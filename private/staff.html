@@ -1,0 +1,322 @@
+<title>Staff Performance</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: sticky control bar over a KPI strip, then a store ranking chart and a staff table. Rose-tinted neutrals, one pink data hue. */
+:root{
+  --bg:#FBF6F7; --surface:#FFFFFF; --ink:#2A1F24; --ink2:#6B5A61; --line:#EADCDF;
+  --accent:#C93A53; --fill:#FF93A0; --fill-soft:#FFE4E8; --hover:#FFF1F3; --good:#1F7A4D;
+  --font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#171013; --surface:#241A1E; --ink:#F6EBEE; --ink2:#B9A5AC; --line:#3A2A30;
+  --accent:#FF8A9A; --fill:#E8697C; --fill-soft:#3A2229; --hover:#2D2025; --good:#5CC48E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#171013; --surface:#241A1E; --ink:#F6EBEE; --ink2:#B9A5AC; --line:#3A2A30;
+  --accent:#FF8A9A; --fill:#E8697C; --fill-soft:#3A2229; --hover:#2D2025; --good:#5CC48E; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;
+  padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.num{font-variant-numeric:tabular-nums}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between}
+.brand{display:flex;flex-direction:column;gap:2px;min-width:0}
+.brand h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+.brand .sub{color:var(--ink2);font-size:12.5px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .btn.primary{color:#2A1018}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{color:#2A1018}}
+.btn.primary:hover{filter:brightness(1.06)}
+
+.drop{border:1.5px dashed var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;background:var(--surface);color:var(--ink2)}
+.drop.over{border-color:var(--accent);background:var(--fill-soft)}
+.drop b{color:var(--ink)}
+.err{color:#fff;background:#B3261E;border-radius:10px;padding:10px 14px;font-weight:600}
+
+.controls{display:flex;flex-direction:column;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);font-weight:700;min-width:64px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 12px;cursor:pointer;font-weight:600;font-size:13px}
+.chip:hover{background:var(--hover)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .chip[aria-pressed="true"]{color:#2A1018}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chip[aria-pressed="true"]{color:#2A1018}}
+.search{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:7px 12px;min-width:180px;flex:1;max-width:280px}
+details.groups summary{cursor:pointer;color:var(--ink2);font-weight:600}
+details.groups .glist{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:4px 16px;margin-top:10px;max-height:220px;overflow:auto}
+details.groups label{display:flex;gap:8px;align-items:center;font-size:12.5px;min-width:0}
+details.groups label span{overflow-wrap:anywhere}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;min-width:0}
+.cardhead{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+.cardhead h2{margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em}
+.cardhead .meta{color:var(--ink2);font-size:12.5px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.kpi{padding:10px 12px;border-radius:12px;background:var(--bg);min-width:0}
+.kpi.hero{grid-column:span 2;background:var(--fill-soft)}
+.kpi .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);font-weight:700}
+.kpi .v{font-size:20px;font-weight:800;letter-spacing:-.02em;overflow-wrap:anywhere}
+.kpi.hero .v{font-size:28px}
+@media (max-width:520px){.kpi.hero{grid-column:span 1}.kpi.hero .v{font-size:22px}}
+
+.bars{display:flex;flex-direction:column;gap:4px}
+.brow{display:grid;grid-template-columns:120px 1fr 110px;gap:10px;align-items:center;padding:4px 6px;border-radius:8px;border:0;background:none;text-align:left;cursor:pointer;width:100%}
+.brow:hover{background:var(--hover)}
+.brow .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow .track{height:14px;border-radius:0 5px 5px 0;background:transparent;position:relative}
+.brow .fill{height:100%;background:var(--fill);border-radius:0 5px 5px 0;min-width:2px}
+.brow .val{text-align:right;font-weight:700}
+.hint{color:var(--ink2);font-size:12px;margin-top:8px}
+
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);font-weight:700;text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,th.l{text-align:left}
+td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+td.l{text-align:left}
+tr.person:hover td{background:var(--hover)}
+tr.storehead td{background:var(--bg);font-weight:800;text-align:left;padding-top:12px;border-bottom:0}
+tr.sub td{font-weight:800;border-bottom:2px solid var(--line)}
+tr.grand td{font-weight:800;background:var(--fill-soft);border-bottom:0}
+td.rank{width:34px;color:var(--ink2);font-weight:700;text-align:left}
+.pname{font-weight:600}
+.pill{display:inline-block;margin-left:8px;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--accent);color:#fff;vertical-align:1px}
+:root[data-theme="dark"] .pill{color:#2A1018}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pill{color:#2A1018}}
+.cellbar{position:relative;min-width:150px}
+.cellbar i{position:absolute;left:0;top:6px;bottom:6px;background:var(--fill-soft);border-radius:0 5px 5px 0;z-index:0}
+.cellbar span{position:relative;z-index:1}
+.share{color:var(--ink2)}
+.sortcol{color:var(--accent)}
+.empty{padding:28px;text-align:center;color:var(--ink2)}
+
+body.clean .controls, body.clean .drop, body.clean header.top .actions .hideclean, body.clean .hint{display:none}
+.exit{display:none;position:fixed;right:max(12px,env(safe-area-inset-right,0px));top:calc(10px + env(safe-area-inset-top,0px));z-index:5;opacity:.55}
+body.clean .exit{display:block}
+@media (max-width:620px){.brow{grid-template-columns:90px 1fr 92px}}
+@media (prefers-reduced-motion:no-preference){.brow .fill{transition:width .3s ease}}
+</style>
+
+<div class="wrap" id="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Staff Performance</h1>
+      <div class="sub" id="source"></div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="loadBtn" type="button">Load new query</button>
+      <button class="btn hideclean" id="cleanBtn" type="button">Screenshot view</button>
+    </div>
+  </header>
+  <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" hidden>
+  <div class="drop" id="drop"><span><b>Drop the new query file here</b> (the Query Report .xlsx or .csv) and the summary rebuilds.</span><span id="dropStatus"></span></div>
+  <div class="err" id="err" hidden></div>
+
+  <section class="controls" aria-label="Filters">
+    <div class="row"><span class="lbl">Store</span><div class="chips" id="storeChips"></div></div>
+    <div class="row"><span class="lbl">Rank by</span><div class="chips" id="metricChips"></div>
+      <input class="search" id="q" type="search" placeholder="Find a sales person" aria-label="Find a sales person"></div>
+    <details class="groups"><summary>Item groups counted <span id="gcount"></span></summary><div class="glist" id="glist"></div></details>
+  </section>
+
+  <button class="btn exit" id="exitClean" type="button">Exit screenshot view</button>
+  <main id="out" style="display:flex;flex-direction:column;gap:16px;width:100%"></main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const VAT=1.14, KEY='storeStaffSummary.v1', EXKEY='storeStaffSummary.ex.v1';
+const SAMPLE=null;
+const METRICS=[
+ {id:'incl',label:'Amount incl. VAT',f:p=>p.incl},
+ {id:'amt',label:'Before VAT',f:p=>p.amt},
+ {id:'inv',label:'Invoices',f:p=>p.inv},
+ {id:'qty',label:'Quantity',f:p=>p.qty},
+ {id:'upt',label:'UPT',f:p=>p.upt},
+ {id:'atv',label:'ATV',f:p=>p.atv}];
+const DEFAULT_EX=/packaging|services|jewellery boxes/i;
+const st={data:null,store:'ALL',metric:'incl',q:'',ex:new Set()};
+const $=id=>document.getElementById(id);
+const nf0=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
+const nf2=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=(id,v)=>id==='upt'?nf2.format(v):nf0.format(v);
+
+function safeGet(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+function safeSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+
+function setData(d){
+  st.data=d; document.querySelector('.controls').hidden=false;
+  const saved=safeGet(EXKEY)||{ex:[],known:[]};
+  st.ex=new Set();
+  d.groups.forEach(g=>{
+    const known=saved.known.includes(g);
+    if(known?saved.ex.includes(g):DEFAULT_EX.test(g)) st.ex.add(g);
+  });
+  if(st.store!=='ALL' && !d.stores.includes(st.store)) st.store='ALL';
+  buildControls(); render();
+}
+function persistEx(){safeSet(EXKEY,{ex:[...st.ex],known:st.data.groups})}
+
+function compute(){
+  const d=st.data, exIdx=new Set(); d.groups.forEach((g,i)=>{if(st.ex.has(g))exIdx.add(i)});
+  const P=d.people.map(()=>({inv:new Set(),qty:0,amt:0}));
+  const S=d.stores.map(()=>({inv:new Set(),qty:0,amt:0}));
+  const G={inv:new Set(),qty:0,amt:0};
+  for(const r of d.rows){ // [person, group, invoice, qty, amt]
+    if(exIdx.has(r[1])) continue;
+    const p=P[r[0]], s=S[d.people[r[0]][1]];
+    p.inv.add(r[2]); s.inv.add(r[2]); G.inv.add(r[2]);
+    p.qty+=r[3]; s.qty+=r[3]; G.qty+=r[3];
+    p.amt+=r[4]; s.amt+=r[4]; G.amt+=r[4];
+  }
+  const fin=o=>{const inv=o.inv.size;return{inv,qty:o.qty,amt:o.amt,incl:o.amt*VAT,upt:inv?o.qty/inv:0,atv:inv?o.amt*VAT/inv:0}};
+  const stores=d.stores.map((name,si)=>({name,tot:fin(S[si]),people:[]}));
+  d.people.forEach((p,i)=>{const f=fin(P[i]); if(f.inv>0||f.amt!==0) stores[p[1]].people.push({name:p[0],...f})});
+  return{stores:stores.filter(s=>s.people.length),grand:fin(G)};
+}
+
+function buildControls(){
+  const d=st.data;
+  $('storeChips').innerHTML=['ALL',...[...d.stores].sort()].map(s=>
+    `<button class="chip" type="button" data-store="${esc(s)}" aria-pressed="${s===st.store}">${s==='ALL'?'All stores':esc(s)}</button>`).join('');
+  $('metricChips').innerHTML=METRICS.map(m=>
+    `<button class="chip" type="button" data-metric="${m.id}" aria-pressed="${m.id===st.metric}">${m.label}</button>`).join('');
+  $('glist').innerHTML=[...d.groups].sort().map((g,i)=>
+    `<label><input type="checkbox" data-g="${esc(g)}" ${st.ex.has(g)?'':'checked'}><span>${esc(g)}</span></label>`).join('');
+  updGcount();
+  $('source').textContent=`${d.file||'Query'} · ${d.period||''}`;
+}
+function updGcount(){const n=st.ex.size;$('gcount').textContent=n?`(${n} left out)`:'(all counted)'}
+
+function kpis(t,label){
+  return `<div class="kpis">
+   <div class="kpi hero"><div class="k">${label} incl. VAT</div><div class="v num">${nf0.format(t.incl)} EGP</div></div>
+   <div class="kpi"><div class="k">Before VAT</div><div class="v num">${nf0.format(t.amt)}</div></div>
+   <div class="kpi"><div class="k">Invoices</div><div class="v num">${nf0.format(t.inv)}</div></div>
+   <div class="kpi"><div class="k">Quantity</div><div class="v num">${nf0.format(t.qty)}</div></div>
+   <div class="kpi"><div class="k">UPT</div><div class="v num">${nf2.format(t.upt)}</div></div>
+   <div class="kpi"><div class="k">ATV</div><div class="v num">${nf0.format(t.atv)}</div></div></div>`;
+}
+function head(m){
+  const cols=[['inv','# Invoices'],['qty','Total Qty'],['amt','Before VAT'],['incl','Incl. VAT'],['upt','UPT'],['atv','ATV']];
+  return cols.map(c=>`<th class="${c[0]===m?'sortcol':''}">${c[1]}</th>`).join('');
+}
+function cells(p,m,max,extraShare){
+  const mk=(id,txt)=>id===m?`<td class="cellbar"><i style="width:${max?Math.max(2,p[id]/max*100):0}%"></i><span class="num">${txt}</span></td>`:`<td class="num">${txt}</td>`;
+  return mk('inv',nf0.format(p.inv))+mk('qty',nf0.format(p.qty))+mk('amt',nf0.format(p.amt))+mk('incl',nf0.format(p.incl))+mk('upt',nf2.format(p.upt))+mk('atv',nf0.format(p.atv));
+}
+
+function render(){
+  if(!st.data) return;
+  const {stores,grand}=compute(), m=METRICS.find(x=>x.id===st.metric), mf=m.f;
+  const q=st.q.trim().toLowerCase(), period=st.data.period||'';
+  const sortP=a=>[...a].sort((x,y)=>mf(y)-mf(x));
+  let html='';
+  if(st.store==='ALL'){
+    const ranked=[...stores].sort((a,b)=>mf(b.tot)-mf(a.tot)), top=Math.max(...ranked.map(s=>mf(s.tot)),0);
+    html+=`<section class="card"><div class="cardhead"><h2>All stores</h2><span class="meta">${esc(period)} · ${stores.length} stores · ${stores.reduce((n,s)=>n+s.people.length,0)} sales people</span></div>
+      ${kpis(grand,'Total')}
+      <div class="lbl" style="margin-bottom:6px">Stores by ${m.label.toLowerCase()}</div>
+      <div class="bars">${ranked.map(s=>`<button class="brow" type="button" data-pick="${esc(s.name)}" title="${esc(s.name)}: ${fmt(m.id,mf(s.tot))}">
+        <span class="n">${esc(s.name)}</span><span class="track"><span class="fill" style="display:block;width:${top?mf(s.tot)/top*100:0}%"></span></span>
+        <span class="val num">${fmt(m.id,mf(s.tot))}</span></button>`).join('')}</div>
+      <div class="hint">Select a store to see only its team.</div></section>`;
+    const maxP=Math.max(...stores.flatMap(s=>s.people.map(mf)),0);
+    let body='';
+    [...stores].sort((a,b)=>a.name.localeCompare(b.name)).forEach(s=>{
+      const people=sortP(s.people).filter(p=>!q||p.name.toLowerCase().includes(q));
+      if(!people.length) return;
+      body+=`<tr class="storehead"><td colspan="8">${esc(s.name)}</td></tr>`;
+      people.forEach(p=>body+=`<tr class="person"><td class="l" colspan="2"><span class="pname">${esc(p.name)}</span></td>${cells(p,st.metric,maxP)}</tr>`);
+      body+=`<tr class="sub"><td class="l" colspan="2">${esc(s.name)} total</td>${cells(s.tot,'',0)}</tr>`;
+    });
+    html+=`<section class="card"><div class="cardhead"><h2>Staff performance</h2><span class="meta">Bars follow “${m.label}”</span></div>
+      <div class="tablewrap"><table><thead><tr><th colspan="2">Store / Sales person</th>${head(st.metric)}</tr></thead><tbody>${body||'<tr><td colspan="8" class="empty">No sales person matches that search.</td></tr>'}
+      <tr class="grand"><td class="l" colspan="2">Grand total</td>${cells(grand,'',0)}</tr></tbody></table></div></section>`;
+  } else {
+    const s=stores.find(x=>x.name===st.store);
+    if(!s){html='<div class="card empty">No sales for this store with the current item groups.</div>';}
+    else{
+      const all=sortP(s.people), people=all.filter(p=>!q||p.name.toLowerCase().includes(q)), max=Math.max(...all.map(mf),0);
+      const rankOf=new Map(all.map((p,i)=>[p.name,i+1]));
+      const rows=people.map(p=>{const r=rankOf.get(p.name);
+        return `<tr class="person"><td class="rank num">${r}</td><td class="l"><span class="pname">${esc(p.name)}</span>${r===1?'<span class="pill">Top seller</span>':''}</td>${cells(p,st.metric,max)}<td class="num share">${s.tot.amt?nf0.format(p.amt/s.tot.amt*100):0}%</td></tr>`}).join('');
+      html+=`<section class="card"><div class="cardhead"><h2>${esc(s.name)}</h2><span class="meta">${esc(period)} · ${s.people.length} sales people</span></div>
+        ${kpis(s.tot,'Store total')}
+        <div class="tablewrap"><table><thead><tr><th>#</th><th class="l">Sales person</th>${head(st.metric)}<th>Share</th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="empty">No sales person matches that search.</td></tr>'}
+        <tr class="grand"><td></td><td class="l">${esc(s.name)} total</td>${cells(s.tot,'',0)}<td class="num">100%</td></tr></tbody></table></div></section>`;
+    }
+  }
+  $('out').innerHTML=html;
+  document.querySelectorAll('#storeChips .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.store===st.store));
+  document.querySelectorAll('#metricChips .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.metric===st.metric));
+}
+
+/* ---- loading a query file ---- */
+function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
+function parseDate(v){if(v instanceof Date)return v; const d=new Date(v);return isNaN(d)?null:d}
+function fmtPeriod(a,b){if(!a||!b)return'';const o={day:'numeric',month:'short'};
+  return `${a.toLocaleDateString('en-GB',o)} – ${b.toLocaleDateString('en-GB',{...o,year:'numeric'})}`}
+async function loadFile(file){
+  showErr('');$('dropStatus').textContent='Reading '+file.name+'…';
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:null});
+    const need=['Sales Invoice','Item Group','Sales Person','Contribution Qty','Contribution Amount','Parent Sales Person'];
+    const miss=need.filter(c=>!rows.length||!(c in rows[0]));
+    if(miss.length) throw new Error('This file is missing the column'+(miss.length>1?'s':'')+': '+miss.join(', ')+'. Use the Query Report export.');
+    const stores=[],people=[],groups=[],invs=[],sI=new Map(),pI=new Map(),gI=new Map(),iI=new Map(),out=[];
+    const idx=(m,arr,k)=>{if(!m.has(k)){m.set(k,arr.length);arr.push(k)}return m.get(k)};
+    let dmin=null,dmax=null;
+    for(const r of rows){
+      const pn=r['Sales Person'],sn=r['Parent Sales Person']; if(!pn||!sn) continue;
+      const si=idx(sI,stores,String(sn).trim());
+      const pk=si+'|'+String(pn).trim();
+      if(!pI.has(pk)){pI.set(pk,people.length);people.push([String(pn).trim(),si])}
+      const dt=parseDate(r['Posting Date']); if(dt){if(!dmin||dt<dmin)dmin=dt;if(!dmax||dt>dmax)dmax=dt}
+      out.push([pI.get(pk),idx(gI,groups,String(r['Item Group']||'').trim()),idx(iI,invs,r['Sales Invoice']),
+        Number(r['Contribution Qty'])||0,Math.round((Number(r['Contribution Amount'])||0)*1000)/1000]);
+    }
+    if(!out.length) throw new Error('No sales rows found in that file.');
+    const d={file:file.name.replace(/\.[^.]+$/,'').slice(0,70),period:fmtPeriod(dmin,dmax),stores,people,groups,rows:out};
+    safeSet(KEY,d); setData(d); $('dropStatus').textContent='Loaded '+nf0.format(out.length)+' rows';
+  }catch(e){showErr(e.message||'Could not read that file.');$('dropStatus').textContent=''}
+}
+
+/* ---- events ---- */
+$('loadBtn').onclick=()=>$('file').click();
+$('file').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);e.target.value=''};
+const dz=$('drop');
+['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over')}));
+document.addEventListener('drop',e=>{const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)loadFile(f)});
+document.addEventListener('click',e=>{
+  const c=e.target.closest('[data-store]'),m=e.target.closest('[data-metric]'),p=e.target.closest('[data-pick]');
+  if(c){st.store=c.dataset.store;render()}
+  else if(m){st.metric=m.dataset.metric;render()}
+  else if(p){st.store=p.dataset.pick;render();window.scrollTo({top:0,behavior:'smooth'})}
+});
+$('q').oninput=e=>{st.q=e.target.value;render()};
+$('glist').onchange=e=>{const g=e.target.dataset.g;if(e.target.checked)st.ex.delete(g);else st.ex.add(g);persistEx();updGcount();render()};
+$('cleanBtn').onclick=()=>document.body.classList.add('clean');
+$('exitClean').onclick=()=>document.body.classList.remove('clean');
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.body.classList.remove('clean')});
+
+function showEmpty(){
+  document.querySelector('.controls').hidden=true;
+  $('source').textContent='No query loaded yet';
+  $('out').innerHTML='<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">Load this month\u2019s query</h2>Drop the Query Report file (.xlsx or .csv) anywhere on this page, or press <b>Load new query</b>. The store and sales person summary appears here.</section>';
+}
+const saved0=safeGet(KEY)||SAMPLE;
+if(saved0) setData(saved0); else showEmpty();
+</script>

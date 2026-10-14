@@ -1,1 +1,2 @@
 Static Vercel site: no Next.js middleware. Dashboard HTML is in private/index.html and served only by api/site.js after signed-cookie verification. Configure secrets in Vercel environment variables.
+Staff Performance page: private/staff.html, served by api/site.js at /staff after verifying the staff_auth cookie. Shared auth helpers: api/_projects.js. Env vars: STAFF_USERNAME, STAFF_PASSWORD.

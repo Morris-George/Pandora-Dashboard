@@ -1,42 +1,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
+const { PROJECTS, validSession, readCookie } = require('./_projects');
 
 const PRIVATE_DIR = path.join(process.cwd(), 'private');
-
-function safeEqual(a, b) {
-  const aa = Buffer.from(String(a));
-  const bb = Buffer.from(String(b));
-  return aa.length === bb.length &&
-    crypto.timingSafeEqual(aa, bb);
-}
-
-function validSession(token, expectedUser, secret) {
-  try {
-    if (!token || !expectedUser || !secret) return false;
-
-    const parts = token.split('.');
-    if (parts.length !== 2) return false;
-
-    const [payload, signature] = parts;
-    const expected = crypto.createHmac('sha256', secret)
-      .update(payload).digest();
-    const actual = Buffer.from(signature, 'base64url');
-
-    if (actual.length !== expected.length ||
-        !crypto.timingSafeEqual(actual, expected)) return false;
-
-    const decoded = Buffer.from(payload, 'base64url')
-      .toString('utf8').split('\n');
-
-    return decoded.length === 2 &&
-      safeEqual(decoded[0], expectedUser) &&
-      Number(decoded[1]) > Math.floor(Date.now() / 1000);
-  } catch (_) {
-    return false;
-  }
-}
 
 const LOGOUT_SNIPPET = '<script>(function(){' +
   "var b=document.createElement('button');" +
@@ -51,6 +18,27 @@ const LOGOUT_SNIPPET = '<script>(function(){' +
   'if(bar){bar.appendChild(b);}' +
   "else{b.style.cssText='position:fixed;top:12px;right:12px;z-index:9999';document.body.appendChild(b);}" +
   '})();</script>';
+
+const STAFF_LOGOUT_SNIPPET = '<script>(function(){' +
+  "var bar=document.querySelector('.actions');if(!bar)return;" +
+  "var a=document.createElement('a');a.href='/login.html';a.className='btn';a.textContent='Switch project';a.style.textDecoration='none';" +
+  "var b=document.createElement('button');b.type='button';b.className='btn';b.textContent='Log out';" +
+  "b.addEventListener('click',function(){b.disabled=true;" +
+  "try{localStorage.removeItem('storeStaffSummary.v1')}catch(e){}" +
+  "fetch('/api/logout?project=staff',{method:'POST',credentials:'same-origin'}).then(function(r){" +
+  "if(r.ok){location.replace('/login.html?project=staff');}else{throw new Error('x');}" +
+  "}).catch(function(){b.disabled=false;});});" +
+  "bar.appendChild(a);bar.appendChild(b);" +
+  '})();</script>';
+
+function inject(snippet) {
+  return function (buf) {
+    const html = buf.toString('utf8');
+    const i = html.lastIndexOf('</body>');
+    const at = i === -1 ? html.length : i;
+    return Buffer.from(html.slice(0, at) + snippet + html.slice(at), 'utf8');
+  };
+}
 
 function addLogoutButton(buf) {
   const html = buf.toString('utf8');
@@ -96,20 +84,24 @@ module.exports = function handler(req, res) {
     return res.status(404).end();
   }
 
-  const { PANDORA_USERNAME, PANDORA_AUTH_SECRET } = process.env;
+  const secret = process.env.PANDORA_AUTH_SECRET;
 
-  const cookie = (req.headers.cookie || '')
-    .split(';')
-    .map(part => part.trim())
-    .find(part => part.startsWith('pandora_auth='));
+  // Staff Performance project (its own login and cookie)
+  if (['/staff', '/staff/', '/staff.html', '/staff/index.html'].includes(requestedPath)) {
+    const ok = validSession('staff', readCookie(req, PROJECTS.staff.cookie), process.env[PROJECTS.staff.userEnv], secret);
+    if (!ok) {
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Location', '/login.html?project=staff');
+      return res.status(302).end();
+    }
+    return sendFile(res, 'staff.html', 'text/html; charset=utf-8', inject(STAFF_LOGOUT_SNIPPET));
+  }
 
-  const token = cookie
-    ? cookie.slice('pandora_auth='.length)
-    : '';
-
-  if (!validSession(token, PANDORA_USERNAME, PANDORA_AUTH_SECRET)) {
+  // Pandora Dashboards project (original login and cookie)
+  const dashOk = validSession('dashboards', readCookie(req, PROJECTS.dashboards.cookie), process.env[PROJECTS.dashboards.userEnv], secret);
+  if (!dashOk) {
     res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('Location', '/login.html');
+    res.setHeader('Location', '/login.html?project=dashboards');
     return res.status(302).end();
   }
 

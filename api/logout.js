@@ -1,3 +1,5 @@
+const { PROJECTS, projectFrom } = require('./_projects');
+
 module.exports = function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -5,9 +7,11 @@ module.exports = function handler(req, res) {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ ok: false, error: 'Method not allowed' });
   }
+  const url = new URL(req.url, 'https://vercel.invalid');
+  const cfg = PROJECTS[projectFrom(url.searchParams.get('project'))];
   res.setHeader(
     'Set-Cookie',
-    'pandora_auth=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
+    `${cfg.cookie}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
   );
   return res.status(200).json({ ok: true });
 };
