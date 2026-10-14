@@ -1,4 +1,5 @@
 <escape>{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/site.js": {
       "includeFiles": "private/**"
@@ -6,11 +7,19 @@
   },
   "rewrites": [
     {
-      "source": "/api/login",
-      "destination": "/api/login"
+      "source": "/login.html",
+      "destination": "/api/site?path=/login.html"
     },
     {
-      "source": "/(.*)",
+      "source": "/pandora-logo.png",
+      "destination": "/api/site?path=/pandora-logo.png"
+    },
+    {
+      "source": "/",
+      "destination": "/api/site?path=/"
+    },
+    {
+      "source": "/((?!api/).*)",
       "destination": "/api/site?path=$1"
     }
   ]
