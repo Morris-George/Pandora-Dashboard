@@ -31,7 +31,11 @@ function sendFile(res, filename, contentType) {
     return res.status(200).send(content);
   } catch (_) { return res.status(500).send('Site file unavailable.'); }
 }
-module.exports = function handler(req, res) {
+
+  const url = new URL(req.url, 'https://vercel.invalid');
+  const pathname = url.searchParams.has('path')
+    ? '/' + (url.searchParams.get('path') || '').replace(/^\/+/, '')
+    : url.pathname;
 const pathname = url.searchParams.has('path')
   ? '/' + (url.searchParams.get('path') || '').replace(/^\/+/, '')
   : url.pathname;
