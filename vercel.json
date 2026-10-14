@@ -6,7 +6,11 @@
   },
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/api/login",
+      "destination": "/api/login"
+    },
+    {
+      "source": "/(.*)",
       "destination": "/api/site?path=$1"
     }
   ]
