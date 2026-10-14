@@ -15,11 +15,9 @@
 <script>
 const form=document.getElementById('loginForm'),err=document.getElementById('error'),btn=document.getElementById('submit'),pass=document.getElementById('password');
 const LABELS={dashboards:'Pandora Dashboards',staff:'Staff Performance'};
-let project=null;try{setTimeout(function(){sessionStorage.removeItem('pandora-autoenter')},4000)}catch(e){}
+let project=null;
 const sub=document.getElementById('sub'),hint=document.getElementById('hint');
-function choose(p){project=p;document.querySelectorAll('.pick').forEach(b=>b.setAttribute('aria-pressed',b.dataset.project===p));form.hidden=false;hint.hidden=true;err.style.display='none';sub.textContent='Sign in to '+LABELS[p]+'.';btn.textContent='Sign in to '+LABELS[p];document.getElementById('username').focus();
-  // already signed in to this project? go straight in
-  var path=p==='staff'?'/staff':'/';var probe='/api/site?path='+path;fetch(probe,{credentials:'same-origin',redirect:'manual',cache:'no-store'}).then(function(r){if(r.status===200&&r.type==='basic'&&!sessionStorage.getItem('pandora-autoenter')){try{sessionStorage.setItem('pandora-autoenter','1')}catch(e){}location.replace(path)}}).catch(function(){});}
+function choose(p){project=p;document.querySelectorAll('.pick').forEach(b=>b.setAttribute('aria-pressed',b.dataset.project===p));form.hidden=false;hint.hidden=true;err.style.display='none';sub.textContent='Sign in to '+LABELS[p]+'.';btn.textContent='Sign in to '+LABELS[p];document.getElementById('username').focus();}
 
 document.getElementById('toggle').addEventListener('click',()=>{const reveal=pass.type==='password';pass.type=reveal?'text':'password';document.getElementById('toggle').textContent=reveal?'Hide':'Show';});
 form.addEventListener('submit',async e=>{e.preventDefault();if(!project)return;err.style.display='none';btn.disabled=true;btn.textContent='Checking…';try{const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({project:project,username:document.getElementById('username').value,password:pass.value})});const data=await r.json().catch(()=>({}));if(r.status===500&&data.error)throw new Error(data.error);if(!r.ok||!data.ok)throw new Error('Incorrect username or password. Please try again.');location.replace(data.next||'/');}catch(ex){err.textContent=ex.message||'Sign-in failed. Please try again.';err.style.display='block';}finally{btn.disabled=false;btn.textContent='Sign in to '+LABELS[project];}});

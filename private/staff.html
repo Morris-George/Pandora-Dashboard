@@ -131,7 +131,7 @@ body.clean .exit{display:block}
   <section class="controls" aria-label="Filters">
     <div class="row"><span class="lbl">Store</span><div class="chips" id="storeChips"></div></div>
     <div class="row"><span class="lbl">Rank by</span><div class="chips" id="metricChips"></div>
-      <input class="search" id="q" type="search" placeholder="Find a sales person" aria-label="Find a sales person"></div>
+      <input class="search" id="q" type="search" placeholder="Search sales person or store" aria-label="Search sales person or store"></div>
     <details class="groups"><summary>Item groups counted <span id="gcount"></span></summary><div class="glist" id="glist"></div></details>
   </section>
 
@@ -231,6 +231,7 @@ function render(){
   let html='';
   if(st.store==='ALL'){
     const ranked=[...stores].sort((a,b)=>mf(b.tot)-mf(a.tot)), top=Math.max(...ranked.map(s=>mf(s.tot)),0);
+    if(!q){
     html+=`<section class="card"><div class="cardhead"><h2>All stores</h2><span class="meta">${esc(period)} · ${stores.length} stores · ${stores.reduce((n,s)=>n+s.people.length,0)} sales people</span></div>
       ${kpis(grand,'Total')}
       <div class="lbl" style="margin-bottom:6px">Stores by ${m.label.toLowerCase()}</div>
@@ -238,18 +239,22 @@ function render(){
         <span class="n">${esc(s.name)}</span><span class="track"><span class="fill" style="display:block;width:${top?mf(s.tot)/top*100:0}%"></span></span>
         <span class="val num">${fmt(m.id,mf(s.tot))}</span></button>`).join('')}</div>
       <div class="hint">Select a store to see only its team.</div></section>`;
+    }
     const maxP=Math.max(...stores.flatMap(s=>s.people.map(mf)),0);
-    let body='';
+    let body='';const hit={inv:0,qty:0,amt:0};let hits=0;
     [...stores].sort((a,b)=>a.name.localeCompare(b.name)).forEach(s=>{
-      const people=sortP(s.people).filter(p=>!q||p.name.toLowerCase().includes(q));
+      const people=sortP(s.people).filter(p=>!q||p.name.toLowerCase().includes(q)||s.name.toLowerCase().includes(q));
       if(!people.length) return;
+      people.forEach(p=>{hits++;hit.inv+=p.inv;hit.qty+=p.qty;hit.amt+=p.amt});
       body+=`<tr class="storehead"><td colspan="8">${esc(s.name)}</td></tr>`;
       people.forEach(p=>body+=`<tr class="person"><td class="l" colspan="2"><span class="pname">${esc(p.name)}</span></td>${cells(p,st.metric,maxP)}</tr>`);
       body+=`<tr class="sub"><td class="l" colspan="2">${esc(s.name)} total</td>${cells(s.tot,'',0)}</tr>`;
     });
-    html+=`<section class="card"><div class="cardhead"><h2>Staff performance</h2><span class="meta">Bars follow “${m.label}”</span></div>
-      <div class="tablewrap"><table><thead><tr><th colspan="2">Store / Sales person</th>${head(st.metric)}</tr></thead><tbody>${body||'<tr><td colspan="8" class="empty">No sales person matches that search.</td></tr>'}
-      <tr class="grand"><td class="l" colspan="2">Grand total</td>${cells(grand,'',0)}</tr></tbody></table></div></section>`;
+    const mt=q?{...hit,incl:hit.amt*VAT,upt:hit.inv?hit.qty/hit.inv:0,atv:hit.inv?hit.amt*VAT/hit.inv:0}:grand;
+    if(q) html+=`<section class="card"><div class="cardhead"><h2>Search results for “${esc(st.q.trim())}”</h2><span class="meta">${hits} sales ${hits===1?'person':'people'} · ${esc(period)}</span></div>${hits?kpis(mt,'Matches'):''}</section>`;
+    html+=`<section class="card"><div class="cardhead"><h2>${q?'Matching staff':'Staff performance'}</h2><span class="meta">Bars follow “${m.label}”</span></div>
+      <div class="tablewrap"><table><thead><tr><th colspan="2">Store / Sales person</th>${head(st.metric)}</tr></thead><tbody>${body||'<tr><td colspan="8" class="empty">No sales person or store matches “'+esc(st.q.trim())+'”.</td></tr>'}
+      ${hits||!q?`<tr class="grand"><td class="l" colspan="2">${q?'Matches total':'Grand total'}</td>${cells(mt,'',0)}</tr>`:''}</tbody></table></div></section>`;
   } else {
     const s=stores.find(x=>x.name===st.store);
     if(!s){html='<div class="card empty">No sales for this store with the current item groups.</div>';}
@@ -258,7 +263,7 @@ function render(){
       const rankOf=new Map(all.map((p,i)=>[p.name,i+1]));
       const rows=people.map(p=>{const r=rankOf.get(p.name);
         return `<tr class="person"><td class="rank num">${r}</td><td class="l"><span class="pname">${esc(p.name)}</span>${r===1?'<span class="pill">Top seller</span>':''}</td>${cells(p,st.metric,max)}<td class="num share">${s.tot.amt?nf0.format(p.amt/s.tot.amt*100):0}%</td></tr>`}).join('');
-      html+=`<section class="card"><div class="cardhead"><h2>${esc(s.name)}</h2><span class="meta">${esc(period)} · ${s.people.length} sales people</span></div>
+      html+=`<section class="card"><div class="cardhead"><h2>${esc(s.name)}</h2><span class="meta">${esc(period)} · ${q?people.length+' of ':''}${s.people.length} sales people</span></div>
         ${kpis(s.tot,'Store total')}
         <div class="tablewrap"><table><thead><tr><th>#</th><th class="l">Sales person</th>${head(st.metric)}<th>Share</th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="empty">No sales person matches that search.</td></tr>'}
         <tr class="grand"><td></td><td class="l">${esc(s.name)} total</td>${cells(s.tot,'',0)}<td class="num">100%</td></tr></tbody></table></div></section>`;
