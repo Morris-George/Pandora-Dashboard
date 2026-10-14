@@ -1,0 +1,1 @@
+Static Vercel site: no Next.js middleware. Dashboard HTML is in private/index.html and served only by api/site.js after signed-cookie verification. Configure secrets in Vercel environment variables.

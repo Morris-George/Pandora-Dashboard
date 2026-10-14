@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/site.js": {
+      "includeFiles": "private/**"
+    }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/site?path=$1" }
+  ]
+}
