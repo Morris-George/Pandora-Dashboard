@@ -26,6 +26,39 @@
 .upload-help-overlay.open{display:flex}.upload-help-modal{width:min(540px,100%);background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 80px rgba(0,0,0,.28);padding:25px;position:relative}
 .upload-help-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:8px}.upload-help-head h2{margin:0;font-size:22px;letter-spacing:-.03em}.upload-help-close{border:1px solid var(--line);background:var(--surface2);color:var(--text);border-radius:8px;width:34px;height:34px;font-size:21px;cursor:pointer;flex:0 0 auto}.upload-help-intro{color:var(--muted);font-size:13px;margin:0 0 18px}.upload-help-steps{padding:0;margin:0;list-style:none;display:grid;gap:13px;counter-reset:steps}.upload-help-steps li{display:grid;grid-template-columns:30px 1fr;gap:11px;align-items:start;line-height:1.5}.upload-help-steps li:before{counter-increment:steps;content:counter(steps);display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#f8eaf0;color:#9e174d;font-weight:800}.upload-help-steps strong{display:block;margin-bottom:2px}.upload-help-note{margin-top:19px;padding:13px 14px;border:1px solid #e8c4d2;background:light-dark(#fff6fa,#321d27);border-radius:10px;font-size:12px}.upload-help-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}.upload-help-actions .upload-btn{padding:10px 14px}
 @media(max-width:600px){.upload-help-modal{padding:19px}.upload-help-head h2{font-size:19px}.upload-help-actions{flex-wrap:wrap}.top-actions{gap:7px}}
+
+/* Category explorer */
+.explorer .xtop{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.xchips{display:flex;flex-wrap:wrap;gap:8px}
+.xchip{border:1px solid var(--line);background:var(--surface2);color:var(--text);border-radius:999px;padding:7px 13px;cursor:pointer;font-weight:650;font-size:12px}
+.xchip:hover{border-color:var(--accent2)}.xchip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;background:var(--surface2);color:var(--muted);padding:7px 13px;font-weight:650;cursor:pointer;font-size:12px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.xsearch{width:100%;max-width:460px;min-height:38px;border:1px solid var(--line);border-radius:9px;padding:8px 12px;background:var(--surface2);color:var(--text);outline:none;margin-bottom:16px}
+.xsearch:focus{border-color:var(--accent2)}
+.exp-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:18px;align-items:start}
+.xlist{display:flex;flex-direction:column;gap:2px;min-width:0}
+.xrow{display:grid;grid-template-columns:minmax(110px,1.2fr) 2fr auto;gap:12px;align-items:center;width:100%;border:0;background:none;color:var(--text);text-align:left;padding:9px 10px;border-radius:10px;cursor:pointer;font-size:12px}
+.xrow:hover,.xrow[aria-pressed="true"]{background:light-dark(#fbf1f5,#33202a)}
+.xrow .xname{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xrow .xmeta{display:block;color:var(--muted);font-size:10.5px;font-weight:500;margin-top:2px}
+.xrow .xval{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.xdetail{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.xdetail h4{margin:0;font-size:15px;letter-spacing:-.02em}
+.xk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 16px}
+.xk div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.xk b{display:block;font-size:17px;letter-spacing:-.03em;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xk span{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.xk small{display:block;font-size:10.5px;color:var(--muted);margin-top:2px}
+.xh{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin:14px 0 8px}
+.xtop5{display:flex;flex-direction:column;gap:8px;font-size:12px}
+.xtop5 .xp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+.xtop5 .xp span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xtop5 .xp em{font-style:normal;color:var(--muted);font-size:10.5px;display:block}
+.xempty{padding:22px;text-align:center;color:var(--muted)}
+@media (max-width:600px){.xk{grid-template-columns:1fr 1fr}.xk div:last-child{grid-column:span 2}}
+@media (max-width:900px){.exp-grid{grid-template-columns:1fr}.xrow{grid-template-columns:minmax(90px,1fr) 1.4fr auto}}
 </style>
 </head>
 <body>
@@ -39,6 +72,10 @@
 </section>
 <section class="kpis" id="kpis"></section>
 <section class="grid"><article class="panel"><div class="panel-head"><div><h3>Revenue trend</h3><div class="sub">Daily revenue across the selected period</div></div><div class="legend"><span>Revenue</span></div></div><svg class="chart" id="trendChart" viewBox="0 0 700 310" role="img" aria-label="Daily revenue trend"></svg></article><article class="panel"><div class="panel-head"><div><h3>Category mix</h3><div class="sub">Revenue contribution by product category</div></div></div><div class="donut-wrap" id="categoryChart"></div></article></section>
+<section class="panel explorer" id="explorer"><div class="panel-head"><div><h3>Category explorer</h3><div class="sub">Pick a category, then a type, to see its sales. Uses the date and branch filters above.</div></div></div>
+<div class="xtop"><div class="xchips" id="xChips"></div><div class="seg" id="xGroup" role="group" aria-label="Group by"><button type="button" data-g="type">By type</button><button type="button" data-g="metal">By metal</button></div></div>
+<input class="xsearch" id="xSearch" type="search" placeholder="Ask about a type or product, e.g. bangle, dangle, hoop" aria-label="Search types and products">
+<div class="exp-grid"><div class="xlist" id="xList"></div><div class="xdetail" id="xDetail"></div></div></section>
 <section class="grid equal"><article class="panel"><div class="panel-head"><div><h3>Branch leaderboard</h3><div class="sub">Revenue by store</div></div></div><div class="bars" id="branchChart"></div></article><article class="panel"><div class="panel-head"><div><h3>Sales by weekday</h3><div class="sub">Find your strongest trading days</div></div></div><div class="bars" id="weekdayChart"></div></article></section>
 <section class="grid equal"><article class="panel"><div class="panel-head"><div><h3>Top products</h3><div class="sub">Ranked by revenue · SKU-level product variants</div></div><span class="pill">Top 8</span></div><div class="table-wrap"><table><thead><tr><th>#</th><th>SKU</th><th>Product</th><th>Category</th><th>Units</th><th class="right">Revenue</th></tr></thead><tbody id="productsTable"></tbody></table></div></article><article class="panel"><div class="panel-head"><div><h3>Payment mix</h3><div class="sub">Revenue by payment method</div></div></div><div class="bars" id="paymentChart"></div><div class="sub" style="margin-top:18px">Use the branch and category filters above to investigate performance.</div></article></section>
 <div class="footer"><span>PRIVATE WORKSPACE · Data stays in this browser preview session.</span><span id="lastUpdated">Calculated from current report</span></div>
@@ -123,6 +160,68 @@ $('uploadHelpBtn').addEventListener('click',()=>{helpOverlay.classList.add('open
 helpOverlay.addEventListener('click',e=>{if(e.target===helpOverlay)closeUploadHelp()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&helpOverlay.classList.contains('open'))closeUploadHelp()});
 $('uploadHelpChooseFile').addEventListener('click',()=>{closeUploadHelp();$('fileInput').click()});
+
+// ---- Category explorer: types and metals are read from the product name ----
+(function(){
+const TYPE_RULES={
+ Bracelets:[['Tennis',/tennis/],['Bangle',/bangle|cuff/],['Leather & cord',/leather|cord|braided|textile/],['Snake chain',/snake/],['Heart clasp',/clasp/],['Other chains & plain',/./]],
+ Charms:[['Spacer',/spacer/],['Clip',/\bclips?\b/],['Medallion',/medallion/],['Murano glass',/murano/],['Mini dangle',/\bmini\b/],['Dangle',/dangle/],['Charm',/./]],
+ Earrings:[['Stud',/stud/],['Hoop & huggie',/hoop|huggie/],['Drop & other',/./]],
+ Necklaces:[['Collier',/collier/],['Pendant',/pendant/],['Chain necklace',/chain|rope|link/],['Necklace',/./]],
+ Rings:[['Heart',/heart/],['Crown & tiara',/crown|tiara/],['Star, moon & sun',/star|moon|sun/],['Other rings',/./]],
+ Other:[['Pendant',/pendant/],['Safety chain',/safety/],['Care & tools',/./]]
+};
+const METAL_RULES=[['Rose gold-plated',/rose gold/],['Silver & gold two-tone',/(silver|sterling).*(14k|gold-plated)|(14k|gold-plated).*(silver|sterling)/],['14K gold-plated',/14k|gold-plated/],['Rhodium-plated',/rhodium/],['Sterling silver',/sterling|silver/],['Not stated',/./]];
+const ex={cat:'All',grp:'type',sel:null,q:''};
+const pick=(rules,name)=>{const n=String(name||'').toLowerCase();for(const [label,re] of rules)if(re.test(n))return label;return 'Other'};
+const typeOf=r=>TYPE_RULES[r.category]?pick(TYPE_RULES[r.category],r.name):(r.name||'Unspecified');
+const keyOf=r=>ex.grp==='metal'?pick(METAL_RULES,r.name):typeOf(r);
+const inScope=r=>r.date>=$('startDate').value&&r.date<=$('endDate').value&&($('branchFilter').value==='All'||r.branch===$('branchFilter').value);
+const group=(rows,f)=>{const m={};rows.forEach(r=>{const k=f(r);const o=m[k]||(m[k]={name:k,value:0,units:0});o.value+=rev(r);o.units+=r.qty});return Object.values(m).sort((a,b)=>b.value-a.value)};
+const pct=(a,b)=>b>0?(a/b*100).toFixed(a/b<0.1?1:0)+'%':'—';
+
+function renderExplorer(){
+  const root=$('explorer');if(!root)return;
+  if(!data.length){root.hidden=true;return}root.hidden=false;
+  const scope=data.filter(inScope), cats=group(scope,r=>r.category||'Unspecified').map(c=>c.name);
+  if(ex.cat!=='All'&&!cats.includes(ex.cat)){ex.cat='All';ex.sel=null}
+  const totalAll=sum(scope,rev);
+  const catRows=ex.cat==='All'?scope:scope.filter(r=>(r.category||'Unspecified')===ex.cat);
+  const words=ex.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const qRows=words.length?catRows.filter(r=>{const hay=(r.name+' '+(r.category||'')+' '+typeOf(r)+' '+pick(METAL_RULES,r.name)).toLowerCase();return words.every(w=>hay.includes(w))}):catRows;
+  const totalCat=sum(catRows,rev);
+  $('xChips').innerHTML=['All',...cats].map(c=>`<button class="xchip" type="button" data-cat="${esc(c)}" aria-pressed="${c===ex.cat}">${c==='All'?'All categories':esc(c)}</button>`).join('');
+  document.querySelectorAll('#xGroup button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.g===ex.grp));
+  $('xGroup').hidden=ex.cat==='All';
+  const keyFn=ex.cat==='All'?(r=>r.category||'Unspecified'):keyOf;
+  const list=group(qRows,keyFn);
+  if(ex.sel&&!list.some(x=>x.name===ex.sel))ex.sel=null;
+  const max=Math.max(1,...list.map(x=>Math.abs(x.value)));
+  const total=sum(qRows,rev);
+  $('xList').innerHTML=list.length?list.map(x=>`<button class="xrow" type="button" data-sel="${esc(x.name)}" aria-pressed="${x.name===ex.sel}" title="${esc(x.name)}"><span><span class="xname">${esc(x.name)}</span><span class="xmeta">${num(x.units)} units · ${pct(x.value,total)} of ${ex.cat==='All'?'sales':esc(ex.cat.toLowerCase())}</span></span><span class="track"><span class="fill" style="display:block;width:${Math.max(2,Math.abs(x.value)/max*100)}%"></span></span><span class="xval">${money(x.value)}</span></button>`).join(''):'<div class="xempty">Nothing matches that search for this period and branch.</div>';
+  const selRows=ex.sel?qRows.filter(r=>keyFn(r)===ex.sel):qRows;
+  const catWord=ex.cat==='All'?'all categories':'all '+ex.cat.toLowerCase();
+  let title=ex.sel?(ex.cat==='All'?ex.sel:ex.cat+' · '+ex.sel):(ex.cat==='All'?'All categories':'All '+ex.cat.toLowerCase());
+  if(words.length)title+=` matching “${ex.q.trim()}”`;
+  const rv=sum(selRows,rev),un=sum(selRows,r=>r.qty);
+  const prods=group(selRows,r=>r.name||'Unspecified').slice(0,5);
+  const br=group(selRows,r=>r.branch||'Unspecified').slice(0,5);
+  $('xDetail').innerHTML=selRows.length?`<h4>${esc(title)}</h4>
+   <div class="xk"><div><span>Revenue</span><b>${money(rv)}</b></div><div><span>Units</span><b>${num(un)}</b></div><div><span>Share</span><b>${pct(rv,totalAll)}</b><small>of all sales${ex.cat!=='All'?' · '+pct(rv,totalCat)+' of '+esc(ex.cat.toLowerCase()):''}</small></div></div>
+   <div class="xh">Top products</div><div class="xtop5">${prods.map(p=>`<div class="xp"><span title="${esc(p.name)}">${esc(p.name)}<em>${num(p.units)} units</em></span><b>${money(p.value)}</b></div>`).join('')}</div>
+   <div class="xh">By branch</div><div class="bars" id="xBranch"></div>`:'<div class="xempty">No sales to show.</div>';
+  if($('xBranch'))bars('xBranch',br);
+}
+document.addEventListener('click',e=>{
+  const c=e.target.closest('#xChips [data-cat]'),g=e.target.closest('#xGroup [data-g]'),s=e.target.closest('#xList [data-sel]');
+  if(c){ex.cat=c.dataset.cat;ex.sel=null;renderExplorer()}
+  else if(g){ex.grp=g.dataset.g;ex.sel=null;renderExplorer()}
+  else if(s){ex.sel=ex.sel===s.dataset.sel?null:s.dataset.sel;renderExplorer()}
+});
+$('xSearch').addEventListener('input',e=>{ex.q=e.target.value;ex.sel=null;renderExplorer()});
+const baseRender=render;
+render=function(){baseRender.apply(this,arguments);renderExplorer()};
+})();
 initialize();
 </script>
 </body></html>
