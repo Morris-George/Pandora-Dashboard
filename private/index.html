@@ -56,6 +56,7 @@
 .xtop5 .xp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
 .xtop5 .xp span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .xtop5 .xp em{font-style:normal;color:var(--muted);font-size:10.5px;display:block}
+.xsku{font-style:normal;font-weight:700;color:var(--text);letter-spacing:.01em}
 .xempty{padding:22px;text-align:center;color:var(--muted)}
 @media (max-width:600px){.xk{grid-template-columns:1fr 1fr}.xk div:last-child{grid-column:span 2}}
 @media (max-width:900px){.exp-grid{grid-template-columns:1fr}.xrow{grid-template-columns:minmax(90px,1fr) 1.4fr auto}}
@@ -74,7 +75,7 @@
 <section class="grid"><article class="panel"><div class="panel-head"><div><h3>Revenue trend</h3><div class="sub">Daily revenue across the selected period</div></div><div class="legend"><span>Revenue</span></div></div><svg class="chart" id="trendChart" viewBox="0 0 700 310" role="img" aria-label="Daily revenue trend"></svg></article><article class="panel"><div class="panel-head"><div><h3>Category mix</h3><div class="sub">Revenue contribution by product category</div></div></div><div class="donut-wrap" id="categoryChart"></div></article></section>
 <section class="panel explorer" id="explorer"><div class="panel-head"><div><h3>Category explorer</h3><div class="sub">Pick a category, then a type, to see its sales. Uses the date and branch filters above.</div></div></div>
 <div class="xtop"><div class="xchips" id="xChips"></div><div class="seg" id="xGroup" role="group" aria-label="Group by"><button type="button" data-g="type">By type</button><button type="button" data-g="metal">By metal</button></div></div>
-<input class="xsearch" id="xSearch" type="search" placeholder="Ask about a type or product, e.g. bangle, dangle, hoop" aria-label="Search types and products">
+<input class="xsearch" id="xSearch" type="search" placeholder="Ask about a type, product or SKU, e.g. bangle, dangle, 590745" aria-label="Search types, products and SKUs">
 <div class="exp-grid"><div class="xlist" id="xList"></div><div class="xdetail" id="xDetail"></div></div></section>
 <section class="grid equal"><article class="panel"><div class="panel-head"><div><h3>Branch leaderboard</h3><div class="sub">Revenue by store</div></div></div><div class="bars" id="branchChart"></div></article><article class="panel"><div class="panel-head"><div><h3>Sales by weekday</h3><div class="sub">Find your strongest trading days</div></div></div><div class="bars" id="weekdayChart"></div></article></section>
 <section class="grid equal"><article class="panel"><div class="panel-head"><div><h3>Top products</h3><div class="sub">Ranked by revenue · SKU-level product variants</div></div><span class="pill">Top 8</span></div><div class="table-wrap"><table><thead><tr><th>#</th><th>SKU</th><th>Product</th><th>Category</th><th>Units</th><th class="right">Revenue</th></tr></thead><tbody id="productsTable"></tbody></table></div></article><article class="panel"><div class="panel-head"><div><h3>Payment mix</h3><div class="sub">Revenue by payment method</div></div></div><div class="bars" id="paymentChart"></div><div class="sub" style="margin-top:18px">Use the branch and category filters above to investigate performance.</div></article></section>
@@ -188,7 +189,7 @@ function renderExplorer(){
   const totalAll=sum(scope,rev);
   const catRows=ex.cat==='All'?scope:scope.filter(r=>(r.category||'Unspecified')===ex.cat);
   const words=ex.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const qRows=words.length?catRows.filter(r=>{const hay=(r.name+' '+(r.category||'')+' '+typeOf(r)+' '+pick(METAL_RULES,r.name)).toLowerCase();return words.every(w=>hay.includes(w))}):catRows;
+  const qRows=words.length?catRows.filter(r=>{const hay=((r.sku||'')+' '+r.name+' '+(r.category||'')+' '+typeOf(r)+' '+pick(METAL_RULES,r.name)).toLowerCase();return words.every(w=>hay.includes(w))}):catRows;
   const totalCat=sum(catRows,rev);
   $('xChips').innerHTML=['All',...cats].map(c=>`<button class="xchip" type="button" data-cat="${esc(c)}" aria-pressed="${c===ex.cat}">${c==='All'?'All categories':esc(c)}</button>`).join('');
   document.querySelectorAll('#xGroup button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.g===ex.grp));
@@ -204,11 +205,11 @@ function renderExplorer(){
   let title=ex.sel?(ex.cat==='All'?ex.sel:ex.cat+' · '+ex.sel):(ex.cat==='All'?'All categories':'All '+ex.cat.toLowerCase());
   if(words.length)title+=` matching “${ex.q.trim()}”`;
   const rv=sum(selRows,rev),un=sum(selRows,r=>r.qty);
-  const prods=group(selRows,r=>r.name||'Unspecified').slice(0,5);
+  const pm={};selRows.forEach(r=>{const k=(r.sku||'—')+'|'+(r.name||'Unspecified');const o=pm[k]||(pm[k]={sku:r.sku||'—',name:r.name||'Unspecified',value:0,units:0});o.value+=rev(r);o.units+=r.qty});const prods=Object.values(pm).sort((a,b)=>b.value-a.value).slice(0,5);
   const br=group(selRows,r=>r.branch||'Unspecified').slice(0,5);
   $('xDetail').innerHTML=selRows.length?`<h4>${esc(title)}</h4>
    <div class="xk"><div><span>Revenue</span><b>${money(rv)}</b></div><div><span>Units</span><b>${num(un)}</b></div><div><span>Share</span><b>${pct(rv,totalAll)}</b><small>of all sales${ex.cat!=='All'?' · '+pct(rv,totalCat)+' of '+esc(ex.cat.toLowerCase()):''}</small></div></div>
-   <div class="xh">Top products</div><div class="xtop5">${prods.map(p=>`<div class="xp"><span title="${esc(p.name)}">${esc(p.name)}<em>${num(p.units)} units</em></span><b>${money(p.value)}</b></div>`).join('')}</div>
+   <div class="xh">Top products</div><div class="xtop5">${prods.map(p=>`<div class="xp"><span title="${esc(p.sku)} · ${esc(p.name)}">${esc(p.name)}<em><i class="xsku">${esc(p.sku)}</i> · ${num(p.units)} units</em></span><b>${money(p.value)}</b></div>`).join('')}</div>
    <div class="xh">By branch</div><div class="bars" id="xBranch"></div>`:'<div class="xempty">No sales to show.</div>';
   if($('xBranch'))bars('xBranch',br);
 }
