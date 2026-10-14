@@ -5,46 +5,53 @@ const { PROJECTS, validSession, readCookie } = require('./_projects');
 
 const PRIVATE_DIR = path.join(process.cwd(), 'private');
 
-const LOGOUT_SNIPPET = '<script>(function(){' +
-  "var b=document.createElement('button');" +
-  "b.type='button';b.id='logoutBtn';b.className='secondary';b.textContent='Log out';" +
-  "b.addEventListener('click',function(){" +
-  "b.disabled=true;b.textContent='Logging out\\u2026';" +
-  "fetch('/api/logout',{method:'POST',credentials:'same-origin'}).then(function(r){" +
-  "if(r.ok){location.replace('/login.html');}else{throw new Error('logout failed');}" +
-  "}).catch(function(){b.disabled=false;b.textContent='Log out';});" +
-  '});' +
-  "var bar=document.querySelector('.top-actions');" +
-  'if(bar){bar.appendChild(b);}' +
-  "else{b.style.cssText='position:fixed;top:12px;right:12px;z-index:9999';document.body.appendChild(b);}" +
-  '})();</script>';
+// ---- shared page chrome: theme (light/dark) + Switch project + Log out ----
+const THEME_HEAD = '<style id="pandora-theme-css">' +
+  ':root[data-theme="light"]{color-scheme:light}:root[data-theme="dark"]{color-scheme:dark}' +
+  '.pandora-fab{position:fixed;top:12px;right:12px;z-index:9999;border:1px solid rgba(128,128,128,.4);' +
+  'background:rgba(255,255,255,.9);color:#282522;border-radius:10px;padding:8px 14px;font:600 13px system-ui,sans-serif;cursor:pointer}' +
+  ':root[data-theme="dark"] .pandora-fab{background:rgba(33,31,29,.92);color:#f7f2ed}' +
+  '@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pandora-fab{background:rgba(33,31,29,.92);color:#f7f2ed}}' +
+  '</style><script>(function(){try{var t=localStorage.getItem("pandora-theme");' +
+  'if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>';
 
-const STAFF_LOGOUT_SNIPPET = '<script>(function(){' +
-  "var bar=document.querySelector('.actions');if(!bar)return;" +
-  "var a=document.createElement('a');a.href='/login.html';a.className='btn';a.textContent='Switch project';a.style.textDecoration='none';" +
-  "var b=document.createElement('button');b.type='button';b.className='btn';b.textContent='Log out';" +
-  "b.addEventListener('click',function(){b.disabled=true;" +
-  "try{localStorage.removeItem('storeStaffSummary.v1')}catch(e){}" +
-  "fetch('/api/logout?project=staff',{method:'POST',credentials:'same-origin'}).then(function(r){" +
-  "if(r.ok){location.replace('/login.html?project=staff');}else{throw new Error('x');}" +
-  "}).catch(function(){b.disabled=false;});});" +
-  "bar.appendChild(a);bar.appendChild(b);" +
+// kind: 'dashboards' | 'staff' | 'login'
+function chromeScript(kind) {
+  return '<script>(function(){' +
+  'var kind=' + JSON.stringify(kind) + ';' +
+  'var bar=document.querySelector(".top-actions")||document.querySelector(".actions");' +
+  'var cls=document.querySelector(".top-actions")?"secondary":(document.querySelector(".actions")?"btn":"pandora-fab");' +
+  'function mk(text){var b=document.createElement("button");b.type="button";b.className=(bar?cls:"pandora-fab")+" hideclean";b.textContent=text;' +
+  'if(!bar){b.style.cssText="";}return b}' +
+  'function place(el){if(bar)bar.appendChild(el);else{document.body.appendChild(el);}}' +
+  'function cur(){return document.documentElement.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")}' +
+  'var t=mk("");function label(){t.textContent=cur()==="dark"?"Light mode":"Dark mode"}label();' +
+  't.id="themeBtn";t.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";' +
+  'document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("pandora-theme",n)}catch(e){}label()});' +
+  'if(kind!=="login"){' +
+  'var sw=mk("Switch project");sw.addEventListener("click",function(){location.href="/login.html"});place(sw);' +
+  '}' +
+  'place(t);' +
+  'if(kind!=="login"){' +
+  'var lo=mk("Log out");lo.addEventListener("click",function(){lo.disabled=true;lo.textContent="Logging out\\u2026";' +
+  'if(kind==="staff"){try{localStorage.removeItem("storeStaffSummary.v1")}catch(e){}}' +
+  'fetch("/api/logout"+(kind==="staff"?"?project=staff":""),{method:"POST",credentials:"same-origin"}).then(function(r){' +
+  'if(r.ok){location.replace("/login.html"+(kind==="staff"?"?project=staff":""));}else{throw new Error("x");}' +
+  '}).catch(function(){lo.disabled=false;lo.textContent="Log out";});});place(lo);' +
+  '}' +
   '})();</script>';
-
-function inject(snippet) {
-  return function (buf) {
-    const html = buf.toString('utf8');
-    const i = html.lastIndexOf('</body>');
-    const at = i === -1 ? html.length : i;
-    return Buffer.from(html.slice(0, at) + snippet + html.slice(at), 'utf8');
-  };
 }
 
-function addLogoutButton(buf) {
-  const html = buf.toString('utf8');
-  const i = html.lastIndexOf('</body>');
-  if (i === -1) return buf;
-  return Buffer.from(html.slice(0, i) + LOGOUT_SNIPPET + html.slice(i), 'utf8');
+function withChrome(kind) {
+  return function (buf) {
+    let html = buf.toString('utf8');
+    const h = html.search(/<\/head>/i);
+    if (h !== -1) html = html.slice(0, h) + THEME_HEAD + html.slice(h);
+    const i = html.lastIndexOf('</body>');
+    const at = i === -1 ? html.length : i;
+    html = html.slice(0, at) + chromeScript(kind) + html.slice(at);
+    return Buffer.from(html, 'utf8');
+  };
 }
 
 function sendFile(res, filename, contentType, transform) {
@@ -73,7 +80,7 @@ module.exports = function handler(req, res) {
     : url.pathname;
 
   if (requestedPath === '/login.html') {
-    return sendFile(res, 'login.html', 'text/html; charset=utf-8');
+    return sendFile(res, 'login.html', 'text/html; charset=utf-8', withChrome('login'));
   }
 
   if (requestedPath === '/pandora-logo.png') {
@@ -94,7 +101,7 @@ module.exports = function handler(req, res) {
       res.setHeader('Location', '/login.html?project=staff');
       return res.status(302).end();
     }
-    return sendFile(res, 'staff.html', 'text/html; charset=utf-8', inject(STAFF_LOGOUT_SNIPPET));
+    return sendFile(res, 'staff.html', 'text/html; charset=utf-8', withChrome('staff'));
   }
 
   // Pandora Dashboards project (original login and cookie)
@@ -106,7 +113,7 @@ module.exports = function handler(req, res) {
   }
 
   if (requestedPath === '/' || requestedPath === '/index.html') {
-    return sendFile(res, 'index.html', 'text/html; charset=utf-8', addLogoutButton);
+    return sendFile(res, 'index.html', 'text/html; charset=utf-8', withChrome('dashboards'));
   }
 
   res.setHeader('Cache-Control', 'no-store');
