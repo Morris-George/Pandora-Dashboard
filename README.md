@@ -24,3 +24,17 @@ This version is for a **plain static HTML/CSS/JavaScript repository**, not Next.
 - Vercel's rewrite sends requests through the function. If you later add files/assets to the dashboard, update `api/site.js` to serve each required asset deliberately and only after authentication. Do not put sensitive files in a public directory.
 - This starter does not implement account recovery, logout, persistent account storage, or distributed rate limiting. Add Vercel Firewall/rate limiting to `/api/login` where available, and use a long unique password. For stronger production-grade identity and brute-force protection, use a dedicated authentication provider or Vercel Deployment Protection.
 - The supplied Excel source files are not included or modified.
+
+
+## Two projects, two logins
+
+The login page (`/login.html`) has two buttons: **Pandora Dashboards** (`/`) and **Staff Performance** (`/staff`). Each project has its own username, password and session cookie, and one login never opens the other.
+
+Vercel environment variables (Production):
+
+| Project | Username | Password |
+|---|---|---|
+| Pandora Dashboards | `PANDORA_USERNAME` | `PANDORA_PASSWORD` |
+| Staff Performance | `STAFF_USERNAME` | `STAFF_PASSWORD` |
+
+`PANDORA_AUTH_SECRET` is shared (the staff cookie is signed with a derived key). Redeploy after changing any variable. The Staff Performance page is `private/staff.html`; it keeps the loaded sales file only in the user's own browser and clears it on logout. Do not commit sales files to this repo.
