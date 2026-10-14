@@ -32,8 +32,9 @@ function sendFile(res, filename, contentType) {
   } catch (_) { return res.status(500).send('Site file unavailable.'); }
 }
 module.exports = function handler(req, res) {
-  const url = new URL(req.url, 'https://vercel.invalid');
-  const pathname = url.pathname;
+const pathname = url.searchParams.has('path')
+  ? '/' + (url.searchParams.get('path') || '').replace(/^\/+/, '')
+  : url.pathname;
   // Only these two resources are intentionally available before login.
   if (pathname === '/login.html') return sendFile(res, 'login.html', 'text/html; charset=utf-8');
   if (pathname === '/pandora-logo.png') return sendFile(res, 'pandora-logo.png', 'image/png');
