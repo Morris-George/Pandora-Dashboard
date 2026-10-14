@@ -38,11 +38,33 @@ function validSession(token, expectedUser, secret) {
   }
 }
 
-function sendFile(res, filename, contentType) {
+const LOGOUT_SNIPPET = '<script>(function(){' +
+  "var b=document.createElement('button');" +
+  "b.type='button';b.id='logoutBtn';b.className='secondary';b.textContent='Log out';" +
+  "b.addEventListener('click',function(){" +
+  "b.disabled=true;b.textContent='Logging out\\u2026';" +
+  "fetch('/api/logout',{method:'POST',credentials:'same-origin'}).then(function(r){" +
+  "if(r.ok){location.replace('/login.html');}else{throw new Error('logout failed');}" +
+  "}).catch(function(){b.disabled=false;b.textContent='Log out';});" +
+  '});' +
+  "var bar=document.querySelector('.top-actions');" +
+  'if(bar){bar.appendChild(b);}' +
+  "else{b.style.cssText='position:fixed;top:12px;right:12px;z-index:9999';document.body.appendChild(b);}" +
+  '})();</script>';
+
+function addLogoutButton(buf) {
+  const html = buf.toString('utf8');
+  const i = html.lastIndexOf('</body>');
+  if (i === -1) return buf;
+  return Buffer.from(html.slice(0, i) + LOGOUT_SNIPPET + html.slice(i), 'utf8');
+}
+
+function sendFile(res, filename, contentType, transform) {
   try {
-    const content = fs.readFileSync(
+    let content = fs.readFileSync(
       path.join(PRIVATE_DIR, filename)
     );
+    if (transform) content = transform(content);
 
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'no-store');
@@ -92,7 +114,7 @@ module.exports = function handler(req, res) {
   }
 
   if (requestedPath === '/' || requestedPath === '/index.html') {
-    return sendFile(res, 'index.html', 'text/html; charset=utf-8');
+    return sendFile(res, 'index.html', 'text/html; charset=utf-8', addLogoutButton);
   }
 
   res.setHeader('Cache-Control', 'no-store');
