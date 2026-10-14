@@ -29,7 +29,7 @@ function chromeScript(kind) {
   't.id="themeBtn";t.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";' +
   'document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("pandora-theme",n)}catch(e){}label()});' +
   'if(kind!=="login"){' +
-  'var sw=mk("Switch project");sw.addEventListener("click",function(){location.href="/login.html"});place(sw);' +
+  'var sw=mk("Switch project");sw.addEventListener("click",function(){sw.disabled=true;sw.textContent="Switching\u2026";if(kind==="staff"){try{localStorage.removeItem("storeStaffSummary.v1")}catch(e){}}fetch("/api/logout"+(kind==="staff"?"?project=staff":""),{method:"POST",credentials:"same-origin"}).finally(function(){location.replace("/login.html")});});place(sw);' +
   '}' +
   'place(t);' +
   'if(kind!=="login"){' +
