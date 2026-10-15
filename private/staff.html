@@ -113,7 +113,7 @@ body.clean .controls, body.clean .drop, body.clean header.top .actions .hideclea
 body.clean .exit{display:block}
 @media (max-width:620px){.brow{grid-template-columns:90px 1fr 92px}}
 @media (prefers-reduced-motion:no-preference){.brow .fill{transition:width .3s ease}}
-</style>
+.pagefoot{margin-top:22px;padding-top:14px;border-top:1px solid var(--line,#e9e2dc);display:grid;gap:4px;font-size:12px}.pagefoot .sub{margin:0}.pagefoot:not(:has(.sub:not(:empty))){display:none}</style>
 </head>
 <body>
 
@@ -121,8 +121,6 @@ body.clean .exit{display:block}
   <header class="top">
     <div class="brand">
       <h1>Staff Performance</h1>
-      <div class="sub" id="source"></div>
-      <div class="sub" id="roleNote"></div>
     </div>
     <div class="actions">
       <button class="btn primary" id="loadBtn" type="button">Load new query</button>
@@ -142,6 +140,7 @@ body.clean .exit{display:block}
 
   <button class="btn exit" id="exitClean" type="button">Exit screenshot view</button>
   <main id="out" style="display:flex;flex-direction:column;gap:16px;width:100%"></main>
+  <footer class="pagefoot"><div class="sub" id="source"></div><div class="sub" id="roleNote"></div></footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
