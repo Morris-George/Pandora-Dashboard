@@ -94,6 +94,10 @@ tr.sub td{font-weight:800;border-bottom:2px solid var(--line)}
 tr.grand td{font-weight:800;background:var(--fill-soft);border-bottom:0}
 td.rank{width:34px;color:var(--ink2);font-weight:700;text-align:left}
 .pname{font-weight:600}
+a.pname{color:inherit;text-decoration:none}
+a.pname:hover{color:var(--accent);text-decoration:underline}
+a.pname::after{content:' \203A';color:var(--accent);font-weight:800}
+tr.person[data-href]{cursor:pointer}
 .pill{display:inline-block;margin-left:8px;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--accent);color:#fff;vertical-align:1px}
 :root[data-theme="dark"] .pill{color:#2A1018}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pill{color:#2A1018}}
@@ -158,8 +162,8 @@ const nf2=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFraction
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=(id,v)=>id==='upt'?nf2.format(v):nf0.format(v);
 
-function safeGet(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
-function safeSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function safeGet(k){for(const n of ['localStorage','sessionStorage']){try{const v=JSON.parse(window[n].getItem(k));if(v)return v}catch(e){}}return null}
+function safeSet(k,v){const j=JSON.stringify(v);try{localStorage.setItem(k,j);try{sessionStorage.removeItem(k)}catch(e){}}catch(e){try{sessionStorage.setItem(k,j)}catch(e2){}}}
 
 function setData(d){
   st.data=d; document.querySelector('.controls').hidden=false;
@@ -214,6 +218,7 @@ function kpis(t,label){
    <div class="kpi"><div class="k">UPT</div><div class="v num">${nf2.format(t.upt)}</div></div>
    <div class="kpi"><div class="k">ATV</div><div class="v num">${nf0.format(t.atv)}</div></div></div>`;
 }
+const pUrl=(store,name)=>'/staff/person?store='+encodeURIComponent(store)+'&name='+encodeURIComponent(name);
 function head(m){
   const cols=[['inv','# Invoices'],['qty','Total Qty'],['amt','Before VAT'],['incl','Incl. VAT'],['upt','UPT'],['atv','ATV']];
   return cols.map(c=>`<th class="${c[0]===m?'sortcol':''}">${c[1]}</th>`).join('');
@@ -247,12 +252,12 @@ function render(){
       if(!people.length) return;
       people.forEach(p=>{hits++;hit.inv+=p.inv;hit.qty+=p.qty;hit.amt+=p.amt});
       body+=`<tr class="storehead"><td colspan="8">${esc(s.name)}</td></tr>`;
-      people.forEach(p=>body+=`<tr class="person"><td class="l" colspan="2"><span class="pname">${esc(p.name)}</span></td>${cells(p,st.metric,maxP)}</tr>`);
+      people.forEach(p=>body+=`<tr class="person" data-href="${esc(pUrl(s.name,p.name))}"><td class="l" colspan="2"><a class="pname" href="${esc(pUrl(s.name,p.name))}">${esc(p.name)}</a></td>${cells(p,st.metric,maxP)}</tr>`);
       body+=`<tr class="sub"><td class="l" colspan="2">${esc(s.name)} total</td>${cells(s.tot,'',0)}</tr>`;
     });
     const mt=q?{...hit,incl:hit.amt*VAT,upt:hit.inv?hit.qty/hit.inv:0,atv:hit.inv?hit.amt*VAT/hit.inv:0}:grand;
     if(q) html+=`<section class="card"><div class="cardhead"><h2>Search results for “${esc(st.q.trim())}”</h2><span class="meta">${hits} sales ${hits===1?'person':'people'} · ${esc(period)}</span></div>${hits?kpis(mt,'Matches'):''}</section>`;
-    html+=`<section class="card"><div class="cardhead"><h2>${q?'Matching staff':'Staff performance'}</h2><span class="meta">Bars follow “${m.label}”</span></div>
+    html+=`<section class="card"><div class="cardhead"><h2>${q?'Matching staff':'Staff performance'}</h2><span class="meta">Bars follow “${m.label}” · select a name for their dashboard</span></div>
       <div class="tablewrap"><table><thead><tr><th colspan="2">Store / Sales person</th>${head(st.metric)}</tr></thead><tbody>${body||'<tr><td colspan="8" class="empty">No sales person or store matches “'+esc(st.q.trim())+'”.</td></tr>'}
       ${hits||!q?`<tr class="grand"><td class="l" colspan="2">${q?'Matches total':'Grand total'}</td>${cells(mt,'',0)}</tr>`:''}</tbody></table></div></section>`;
   } else {
@@ -262,7 +267,7 @@ function render(){
       const all=sortP(s.people), people=all.filter(p=>!q||p.name.toLowerCase().includes(q)), max=Math.max(...all.map(mf),0);
       const rankOf=new Map(all.map((p,i)=>[p.name,i+1]));
       const rows=people.map(p=>{const r=rankOf.get(p.name);
-        return `<tr class="person"><td class="rank num">${r}</td><td class="l"><span class="pname">${esc(p.name)}</span>${r===1?'<span class="pill">Top seller</span>':''}</td>${cells(p,st.metric,max)}<td class="num share">${s.tot.amt?nf0.format(p.amt/s.tot.amt*100):0}%</td></tr>`}).join('');
+        return `<tr class="person" data-href="${esc(pUrl(s.name,p.name))}"><td class="rank num">${r}</td><td class="l"><a class="pname" href="${esc(pUrl(s.name,p.name))}">${esc(p.name)}</a>${r===1?'<span class="pill">Top seller</span>':''}</td>${cells(p,st.metric,max)}<td class="num share">${s.tot.amt?nf0.format(p.amt/s.tot.amt*100):0}%</td></tr>`}).join('');
       html+=`<section class="card"><div class="cardhead"><h2>${esc(s.name)}</h2><span class="meta">${esc(period)} · ${q?people.length+' of ':''}${s.people.length} sales people</span></div>
         ${kpis(s.tot,'Store total')}
         <div class="tablewrap"><table><thead><tr><th>#</th><th class="l">Sales person</th>${head(st.metric)}<th>Share</th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="empty">No sales person matches that search.</td></tr>'}
@@ -288,7 +293,7 @@ async function loadFile(file){
     const need=['Sales Invoice','Item Group','Sales Person','Contribution Qty','Contribution Amount','Parent Sales Person'];
     const miss=need.filter(c=>!rows.length||!(c in rows[0]));
     if(miss.length) throw new Error('This file is missing the column'+(miss.length>1?'s':'')+': '+miss.join(', ')+'. Use the Query Report export.');
-    const stores=[],people=[],groups=[],invs=[],sI=new Map(),pI=new Map(),gI=new Map(),iI=new Map(),out=[];
+    const stores=[],people=[],groups=[],invs=[],items=[],sI=new Map(),pI=new Map(),gI=new Map(),iI=new Map(),tI=new Map(),out=[];
     const idx=(m,arr,k)=>{if(!m.has(k)){m.set(k,arr.length);arr.push(k)}return m.get(k)};
     let dmin=null,dmax=null;
     for(const r of rows){
@@ -297,11 +302,14 @@ async function loadFile(file){
       const pk=si+'|'+String(pn).trim();
       if(!pI.has(pk)){pI.set(pk,people.length);people.push([String(pn).trim(),si])}
       const dt=parseDate(r['Posting Date']); if(dt){if(!dmin||dt<dmin)dmin=dt;if(!dmax||dt>dmax)dmax=dt}
+      const day=dt?Math.round(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate())/86400000):null;
+      const icode=String(r['Item Code']||'').trim(), iname=String(r['Item Name']||r['Item']||'').trim();
+      let ti=null; if(icode||iname){const tk=icode+'|'+iname; if(!tI.has(tk)){tI.set(tk,items.length);items.push([iname,icode])} ti=tI.get(tk)}
       out.push([pI.get(pk),idx(gI,groups,String(r['Item Group']||'').trim()),idx(iI,invs,r['Sales Invoice']),
-        Number(r['Contribution Qty'])||0,Math.round((Number(r['Contribution Amount'])||0)*1000)/1000]);
+        Number(r['Contribution Qty'])||0,Math.round((Number(r['Contribution Amount'])||0)*1000)/1000,day,ti]);
     }
     if(!out.length) throw new Error('No sales rows found in that file.');
-    const d={file:file.name.replace(/\.[^.]+$/,'').slice(0,70),period:fmtPeriod(dmin,dmax),stores,people,groups,rows:out};
+    const d={file:file.name.replace(/\.[^.]+$/,'').slice(0,70),period:fmtPeriod(dmin,dmax),stores,people,groups,items,rows:out};
     safeSet(KEY,d); setData(d); $('dropStatus').textContent='Loaded '+nf0.format(out.length)+' rows';
   }catch(e){showErr(e.message||'Could not read that file.');$('dropStatus').textContent=''}
 }
@@ -314,6 +322,8 @@ const dz=$('drop');
 ['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over')}));
 document.addEventListener('drop',e=>{const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)loadFile(f)});
 document.addEventListener('click',e=>{
+  const row=e.target.closest('tr.person[data-href]');
+  if(row&&!e.target.closest('a')&&!getSelection().toString()){location.href=row.dataset.href;return}
   const c=e.target.closest('[data-store]'),m=e.target.closest('[data-metric]'),p=e.target.closest('[data-pick]');
   if(c){st.store=c.dataset.store;render()}
   else if(m){st.metric=m.dataset.metric;render()}

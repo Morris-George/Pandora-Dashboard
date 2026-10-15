@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Sales Person</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: header + hero, coaching cards, then chart cards in a two-column grid. One brand hue (pink) with a muted rose-gray for everything that is not the point. */
+:root{
+  --bg:#FBF6F7; --surface:#FFFFFF; --ink:#2A1F24; --ink2:#6B5A61; --line:#EADCDF;
+  --accent:#C93A53; --fill:#FF93A0; --fill-soft:#FFE4E8; --hover:#FFF1F3; --mute:#D9C8CD;
+  --good:#1F7A4D; --bad:#B3261E;
+  --s1:#F7A0AD; --s2:#E8697C; --s3:#C93A53; --s4:#8E1F38;
+  --font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#171013; --surface:#241A1E; --ink:#F6EBEE; --ink2:#B9A5AC; --line:#3A2A30;
+  --accent:#FF8A9A; --fill:#E8697C; --fill-soft:#3A2229; --hover:#2D2025; --mute:#5A4650;
+  --good:#5CC48E; --bad:#FF8A80;
+  --s1:#7A3A48; --s2:#B5566A; --s3:#E8697C; --s4:#FFA3B0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#171013; --surface:#241A1E; --ink:#F6EBEE; --ink2:#B9A5AC; --line:#3A2A30;
+  --accent:#FF8A9A; --fill:#E8697C; --fill-soft:#3A2229; --hover:#2D2025; --mute:#5A4650;
+  --good:#5CC48E; --bad:#FF8A80;
+  --s1:#7A3A48; --s2:#B5566A; --s3:#E8697C; --s4:#FFA3B0; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;
+  padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));padding-block:20px 56px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.num{font-variant-numeric:tabular-nums}
+button,select,input{font:inherit;color:inherit}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-start;justify-content:space-between}
+.crumb{color:var(--ink2);font-size:12.5px;font-weight:600;text-decoration:none;display:inline-block;margin-bottom:4px}
+.crumb:hover{color:var(--accent)}
+.brand h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+.brand .sub{color:var(--ink2);font-size:12.5px;margin-top:2px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
+.btn:hover{background:var(--hover)}
+.btn[aria-disabled="true"]{opacity:.4;pointer-events:none}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;min-width:0}
+.cardhead{display:flex;flex-wrap:wrap;gap:4px 16px;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+.cardhead h2{margin:0;font-size:18px;font-weight:800;letter-spacing:-.02em}
+.cardhead .meta{color:var(--ink2);font-size:12.5px}
+.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);font-weight:700}
+.hint{color:var(--ink2);font-size:12px;margin-top:10px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,2fr);gap:18px;align-items:stretch}
+@media (max-width:820px){.hero{grid-template-columns:1fr}}
+.heroleft{background:var(--fill-soft);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:6px;justify-content:center}
+.heroleft .big{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1.05;overflow-wrap:anywhere}
+.heroleft .big small{font-size:16px;font-weight:700;color:var(--ink2);margin-left:4px}
+.ranks{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.pill{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:var(--accent);color:#fff}
+:root[data-theme="dark"] .pill{color:#2A1018}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pill{color:#2A1018}}
+.pill.soft{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+:root[data-theme="dark"] .pill.soft{color:var(--ink)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pill.soft{color:var(--ink)}}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{padding:10px 12px;border-radius:12px;background:var(--bg);min-width:0;display:flex;flex-direction:column;gap:2px}
+.kpi .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);font-weight:700}
+.kpi .v{font-size:22px;font-weight:800;letter-spacing:-.02em;overflow-wrap:anywhere}
+.delta{font-size:12px;font-weight:700;display:flex;gap:4px;align-items:center;color:var(--ink2)}
+.delta.up{color:var(--good)} .delta.down{color:var(--bad)}
+.delta svg{width:10px;height:10px;flex:none}
+
+/* coaching */
+.coach{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+.tip{border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px;background:var(--surface)}
+.tip .tag{display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:800;color:var(--ink2)}
+.tip .ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:var(--fill-soft);color:var(--accent)}
+.tip.win .ic{background:var(--good);color:#fff}
+:root[data-theme="dark"] .tip.win .ic{color:#10261b}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tip.win .ic{color:#10261b}}
+.tip h3{margin:0;font-size:15px;font-weight:800;letter-spacing:-.01em}
+.tip p{margin:0;color:var(--ink2);font-size:13px}
+.tip .est{margin-top:auto;padding-top:6px;font-weight:800;color:var(--accent);font-size:13px}
+.tip .est small{display:block;color:var(--ink2);font-weight:500;font-size:11.5px}
+
+/* bars */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 12px;cursor:pointer;font-weight:600;font-size:12.5px}
+.chip:hover{background:var(--hover)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .chip[aria-pressed="true"]{color:#2A1018}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chip[aria-pressed="true"]{color:#2A1018}}
+.bars{display:flex;flex-direction:column;gap:2px}
+.brow{display:grid;grid-template-columns:minmax(90px,170px) 1fr 104px;gap:10px;align-items:center;padding:5px 6px;border-radius:8px;text-decoration:none;color:inherit}
+.brow:hover,.brow:focus-visible{background:var(--hover)}
+.brow .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow .track{height:14px;position:relative}
+.brow .fill{display:block;height:100%;background:var(--mute);border-radius:0 5px 5px 0;min-width:2px}
+.brow.top .fill,.brow.me .fill{background:var(--accent)}
+.brow .val{text-align:right;font-weight:700}
+.brow .val small{display:block;font-weight:500;color:var(--ink2);font-size:11px;margin-top:-2px}
+.brow.me .n{color:var(--accent);font-weight:800}
+.bullet .track{background:color-mix(in srgb,var(--mute) 35%,transparent);border-radius:0 5px 5px 0}
+.bullet .fill{background:var(--accent)}
+.bullet .mark{position:absolute;top:-3px;bottom:-3px;width:3px;margin-left:-1.5px;background:var(--ink);border-radius:2px}
+.bullet .gap{color:var(--bad);font-weight:700}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--ink2);font-size:12px;margin-bottom:10px;align-items:center}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-2px}
+.legend i.tick{width:3px;height:14px;border-radius:2px;background:var(--ink);vertical-align:-3px}
+
+.stack{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--line)}
+.stack span{display:block;height:100%;border-left:2px solid var(--surface)}
+.stack span:first-child{border-left:0}
+.srow{display:grid;grid-template-columns:70px 1fr 110px;gap:10px;align-items:center;padding:6px}
+.srow .n{font-weight:700}
+.srow .val{text-align:right;font-weight:700}
+.srow .val small{display:block;font-weight:500;color:var(--ink2);font-size:11px}
+
+svg.chart{width:100%;height:auto;display:block;overflow:visible}
+svg.chart text{font-family:var(--font);fill:var(--ink2);font-size:11px}
+svg.chart .grid{stroke:var(--line);stroke-width:1}
+svg.chart .col{fill:var(--mute)}
+svg.chart .col.peak{fill:var(--accent)}
+svg.chart text.avglbl{paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round;font-weight:700}
+svg.chart .avg{stroke:var(--ink2);stroke-width:1.5;stroke-dasharray:4 4}
+svg.chart g.hit:hover .col,svg.chart g.hit:focus .col{fill:var(--fill)}
+svg.chart g.hit:hover .col.peak{fill:var(--accent)}
+svg.chart g.hit{outline:none}
+
+table{border-collapse:collapse;width:100%;min-width:560px}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);font-weight:700;text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child{text-align:left}
+td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+td:first-child{text-align:left}
+.tablewrap{overflow-x:auto}
+details.tbl{margin-top:12px}
+details.tbl summary{cursor:pointer;color:var(--ink2);font-weight:600}
+.empty{padding:28px;text-align:center;color:var(--ink2)}
+.note{border:1px dashed var(--line);border-radius:12px;padding:12px 14px;color:var(--ink2);background:var(--surface)}
+.note b{color:var(--ink)}
+
+#tip{position:fixed;z-index:10000;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;max-width:260px;opacity:0;transition:opacity .1s;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+#tip.on{opacity:1}
+
+body.clean .nav, body.clean .hideclean, body.clean .hint, body.clean details.tbl, body.clean .chips.sw{display:none}
+.exit{display:none;position:fixed;right:max(12px,env(safe-area-inset-right,0px));top:calc(10px + env(safe-area-inset-top,0px));z-index:5;opacity:.55}
+body.clean .exit{display:block}
+@media (max-width:620px){.brow{grid-template-columns:96px 1fr 88px}.heroleft .big{font-size:32px}}
+@media (prefers-reduced-motion:no-preference){.brow .fill{transition:width .3s ease}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header class="top">
+    <div class="brand">
+      <a class="crumb nav" href="/staff">&larr; Staff Performance</a>
+      <h1 id="pname">Sales person</h1>
+      <div class="sub" id="psub"></div>
+    </div>
+    <div class="actions">
+      <a class="btn hideclean" id="prev" href="#" aria-label="Previous sales person in this store">&larr; Prev</a>
+      <a class="btn hideclean" id="next" href="#" aria-label="Next sales person in this store">Next &rarr;</a>
+      <button class="btn hideclean" id="cleanBtn" type="button">Screenshot view</button>
+    </div>
+  </header>
+  <button class="btn exit" id="exitClean" type="button">Exit screenshot view</button>
+  <main id="out" style="display:flex;flex-direction:column;gap:16px;width:100%"></main>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const VAT=1.14, KEY='storeStaffSummary.v1', EXKEY='storeStaffSummary.ex.v1';
+const DEFAULT_EX=/packaging|services|jewellery boxes/i;
+const $=id=>document.getElementById(id);
+const nf0=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
+const nf1=new Intl.NumberFormat('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
+const nf2=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pct=v=>nf0.format(v*100)+'%';
+const short=v=>Math.abs(v)>=1e6?nf1.format(v/1e6)+'M':Math.abs(v)>=1e3?nf1.format(v/1e3).replace('.0','')+'k':nf0.format(v);
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], WDFULL=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const WEEK_ORDER=[6,0,1,2,3,4,5]; // Saturday first
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function safeGet(k){for(const name of ['localStorage','sessionStorage']){try{const v=JSON.parse(window[name].getItem(k));if(v)return v}catch(e){}}return null}
+const dayDate=n=>new Date(n*86400000); // UTC based
+const dayLabel=n=>{const d=dayDate(n);return d.getUTCDate()+' '+MON[d.getUTCMonth()]};
+const personUrl=(store,name)=>'/staff/person?store='+encodeURIComponent(store)+'&name='+encodeURIComponent(name);
+
+/* ---------- data ---------- */
+function prep(d){
+  const saved=safeGet(EXKEY)||{ex:[],known:[]};
+  const exIdx=new Set(); let exCount=0;
+  d.groups.forEach((g,i)=>{const known=saved.known.includes(g); if(known?saved.ex.includes(g):DEFAULT_EX.test(g)){exIdx.add(i);exCount++}});
+  const P=d.people.map(()=>({inv:new Map(),g:new Map(),day:new Map(),item:new Map(),qty:0,amt:0}));
+  let dmin=null,dmax=null,hasDate=false,hasItem=false;
+  for(const r of d.rows){
+    if(r[5]!=null){hasDate=true; if(dmin===null||r[5]<dmin)dmin=r[5]; if(dmax===null||r[5]>dmax)dmax=r[5]}
+    if(exIdx.has(r[1])) continue;
+    const p=P[r[0]];
+    let iv=p.inv.get(r[2]); if(!iv){iv={q:0,a:0};p.inv.set(r[2],iv)} iv.q+=r[3]; iv.a+=r[4];
+    p.qty+=r[3]; p.amt+=r[4];
+    let g=p.g.get(r[1]); if(!g){g={q:0,a:0,inv:new Set()};p.g.set(r[1],g)} g.q+=r[3]; g.a+=r[4]; g.inv.add(r[2]);
+    if(r[5]!=null){let x=p.day.get(r[5]); if(!x){x={a:0,inv:new Set()};p.day.set(r[5],x)} x.a+=r[4]; x.inv.add(r[2])}
+    if(r[6]!=null){hasItem=true; let x=p.item.get(r[6]); if(!x){x={q:0,a:0};p.item.set(r[6],x)} x.q+=r[3]; x.a+=r[4]}
+  }
+  return{P,exIdx,exCount,hasDate,hasItem,dmin,dmax};
+}
+function pool(P,S){
+  let inv=0,qty=0,amt=0,n=0; const pen=new Map(),gamt=new Map(),b=[0,0,0,0];
+  for(const i of S){const p=P[i]; if(!p.inv.size) continue; n++; inv+=p.inv.size; qty+=p.qty; amt+=p.amt;
+    for(const [g,v] of p.g){pen.set(g,(pen.get(g)||0)+v.inv.size); gamt.set(g,(gamt.get(g)||0)+v.a)}
+    for(const v of p.inv.values()){const q=v.q; if(q>0) b[q<=1?0:q<=2?1:q<=3?2:3]++}}
+  const incl=amt*VAT;
+  return{n,inv,qty,amt,incl,upt:inv?qty/inv:0,atv:inv?incl/inv:0,pen,gamt,b,bt:b[0]+b[1]+b[2]+b[3],avgIncl:n?incl/n:0,avgInv:n?inv/n:0,avgQty:n?qty/n:0};
+}
+
+/* ---------- small renderers ---------- */
+const arrow=up=>`<svg viewBox="0 0 10 10" aria-hidden="true"><path d="${up?'M5 1 9 8H1z':'M5 9 1 2h8z'}" fill="currentColor"/></svg>`;
+function delta(v,bench,label){
+  if(!bench||!isFinite(bench)) return '';
+  const r=(v-bench)/Math.abs(bench), flat=Math.abs(r)<0.005;
+  if(flat) return `<div class="delta">In line with ${label}</div>`;
+  return `<div class="delta ${r>0?'up':'down'}">${arrow(r>0)}${nf0.format(Math.abs(r)*100)}% ${r>0?'above':'below'} ${label}</div>`;
+}
+function bars(rows,opts){ // rows: {name,val,txt,sub,tip,top,me,href}
+  const max=Math.max(...rows.map(r=>r.val),0)||1;
+  return `<div class="bars">`+rows.map(r=>{
+    const tag=r.href?'a':'div', h=r.href?` href="${esc(r.href)}"`:'';
+    return `<${tag} class="brow${r.top?' top':''}${r.me?' me':''}"${h} data-tip="${esc(r.tip||'')}" tabindex="0">
+      <span class="n" title="${esc(r.name)}">${esc(r.name)}</span>
+      <span class="track"><span class="fill" style="width:${Math.max(0,r.val)/max*100}%"></span></span>
+      <span class="val num">${esc(r.txt)}${r.sub?`<small>${esc(r.sub)}</small>`:''}</span></${tag}>`}).join('')+`</div>`;
+}
+
+/* ---------- page ---------- */
+const q=new URLSearchParams(location.search);
+const wantStore=q.get('store')||'', wantName=q.get('name')||'';
+let VIEW={cat:'sales'}, CTX=null;
+
+function noData(msg){
+  $('pname').textContent='Sales person';
+  $('out').innerHTML=`<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">${esc(msg)}</h2>Open <a href="/staff" style="color:var(--accent);font-weight:700">Staff Performance</a>, load this month's query file, then click a sales person.</section>`;
+}
+
+function build(){
+  const d=safeGet(KEY);
+  if(!d||!d.rows||!d.people) return noData('No sales file is loaded in this browser');
+  const si=d.stores.indexOf(wantStore);
+  const pi=d.people.findIndex(p=>p[0]===wantName&&d.stores[p[1]]===wantStore);
+  if(si<0||pi<0) return noData('That sales person was not found in the loaded file');
+  const X=prep(d), P=X.P;
+  const me=P[pi];
+  if(!me.inv.size) return noData('No sales for this person with the current item groups');
+  const storeIdx=d.people.map((p,i)=>i).filter(i=>d.people[i][1]===si);
+  const allIdx=d.people.map((p,i)=>i);
+  const M=pool(P,[pi]), S=pool(P,storeIdx), C=pool(P,allIdx);
+  const mates=storeIdx.filter(i=>P[i].inv.size).sort((a,b)=>P[b].amt-P[a].amt);
+  const coAll=allIdx.filter(i=>P[i].inv.size).sort((a,b)=>P[b].amt-P[a].amt);
+  const rankStore=mates.indexOf(pi)+1, rankCo=coAll.indexOf(pi)+1;
+  CTX={d,X,P,pi,si,M,S,C,mates,coAll,rankStore,rankCo};
+  document.title=wantName+' · Staff Performance';
+  $('pname').textContent=wantName;
+  $('psub').textContent=`${wantStore} · ${d.period||''}${X.exCount?` · ${X.exCount} item group${X.exCount>1?'s':''} left out, same as Staff Performance`:''}`;
+  // prev / next colleague
+  const k=mates.indexOf(pi), pv=mates[k-1], nx=mates[k+1];
+  const setNav=(id,idx)=>{const a=$(id); if(idx==null){a.setAttribute('aria-disabled','true');a.removeAttribute('href')}else{a.removeAttribute('aria-disabled');a.href=personUrl(wantStore,d.people[idx][0])}};
+  setNav('prev',pv); setNav('next',nx);
+  render();
+}
+
+function groupRows(){
+  const {d,P,pi,M,S}=CTX, me=P[pi];
+  return [...me.g.entries()].map(([g,v])=>({g,name:d.groups[g],a:v.a*VAT,q:v.q,share:me.amt?v.a/me.amt:0,
+    pen:v.inv.size/M.inv,storePen:S.inv?(S.pen.get(g)||0)/S.inv:0,invCount:v.inv.size}));
+}
+
+function coaching(G){
+  const {d,X,P,pi,M,S,C}=CTX, tips=[], hasPeers=S.n>1;
+  const top=[...G].sort((a,b)=>b.a-a.a)[0];
+  if(top) tips.push({cls:'win',ic:'★',tag:'Best seller',h:`${top.name} leads your sales`,
+    p:`${pct(top.share)} of your sales (${nf0.format(top.a)} EGP incl. VAT) and ${nf0.format(top.q)} pieces came from ${top.name}. Start conversations with it and keep it well stocked.`});
+  // cross-sell gap
+  if(hasPeers){
+    const gaps=G.concat([...S.pen.keys()].filter(g=>!P[pi].g.has(g)).map(g=>({g,name:d.groups[g],pen:0,storePen:S.inv?S.pen.get(g)/S.inv:0})))
+      .filter(x=>x.storePen>=0.05&&x.storePen-x.pen>=0.05).sort((a,b)=>(b.storePen-b.pen)-(a.storePen-a.pen));
+    if(gaps.length){const x=gaps[0], cnt=S.pen.get(x.g)||0, avg=cnt?(S.gamt.get(x.g)*VAT)/cnt:0, half=(x.storePen-x.pen)/2, est=half*M.inv*avg;
+      tips.push({cls:'',ic:'↗',tag:'Cross-sell gap',h:`Offer ${x.name} more often`,
+        p:`${x.name} is in ${pct(x.storePen)} of the store's invoices but only ${pct(x.pen)} of yours.`,
+        est:est>0?`≈ +${nf0.format(est)} EGP`:'',estNote:`if you close half the gap (${nf1.format(half*100)} points × your ${nf0.format(M.inv)} invoices × ${nf0.format(avg)} EGP average)`});}
+    else tips.push({cls:'win',ic:'✓',tag:'Cross-sell',h:'Matching the store on add-ons',p:'Every main category appears in your invoices about as often as it does across the store.'});
+  }
+  // basket size
+  if(hasPeers&&M.upt<S.upt){
+    const s1=M.bt?M.b[0]/M.bt:0, t1=S.bt?S.b[0]/S.bt:0, unit=M.qty?M.incl/M.qty:0, est=0.25*M.b[0]*unit;
+    tips.push({cls:'',ic:'＋',tag:'Basket size',h:`Pieces per invoice: ${nf2.format(M.upt)} vs ${nf2.format(S.upt)}`,
+      p:`${pct(s1)} of your invoices are single-piece, against ${pct(t1)} across the store. Suggest a matching second piece before closing the sale.`,
+      est:est>0?`≈ +${nf0.format(est)} EGP`:'',estNote:`if 1 in 4 of your ${nf0.format(M.b[0])} single-piece invoices gained one more piece at your average ${nf0.format(unit)} EGP`});
+  } else if(hasPeers){
+    tips.push({cls:'win',ic:'✓',tag:'Basket size',h:`Pieces per invoice: ${nf2.format(M.upt)}`,p:`You sell ${nf2.format(M.upt)} pieces per invoice, at or above the store's ${nf2.format(S.upt)}. Keep building the basket.`});
+  }
+  if(hasPeers&&M.atv<S.atv*0.97){
+    tips.push({cls:'',ic:'◔',tag:'Ticket value',h:`Average invoice ${nf0.format(M.atv)} vs ${nf0.format(S.atv)} EGP`,
+      p:`Your average invoice is ${nf0.format((1-M.atv/S.atv)*100)}% below the store. Showing one step-up option on each sale lifts ticket value without adding invoices.`});
+  } else if(hasPeers&&M.atv>=S.atv*1.03){
+    tips.push({cls:'win',ic:'✓',tag:'Ticket value',h:`Average invoice ${nf0.format(M.atv)} EGP`,p:`That is ${nf0.format((M.atv/S.atv-1)*100)}% above the store average of ${nf0.format(S.atv)} EGP.`});
+  }
+  // weekday
+  const wd=weekdayStats();
+  if(wd&&wd.activeDays>=7){
+    const best=wd.rows.filter(r=>r.n>0).sort((a,b)=>b.avg-a.avg)[0], overall=wd.overall;
+    if(best&&overall) tips.push({cls:'win',ic:'◷',tag:'Best day',h:`${WDFULL[best.wd]} is your strongest day`,p:`You average ${nf0.format(best.avg)} EGP on selling ${WDFULL[best.wd]}s, ${nf0.format((best.avg/overall-1)*100)}% above your usual ${nf0.format(overall)} EGP per selling day.`});
+  }
+  return tips;
+}
+
+function weekdayStats(){
+  const {X,P,pi}=CTX; if(!X.hasDate) return null;
+  const me=P[pi], acc=Array.from({length:7},()=>({a:0,n:0}));
+  let total=0,days=0;
+  for(const [dn,v] of me.day){const w=dayDate(dn).getUTCDay(); acc[w].a+=v.a*VAT; acc[w].n++; total+=v.a*VAT; days++}
+  return{rows:WEEK_ORDER.map(w=>({wd:w,n:acc[w].n,avg:acc[w].n?acc[w].a/acc[w].n:0,sum:acc[w].a})),overall:days?total/days:0,activeDays:days};
+}
+
+function dailyChart(){
+  const {X,P,pi}=CTX, me=P[pi];
+  const n=X.dmax-X.dmin+1; if(n<2||n>370) return '';
+  const vals=[]; let peak=-1,pv=0,sum=0,active=0;
+  for(let i=0;i<n;i++){const v=me.day.get(X.dmin+i); const a=v?v.a*VAT:0; vals.push({a,inv:v?v.inv.size:0}); if(a>pv){pv=a;peak=i} if(v){sum+=a;active++}}
+  const avg=active?sum/active:0, W=720,H=230,l=40,r=6,t=12,b=26, iw=W-l-r, ih=H-t-b, step=iw/n, bw=Math.max(2,step*0.72);
+  const nice=v=>{const p=Math.pow(10,Math.floor(Math.log10(v||1))),m=v/p;return(m<=1?1:m<=2?2:m<=5?5:10)*p};
+  const ymax=nice(Math.max(pv,avg)*1.05||1), Y=v=>t+ih-(v/ymax)*ih;
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily sales for ${esc(wantName)}">`;
+  [0,.5,1].forEach(f=>{const y=Y(ymax*f);s+=`<line class="grid" x1="${l}" x2="${W-r}" y1="${y}" y2="${y}"/><text x="${l-6}" y="${y+3.5}" text-anchor="end">${short(ymax*f)}</text>`});
+  const every=Math.ceil(n/8);
+  vals.forEach((v,i)=>{
+    const x=l+i*step+(step-bw)/2, h=v.a>0?Math.max(2,(v.a/ymax)*ih):0, dn=X.dmin+i;
+    const wdn=WD[dayDate(dn).getUTCDay()];
+    const tip=v.a>0?`${wdn} ${dayLabel(dn)} · ${nf0.format(v.a)} EGP · ${v.inv} invoice${v.inv===1?'':'s'}`:`${wdn} ${dayLabel(dn)} · no sales`;
+    s+=`<g class="hit" data-tip="${esc(tip)}" tabindex="0"><rect x="${l+i*step}" y="${t}" width="${step}" height="${ih}" fill="transparent"/>${h?`<rect class="col${i===peak?' peak':''}" x="${x}" y="${t+ih-h}" width="${bw}" height="${h}" rx="2"/>`:''}</g>`;
+    if(i%every===0) s+=`<text x="${x+bw/2}" y="${H-8}" text-anchor="middle">${dayLabel(dn)}</text>`;
+  });
+  if(avg>0) s+=`<line class="avg" x1="${l}" x2="${W-r}" y1="${Y(avg)}" y2="${Y(avg)}"/><text class="avglbl" x="${W-r}" y="${Y(avg)-5}" text-anchor="end">avg per selling day ${nf0.format(avg)}</text>`;
+  s+='</svg>';
+  return{svg:s,peak:peak>=0?{dn:X.dmin+peak,a:pv}:null,active,n,avg};
+}
+
+function render(){
+  const {d,X,P,pi,M,S,C,mates,rankStore,rankCo}=CTX, me=P[pi], hasPeers=S.n>1;
+  const G=groupRows().sort((a,b)=>b.a-a.a);
+  const topG=G[0];
+  let h='';
+
+  /* hero */
+  h+=`<section class="card hero">
+    <div class="heroleft"><div class="lbl">Total sales incl. VAT</div>
+      <div class="big num">${nf0.format(M.incl)}<small>EGP</small></div>
+      <div class="ranks"><span class="pill">#${rankStore} of ${mates.length} in ${esc(wantStore)}</span><span class="pill soft">#${rankCo} of ${CTX.coAll.length} overall</span></div>
+      <div style="color:var(--ink2);font-size:12.5px;margin-top:4px">${topG?`Sells most: <b style="color:var(--ink)">${esc(topG.name)}</b> (${pct(topG.share)} of sales)`:''}</div></div>
+    <div class="kpis">
+      <div class="kpi"><div class="k">Invoices</div><div class="v num">${nf0.format(M.inv)}</div>${hasPeers?delta(M.inv,S.avgInv,'store avg'):''}</div>
+      <div class="kpi"><div class="k">Pieces sold</div><div class="v num">${nf0.format(M.qty)}</div>${hasPeers?delta(M.qty,S.avgQty,'store avg'):''}</div>
+      <div class="kpi"><div class="k">UPT</div><div class="v num">${nf2.format(M.upt)}</div>${hasPeers?delta(M.upt,S.upt,'store'):''}</div>
+      <div class="kpi"><div class="k">ATV</div><div class="v num">${nf0.format(M.atv)}</div>${hasPeers?delta(M.atv,S.atv,'store'):''}</div>
+      <div class="kpi"><div class="k">Share of store</div><div class="v num">${S.amt?pct(M.amt/S.amt):'—'}</div><div class="delta">${S.n} sales people</div></div>
+      <div class="kpi"><div class="k">Categories sold</div><div class="v num">${me.g.size}</div><div class="delta">item groups</div></div>
+    </div></section>`;
+
+  /* coaching */
+  const tips=coaching(G);
+  h+=`<section class="card"><div class="cardhead"><h2>What to work on</h2><span class="meta">Built from ${esc(wantName)}'s own numbers vs the ${hasPeers?'store':'file'}</span></div><div class="coach">`+
+    tips.map(t=>`<article class="tip ${t.cls}"><div class="tag"><span class="ic" aria-hidden="true">${t.ic}</span>${esc(t.tag)}</div><h3>${esc(t.h)}</h3><p>${esc(t.p)}</p>${t.est?`<div class="est num">${esc(t.est)}<small>${esc(t.estNote)}. An estimate, not a target.</small></div>`:''}</article>`).join('')+
+    `</div></section>`;
+
+  h+=`<div class="grid2">`;
+  /* categories */
+  h+=`<section class="card"><div class="cardhead"><h2>What ${esc(wantName.split(' ')[0])} sells most</h2><span class="meta">By item group</span></div>
+    <div class="chips sw" style="margin-bottom:10px"><button class="chip" type="button" data-cat="sales" aria-pressed="${VIEW.cat==='sales'}">By sales</button><button class="chip" type="button" data-cat="qty" aria-pressed="${VIEW.cat==='qty'}">By pieces</button></div>`;
+  const byQty=VIEW.cat==='qty', sorted=[...G].sort((a,b)=>byQty?b.q-a.q:b.a-a.a), shown=sorted.slice(0,10);
+  h+=bars(shown.map((g,i)=>({name:g.name,val:byQty?g.q:g.a,txt:byQty?nf0.format(g.q)+' pcs':nf0.format(g.a)+' EGP',sub:pct(byQty?(me.qty?g.q/me.qty:0):g.share),top:i===0,
+    tip:`${g.name} · ${nf0.format(g.a)} EGP incl. VAT · ${nf0.format(g.q)} pieces · ${pct(g.share)} of sales · in ${g.invCount} invoices`})));
+  if(sorted.length>10) h+=`<div class="hint">Top 10 of ${sorted.length} item groups. The table below lists all of them.</div>`;
+  h+=`<details class="tbl"><summary>View as table</summary><div class="tablewrap"><table><thead><tr><th>Item group</th><th>Sales incl. VAT</th><th>Pieces</th><th>Share</th><th>In your invoices</th>${hasPeers?'<th>In store invoices</th>':''}</tr></thead><tbody>`+
+    sorted.map(g=>`<tr><td>${esc(g.name)}</td><td class="num">${nf0.format(g.a)}</td><td class="num">${nf0.format(g.q)}</td><td class="num">${pct(g.share)}</td><td class="num">${pct(g.pen)}</td>${hasPeers?`<td class="num">${pct(g.storePen)}</td>`:''}</tr>`).join('')+`</tbody></table></div></details></section>`;
+
+  /* cross-sell bullets */
+  if(hasPeers){
+    const keys=new Set(G.map(g=>g.g)); S.pen.forEach((v,g)=>keys.add(g));
+    const rows=[...keys].map(g=>({name:d.groups[g],pen:(me.g.get(g)?me.g.get(g).inv.size:0)/M.inv,sp:(S.pen.get(g)||0)/S.inv})).filter(r=>r.sp>=0.05).sort((a,b)=>b.sp-a.sp).slice(0,8);
+    const mx=Math.max(...rows.map(r=>Math.max(r.pen,r.sp)),0.01)*1.08;
+    h+=`<section class="card"><div class="cardhead"><h2>Add-on rate vs the store</h2><span class="meta">Share of invoices that include each group</span></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>${esc(wantName.split(' ')[0])}</span><span><i class="tick"></i>Store (${S.n} people)</span></div>
+      <div class="bars bullet">`+rows.map(r=>{const behind=r.sp-r.pen>=0.05;
+        return `<div class="brow" tabindex="0" data-tip="${esc(`${r.name} · ${pct(r.pen)} of your invoices vs ${pct(r.sp)} across the store`)}"><span class="n" title="${esc(r.name)}">${esc(r.name)}</span>
+        <span class="track"><span class="fill" style="width:${r.pen/mx*100}%"></span><span class="mark" style="left:${r.sp/mx*100}%"></span></span>
+        <span class="val num">${pct(r.pen)}<small class="${behind?'gap':''}">${behind?'▼ ':''}store ${pct(r.sp)}</small></span></div>`}).join('')+`</div>
+      <div class="hint">A group in more of your invoices is a group you offer more. A gap marked ▼ is 5 points or more behind the store.</div></section>`;
+  }
+
+  /* basket build */
+  if(M.bt){
+    const seg=(b,bt)=>b.map((v,i)=>`<span style="width:${bt?v/bt*100:0}%;background:var(--s${i+1})"></span>`).join('');
+    const row=(lab,o)=>`<div class="srow" data-tip="${esc(`${lab} · 1 piece ${pct(o.bt?o.b[0]/o.bt:0)} · 2 pieces ${pct(o.bt?o.b[1]/o.bt:0)} · 3 pieces ${pct(o.bt?o.b[2]/o.bt:0)} · 4+ pieces ${pct(o.bt?o.b[3]/o.bt:0)}`)}" tabindex="0"><span class="n">${esc(lab)}</span><div class="stack">${seg(o.b,o.bt)}</div><span class="val num">${o.bt?pct(o.b[0]/o.bt):'—'}<small>single-piece</small></span></div>`;
+    h+=`<section class="card"><div class="cardhead"><h2>How big are the baskets?</h2><span class="meta">Pieces per invoice</span></div>
+      <div class="legend">${['1 piece','2 pieces','3 pieces','4+ pieces'].map((t,i)=>`<span><i style="background:var(--s${i+1})"></i>${t}</span>`).join('')}</div>
+      ${row(wantName.split(' ')[0],M)}${hasPeers?row('Store',S):''}${row('Company',C)}
+      <div class="hint">More of the bar in the stronger colours on the right means customers leave with more pieces.</div></section>`;
+  }
+
+  /* trend */
+  if(X.hasDate){
+    const dc=dailyChart();
+    if(dc){
+      h+=`<section class="card" style="grid-column:1/-1"><div class="cardhead"><h2>Day by day</h2><span class="meta">${dc.active} selling day${dc.active===1?'':'s'} of ${dc.n}${dc.peak?` · best day ${dayLabel(dc.peak.dn)}: ${nf0.format(dc.peak.a)} EGP`:''}</span></div>${dc.svg}</section>`;
+    }
+    const wd=weekdayStats();
+    if(wd&&wd.activeDays){
+      const mx=Math.max(...wd.rows.map(r=>r.avg),0), bestWd=wd.rows.reduce((a,b)=>b.avg>a.avg?b:a);
+      h+=`<section class="card"><div class="cardhead"><h2>Which weekday works best</h2><span class="meta">Average per selling day, incl. VAT</span></div>`+
+        bars(wd.rows.map(r=>({name:WDFULL[r.wd],val:r.avg,txt:r.n?nf0.format(r.avg)+' EGP':'—',sub:r.n?r.n+' day'+(r.n===1?'':'s'):'no sales',top:r===bestWd&&mx>0,tip:`${WDFULL[r.wd]} · ${r.n?nf0.format(r.avg)+' EGP average over '+r.n+' selling day'+(r.n===1?'':'s'):'no selling days'}`})))+`</section>`;
+    }
+  } else {
+    h+=`<section class="note" style="grid-column:1/-1"><b>Daily trend and weekday charts need dates.</b> The file loaded earlier was read before dates were kept. Open <a href="/staff" style="color:var(--accent);font-weight:700">Staff Performance</a> and load the query file once more to unlock them.</section>`;
+  }
+
+  /* products */
+  if(X.hasItem&&me.item.size){
+    const items=[...me.item.entries()].map(([k,v])=>{const it=d.items&&d.items[k]; const nm=Array.isArray(it)?(it[0]||it[1]||'Item'):String(it||'Item'); const cd=Array.isArray(it)?it[1]:'';return{name:nm,code:cd,a:v.a*VAT,q:v.q}}).sort((a,b)=>b.a-a.a).slice(0,8);
+    h+=`<section class="card"><div class="cardhead"><h2>Top products</h2><span class="meta">By sales incl. VAT</span></div>`+
+      bars(items.map((x,i)=>({name:x.name,val:x.a,txt:nf0.format(x.a)+' EGP',sub:nf0.format(x.q)+' pcs',top:i===0,tip:`${x.name}${x.code&&x.code!==x.name?' ('+x.code+')':''} · ${nf0.format(x.a)} EGP · ${nf0.format(x.q)} pieces`})))+`</section>`;
+  } else if(X.hasDate){
+    h+=`<section class="note"><b>Top products</b> appear here when the query file has an Item Code or Item Name column.</section>`;
+  }
+
+  /* team */
+  if(mates.length>1){
+    h+=`<section class="card"><div class="cardhead"><h2>The ${esc(wantStore)} team</h2><span class="meta">Sales incl. VAT · open a colleague's page</span></div>`+
+      bars(mates.map((i,k)=>({name:`${k+1}. ${d.people[i][0]}`,val:P[i].amt*VAT,txt:nf0.format(P[i].amt*VAT)+' EGP',sub:`UPT ${nf2.format(P[i].inv.size?P[i].qty/P[i].inv.size:0)}`,me:i===pi,href:personUrl(wantStore,d.people[i][0]),tip:`${d.people[i][0]} · ${nf0.format(P[i].amt*VAT)} EGP · ${P[i].inv.size} invoices`})))+`</section>`;
+  }
+  h+=`</div>`;
+  $('out').innerHTML=h;
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{const c=e.target.closest('[data-cat]'); if(c&&CTX){VIEW.cat=c.dataset.cat;render()}});
+$('cleanBtn').onclick=()=>document.body.classList.add('clean');
+$('exitClean').onclick=()=>document.body.classList.remove('clean');
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.body.classList.remove('clean')});
+const tip=$('tip');
+function showTip(el,x,y){const t=el.getAttribute('data-tip'); if(!t){tip.classList.remove('on');return} tip.textContent=t; tip.classList.add('on');
+  const w=tip.offsetWidth,h=tip.offsetHeight; let L=x+14,T=y+14; if(L+w>innerWidth-8)L=x-w-14; if(T+h>innerHeight-8)T=y-h-14; tip.style.left=Math.max(8,L)+'px'; tip.style.top=Math.max(8,T)+'px'}
+document.addEventListener('mousemove',e=>{const el=e.target.closest&&e.target.closest('[data-tip]'); if(el)showTip(el,e.clientX,e.clientY); else tip.classList.remove('on')});
+document.addEventListener('focusin',e=>{const el=e.target.closest&&e.target.closest('[data-tip]'); if(el){const r=el.getBoundingClientRect(); showTip(el,r.left+Math.min(r.width,200)/2,r.top)}});
+document.addEventListener('focusout',()=>tip.classList.remove('on'));
+document.addEventListener('scroll',()=>tip.classList.remove('on'),{passive:true});
+build();
+</script>
+</body>
+</html>

@@ -32,12 +32,12 @@ function chromeScript(kind) {
   't.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";' +
   'document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("pandora-theme",n)}catch(e){}sync()});' +
   'if(kind!=="login"){' +
-  'var sw=mk("Switch project");sw.addEventListener("click",function(){sw.disabled=true;sw.textContent="Switching\u2026";if(kind==="staff"){try{localStorage.removeItem("storeStaffSummary.v1")}catch(e){}}fetch("/api/logout"+(kind==="staff"?"?project=staff":""),{method:"POST",credentials:"same-origin"}).finally(function(){location.replace("/login.html")});});place(sw);' +
+  'var sw=mk("Switch project");sw.addEventListener("click",function(){sw.disabled=true;sw.textContent="Switching\u2026";if(kind==="staff"){try{localStorage.removeItem("storeStaffSummary.v1");sessionStorage.removeItem("storeStaffSummary.v1")}catch(e){}}fetch("/api/logout"+(kind==="staff"?"?project=staff":""),{method:"POST",credentials:"same-origin"}).finally(function(){location.replace("/login.html")});});place(sw);' +
   '}' +
   'place(t);' +
   'if(kind!=="login"){' +
   'var lo=mk("Log out");lo.addEventListener("click",function(){lo.disabled=true;lo.textContent="Logging out\\u2026";' +
-  'if(kind==="staff"){try{localStorage.removeItem("storeStaffSummary.v1")}catch(e){}}' +
+  'if(kind==="staff"){try{localStorage.removeItem("storeStaffSummary.v1");sessionStorage.removeItem("storeStaffSummary.v1")}catch(e){}}' +
   'fetch("/api/logout"+(kind==="staff"?"?project=staff":""),{method:"POST",credentials:"same-origin"}).then(function(r){' +
   'if(r.ok){location.replace("/login.html"+(kind==="staff"?"?project=staff":""));}else{throw new Error("x");}' +
   '}).catch(function(){lo.disabled=false;lo.textContent="Log out";});});place(lo);' +
@@ -97,14 +97,15 @@ module.exports = function handler(req, res) {
   const secret = process.env.PANDORA_AUTH_SECRET;
 
   // Staff Performance project (its own login and cookie)
-  if (['/staff', '/staff/', '/staff.html', '/staff/index.html'].includes(requestedPath)) {
+  if (['/staff', '/staff/', '/staff.html', '/staff/index.html', '/staff/person', '/staff/person/'].includes(requestedPath)) {
     const ok = validSession('staff', readCookie(req, PROJECTS.staff.cookie), process.env[PROJECTS.staff.userEnv], secret);
     if (!ok) {
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('Location', '/login.html?project=staff');
       return res.status(302).end();
     }
-    return sendFile(res, 'staff.html', 'text/html; charset=utf-8', withChrome('staff'));
+    const isPerson = requestedPath.startsWith('/staff/person');
+    return sendFile(res, isPerson ? 'person.html' : 'staff.html', 'text/html; charset=utf-8', withChrome('staff'));
   }
 
   // Pandora Dashboards project (original login and cookie)
