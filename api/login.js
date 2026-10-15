@@ -44,7 +44,8 @@ module.exports = async function handler(req, res) {
     const facts = { dash: false, staff: null };
     if (matched) { cookies.push(cookie('staff', matched.user)); facts.staff = { role: matched.role }; }
     // the super admin can open everything, so the super admin also gets the dashboards session
-    if (dashMatch || (matched && matched.role === 'admin' && dUser && dPass)) { cookies.push(cookie('dashboards', dUser)); facts.dash = true; }
+    if (dashMatch) { cookies.push(cookie('dashboards', dUser)); facts.dash = true; }
+    else if (matched && matched.role === 'admin') { cookies.push(cookie('dashboards', matched.user)); facts.dash = true; }
     return finish(cookies, facts);
   }
 

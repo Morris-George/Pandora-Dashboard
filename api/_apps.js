@@ -1,6 +1,6 @@
 // What a signed-in person can open. To add a new option later, add one entry to APPS:
 // `allow` decides who sees it (by role), `href` is where it opens. The home screen shows whatever this returns.
-const { PROJECTS, validSession, readCookie } = require('./_projects');
+const { PROJECTS, validSession, readCookie, staffAccounts } = require('./_projects');
 const { whoami } = require('./_auth');
 
 // f = { dash: true/false, staff: { role, label, name } | null }
@@ -17,7 +17,10 @@ function appsFor(f) {
 // Read the cookies of this request: which logins are valid?
 async function sessionFacts(req) {
   const secret = process.env.PANDORA_AUTH_SECRET;
-  const dash = validSession('dashboards', readCookie(req, PROJECTS.dashboards.cookie), process.env[PROJECTS.dashboards.userEnv], secret);
+  // the dashboards session belongs either to the dashboards login or to the super admin (who can open everything)
+  const tok = readCookie(req, PROJECTS.dashboards.cookie);
+  const adminUser = (staffAccounts().find(a => a.role === 'admin') || {}).user;
+  const dash = validSession('dashboards', tok, process.env[PROJECTS.dashboards.userEnv], secret) || validSession('dashboards', tok, adminUser, secret);
   const who = await whoami(req);
   const staff = who ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', who } : null;
   return { dash, staff };
