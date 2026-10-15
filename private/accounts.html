@@ -38,6 +38,7 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
   <header class="top"><div><a class="crumb" href="/staff">&larr; Staff Performance</a><h1>Staff approvals</h1><div class="sub">Sales people create their own account. Nobody sees any sales until you approve and link them to the right sales person.</div></div><div class="actions"></div></header>
   <div class="err" id="err" hidden></div>
   <section class="card pwbox" id="pwbox" hidden></section>
+  <section class="card" id="resetcard" hidden><h2>Forgot password requests</h2><div class="meta">These people asked for a new password. Call the number to check it is really them, then set a new password and send it to them.</div><div id="resets"></div></section>
   <section class="card"><h2>Waiting for approval</h2><div class="meta">Choose who this person is in the sales file, then press Approve.</div><div id="pending"></div></section>
   <section class="card"><h2>Active</h2><div class="meta">These people can sign in and see their own page.</div><div id="active"></div></section>
   <section class="card" id="offcard"><h2>Switched off</h2><div class="meta">They cannot sign in. You can switch them on again.</div><div id="off"></div></section>
@@ -63,6 +64,8 @@ async function load(){
     const j=await r.json();
     if(!r.ok||!j.ok){showErr(r.status===503?'Server storage is not set up yet.':(j.error||'Could not load accounts.'));return}
     PEOPLE=j.people||[];HASDATA=!!j.hasData;
+    const rs=j.resets||[];$('resetcard').hidden=!rs.length;
+    $('resets').innerHTML=rs.map(a=>`<div class="row"><div class="who">${esc(a.name)}<small>${esc(a.store)}</small></div><div>${esc(a.username)}<br><small style="color:var(--ink2)">Asked ${esc(a.requestedAt?new Date(a.requestedAt).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'')}</small></div><div><a href="tel:${esc(a.phone)}" style="color:var(--accent-text);font-weight:700">${esc(a.phone)}</a></div><div class="btns"><button class="btn go" data-act="pw" data-user="${esc(a.username)}">Set new password</button><button class="btn" data-act="dismissreset" data-user="${esc(a.username)}">Dismiss</button></div></div>`).join('');
     const by=s=>j.accounts.filter(a=>a.status===s);
     const fill=(id,list,btns,none,pick)=>{$(id).innerHTML=list.length?list.map(a=>rowHtml(a,btns,pick)).join(''):`<div class="empty">${none}</div>`};
     fill('pending',by('pending'),[['approve','Approve','go'],['pw','Change password'],['remove','Reject','bad']],'Nobody is waiting.',true);
@@ -74,7 +77,7 @@ document.addEventListener('click',async e=>{
   const b=e.target.closest('button[data-act]'); if(!b)return;
   if(b.dataset.act==='pw'){openPw(b.dataset.user);return}
   if(b.dataset.act==='pwsave'){savePw(b);return}
-  if(b.dataset.act==='pwclose'){$('pwbox').hidden=true;return}
+  if(b.dataset.act==='pwclose'){$('pwbox').hidden=true;load();return}
   if(b.dataset.act==='pwcopy'){try{await navigator.clipboard.writeText(b.dataset.pw);b.textContent='Copied'}catch(_){b.textContent='Select and copy it'}return}
   if(b.dataset.act==='remove'&&!confirm('Remove this account? The person can sign up again later.'))return;
   b.disabled=true;

@@ -385,8 +385,9 @@ function applyRoleUI(){
     const a=document.createElement('a'); a.className='btn hideclean'; a.id='approvalsBtn'; a.href='/staff/accounts'; a.textContent='Staff approvals';
     document.querySelector('.actions').insertBefore(a,$('cleanBtn'));
     fetch('/api/accounts',{credentials:'same-origin',cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{
-      const n=j&&j.accounts?j.accounts.filter(x=>x.status==='pending').length:0;
-      if(n){a.textContent='Staff approvals ('+n+' waiting)'; a.classList.add('primary')}
+      const n=j&&j.accounts?j.accounts.filter(x=>x.status==='pending').length:0, f=j&&j.resets?j.resets.length:0;
+      const parts=[n?n+' waiting':'',f?f+' forgot password':''].filter(Boolean);
+      if(parts.length){a.textContent='Staff approvals ('+parts.join(', ')+')'; a.classList.add('primary')}
     }).catch(()=>{});
   }
 }

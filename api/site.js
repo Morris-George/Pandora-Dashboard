@@ -88,6 +88,10 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'signup.html', 'text/html; charset=utf-8', withChrome('login'));
   }
 
+  if (requestedPath === '/forgot.html' || requestedPath === '/forgot') {
+    return sendFile(res, 'forgot.html', 'text/html; charset=utf-8', withChrome('login'));
+  }
+
   if (requestedPath === '/pandora-logo.png') {
     return sendFile(res, 'pandora-logo.png', 'image/png');
   }

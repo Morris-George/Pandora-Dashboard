@@ -32,9 +32,16 @@ module.exports = async function handler(req, res) {
         return best ? best.store + '|' + best.name : '';
       })()
     }));
+    // people who pressed "forgot my password"
+    const resets = [];
+    for (const path of await store.list('resets/')) {
+      const r = await store.getJSON(path); const u = r && all.find(x => x.username === r.username);
+      if (u) resets.push({ username: u.username, name: u.name, store: u.store, phone: u.phone, requestedAt: r.requestedAt });
+    }
+    resets.sort((a, b) => String(b.requestedAt).localeCompare(String(a.requestedAt)));
     list.sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || String(b.createdAt).localeCompare(String(a.createdAt)));
     return send(res, 200, {
-      ok: true, accounts: list, hasData: !!data,
+      ok: true, accounts: list, resets, hasData: !!data,
       people: people.map(p => ({ ...p, takenBy: taken.get(p.store + '|' + p.name) || '' })).sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name))
     });
   }
@@ -71,9 +78,10 @@ module.exports = async function handler(req, res) {
       let pw = String(b.password || '').trim();
       if (!pw) { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'; pw = Array.from({ length: 10 }, () => A[crypto.randomInt(A.length)]).join(''); }
       if (pw.length < 8 || pw.length > 100) return send(res, 400, { ok: false, error: 'Password must be at least 8 characters.' });
-      rec.pass = users.hashPassword(pw); rec.fails = 0; rec.lockUntil = 0; await users.putUser(rec);
+      rec.pass = users.hashPassword(pw); rec.fails = 0; rec.lockUntil = 0; await users.putUser(rec); await store.del('resets/' + rec.username + '.json');
       return send(res, 200, { ok: true, password: pw });
     }
+    if (b.action === 'dismissreset') { await store.del('resets/' + rec.username + '.json'); return send(res, 200, { ok: true }); }
     if (b.action === 'enable') { rec.status = 'active'; rec.fails = 0; rec.lockUntil = 0; await users.putUser(rec); return send(res, 200, { ok: true }); }
     if (b.action === 'disable') { rec.status = 'disabled'; await users.putUser(rec); return send(res, 200, { ok: true }); }
     if (b.action === 'remove') { await users.removeUser(rec); return send(res, 200, { ok: true }); }

@@ -68,6 +68,7 @@ async function createUser({ username, password, phone, store: st, name }) {
 async function removeUser(rec) {
   await store.del('users/u/' + rec.username + '.json');
   await store.del('users/p/' + phoneKey(rec.phone) + '.json');
+  await store.del('resets/' + rec.username + '.json');
   if (rec.linked) await store.del('users/n/' + nameKey(rec.store, rec.name) + '.json');
 }
 
@@ -79,7 +80,8 @@ async function linkUser(rec, st, name) {
   await store.putJSON('users/n/' + nameKey(st, name) + '.json', { username: rec.username });
 }
 
+const getJSONByPhone = async phone => { const c = await store.getJSON('users/p/' + phoneKey(phone) + '.json'); return c ? c.username : null; };
 const phoneTaken = async phone => !!(await store.getJSON('users/p/' + phoneKey(phone) + '.json'));
 const claimOwner = async (st, name) => { const c = await store.getJSON('users/n/' + nameKey(st, name) + '.json'); return c ? c.username : null; };
 
-module.exports = { normUsername, normalizePhone, hashPassword, verifyPassword, burn, getUser, putUser, listUsers, createUser, removeUser, linkUser, phoneTaken, claimOwner, nameKey };
+module.exports = { normUsername, normalizePhone, hashPassword, verifyPassword, burn, getUser, putUser, listUsers, createUser, removeUser, linkUser, phoneTaken, getJSONByPhone, claimOwner, nameKey };
