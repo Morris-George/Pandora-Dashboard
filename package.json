@@ -1,0 +1,12 @@
+{
+  "name": "pandora-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Pandora Egypt dashboards (static pages and Vercel functions)",
+  "dependencies": {
+    "@vercel/blob": "latest"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

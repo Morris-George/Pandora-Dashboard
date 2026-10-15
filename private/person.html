@@ -146,6 +146,7 @@ details.tbl summary{cursor:pointer;color:var(--ink2);font-weight:600}
 #tip{position:fixed;z-index:10000;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;max-width:260px;opacity:0;transition:opacity .1s;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 #tip.on{opacity:1}
 
+body.solo .nav, body.solo #prev, body.solo #next{display:none}
 body.clean .nav, body.clean .hideclean, body.clean .hint, body.clean details.tbl, body.clean .chips.sw{display:none}
 .exit{display:none;position:fixed;right:max(12px,env(safe-area-inset-right,0px));top:calc(10px + env(safe-area-inset-top,0px));z-index:5;opacity:.55}
 body.clean .exit{display:block}
@@ -207,7 +208,8 @@ const personUrl=(store,name)=>'/staff/person?store='+encodeURIComponent(store)+'
 function prep(d){
   const saved=safeGet(EXKEY)||{ex:[],known:[]};
   const exIdx=new Set(); let exCount=0;
-  d.groups.forEach((g,i)=>{const known=saved.known.includes(g); if(known?saved.ex.includes(g):DEFAULT_EX.test(g)){exIdx.add(i);exCount++}});
+  if(SERVER&&Array.isArray(d.ex)) d.groups.forEach((g,i)=>{if(d.ex.includes(g)){exIdx.add(i);exCount++}});
+  else d.groups.forEach((g,i)=>{const known=saved.known.includes(g); if(known?saved.ex.includes(g):DEFAULT_EX.test(g)){exIdx.add(i);exCount++}});
   const P=d.people.map(()=>({inv:new Map(),g:new Map(),day:new Map(),item:new Map(),qty:0,amt:0}));
   let dmin=null,dmax=null,hasDate=false,hasItem=false;
   for(const r of d.rows){
@@ -249,30 +251,61 @@ function bars(rows){ // rows: {name,val,txt,sub,tip,top}
 
 /* ---------- page ---------- */
 const q=new URLSearchParams(location.search);
-const wantStore=q.get('store')||'', wantName=q.get('name')||'';
+let wantStore=q.get('store')||'', wantName=q.get('name')||'';
+let SERVER=false;
 let CTX=null;
 
 function noData(msg){
   $('pname').textContent='Sales person';
-  $('out').innerHTML=`<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">${esc(msg)}</h2>Open <a href="/staff" style="color:var(--accent);font-weight:700">Staff Performance</a>, load this month's file, then click a name.</section>`;
+  const tail=ROLE.role==='staff'?'Please check again later, or ask your manager.':'Open <a href="/staff" style="color:var(--accent);font-weight:700">Staff Performance</a> first'+(ROLE.role==='admin'?', load this month\'s file, then click a name.':' and pick a name from the table.');
+  $('out').innerHTML=`<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">${esc(msg)}</h2>${tail}</section>`;
 }
 
-function build(){
-  const d0=safeGet(KEY);
-  if(!d0||!d0.rows||!d0.people) return noData('No sales file is loaded in this browser');
-  const d=scopeData(d0);
-  const si=d.stores.indexOf(wantStore);
-  const pi=d.people.findIndex(p=>p[0]===wantName&&d.stores[p[1]]===wantStore);
-  if(si<0||pi<0) return noData('That sales person was not found in the loaded file');
-  const X=prep(d), P=X.P;
-  if(!P[pi].inv.size) return noData('No sales for this person this month');
-  const storeIdx=d.people.map((p,i)=>i).filter(i=>d.people[i][1]===si);
-  const allIdx=d.people.map((p,i)=>i);
-  const M=pool(P,[pi]), S=pool(P,storeIdx), C=pool(P,allIdx);
-  const mates=storeIdx.filter(i=>P[i].inv.size).sort((a,b)=>P[b].amt-P[a].amt);
-  const coAll=allIdx.filter(i=>P[i].inv.size);
+function benchPool(o){
+  const incl=o.amt*VAT;
+  return{n:o.n,inv:o.inv,qty:o.qty,amt:o.amt,incl,upt:o.inv?o.qty/o.inv:0,atv:o.inv?incl/o.inv:0,pen:new Map(o.pen),gamt:new Map(o.gamt),b:o.b,
+    bt:o.b[0]+o.b[1]+o.b[2]+o.b[3],avgIncl:o.n?incl/o.n:0,avgInv:o.n?o.inv/o.n:0,avgQty:o.n?o.qty/o.n:0};
+}
+async function loadData(){
+  try{
+    const r=await fetch('/api/data',{credentials:'same-origin',cache:'no-store'});
+    if(r.status===401){location.replace('/login.html?project=staff');return{err:'Signing you in…'}}
+    if(r.ok){SERVER=true;return{d:await r.json()}}
+    if(r.status===404) return{err:'No sales have been published yet'};
+  }catch(e){}
+  SERVER=false; // server storage not set up: the old browser-only way
+  const d=safeGet(KEY);
+  return d&&d.rows&&d.people?{d}:{err:'No sales file is loaded in this browser'};
+}
+
+async function build(){
+  const L=await loadData();
+  if(L.err) return noData(L.err);
+  const d=scopeData(L.d);
+  let si,pi,M,S,C,P,X,mates,storeCount,rankStore;
+  if(ROLE.role==='staff'){
+    // a sales person only receives their own rows, plus store and company totals worked out on the server
+    document.body.classList.add('solo');
+    if(!d.rows.length||!d.bench) return noData('No sales found for you in this month’s file yet');
+    wantStore=d.self.store; wantName=d.self.name; si=0; pi=0;
+    X=prep(d); P=X.P;
+    if(!P[0].inv.size) return noData('No sales found for you this month yet');
+    M=pool(P,[0]); S=benchPool(d.bench.store); C=benchPool(d.bench.company);
+    mates=[0]; storeCount=d.bench.storeCount; rankStore=d.bench.rankStore;
+  } else {
+    si=d.stores.indexOf(wantStore);
+    pi=d.people.findIndex(p=>p[0]===wantName&&d.stores[p[1]]===wantStore);
+    if(si<0||pi<0) return noData('That sales person was not found in the loaded file');
+    X=prep(d); P=X.P;
+    if(!P[pi].inv.size) return noData('No sales for this person this month');
+    const storeIdx=d.people.map((p,i)=>i).filter(i=>d.people[i][1]===si);
+    const allIdx=d.people.map((p,i)=>i);
+    M=pool(P,[pi]); S=pool(P,storeIdx); C=pool(P,allIdx);
+    mates=storeIdx.filter(i=>P[i].inv.size).sort((a,b)=>P[b].amt-P[a].amt);
+    storeCount=mates.length; rankStore=mates.indexOf(pi)+1;
+  }
   const alone=S.n<2, B=alone?C:S, bname=alone?'all stores':'your store';
-  CTX={d,X,P,pi,si,M,S,C,B,bname,alone,mates,total:coAll.length,rankStore:mates.indexOf(pi)+1};
+  CTX={d,X,P,pi,si,M,S,C,B,bname,alone,mates,storeCount,rankStore};
   document.title=wantName+' · Staff Performance';
   $('pname').textContent=wantName;
   $('psub').textContent=`${wantStore} · ${d.period||''} · all amounts include VAT`;
@@ -330,13 +363,13 @@ function tips(G){
 }
 
 function render(){
-  const {d,X,P,pi,M,B,bname,alone,mates,total,rankStore}=CTX, me=P[pi];
+  const {d,X,P,pi,M,B,bname,alone,storeCount,rankStore}=CTX, me=P[pi];
   const G=groupRows().sort((a,b)=>b.a-a.a), topG=G[0];
   let h='';
   h+=`<section class="card hero">
     <div class="heroleft"><div class="lbl">Your sales</div>
       <div class="big num">${nf0.format(M.incl)}<small>EGP</small></div>
-      <div class="ranks"><span class="pill">${alone?'This month':`#${rankStore} of ${mates.length} in your store`}</span></div>
+      <div class="ranks"><span class="pill">${alone?'This month':`#${rankStore} of ${CTX.storeCount} in your store`}</span></div>
       <div style="color:var(--ink2);font-size:13px;margin-top:4px">${topG?`You sell most: <b style="color:var(--ink)">${esc(topG.name)}</b>`:''}</div></div>
     <div class="kpis">
       <div class="kpi"><div class="k">Customers served</div><div class="v num">${nf0.format(M.inv)}</div>${alone?'':delta(M.inv,B.avgInv,'the store average')}</div>

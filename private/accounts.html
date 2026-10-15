@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Staff accounts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--bg:#FBF6F7;--surface:#FFFFFF;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--accent:#C93A53;--fill-soft:#FFE4E8;--hover:#FFF1F3;--good:#1F7A4D;--bad:#B3261E;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--accent:#FF8A9A;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--bad:#FF8A80;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--accent:#FF8A9A;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--bad:#FF8A80;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding:20px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between}
+h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(--ink2);font-size:12.5px}
+.crumb{color:var(--ink2);font-size:12.5px;font-weight:600;text-decoration:none}.crumb:hover{color:var(--accent)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}.btn:hover{background:var(--hover)}
+.btn.go{background:var(--accent);border-color:var(--accent);color:#fff}:root[data-theme="dark"] .btn.go{color:#2A1018}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.go{color:#2A1018}}
+.btn.bad{color:var(--bad)}.btn:disabled{opacity:.5;cursor:wait}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px}
+.card h2{margin:0 0 4px;font-size:17px;font-weight:800}.card .meta{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
+.row{display:grid;grid-template-columns:minmax(150px,1.4fr) minmax(110px,1fr) minmax(90px,.8fr) auto;gap:8px 14px;align-items:center;padding:10px 6px;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}.row .who{font-weight:700;overflow-wrap:anywhere}.row .who small{display:block;color:var(--ink2);font-weight:500}
+.row .btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.empty{color:var(--ink2);padding:8px 2px}.err{background:#B3261E;color:#fff;border-radius:10px;padding:10px 14px;font-weight:600}
+@media (max-width:640px){.row{grid-template-columns:1fr}.row .btns{justify-content:flex-start}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><div><a class="crumb" href="/staff">&larr; Staff Performance</a><h1>Staff accounts</h1><div class="sub">Sales people create their own account. You approve each one before it opens.</div></div><div class="actions"></div></header>
+  <div class="err" id="err" hidden></div>
+  <section class="card"><h2>Waiting for approval</h2><div class="meta">Check the name and store match the person, then approve.</div><div id="pending"></div></section>
+  <section class="card"><h2>Active</h2><div class="meta">These people can sign in and see their own page.</div><div id="active"></div></section>
+  <section class="card" id="offcard"><h2>Switched off</h2><div class="meta">They cannot sign in. You can switch them on again.</div><div id="off"></div></section>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
+function rowHtml(a,btns){return `<div class="row"><div class="who">${esc(a.name)}<small>${esc(a.store)}</small></div><div>${esc(a.username)}<br><small style="color:var(--ink2)">${esc(a.phone)}</small></div><div style="color:var(--ink2)">${esc((a.createdAt||'').slice(0,10))}</div><div class="btns">${btns.map(b=>`<button class="btn ${b[2]||''}" data-act="${b[0]}" data-user="${esc(a.username)}">${b[1]}</button>`).join('')}</div></div>`}
+async function load(){
+  showErr('');
+  try{
+    const r=await fetch('/api/accounts',{credentials:'same-origin',cache:'no-store'});
+    if(r.status===401){location.replace('/login.html?project=staff');return}
+    const j=await r.json();
+    if(!r.ok||!j.ok){showErr(r.status===503?'Server storage is not set up yet.':(j.error||'Could not load accounts.'));return}
+    const by=s=>j.accounts.filter(a=>a.status===s);
+    const fill=(id,list,btns,none)=>{$(id).innerHTML=list.length?list.map(a=>rowHtml(a,btns)).join(''):`<div class="empty">${none}</div>`};
+    fill('pending',by('pending'),[['approve','Approve','go'],['remove','Reject','bad']],'Nobody is waiting.');
+    fill('active',by('active'),[['disable','Switch off'],['remove','Remove','bad']],'No active accounts yet.');
+    fill('off',by('disabled'),[['enable','Switch on'],['remove','Remove','bad']],'None.');
+  }catch(e){showErr('Could not load accounts. Check your connection.')}
+}
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('button[data-act]'); if(!b)return;
+  if(b.dataset.act==='remove'&&!confirm('Remove this account? The person can sign up again later.'))return;
+  b.disabled=true;
+  try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:b.dataset.act,username:b.dataset.user})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)showErr(j.error||'That did not work.')}catch(_){showErr('No connection.')}
+  load();
+});
+load();
+</script>
+</body>
+</html>

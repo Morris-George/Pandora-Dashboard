@@ -1,7 +1,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { PROJECTS, validSession, readCookie, staffSession, roleInfo } = require('./_projects');
+const { PROJECTS, validSession, readCookie } = require('./_projects');
+const { whoami } = require('./_auth');
 
 const PRIVATE_DIR = path.join(process.cwd(), 'private');
 
@@ -75,7 +76,7 @@ function sendFile(res, filename, contentType, transform) {
   }
 }
 
-module.exports = function handler(req, res) {
+module.exports = async function handler(req, res) {
   const url = new URL(req.url, 'https://vercel.invalid');
 
   const requestedPath = url.searchParams.has('path')
@@ -84,6 +85,10 @@ module.exports = function handler(req, res) {
 
   if (requestedPath === '/login.html') {
     return sendFile(res, 'login.html', 'text/html; charset=utf-8', withChrome('login'));
+  }
+
+  if (requestedPath === '/signup.html' || requestedPath === '/signup') {
+    return sendFile(res, 'signup.html', 'text/html; charset=utf-8', withChrome('login'));
   }
 
   if (requestedPath === '/pandora-logo.png') {
@@ -96,18 +101,27 @@ module.exports = function handler(req, res) {
 
   const secret = process.env.PANDORA_AUTH_SECRET;
 
-  // Staff Performance project (its own login and cookie)
-  if (['/staff', '/staff/', '/staff.html', '/staff/index.html', '/staff/person', '/staff/person/'].includes(requestedPath)) {
-    const account = staffSession(readCookie(req, PROJECTS.staff.cookie), secret);
-    if (!account) {
+  // Staff Performance project: super admin, area managers and sales people (each with their own login)
+  const STAFF_PATHS = ['/staff', '/staff/', '/staff.html', '/staff/index.html', '/staff/person', '/staff/person/', '/staff/accounts', '/staff/accounts/'];
+  if (STAFF_PATHS.includes(requestedPath)) {
+    const who = await whoami(req);
+    if (!who) {
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('Location', '/login.html?project=staff');
       return res.status(302).end();
     }
-    const isPerson = requestedPath.startsWith('/staff/person');
+    let page;
+    if (who.kind === 'staff') {
+      page = 'person.html'; // a sales person only ever sees their own page
+    } else if (requestedPath.startsWith('/staff/accounts')) {
+      if (who.info.role !== 'admin') { res.setHeader('Location', '/staff'); return res.status(302).end(); }
+      page = 'accounts.html';
+    } else {
+      page = requestedPath.startsWith('/staff/person') ? 'person.html' : 'staff.html';
+    }
     const chrome = withChrome('staff');
-    const info = JSON.stringify(roleInfo(account)).replace(/</g, '\\u003c');
-    return sendFile(res, isPerson ? 'person.html' : 'staff.html', 'text/html; charset=utf-8', function (buf) {
+    const info = JSON.stringify(who.info).replace(/</g, '\\u003c');
+    return sendFile(res, page, 'text/html; charset=utf-8', function (buf) {
       let html = buf.toString('utf8');
       const h = html.search(/<\/head>/i);
       if (h !== -1) html = html.slice(0, h) + '<script>window.__PANDORA_ROLE=' + info + ';</script>' + html.slice(h);

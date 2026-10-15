@@ -1,4 +1,7 @@
 const { PROJECTS, projectFrom, safeEqual, signingKey, sign, staffAccounts } = require('./_projects');
+const users = require('./_users');
+const store = require('./_store');
+const { stafferCookie } = require('./_auth');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -24,7 +27,28 @@ module.exports = async function handler(req, res) {
       const okPass = safeEqual(body.password || '', a.pass);
       if (okUser && okPass && !matched) matched = a;
     }
-    if (!matched) return res.status(401).json({ ok: false });
+    if (!matched) {
+      // not an admin or manager: maybe a sales person with their own account
+      const isEnvName = accounts.some(a => safeEqual(body.username || '', a.user));
+      const uname = users.normUsername(body.username);
+      if (isEnvName || !uname || !store.configured()) { users.burn(body.password || ''); return res.status(401).json({ ok: false }); }
+      const rec = await users.getUser(uname);
+      if (!rec) { users.burn(body.password || ''); return res.status(401).json({ ok: false }); }
+      if (rec.lockUntil && rec.lockUntil > Date.now()) {
+        return res.status(429).json({ ok: false, error: 'Too many wrong attempts. Please wait 15 minutes and try again.' });
+      }
+      if (!users.verifyPassword(body.password || '', rec.pass)) {
+        rec.fails = (rec.fails || 0) + 1;
+        if (rec.fails >= 8) { rec.fails = 0; rec.lockUntil = Date.now() + 15 * 60 * 1000; }
+        await users.putUser(rec);
+        return res.status(401).json({ ok: false });
+      }
+      if (rec.status === 'pending') return res.status(403).json({ ok: false, error: 'Your account is waiting for approval. You will be able to sign in once it is approved.' });
+      if (rec.status !== 'active') return res.status(403).json({ ok: false, error: 'This account is not active. Please contact your manager.' });
+      if (rec.fails) { rec.fails = 0; rec.lockUntil = 0; await users.putUser(rec); }
+      res.setHeader('Set-Cookie', stafferCookie(rec.username, secret));
+      return res.status(200).json({ ok: true, next: '/staff' });
+    }
     USER = matched.user;
   } else {
     if (!USER || !PASS || !secret || secret.length < 32) {

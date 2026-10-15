@@ -169,6 +169,7 @@ const METRICS=[
  {id:'atv',label:'ATV',f:p=>p.atv}];
 const DEFAULT_EX=/packaging|services|jewellery boxes/i;
 const st={data:null,store:'ALL',metric:'incl',q:'',ex:new Set()};
+let SERVER=null; // true: the sales data lives on the server; false: this browser only (old way)
 const $=id=>document.getElementById(id);
 const nf0=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
 const nf2=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -184,14 +185,19 @@ function setData(d){
   st.data=d; st.full=full; document.querySelector('.controls').hidden=false;
   const saved=safeGet(EXKEY)||{ex:[],known:[]};
   st.ex=new Set();
-  d.groups.forEach(g=>{
+  if(SERVER&&Array.isArray(d.ex)){ d.ex.forEach(g=>{if(d.groups.includes(g))st.ex.add(g)}); }
+  else d.groups.forEach(g=>{
     const known=saved.known.includes(g);
     if(known?saved.ex.includes(g):DEFAULT_EX.test(g)) st.ex.add(g);
   });
   if(st.store!=='ALL' && !d.stores.includes(st.store)) st.store='ALL';
   buildControls(); render();
 }
-function persistEx(){safeSet(EXKEY,{ex:[...st.ex],known:st.data.groups})}
+let exTimer=null;
+function persistEx(){
+  if(SERVER){ if(ROLE.role!=='admin')return; clearTimeout(exTimer); exTimer=setTimeout(()=>{fetch('/api/data?op=settings',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({ex:[...st.ex]})}).catch(()=>{})},600); return; }
+  safeSet(EXKEY,{ex:[...st.ex],known:st.data.groups});
+}
 
 function compute(){
   const d=st.data, exIdx=new Set(); d.groups.forEach((g,i)=>{if(st.ex.has(g))exIdx.add(i)});
@@ -308,6 +314,7 @@ function parseDate(v){if(v instanceof Date)return v; const d=new Date(v);return 
 function fmtPeriod(a,b){if(!a||!b)return'';const o={day:'numeric',month:'short'};
   return `${a.toLocaleDateString('en-GB',o)} – ${b.toLocaleDateString('en-GB',{...o,year:'numeric'})}`}
 async function loadFile(file){
+  if(SERVER&&ROLE.role!=='admin') return; // only the super admin can load a file
   showErr('');$('dropStatus').textContent='Reading '+file.name+'…';
   try{
     const buf=await file.arrayBuffer();
@@ -333,8 +340,38 @@ async function loadFile(file){
     }
     if(!out.length) throw new Error('No sales rows found in that file.');
     const d={file:file.name.replace(/\.[^.]+$/,'').slice(0,70),period:fmtPeriod(dmin,dmax),stores,people,groups,items,rows:out};
-    safeSet(KEY,d); setData(d); $('dropStatus').textContent='Loaded '+nf0.format(out.length)+' rows';
+    if(SERVER){
+      setData(d); d.ex=[...st.ex];
+      $('dropStatus').textContent='Publishing…';
+      const msg=await publish(d);
+      $('dropStatus').textContent=msg;
+    } else { safeSet(KEY,d); setData(d); $('dropStatus').textContent='Loaded '+nf0.format(out.length)+' rows'; }
   }catch(e){showErr(e.message||'Could not read that file.');$('dropStatus').textContent=''}
+}
+
+/* ---- publishing (super admin) ---- */
+async function publish(d){
+  try{
+    const json=JSON.stringify(d); let body=json, headers={'Content-Type':'application/json'};
+    if(typeof CompressionStream!=='undefined'){
+      const gz=await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+      body=gz; headers={'Content-Type':'application/octet-stream'};
+    }
+    const r=await fetch('/api/data',{method:'POST',credentials:'same-origin',headers,body});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok&&j.ok) return 'Published: managers and sales people now see '+nf0.format(j.rows)+' rows';
+    return 'Not published: '+(j.error||('error '+r.status));
+  }catch(e){return 'Not published: no connection'}
+}
+function applyRoleUI(){
+  if(!SERVER) return;
+  if(ROLE.role!=='admin'){
+    ['loadBtn','drop'].forEach(id=>{const el=$(id); if(el) el.hidden=true});
+    const g=document.querySelector('details.groups'); if(g) g.hidden=true;
+  } else {
+    const a=document.createElement('a'); a.className='btn hideclean'; a.href='/staff/accounts'; a.textContent='Staff accounts';
+    document.querySelector('.actions').insertBefore(a,$('cleanBtn'));
+  }
 }
 
 /* ---- events ---- */
@@ -361,10 +398,22 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')document.body.classL
 function showEmpty(){
   document.querySelector('.controls').hidden=true;
   $('source').textContent='No query loaded yet';
-  $('out').innerHTML='<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">Load this month\u2019s query</h2>Drop the Query Report file (.xlsx or .csv) anywhere on this page, or press <b>Load new query</b>. The store and sales person summary appears here.</section>';
+  $('out').innerHTML=(SERVER&&ROLE.role!=='admin')
+    ?'<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">No sales published yet</h2>The super admin has not published this month\u2019s sales file yet.</section>'
+    :'<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">Load this month\u2019s query</h2>Drop the Query Report file (.xlsx or .csv) anywhere on this page, or press <b>Load new query</b>. The store and sales person summary appears here.</section>';
 }
-const saved0=safeGet(KEY)||SAMPLE;
-if(saved0) setData(saved0); else showEmpty();
+async function boot(){
+  try{
+    const r=await fetch('/api/data',{credentials:'same-origin',cache:'no-store'});
+    if(r.status===401){location.replace('/login.html?project=staff');return}
+    if(r.ok){SERVER=true; applyRoleUI(); setData(await r.json()); return}
+    if(r.status===404){SERVER=true; applyRoleUI(); showEmpty(); return}
+  }catch(e){}
+  SERVER=false; // server storage not set up: keep the old browser-only way
+  const saved0=safeGet(KEY)||SAMPLE;
+  if(saved0) setData(saved0); else showEmpty();
+}
+boot();
 </script>
 </body>
 </html>

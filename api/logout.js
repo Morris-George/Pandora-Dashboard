@@ -9,9 +9,9 @@ module.exports = function handler(req, res) {
   }
   const url = new URL(req.url, 'https://vercel.invalid');
   const cfg = PROJECTS[projectFrom(url.searchParams.get('project'))];
-  res.setHeader(
-    'Set-Cookie',
-    `${cfg.cookie}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
-  );
+  const gone = name => `${name}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  const cookies = [gone(cfg.cookie)];
+  if (cfg === PROJECTS.staff) cookies.push(gone('staffer_auth'));
+  res.setHeader('Set-Cookie', cookies);
   return res.status(200).json({ ok: true });
 };
