@@ -137,6 +137,16 @@ module.exports = async function handler(req, res) {
     });
   }
 
+  // All Uploads (super admin only) and the file readers it shares with the Dashboards page
+  if (requestedPath === '/uploads' || requestedPath === '/uploads/' || requestedPath === '/uploads.html') {
+    if (!(facts.staff && facts.staff.role === 'admin')) return toHome();
+    return sendFile(res, 'uploads.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+  }
+  if (requestedPath === '/parsers.js') {
+    if (!(facts.staff && facts.staff.role === 'admin') && !facts.dash) return res.status(404).end();
+    return sendFile(res, 'parsers.js', 'application/javascript; charset=utf-8');
+  }
+
   // VM report: the VM account (view only) and the super admin (who feeds it)
   if (requestedPath === '/vm' || requestedPath === '/vm/' || requestedPath === '/vm.html') {
     const admin = !!facts.staff && facts.staff.role === 'admin';

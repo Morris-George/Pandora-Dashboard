@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head><link rel="icon" type="image/png" href="/favicon.png?v=2">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>All Uploads</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--bg:#FBF6F7;--surface:#FFFFFF;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--accent:#FF93A0;--accent-text:#2A1F24;--fill-soft:#FFE4E8;--hover:#FFF1F3;--good:#1F7A4D;--bad:#FF93A0;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--accent:#FF93A0;--accent-text:#FF93A0;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--bad:#FF93A0;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--accent:#FF93A0;--accent-text:#FF93A0;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--bad:#FF93A0;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{word-spacing:.09em;margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding:20px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between}
+h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(--ink2);font-size:12.5px}
+.crumb{color:var(--ink2);font-size:12.5px;font-weight:600;text-decoration:none}.crumb:hover{color:var(--accent-text)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}.btn:hover{background:var(--hover)}
+.btn.go{background:var(--accent);border-color:var(--accent);color:#2A1018}:root[data-theme="dark"] .btn.go{color:#2A1018}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.go{color:#2A1018}}
+.btn.bad{color:var(--accent-text)}.btn:disabled{opacity:.5;cursor:wait}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px}
+.card h2{margin:0 0 4px;font-size:17px;font-weight:800}.card .meta{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
+.row{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(110px,.9fr) minmax(200px,1.4fr) auto;gap:8px 14px;align-items:center;padding:10px 6px;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}.row .who{font-weight:700;overflow-wrap:anywhere}.row .who small{display:block;color:var(--ink2);font-weight:500}
+.row .btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);border-radius:10px;padding:0 8px;font:inherit;color:var(--ink);background:var(--bg)}
+.pwbox{border:2px solid var(--accent);background:var(--fill-soft)}.pwbox h2{font-size:16px}.pwline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.pwline input{height:38px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;color:var(--ink);background:var(--surface);min-width:220px}.big{font-size:22px;font-weight:800;letter-spacing:.04em;font-family:ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere}
+.note{color:var(--ink2);font-size:12px;margin-top:4px}
+.empty{color:var(--ink2);padding:8px 2px}.err{background:#FF93A0;color:#2A1018;border-radius:10px;padding:10px 14px;font-weight:600}
+@media (max-width:640px){.row{grid-template-columns:1fr}.row .btns{justify-content:flex-start}}
+
+.grp{display:flex;flex-direction:column;gap:6px}
+.grp .top2{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-start;justify-content:space-between}
+.item{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) auto;gap:8px 14px;align-items:center;padding:11px 6px;border-top:1px solid var(--line)}
+.item .nm{font-weight:700;overflow-wrap:anywhere}.item .nm small,.item .dt{display:block;color:var(--ink2);font-weight:500;font-size:12.5px}
+.item .btns{display:flex;gap:6px;justify-content:flex-end}
+.drop{border:1.5px dashed var(--line);border-radius:12px;padding:12px 14px;color:var(--ink2);font-size:13px;margin:6px 0 4px}.drop.on{border-color:var(--accent);background:var(--fill-soft)}
+.top .sub{max-width:560px}.st{font-size:12.5px;font-weight:600;margin-top:4px;min-height:18px}
+@media (max-width:640px){.item{grid-template-columns:1fr}.item .btns{justify-content:flex-start}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>All Uploads</h1><div class="sub">Every document in one place, listed under the part of the site it feeds. Saved documents stay until you remove them here.</div></div><div class="actions"></div></header>
+  <div class="err" id="err" hidden></div>
+  <div id="groups"><div class="empty">Loading…</div></div>
+</div>
+<input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" hidden>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="/parsers.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ACCEPT={dashboards:'.xlsx,.xlsm,.csv',staff:'.xlsx,.xls,.xlsm,.csv',vm:'.xlsx,.xls,.xlsm'};
+let pending=null;
+function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
+function when(s){try{return s?new Date(s).toLocaleString([],{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):''}catch(_){return''}}
+async function load(){
+  try{
+    const r=await fetch('/api/uploads',{credentials:'same-origin',cache:'no-store'});
+    if(r.status===401){location.replace('/login.html');return}
+    const j=await r.json();
+    if(!r.ok||!j.ok){showErr(j.error||'Could not load.');return}
+    showErr('');
+    $('groups').innerHTML=j.groups.map(g=>`<section class="card grp" data-g="${g.id}"><div class="top2"><div><h2>${esc(g.title)}</h2><div class="meta" style="margin:0">${esc(g.hint)}</div></div><button class="btn go" data-add="${g.id}" type="button">Add a file</button></div>
+      <div class="drop" data-drop="${g.id}">Drop a file here to add it to <b>${esc(g.title)}</b></div><div class="st" data-st="${g.id}"></div>
+      ${g.items.length?g.items.map(it=>`<div class="item"><div class="nm">${esc(it.name)}<small>${esc(it.detail||'')}</small></div><div class="dt">${it.uploadedAt?'Added '+esc(when(it.uploadedAt)):''}</div><div class="btns"><button class="btn bad" type="button" data-del="${g.id}" data-id="${esc(it.id)}">Remove</button></div></div>`).join(''):'<div class="empty">Nothing uploaded yet.</div>'}
+    </section>`).join('');
+  }catch(_){showErr('Could not load. Check your connection.')}
+}
+function say(area,t,bad){const s=document.querySelector('[data-st="'+area+'"]');if(s){s.textContent=t;s.style.color=bad?'var(--accent-text)':'var(--ink2)'}}
+async function post(url,body,type){const r=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':type},body});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('error '+r.status));return j}
+async function add(area,file){
+  say(area,'Reading '+file.name+'…');
+  try{
+    if(area==='dashboards'){
+      const rows=await PandoraParse.dash(file);say(area,'Saving…');
+      const j=await post('/api/uploads?area=dashboards',await PandoraParse.gzip({file:file.name,rows}),'application/octet-stream');
+      await load();say(area,'Saved '+j.rows.toLocaleString()+' sales lines.');
+    }else if(area==='staff'){
+      const d=await PandoraParse.staff(file);say(area,'Publishing…');
+      const j=await post('/api/data',await PandoraParse.gzip(d),'application/octet-stream');
+      await load();say(area,'Published '+j.rows.toLocaleString()+' rows.');
+    }else{
+      const d=await PandoraParse.vm(file);say(area,'Cleaning and saving…');
+      const j=await post('/api/vm',await PandoraParse.gzip(d),'application/octet-stream');
+      await load();say(area,'Added.'+(j.removed&&j.removed.length?' Removed automatically: '+j.removed.join(', ')+'.':''));
+    }
+  }catch(e){say(area,'Not added: '+(e.message||'could not read that file.'),true)}
+}
+document.addEventListener('click',async e=>{
+  const a=e.target.closest('[data-add]');
+  if(a){pending=a.dataset.add;const f=$('file');f.accept=ACCEPT[pending]||'';f.click();return}
+  const d=e.target.closest('[data-del]');
+  if(d){
+    if(!d.dataset.sure){d.dataset.sure='1';d.textContent='Sure? Remove';setTimeout(()=>{if(d.isConnected){delete d.dataset.sure;d.textContent='Remove'}},4000);return}
+    d.disabled=true;
+    try{await post('/api/uploads?op=delete',JSON.stringify({area:d.dataset.del,id:d.dataset.id}),'application/json');await load()}catch(x){showErr('Could not remove: '+x.message);d.disabled=false}
+  }
+});
+$('file').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f&&pending)add(pending,f)});
+['dragover','dragenter'].forEach(ev=>document.addEventListener(ev,e=>{const z=e.target.closest&&e.target.closest('[data-drop]');if(z){e.preventDefault();z.classList.add('on')}}));
+['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{const z=e.target.closest&&e.target.closest('[data-drop]');if(z){e.preventDefault();z.classList.remove('on');if(ev==='drop'){const f=e.dataTransfer.files[0];if(f)add(z.dataset.drop,f)}}}));
+load();
+</script>
+</body>
+</html>

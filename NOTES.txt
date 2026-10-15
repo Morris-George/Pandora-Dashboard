@@ -16,3 +16,10 @@ VM REPORT LIBRARY
 - /vm shows a list of reports; the VM (Raef) picks one. The super admin adds reports by dropping an Excel file on that page (Remove button per report).
 - Amounts are ALWAYS stripped on the server (api/vm.js): only columns like store/category/item/qty are kept; anything named amount/value/price/revenue/TRX/etc. is dropped, and "Total" rows are ignored. Nothing with amounts is ever stored or sent to the VM.
 - Report kinds: "qty-by-category" (store + category + qty) gets the full dashboard (bars, heat map, store cards, filter; Packaging/Operations hidden by default with a toggle); any other file shows as a simple table. New kinds can be added in private/vm.html.
+
+ALL UPLOADS (super admin home screen -> "All Uploads", /uploads)
+- One page listing every document under the part of the site it feeds: Pandora Dashboards, Staff Performance, VM Report. Each section has Add a file / drop zone and a Remove button per document (two-step: "Sure? Remove").
+- Pandora Dashboards sales files are now saved on the server (dash/index.json, dash/f/<id>.json, api/uploads.js) and load automatically every time the dashboard opens. They are only removed with Remove on the All Uploads page. Several files are added together; a line that appears in two files is counted once; adding a file with the same name replaces that file.
+- The Upload button on the Dashboards page saves into the same place (it no longer keeps data in the browser only).
+- Staff Performance data (one month, data/current.json) and VM reports (vm/) are listed here too and can be removed here; their own upload buttons still work.
+- Shared file readers: private/parsers.js (window.PandoraParse), served to the super admin only.
