@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>VM Report</title>
+<title>VM Reports</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
 <style>
 :root{--bg:#FBF6F7;--surface:#FFFFFF;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--accent:#FF93A0;--accent-text:#2A1F24;--fill-soft:#FFE4E8;--hover:#FFF1F3;--good:#1F7A4D;--bad:#FF93A0;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
@@ -31,45 +31,129 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
 .note{color:var(--ink2);font-size:12px;margin-top:4px}
 .empty{color:var(--ink2);padding:8px 2px}.err{background:#FF93A0;color:#2A1018;border-radius:10px;padding:10px 14px;font-weight:600}
 @media (max-width:640px){.row{grid-template-columns:1fr}.row .btns{justify-content:flex-start}}
-.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.tab{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px;font-weight:600;cursor:pointer}.tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#2A1018}
-.tw{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:12px}table{border-collapse:collapse;width:100%;min-width:max-content}th,td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{position:sticky;top:0;background:var(--surface);font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2)}td.n{text-align:right;font-variant-numeric:tabular-nums}
+
+.crumb{cursor:pointer;background:none;border:0;padding:0}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px;font-weight:600;cursor:pointer}.chip:hover{background:var(--hover)}.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#2A1018}
+.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);font-weight:700}
+.filters{display:flex;flex-direction:column;gap:10px}.frow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.kpi{padding:12px 14px;border-radius:12px;background:var(--bg);min-width:0}.kpi.hero{background:var(--fill-soft)}.kpi .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);font-weight:700}.kpi .v{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kpi .s{font-size:12px;color:var(--ink2);margin-top:2px}
+.bars{display:flex;flex-direction:column;gap:7px}.brow{display:grid;grid-template-columns:minmax(120px,190px) 1fr 120px;gap:10px;align-items:center;padding:3px 4px;border-radius:8px}.brow:hover{background:var(--hover)}.brow .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.track{height:14px;background:color-mix(in srgb,var(--line) 55%,transparent);border-radius:0 6px 6px 0}.fill{height:100%;border-radius:0 6px 6px 0;background:#D9C8CD}.brow.top .fill{background:var(--accent)}.brow .val{text-align:right;font-weight:700;white-space:nowrap}.brow .val small{font-weight:500;color:var(--ink2);margin-left:6px}
+.heatwrap{overflow:auto;border:1px solid var(--line);border-radius:12px}table.heat{border-collapse:separate;border-spacing:3px;width:100%;min-width:max-content}table.heat th{font-size:11px;font-weight:700;color:var(--ink2);padding:6px 8px;text-align:center;white-space:nowrap}table.heat th.r{text-align:left;color:var(--ink);font-size:13px;position:sticky;left:0;background:var(--surface);z-index:1}table.heat td{text-align:center;padding:10px 8px;border-radius:8px;font-weight:700;font-variant-numeric:tabular-nums;color:#2A1018;min-width:64px}table.heat td.z{color:var(--ink2);font-weight:500;background:transparent}table.heat td.t,table.heat th.t{background:transparent;color:var(--ink);font-weight:800}
+.scale{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--ink2)}.scale i{display:block;width:160px;height:10px;border-radius:6px;background:linear-gradient(90deg,#FFF3F5,#FFD9DE,#FFB8C0,#FF93A0,#F7707F)}
+.stores{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}.sc{border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--surface)}.sc h3{margin:0;font-size:15px}.sc .tot{color:var(--ink2);font-size:12.5px;margin:2px 0 10px}.mini{display:grid;grid-template-columns:1fr 38px;gap:2px 8px;align-items:center;font-size:12.5px;margin-top:6px}.mini .b{grid-column:1/3;height:8px;border-radius:0 5px 5px 0;background:var(--accent)}.mini .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mini .q{text-align:right;font-weight:700}
+.libgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}.rep{display:flex;flex-direction:column;gap:6px;text-align:left;border:1px solid var(--line);border-radius:16px;padding:18px;background:var(--surface);cursor:pointer;font:inherit;color:inherit;text-decoration:none}.rep:hover{border-color:var(--accent);box-shadow:0 0 0 3px #FF93A044}.rep b{font-size:16px}.rep .d{color:var(--ink2);font-size:12.5px}.rep .ic{width:40px;height:40px;border-radius:12px;background:var(--fill-soft);display:grid;place-items:center;margin-bottom:4px}.rep .ic svg{width:22px;height:22px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tw{overflow:auto;max-height:60vh;border:1px solid var(--line);border-radius:12px}.tw table{border-collapse:collapse;width:100%;min-width:max-content}.tw th,.tw td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}.tw th{position:sticky;top:0;background:var(--surface);font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2)}.tw td.n{text-align:right;font-variant-numeric:tabular-nums}
+details.tbl summary{cursor:pointer;font-weight:700;margin-bottom:10px}
 .drop{border:1.5px dashed var(--line);border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.drop.on{border-color:var(--accent);background:var(--hover)}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;max-width:260px;display:none}
+@media (max-width:640px){.brow{grid-template-columns:96px 1fr 84px}.brow .val small{display:none}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="top"><div><h1 id="ttl">VM Report</h1><div class="sub" id="meta"></div></div><div class="actions"></div></header>
+  <header class="top"><div><button class="crumb" id="back" type="button" hidden>&larr; All reports</button><h1 id="ttl">Reports</h1><div class="sub" id="meta"></div></div><div class="actions"></div></header>
   <div class="err" id="err" hidden></div>
-  <section class="card" id="feed" hidden><h2>Feed the report</h2><div class="meta">Only you (super admin) can do this. The VM account can only view what you publish here. Publishing again replaces the old report.</div>
+  <section class="card" id="feed" hidden><h2>Add a report</h2><div class="meta">Only you (super admin) can do this. Choose an Excel file: any amounts, prices and sales values are removed automatically before it is saved, so the VM only ever sees items, categories and quantities. Reports you add stay in the list until you remove them.</div>
     <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" hidden>
     <div class="drop" id="drop"><button class="btn go" id="pick" type="button">Choose Excel file</button><span>or drop it here</span><span id="status" class="note"></span></div></section>
-  <section class="card" id="view"><div class="empty">Loading…</div></section>
+  <div id="main"></div>
 </div>
+<div id="tip" role="tooltip"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const $=id=>document.getElementById(id),ROLE=window.__PANDORA_ROLE||{role:'vm'},ADMIN=ROLE.role==='admin';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const nf=new Intl.NumberFormat('en-US',{maximumFractionDigits:2});
+const nf=new Intl.NumberFormat('en-US',{maximumFractionDigits:0}),pc=v=>Math.round(v*100)+'%';
 function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
-let D=null,cur=0;
-function cell(v){if(v===null||v===undefined||v==='')return'<td></td>';if(typeof v==='number')return`<td class="n">${nf.format(v)}</td>`;return`<td>${esc(v)}</td>`}
-function draw(){
-  const v=$('view');
-  if(!D){v.innerHTML=ADMIN?'<div class="empty">Nothing is published yet. Choose the Excel file above.</div>':'<div class="empty">Your report is not ready yet. Please check again later.</div>';$('meta').textContent='';return}
-  $('ttl').textContent=D.title||'VM Report';
-  $('meta').textContent=[D.period,D.uploadedAt?'Updated '+new Date(D.uploadedAt).toLocaleDateString([],{day:'numeric',month:'short',year:'numeric'}):''].filter(Boolean).join(' · ');
-  const sh=D.sheets[cur]||D.sheets[0],MAX=500;
-  v.innerHTML=`<div class="tabs">${D.sheets.map((s,i)=>`<button class="tab" type="button" data-i="${i}" aria-pressed="${i===cur}">${esc(s.name)}</button>`).join('')}</div>
-   <div class="tw"><table><thead><tr>${sh.columns.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${sh.rows.slice(0,MAX).map(r=>`<tr>${sh.columns.map((_,i)=>cell(r[i])).join('')}</tr>`).join('')}</tbody></table></div>
-   ${sh.rows.length>MAX?`<div class="note">Showing the first ${MAX} of ${nf.format(sh.rows.length)} rows.</div>`:''}`;
+const get=async u=>{const r=await fetch(u,{credentials:'same-origin',cache:'no-store'});if(r.status===401){location.replace('/login.html');throw 0}return r};
+const ICON='<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>';
+
+/* ---------- library: the list of reports ---------- */
+let LIST=[];
+async function showLibrary(){
+  history.replaceState(null,'',location.pathname);
+  $('back').hidden=true;$('ttl').textContent='Reports';$('meta').textContent=ADMIN?'These are the reports the VM can open.':'Choose a report to open.';
+  try{const j=await (await get('/api/vm')).json();LIST=j.reports||[]}catch(_){showErr('Could not load the reports. Please refresh the page.');return}
+  $('main').innerHTML=LIST.length?`<div class="libgrid">${LIST.map(r=>`<div class="rep" role="button" tabindex="0" data-open="${esc(r.id)}"><span class="ic">${ICON}</span><b>${esc(r.title)}</b><span class="d">${esc(r.period||'')}${r.period?' · ':''}${nf.format(r.rows)} lines</span>${ADMIN?`<span><button class="btn bad" data-del="${esc(r.id)}" type="button">Remove</button></span>`:''}</div>`).join('')}</div>`
+   :`<section class="card"><div class="empty">${ADMIN?'No report yet. Choose an Excel file above.':'There is no report yet. Please check again later.'}</div></section>`;
 }
-document.addEventListener('click',e=>{const t=e.target.closest('.tab');if(t){cur=+t.dataset.i;draw()}});
-async function load(){
-  try{const r=await fetch('/api/vm',{credentials:'same-origin',cache:'no-store'});
-    if(r.status===401){location.replace('/login.html');return}
-    if(r.status===404){D=null}else{const j=await r.json();if(!r.ok)throw 0;D=j}
-    draw()}catch(_){showErr('Could not load the report. Please refresh the page.')}
+document.addEventListener('click',async e=>{
+  const del=e.target.closest('[data-del]');
+  if(del){e.stopPropagation();if(!confirm('Remove this report? The VM will no longer see it.'))return;
+    await fetch('/api/vm?op=delete',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:del.dataset.del})});showLibrary();return}
+  const o=e.target.closest('[data-open]');if(o)openReport(o.dataset.open);
+});
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.open){e.preventDefault();openReport(e.target.dataset.open)}});
+$('back').onclick=showLibrary;
+
+/* ---------- one report ---------- */
+let R=null,S={store:'ALL',ops:false};
+const OPS=/operation|packag|services|boxes|bags?\b/i;
+const shortStore=s=>String(s).replace(/^\s*\d+\s*-\s*/,'').replace(/\s*-\s*[A-Z]{1,3}\s*$/,'').replace(/^Pandora\s+/i,'').trim()||String(s);
+async function openReport(id){
+  showErr('');
+  try{const r=await get('/api/vm?id='+encodeURIComponent(id));if(!r.ok)throw 0;R=await r.json()}catch(_){showErr('Could not open that report.');return}
+  history.replaceState(null,'','#'+id);S={store:'ALL',ops:false};
+  $('back').hidden=false;$('ttl').textContent=R.title;$('meta').textContent=R.period||'';
+  R.kind==='qty-by-category'?drawQty():drawTable();
 }
+function drawTable(){
+  const MAX=500;
+  $('main').innerHTML=`<section class="card"><div class="tw"><table><thead><tr>${R.columns.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${R.rows.slice(0,MAX).map(r=>`<tr>${R.columns.map((_,i)=>{const v=r[i];return v==null||v===''?'<td></td>':typeof v==='number'?`<td class="n">${nf.format(v)}</td>`:`<td>${esc(v)}</td>`}).join('')}</tr>`).join('')}</tbody></table></div>${R.rows.length>MAX?`<div class="note">Showing the first ${MAX} of ${nf.format(R.rows.length)} lines.</div>`:''}</section>`;
+}
+function prep(){
+  const ix=re=>R.columns.findIndex(c=>re.test(c)),is=ix(/store|branch|location|shop/i),ic=ix(/categor|group|class/i),iq=ix(/qty|quantity|units|pieces|pcs/i);
+  const cells=new Map(),stores=new Set(),cats=new Set();
+  for(const r of R.rows){const q=+r[iq];if(!isFinite(q))continue;const st=shortStore(r[is]),ct=String(r[ic]||'Other').trim();
+    if(!S.ops&&OPS.test(ct))continue;stores.add(st);cats.add(ct);const k=st+'\u0001'+ct;cells.set(k,(cells.get(k)||0)+q)}
+  return{cells,stores:[...stores].sort((a,b)=>a.localeCompare(b)),cats:[...cats]};
+}
+function drawQty(){
+  const P=prep(),q=(st,ct)=>P.cells.get(st+'\u0001'+ct)||0;
+  const selStores=S.store==='ALL'?P.stores:P.stores.filter(x=>x===S.store);
+  const catTot=P.cats.map(c=>({n:c,v:selStores.reduce((n,s)=>n+q(s,c),0)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+  const total=catTot.reduce((n,x)=>n+x.v,0);
+  const stTot=P.stores.map(s=>({n:s,v:P.cats.reduce((n,c)=>n+q(s,c),0)})).sort((a,b)=>b.v-a.v);
+  const allTotal=stTot.reduce((n,x)=>n+x.v,0);
+  const maxCat=catTot[0]?catTot[0].v:0;
+  const chips=['ALL',...P.stores].map(s=>`<button class="chip" type="button" data-store="${esc(s)}" aria-pressed="${s===S.store}">${s==='ALL'?'All stores':esc(s)}</button>`).join('');
+  const kBest=catTot[0];
+  const kpis=`<div class="kpis"><div class="kpi hero"><div class="k">Pieces sold</div><div class="v">${nf.format(total)}</div><div class="s">${S.store==='ALL'?'all stores':esc(S.store)}</div></div>
+   <div class="kpi"><div class="k">Best category</div><div class="v">${kBest?esc(kBest.n):'-'}</div><div class="s">${kBest?nf.format(kBest.v)+' pieces · '+pc(kBest.v/total):''}</div></div>
+   <div class="kpi"><div class="k">${S.store==='ALL'?'Best store':'Share of all stores'}</div><div class="v">${S.store==='ALL'?(stTot[0]?esc(stTot[0].n):'-'):pc((stTot.find(x=>x.n===S.store)||{v:0}).v/(allTotal||1))}</div><div class="s">${S.store==='ALL'?(stTot[0]?nf.format(stTot[0].v)+' pieces':''):'of all pieces sold'}</div></div>
+   <div class="kpi"><div class="k">Categories</div><div class="v">${catTot.length}</div><div class="s">${P.stores.length} stores</div></div></div>`;
+  const bars=catTot.map((x,i)=>`<div class="brow ${i===0?'top':''}" data-tip="${esc(x.n)}: ${nf.format(x.v)} pieces (${pc(x.v/total)} of ${S.store==='ALL'?'all stores':esc(S.store)})"><span class="n" title="${esc(x.n)}">${esc(x.n)}</span><span class="track"><span class="fill" style="display:block;width:${maxCat?Math.max(2,x.v/maxCat*100):0}%"></span></span><span class="val">${nf.format(x.v)}<small>${pc(x.v/total)}</small></span></div>`).join('')||'<div class="empty">Nothing to show.</div>';
+  // heat map: category rows x store columns, darker pink = more pieces
+  const cmax=Math.max(1,...P.cats.flatMap(c=>P.stores.map(s=>q(s,c))));
+  const ramp=['#FFF3F5','#FFD9DE','#FFB8C0','#FF93A0','#F7707F'];
+  const col=v=>v<=0?'transparent':ramp[Math.min(4,Math.floor(v/cmax*4.999))];
+  const cats=[...P.cats].sort((a,b)=>catTot_all(b)-catTot_all(a));
+  function catTot_all(c){return P.stores.reduce((n,s)=>n+q(s,c),0)}
+  const heat=`<div class="heatwrap"><table class="heat"><thead><tr><th class="r">Category</th>${P.stores.map(s=>`<th><button class="chip" style="padding:3px 10px;font-size:11px" type="button" data-store="${esc(s)}" aria-pressed="${s===S.store}">${esc(s)}</button></th>`).join('')}<th class="t">All</th></tr></thead><tbody>
+   ${cats.map(c=>`<tr><th class="r">${esc(c)}</th>${P.stores.map(s=>{const v=q(s,c);return v>0?`<td style="background:${col(v)}" data-tip="${esc(c)} · ${esc(s)}: ${nf.format(v)} pieces">${nf.format(v)}</td>`:`<td class="z">–</td>`}).join('')}<td class="t">${nf.format(catTot_all(c))}</td></tr>`).join('')}
+   <tr><th class="r t">All categories</th>${P.stores.map(s=>`<td class="t">${nf.format(stTot.find(x=>x.n===s).v)}</td>`).join('')}<td class="t">${nf.format(allTotal)}</td></tr></tbody></table></div>
+   <div class="scale"><span>Fewer</span><i></i><span>More pieces</span></div>`;
+  const cards=stTot.map(s=>{const l=P.cats.map(c=>({n:c,v:q(s.n,c)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,4),m=l[0]?l[0].v:1;
+    return`<div class="sc"><h3>${esc(s.n)}</h3><div class="tot">${nf.format(s.v)} pieces</div>${l.map(x=>`<div class="mini" data-tip="${esc(x.n)}: ${nf.format(x.v)} pieces (${pc(x.v/s.v)} of ${esc(s.n)})"><span class="n">${esc(x.n)}</span><span class="q">${nf.format(x.v)}</span><span class="b" style="width:${Math.max(3,x.v/m*100)}%"></span></div>`).join('')}</div>`}).join('');
+  const tbl=`<div class="tw"><table><thead><tr><th>Store</th>${cats.map(c=>`<th>${esc(c)}</th>`).join('')}<th>All</th></tr></thead><tbody>${stTot.map(s=>`<tr><td>${esc(s.n)}</td>${cats.map(c=>`<td class="n">${nf.format(q(s.n,c))}</td>`).join('')}<td class="n">${nf.format(s.v)}</td></tr>`).join('')}</tbody></table></div>`;
+  $('main').innerHTML=`<section class="card filters"><div class="frow"><span class="lbl">Store</span><div class="chips">${chips}</div></div>
+    <div class="frow"><span class="lbl">Include</span><div class="chips"><button class="chip" type="button" data-ops="1" aria-pressed="${S.ops}">Packaging &amp; operations</button></div></div></section>
+   <section class="card">${kpis}</section>
+   <section class="card"><h2>Pieces sold by category</h2><div class="meta">${S.store==='ALL'?'All stores together':esc(S.store)}. The darkest bar is the best seller.</div><div class="bars">${bars}</div></section>
+   <section class="card"><h2>Which store sells what</h2><div class="meta">Each box is the number of pieces. Select a store name to focus on it.</div>${heat}</section>
+   <section class="card"><h2>Each store at a glance</h2><div class="meta">The four categories that sell most in each store.</div><div class="stores">${cards}</div></section>
+   <section class="card"><details class="tbl"><summary>Show the numbers as a table</summary>${tbl}</details></section>`;
+}
+document.addEventListener('click',e=>{
+  const s=e.target.closest('[data-store]');if(s&&R){S.store=S.store===s.dataset.store&&s.dataset.store!=='ALL'?'ALL':s.dataset.store;drawQty();return}
+  if(e.target.closest('[data-ops]')&&R){S.ops=!S.ops;if(S.store!=='ALL'&&!prep().stores.includes(S.store))S.store='ALL';drawQty()}
+});
+/* tooltips */
+const tip=$('tip');
+document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]');if(!t){tip.style.display='none';return}tip.textContent=t.dataset.tip;tip.style.display='block'});
+document.addEventListener('mousemove',e=>{if(tip.style.display==='block'){tip.style.left=Math.min(e.clientX+14,innerWidth-270)+'px';tip.style.top=(e.clientY+16)+'px'}});
+
+/* ---------- super admin: add a report ---------- */
 if(ADMIN){$('feed').hidden=false;
   const f=$('file'),drop=$('drop');$('pick').onclick=()=>f.click();f.onchange=()=>f.files[0]&&upload(f.files[0]);
   ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('on')}));
@@ -84,18 +168,17 @@ if(ADMIN){$('feed').hidden=false;
         const cols=(g[0]||[]).map((c,i)=>c==null||c===''?'Column '+(i+1):String(c));
         return{name:n,columns:cols,rows:g.slice(1).map(r=>cols.map((_,i)=>iso(r[i]===undefined?null:r[i])))}}).filter(s=>s.columns.length);
       if(!sheets.length)throw new Error('The file has no data.');
-      $('status').textContent='Publishing…';
-      const body=JSON.stringify({title:file.name.replace(/\.[^.]+$/,'').slice(0,80),file:file.name,sheets});
-      const gz=await new Response(new Blob([body]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+      $('status').textContent='Cleaning and publishing…';
+      const gz=await new Response(new Blob([JSON.stringify({file:file.name,sheets})]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
       const r=await fetch('/api/vm',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:gz});
       const j=await r.json().catch(()=>({}));
       if(!r.ok||!j.ok)throw new Error(j.error||'Could not publish.');
-      $('status').textContent='Published: '+j.sheets+' sheet'+(j.sheets===1?'':'s');cur=0;load();
+      $('status').textContent='Added.'+(j.removed&&j.removed.length?' Removed automatically: '+j.removed.join(', ')+'.':'');showLibrary();
     }catch(e){$('status').textContent='';showErr(e.message||'Could not read that file.')}
     f.value='';
   }
 }
-load();
+showLibrary().then(()=>{const id=location.hash.slice(1);if(id)openReport(id)});
 </script>
 </body>
 </html>
