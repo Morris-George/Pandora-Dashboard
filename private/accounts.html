@@ -7,19 +7,19 @@
 <title>Staff approvals</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
 <style>
-:root{--bg:#FBF6F7;--surface:#FFFFFF;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--accent:#C93A53;--fill-soft:#FFE4E8;--hover:#FFF1F3;--good:#1F7A4D;--bad:#B3261E;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--accent:#FF8A9A;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--bad:#FF8A80;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--accent:#FF8A9A;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--bad:#FF8A80;color-scheme:dark}
+:root{--bg:#FBF6F7;--surface:#FFFFFF;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--accent:#FF93A0;--accent-text:#2A1F24;--fill-soft:#FFE4E8;--hover:#FFF1F3;--good:#1F7A4D;--bad:#FF93A0;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--accent:#FF93A0;--accent-text:#FF93A0;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--bad:#FF93A0;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--accent:#FF93A0;--accent-text:#FF93A0;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--bad:#FF93A0;color-scheme:dark}
 *{box-sizing:border-box}[hidden]{display:none!important}
 body{word-spacing:.09em;margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding:20px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
 .wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between}
 h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(--ink2);font-size:12.5px}
-.crumb{color:var(--ink2);font-size:12.5px;font-weight:600;text-decoration:none}.crumb:hover{color:var(--accent)}
+.crumb{color:var(--ink2);font-size:12.5px;font-weight:600;text-decoration:none}.crumb:hover{color:var(--accent-text)}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
 .btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}.btn:hover{background:var(--hover)}
-.btn.go{background:var(--accent);border-color:var(--accent);color:#fff}:root[data-theme="dark"] .btn.go{color:#2A1018}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.go{color:#2A1018}}
-.btn.bad{color:var(--bad)}.btn:disabled{opacity:.5;cursor:wait}
+.btn.go{background:var(--accent);border-color:var(--accent);color:#2A1018}:root[data-theme="dark"] .btn.go{color:#2A1018}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.go{color:#2A1018}}
+.btn.bad{color:var(--accent-text)}.btn:disabled{opacity:.5;cursor:wait}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px}
 .card h2{margin:0 0 4px;font-size:17px;font-weight:800}.card .meta{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
 .row{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(110px,.9fr) minmax(200px,1.4fr) auto;gap:8px 14px;align-items:center;padding:10px 6px;border-top:1px solid var(--line)}
@@ -29,7 +29,7 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
 .pwbox{border:2px solid var(--accent);background:var(--fill-soft)}.pwbox h2{font-size:16px}.pwline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
 .pwline input{height:38px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;color:var(--ink);background:var(--surface);min-width:220px}.big{font-size:22px;font-weight:800;letter-spacing:.04em;font-family:ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere}
 .note{color:var(--ink2);font-size:12px;margin-top:4px}
-.empty{color:var(--ink2);padding:8px 2px}.err{background:#B3261E;color:#fff;border-radius:10px;padding:10px 14px;font-weight:600}
+.empty{color:var(--ink2);padding:8px 2px}.err{background:#FF93A0;color:#2A1018;border-radius:10px;padding:10px 14px;font-weight:600}
 @media (max-width:640px){.row{grid-template-columns:1fr}.row .btns{justify-content:flex-start}}
 </style>
 </head>
