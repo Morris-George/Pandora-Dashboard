@@ -40,7 +40,7 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
   <section class="card pwbox" id="pwbox" hidden></section>
   <section class="card" id="resetcard" hidden><h2>Forgot password requests</h2><div class="meta">These people asked for a new password. Call the number to check it is really them, then set a new password and send it to them.</div><div id="resets"></div></section>
   <section class="card"><h2>Waiting for approval</h2><div class="meta">Choose who this person is in the sales file, then press Approve.</div><div id="pending"></div></section>
-  <section class="card"><h2>Active</h2><div class="meta">These people can sign in and see their own page.</div><div id="active"></div></section>
+  <section class="card"><h2>Active</h2><div class="meta">Everyone who can sign in right now, with their role.</div><div id="active"></div></section>
   <section class="card" id="special"><h2>Special accounts</h2><div class="meta">For one person who needs a different report, for example the Visual Merchandiser. They sign in with their own username and password and open only what you give them.</div>
     <div id="splist"></div>
     <div class="pwline" style="margin-top:12px"><input id="spname" placeholder="Full name" maxlength="60"><input id="spuser" placeholder="Username" maxlength="30" autocapitalize="none" spellcheck="false"><input id="sppw" placeholder="Password (8+ characters)" maxlength="100" autocomplete="off"><select id="sprole" style="max-width:190px"><option value="vm">VM Report</option></select><button class="btn go" data-act="mkspecial" type="button">Create account</button></div>
@@ -76,7 +76,10 @@ async function load(){
     $('splist').innerHTML=sp.length?sp.map(a=>`<div class="row"><div class="who">${esc(a.name)}<small>${a.role==='vm'?'VM Report':esc(a.role)}${a.status==='active'?'':' · switched off'}</small></div><div>${esc(a.username)}</div><div></div><div class="btns"><button class="btn" data-act="pw" data-user="${esc(a.username)}">Change password</button><button class="btn" data-act="${a.status==='active'?'disable':'enable'}" data-user="${esc(a.username)}">${a.status==='active'?'Switch off':'Switch on'}</button><button class="btn bad" data-act="remove" data-user="${esc(a.username)}">Remove</button></div></div>`).join(''):'<div class="empty">None yet.</div>';
     const fill=(id,list,btns,none,pick)=>{$(id).innerHTML=list.length?list.map(a=>rowHtml(a,btns,pick)).join(''):`<div class="empty">${none}</div>`};
     fill('pending',by('pending'),[['approve','Approve','go'],['pw','Change password'],['remove','Reject','bad']],'Nobody is waiting.',true);
-    fill('active',by('active'),[['link','Save link'],['pw','Change password'],['disable','Switch off'],['remove','Remove','bad']],'No active accounts yet.',true);
+    const adm=(j.admins||[]).map(a=>`<div class="row"><div class="who">${esc(a.label)}<small>${a.role==='admin'?'Full access':'Area manager'} · active</small></div><div>${esc(a.username)}</div><div></div><div class="btns"></div></div>`).join('');
+    const spa=sp.filter(a=>a.status==='active').map(a=>`<div class="row"><div class="who">${esc(a.name)}<small>${a.role==='vm'?'VM Report':esc(a.role)} · special account · active</small></div><div>${esc(a.username)}</div><div></div><div class="btns"><button class="btn" data-act="pw" data-user="${esc(a.username)}">Change password</button><button class="btn" data-act="disable" data-user="${esc(a.username)}">Switch off</button><button class="btn bad" data-act="remove" data-user="${esc(a.username)}">Remove</button></div></div>`).join('');
+    fill('active',by('active'),[['link','Save link'],['pw','Change password'],['disable','Switch off'],['remove','Remove','bad']],'No sales people yet.',true);
+    $('active').insertAdjacentHTML('afterbegin',adm+spa);
     fill('off',by('disabled'),[['enable','Switch on'],['pw','Change password'],['remove','Remove','bad']],'None.',false);
   }catch(e){showErr('Could not load accounts. Check your connection.')}
 }

@@ -42,7 +42,7 @@ module.exports = async function handler(req, res) {
     resets.sort((a, b) => String(b.requestedAt).localeCompare(String(a.requestedAt)));
     list.sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || String(b.createdAt).localeCompare(String(a.createdAt)));
     return send(res, 200, {
-      ok: true, accounts: list, resets, hasData: !!data,
+      ok: true, accounts: list, admins: staffAccounts().map(a => ({ username: a.user, role: a.role, label: a.label })), resets, hasData: !!data,
       people: people.map(p => ({ ...p, takenBy: taken.get(p.store + '|' + p.name) || '' })).sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name))
     });
   }
