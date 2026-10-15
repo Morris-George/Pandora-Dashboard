@@ -1,4 +1,5 @@
 // Sales person accounts: the super admin approves (and links to the right sales person), switches off or removes them.
+const crypto = require('crypto');
 const store = require('./_store');
 const users = require('./_users');
 const { whoami } = require('./_auth');
@@ -64,6 +65,14 @@ module.exports = async function handler(req, res) {
       else if (!rec.linked && data) return send(res, 400, { ok: false, error: 'Choose the sales person for this account first.' });
       rec.status = 'active'; rec.fails = 0; rec.lockUntil = 0; await users.putUser(rec);
       return send(res, 200, { ok: true, linked: !!rec.linked });
+    }
+    if (b.action === 'setpassword') {
+      // Passwords are stored as one-way hashes, so nobody can look one up. The admin sets a new one (typed, or made here) and gives it to the person.
+      let pw = String(b.password || '').trim();
+      if (!pw) { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'; pw = Array.from({ length: 10 }, () => A[crypto.randomInt(A.length)]).join(''); }
+      if (pw.length < 8 || pw.length > 100) return send(res, 400, { ok: false, error: 'Password must be at least 8 characters.' });
+      rec.pass = users.hashPassword(pw); rec.fails = 0; rec.lockUntil = 0; await users.putUser(rec);
+      return send(res, 200, { ok: true, password: pw });
     }
     if (b.action === 'enable') { rec.status = 'active'; rec.fails = 0; rec.lockUntil = 0; await users.putUser(rec); return send(res, 200, { ok: true }); }
     if (b.action === 'disable') { rec.status = 'disabled'; await users.putUser(rec); return send(res, 200, { ok: true }); }

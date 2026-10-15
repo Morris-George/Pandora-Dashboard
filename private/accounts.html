@@ -26,6 +26,8 @@ h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(
 .row:first-of-type{border-top:0}.row .who{font-weight:700;overflow-wrap:anywhere}.row .who small{display:block;color:var(--ink2);font-weight:500}
 .row .btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);border-radius:10px;padding:0 8px;font:inherit;color:var(--ink);background:var(--bg)}
+.pwbox{border:2px solid var(--accent);background:var(--fill-soft)}.pwbox h2{font-size:16px}.pwline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.pwline input{height:38px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;color:var(--ink);background:var(--surface);min-width:220px}.big{font-size:22px;font-weight:800;letter-spacing:.04em;font-family:ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere}
 .note{color:var(--ink2);font-size:12px;margin-top:4px}
 .empty{color:var(--ink2);padding:8px 2px}.err{background:#B3261E;color:#fff;border-radius:10px;padding:10px 14px;font-weight:600}
 @media (max-width:640px){.row{grid-template-columns:1fr}.row .btns{justify-content:flex-start}}
@@ -35,6 +37,7 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
 <div class="wrap">
   <header class="top"><div><a class="crumb" href="/staff">&larr; Staff Performance</a><h1>Staff approvals</h1><div class="sub">Sales people create their own account. Nobody sees any sales until you approve and link them to the right sales person.</div></div><div class="actions"></div></header>
   <div class="err" id="err" hidden></div>
+  <section class="card pwbox" id="pwbox" hidden></section>
   <section class="card"><h2>Waiting for approval</h2><div class="meta">Choose who this person is in the sales file, then press Approve.</div><div id="pending"></div></section>
   <section class="card"><h2>Active</h2><div class="meta">These people can sign in and see their own page.</div><div id="active"></div></section>
   <section class="card" id="offcard"><h2>Switched off</h2><div class="meta">They cannot sign in. You can switch them on again.</div><div id="off"></div></section>
@@ -62,13 +65,17 @@ async function load(){
     PEOPLE=j.people||[];HASDATA=!!j.hasData;
     const by=s=>j.accounts.filter(a=>a.status===s);
     const fill=(id,list,btns,none,pick)=>{$(id).innerHTML=list.length?list.map(a=>rowHtml(a,btns,pick)).join(''):`<div class="empty">${none}</div>`};
-    fill('pending',by('pending'),[['approve','Approve','go'],['remove','Reject','bad']],'Nobody is waiting.',true);
-    fill('active',by('active'),[['link','Save link'],['disable','Switch off'],['remove','Remove','bad']],'No active accounts yet.',true);
-    fill('off',by('disabled'),[['enable','Switch on'],['remove','Remove','bad']],'None.',false);
+    fill('pending',by('pending'),[['approve','Approve','go'],['pw','Change password'],['remove','Reject','bad']],'Nobody is waiting.',true);
+    fill('active',by('active'),[['link','Save link'],['pw','Change password'],['disable','Switch off'],['remove','Remove','bad']],'No active accounts yet.',true);
+    fill('off',by('disabled'),[['enable','Switch on'],['pw','Change password'],['remove','Remove','bad']],'None.',false);
   }catch(e){showErr('Could not load accounts. Check your connection.')}
 }
 document.addEventListener('click',async e=>{
   const b=e.target.closest('button[data-act]'); if(!b)return;
+  if(b.dataset.act==='pw'){openPw(b.dataset.user);return}
+  if(b.dataset.act==='pwsave'){savePw(b);return}
+  if(b.dataset.act==='pwclose'){$('pwbox').hidden=true;return}
+  if(b.dataset.act==='pwcopy'){try{await navigator.clipboard.writeText(b.dataset.pw);b.textContent='Copied'}catch(_){b.textContent='Select and copy it'}return}
   if(b.dataset.act==='remove'&&!confirm('Remove this account? The person can sign up again later.'))return;
   b.disabled=true;
   const body={action:b.dataset.act,username:b.dataset.user};
@@ -80,6 +87,14 @@ document.addEventListener('click',async e=>{
   try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)showErr(j.error||'That did not work.')}catch(_){showErr('No connection.')}
   load();
 });
+function openPw(u){showErr('');const box=$('pwbox');box.hidden=false;
+  box.innerHTML=`<h2>New password for ${esc(u)}</h2><div class="note">Passwords are kept scrambled for safety, so an old password cannot be shown. Type a new one (at least 8 characters), or leave it empty and one will be made for you. Then give it to the person.</div><div class="pwline"><input id="pwin" maxlength="100" placeholder="Leave empty to make one" autocomplete="off"><button class="btn go" data-act="pwsave" data-user="${esc(u)}">Save new password</button><button class="btn" data-act="pwclose">Cancel</button></div>`;
+  box.scrollIntoView({block:'center'});$('pwin').focus()}
+async function savePw(b){b.disabled=true;
+  try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'setpassword',username:b.dataset.user,password:$('pwin').value})});const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok){showErr(j.error||'That did not work.');b.disabled=false;return}
+    $('pwbox').innerHTML=`<h2>Password changed for ${esc(b.dataset.user)}</h2><div class="note">Copy it now and send it to the person. It will not be shown again.</div><div class="pwline"><span class="big">${esc(j.password)}</span><button class="btn go" data-act="pwcopy" data-pw="${esc(j.password)}">Copy</button><button class="btn" data-act="pwclose">Done</button></div>`;
+  }catch(_){showErr('No connection.');b.disabled=false}}
 load();
 </script>
 </body>
