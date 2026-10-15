@@ -223,28 +223,26 @@ function pool(P,S){
 const arrow=up=>`<svg viewBox="0 0 10 10" aria-hidden="true"><path d="${up?'M5 1 9 8H1z':'M5 9 1 2h8z'}" fill="currentColor"/></svg>`;
 function delta(v,bench,label){
   if(!bench||!isFinite(bench)) return '';
-  const r=(v-bench)/Math.abs(bench), flat=Math.abs(r)<0.005;
-  if(flat) return `<div class="delta">In line with ${label}</div>`;
-  return `<div class="delta ${r>0?'up':'down'}">${arrow(r>0)}${nf0.format(Math.abs(r)*100)}% ${r>0?'above':'below'} ${label}</div>`;
+  const r=(v-bench)/Math.abs(bench);
+  if(Math.abs(r)<0.03) return `<div class="delta">About the same as ${label}</div>`;
+  return `<div class="delta ${r>0?'up':'down'}">${arrow(r>0)}${nf0.format(Math.abs(r)*100)}% ${r>0?'more':'less'} than ${label}</div>`;
 }
-function bars(rows,opts){ // rows: {name,val,txt,sub,tip,top,me,href}
+function bars(rows){ // rows: {name,val,txt,sub,tip,top}
   const max=Math.max(...rows.map(r=>r.val),0)||1;
-  return `<div class="bars">`+rows.map(r=>{
-    const tag=r.href?'a':'div', h=r.href?` href="${esc(r.href)}"`:'';
-    return `<${tag} class="brow${r.top?' top':''}${r.me?' me':''}"${h} data-tip="${esc(r.tip||'')}" tabindex="0">
+  return `<div class="bars">`+rows.map(r=>`<div class="brow${r.top?' top':''}" data-tip="${esc(r.tip||'')}" tabindex="0">
       <span class="n" title="${esc(r.name)}">${esc(r.name)}</span>
       <span class="track"><span class="fill" style="width:${Math.max(0,r.val)/max*100}%"></span></span>
-      <span class="val num">${esc(r.txt)}${r.sub?`<small>${esc(r.sub)}</small>`:''}</span></${tag}>`}).join('')+`</div>`;
+      <span class="val num">${esc(r.txt)}${r.sub?`<small>${esc(r.sub)}</small>`:''}</span></div>`).join('')+`</div>`;
 }
 
 /* ---------- page ---------- */
 const q=new URLSearchParams(location.search);
 const wantStore=q.get('store')||'', wantName=q.get('name')||'';
-let VIEW={cat:'sales'}, CTX=null;
+let CTX=null;
 
 function noData(msg){
   $('pname').textContent='Sales person';
-  $('out').innerHTML=`<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">${esc(msg)}</h2>Open <a href="/staff" style="color:var(--accent);font-weight:700">Staff Performance</a>, load this month's query file, then click a sales person.</section>`;
+  $('out').innerHTML=`<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">${esc(msg)}</h2>Open <a href="/staff" style="color:var(--accent);font-weight:700">Staff Performance</a>, load this month's file, then click a name.</section>`;
 }
 
 function build(){
@@ -254,19 +252,17 @@ function build(){
   const pi=d.people.findIndex(p=>p[0]===wantName&&d.stores[p[1]]===wantStore);
   if(si<0||pi<0) return noData('That sales person was not found in the loaded file');
   const X=prep(d), P=X.P;
-  const me=P[pi];
-  if(!me.inv.size) return noData('No sales for this person with the current item groups');
+  if(!P[pi].inv.size) return noData('No sales for this person this month');
   const storeIdx=d.people.map((p,i)=>i).filter(i=>d.people[i][1]===si);
   const allIdx=d.people.map((p,i)=>i);
   const M=pool(P,[pi]), S=pool(P,storeIdx), C=pool(P,allIdx);
   const mates=storeIdx.filter(i=>P[i].inv.size).sort((a,b)=>P[b].amt-P[a].amt);
-  const coAll=allIdx.filter(i=>P[i].inv.size).sort((a,b)=>P[b].amt-P[a].amt);
-  const rankStore=mates.indexOf(pi)+1, rankCo=coAll.indexOf(pi)+1;
-  CTX={d,X,P,pi,si,M,S,C,mates,coAll,rankStore,rankCo};
+  const coAll=allIdx.filter(i=>P[i].inv.size);
+  const alone=S.n<2, B=alone?C:S, bname=alone?'all stores':'your store';
+  CTX={d,X,P,pi,si,M,S,C,B,bname,alone,mates,total:coAll.length,rankStore:mates.indexOf(pi)+1};
   document.title=wantName+' · Staff Performance';
   $('pname').textContent=wantName;
-  $('psub').textContent=`${wantStore} · ${d.period||''}${X.exCount?` · ${X.exCount} item group${X.exCount>1?'s':''} left out, same as Staff Performance`:''}`;
-  // prev / next colleague
+  $('psub').textContent=`${wantStore} · ${d.period||''} · all amounts include VAT`;
   const k=mates.indexOf(pi), pv=mates[k-1], nx=mates[k+1];
   const setNav=(id,idx)=>{const a=$(id); if(idx==null){a.setAttribute('aria-disabled','true');a.removeAttribute('href')}else{a.removeAttribute('aria-disabled');a.href=personUrl(wantStore,d.people[idx][0])}};
   setNav('prev',pv); setNav('next',nx);
@@ -274,48 +270,9 @@ function build(){
 }
 
 function groupRows(){
-  const {d,P,pi,M,S}=CTX, me=P[pi];
+  const {d,P,pi,M,B}=CTX, me=P[pi];
   return [...me.g.entries()].map(([g,v])=>({g,name:d.groups[g],a:v.a*VAT,q:v.q,share:me.amt?v.a/me.amt:0,
-    pen:v.inv.size/M.inv,storePen:S.inv?(S.pen.get(g)||0)/S.inv:0,invCount:v.inv.size}));
-}
-
-function coaching(G){
-  const {d,X,P,pi,M,S,C}=CTX, tips=[], hasPeers=S.n>1;
-  const top=[...G].sort((a,b)=>b.a-a.a)[0];
-  if(top) tips.push({cls:'win',ic:'★',tag:'Best seller',h:`${top.name} leads your sales`,
-    p:`${pct(top.share)} of your sales (${nf0.format(top.a)} EGP incl. VAT) and ${nf0.format(top.q)} pieces came from ${top.name}. Start conversations with it and keep it well stocked.`});
-  // cross-sell gap
-  if(hasPeers){
-    const gaps=G.concat([...S.pen.keys()].filter(g=>!P[pi].g.has(g)).map(g=>({g,name:d.groups[g],pen:0,storePen:S.inv?S.pen.get(g)/S.inv:0})))
-      .filter(x=>x.storePen>=0.05&&x.storePen-x.pen>=0.05).sort((a,b)=>(b.storePen-b.pen)-(a.storePen-a.pen));
-    if(gaps.length){const x=gaps[0], cnt=S.pen.get(x.g)||0, avg=cnt?(S.gamt.get(x.g)*VAT)/cnt:0, half=(x.storePen-x.pen)/2, est=half*M.inv*avg;
-      tips.push({cls:'',ic:'↗',tag:'Cross-sell gap',h:`Offer ${x.name} more often`,
-        p:`${x.name} is in ${pct(x.storePen)} of the store's invoices but only ${pct(x.pen)} of yours.`,
-        est:est>0?`≈ +${nf0.format(est)} EGP`:'',estNote:`if you close half the gap (${nf1.format(half*100)} points × your ${nf0.format(M.inv)} invoices × ${nf0.format(avg)} EGP average)`});}
-    else tips.push({cls:'win',ic:'✓',tag:'Cross-sell',h:'Matching the store on add-ons',p:'Every main category appears in your invoices about as often as it does across the store.'});
-  }
-  // basket size
-  if(hasPeers&&M.upt<S.upt){
-    const s1=M.bt?M.b[0]/M.bt:0, t1=S.bt?S.b[0]/S.bt:0, unit=M.qty?M.incl/M.qty:0, est=0.25*M.b[0]*unit;
-    tips.push({cls:'',ic:'＋',tag:'Basket size',h:`Pieces per invoice: ${nf2.format(M.upt)} vs ${nf2.format(S.upt)}`,
-      p:`${pct(s1)} of your invoices are single-piece, against ${pct(t1)} across the store. Suggest a matching second piece before closing the sale.`,
-      est:est>0?`≈ +${nf0.format(est)} EGP`:'',estNote:`if 1 in 4 of your ${nf0.format(M.b[0])} single-piece invoices gained one more piece at your average ${nf0.format(unit)} EGP`});
-  } else if(hasPeers){
-    tips.push({cls:'win',ic:'✓',tag:'Basket size',h:`Pieces per invoice: ${nf2.format(M.upt)}`,p:`You sell ${nf2.format(M.upt)} pieces per invoice, at or above the store's ${nf2.format(S.upt)}. Keep building the basket.`});
-  }
-  if(hasPeers&&M.atv<S.atv*0.97){
-    tips.push({cls:'',ic:'◔',tag:'Ticket value',h:`Average invoice ${nf0.format(M.atv)} vs ${nf0.format(S.atv)} EGP`,
-      p:`Your average invoice is ${nf0.format((1-M.atv/S.atv)*100)}% below the store. Showing one step-up option on each sale lifts ticket value without adding invoices.`});
-  } else if(hasPeers&&M.atv>=S.atv*1.03){
-    tips.push({cls:'win',ic:'✓',tag:'Ticket value',h:`Average invoice ${nf0.format(M.atv)} EGP`,p:`That is ${nf0.format((M.atv/S.atv-1)*100)}% above the store average of ${nf0.format(S.atv)} EGP.`});
-  }
-  // weekday
-  const wd=weekdayStats();
-  if(wd&&wd.activeDays>=7){
-    const best=wd.rows.filter(r=>r.n>0).sort((a,b)=>b.avg-a.avg)[0], overall=wd.overall;
-    if(best&&overall) tips.push({cls:'win',ic:'◷',tag:'Best day',h:`${WDFULL[best.wd]} is your strongest day`,p:`You average ${nf0.format(best.avg)} EGP on selling ${WDFULL[best.wd]}s, ${nf0.format((best.avg/overall-1)*100)}% above your usual ${nf0.format(overall)} EGP per selling day.`});
-  }
-  return tips;
+    pen:v.inv.size/M.inv,benchPen:B.inv?(B.pen.get(g)||0)/B.inv:0}));
 }
 
 function weekdayStats(){
@@ -323,123 +280,82 @@ function weekdayStats(){
   const me=P[pi], acc=Array.from({length:7},()=>({a:0,n:0}));
   let total=0,days=0;
   for(const [dn,v] of me.day){const w=dayDate(dn).getUTCDay(); acc[w].a+=v.a*VAT; acc[w].n++; total+=v.a*VAT; days++}
-  return{rows:WEEK_ORDER.map(w=>({wd:w,n:acc[w].n,avg:acc[w].n?acc[w].a/acc[w].n:0,sum:acc[w].a})),overall:days?total/days:0,activeDays:days};
+  return{rows:WEEK_ORDER.map(w=>({wd:w,n:acc[w].n,avg:acc[w].n?acc[w].a/acc[w].n:0})),overall:days?total/days:0,activeDays:days};
 }
 
-function dailyChart(){
-  const {X,P,pi}=CTX, me=P[pi];
-  const n=X.dmax-X.dmin+1; if(n<2||n>370) return '';
-  const vals=[]; let peak=-1,pv=0,sum=0,active=0;
-  for(let i=0;i<n;i++){const v=me.day.get(X.dmin+i); const a=v?v.a*VAT:0; vals.push({a,inv:v?v.inv.size:0}); if(a>pv){pv=a;peak=i} if(v){sum+=a;active++}}
-  const avg=active?sum/active:0, W=720,H=230,l=40,r=6,t=12,b=26, iw=W-l-r, ih=H-t-b, step=iw/n, bw=Math.max(2,step*0.72);
-  const nice=v=>{const p=Math.pow(10,Math.floor(Math.log10(v||1))),m=v/p;return(m<=1?1:m<=2?2:m<=5?5:10)*p};
-  const ymax=nice(Math.max(pv,avg)*1.05||1), Y=v=>t+ih-(v/ymax)*ih;
-  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily sales for ${esc(wantName)}">`;
-  [0,.5,1].forEach(f=>{const y=Y(ymax*f);s+=`<line class="grid" x1="${l}" x2="${W-r}" y1="${y}" y2="${y}"/><text x="${l-6}" y="${y+3.5}" text-anchor="end">${short(ymax*f)}</text>`});
-  const every=Math.ceil(n/8);
-  vals.forEach((v,i)=>{
-    const x=l+i*step+(step-bw)/2, h=v.a>0?Math.max(2,(v.a/ymax)*ih):0, dn=X.dmin+i;
-    const wdn=WD[dayDate(dn).getUTCDay()];
-    const tip=v.a>0?`${wdn} ${dayLabel(dn)} · ${nf0.format(v.a)} EGP · ${v.inv} invoice${v.inv===1?'':'s'}`:`${wdn} ${dayLabel(dn)} · no sales`;
-    s+=`<g class="hit" data-tip="${esc(tip)}" tabindex="0"><rect x="${l+i*step}" y="${t}" width="${step}" height="${ih}" fill="transparent"/>${h?`<rect class="col${i===peak?' peak':''}" x="${x}" y="${t+ih-h}" width="${bw}" height="${h}" rx="2"/>`:''}</g>`;
-    if(i%every===0) s+=`<text x="${x+bw/2}" y="${H-8}" text-anchor="middle">${dayLabel(dn)}</text>`;
-  });
-  if(avg>0) s+=`<line class="avg" x1="${l}" x2="${W-r}" y1="${Y(avg)}" y2="${Y(avg)}"/><text class="avglbl" x="${W-r}" y="${Y(avg)-5}" text-anchor="end">avg per selling day ${nf0.format(avg)}</text>`;
-  s+='</svg>';
-  return{svg:s,peak:peak>=0?{dn:X.dmin+peak,a:pv}:null,active,n,avg};
+function tips(G){
+  const {d,P,pi,M,B,bname}=CTX, out=[];
+  const top=[...G].sort((a,b)=>b.a-a.a)[0];
+  if(top) out.push({cls:'win',ic:'★',h:`Your best seller is ${top.name}`,
+    p:`${top.name} brought ${nf0.format(top.a)} EGP, which is ${nf0.format(top.share*100)} out of every 100 EGP you sold. Keep showing it first.`});
+  const wd=weekdayStats();
+  let dayTip=null;
+  if(wd&&wd.activeDays>=7){const best=wd.rows.filter(r=>r.n>0).sort((a,b)=>b.avg-a.avg)[0];
+    if(best&&wd.overall&&best.avg>wd.overall*1.1) dayTip={cls:'win',ic:'★',h:`${WDFULL[best.wd]} is your best day`,p:`On ${WDFULL[best.wd]}s you sell about ${nf0.format(best.avg)} EGP, more than your usual ${nf0.format(wd.overall)} EGP on a selling day.`};}
+  // add-on
+  const keys=new Set(G.map(g=>g.g)); B.pen.forEach((v,g)=>keys.add(g));
+  const gaps=[...keys].map(g=>({g,name:d.groups[g],pen:(P[pi].g.get(g)?P[pi].g.get(g).inv.size:0)/M.inv,bp:B.inv?(B.pen.get(g)||0)/B.inv:0}))
+    .filter(x=>x.bp>=0.05&&x.bp-x.pen>=0.05).sort((a,b)=>(b.bp-b.pen)-(a.bp-a.pen));
+  if(gaps.length){const x=gaps[0], cnt=B.pen.get(x.g)||0, avg=cnt?(B.gamt.get(x.g)*VAT)/cnt:0, est=(x.bp-x.pen)/2*M.inv*avg;
+    out.push({cls:'',ic:'↗',h:`Offer ${x.name} to more customers`,
+      p:`In ${bname}, ${nf0.format(x.bp*100)} out of every 100 customers buy ${x.name}. With you it is ${nf0.format(x.pen*100)} out of 100. Try suggesting it with the main piece.`,
+      est:est>=100?`If you close half of this gap you could add about ${nf0.format(est)} EGP`:''});}
+  // pieces per customer
+  if(M.upt<B.upt*0.98&&M.bt){
+    const s1=M.b[0]/M.bt, t1=B.bt?B.b[0]/B.bt:0, unit=M.qty?M.incl/M.qty:0, est=0.25*M.b[0]*unit;
+    out.push({cls:'',ic:'＋',h:'Help customers take one more piece',
+      p:`${nf0.format(s1*100)} out of 100 of your customers leave with only one piece (${bname}: ${nf0.format(t1*100)}). Before closing, ask: “Would you like something to go with it?”`,
+      est:est>=100?`If 1 in 4 of them took one more piece you could add about ${nf0.format(est)} EGP`:''});
+  }
+  // spend per customer
+  if(M.atv<B.atv*0.97) out.push({cls:'',ic:'↑',h:'Show one higher-priced choice',
+      p:`Your customer spends ${nf0.format(M.atv)} EGP on average. In ${bname} it is ${nf0.format(B.atv)} EGP. Showing a nicer option next to the first choice helps.`});
+  else if(M.atv>=B.atv*1.03) out.push({cls:'win',ic:'★',h:'Your customers spend well',p:`Your customer spends ${nf0.format(M.atv)} EGP on average, more than ${bname} (${nf0.format(B.atv)} EGP).`});
+  if(M.upt>=B.upt*0.98 && out.filter(t=>!t.cls).length===0) out.push({cls:'win',ic:'★',h:'Good work',p:`You are at or above ${bname} on the main numbers. Keep it up.`});
+  if(dayTip) out.push(dayTip);
+  return out.slice(0,4);
 }
 
 function render(){
-  const {d,X,P,pi,M,S,C,mates,rankStore,rankCo}=CTX, me=P[pi], hasPeers=S.n>1;
-  const G=groupRows().sort((a,b)=>b.a-a.a);
-  const topG=G[0];
+  const {d,X,P,pi,M,B,bname,alone,mates,total,rankStore}=CTX, me=P[pi];
+  const G=groupRows().sort((a,b)=>b.a-a.a), topG=G[0];
   let h='';
-
-  /* hero */
   h+=`<section class="card hero">
-    <div class="heroleft"><div class="lbl">Total sales incl. VAT</div>
+    <div class="heroleft"><div class="lbl">Your sales</div>
       <div class="big num">${nf0.format(M.incl)}<small>EGP</small></div>
-      <div class="ranks"><span class="pill">#${rankStore} of ${mates.length} in ${esc(wantStore)}</span><span class="pill soft">#${rankCo} of ${CTX.coAll.length} overall</span></div>
-      <div style="color:var(--ink2);font-size:12.5px;margin-top:4px">${topG?`Sells most: <b style="color:var(--ink)">${esc(topG.name)}</b> (${pct(topG.share)} of sales)`:''}</div></div>
+      <div class="ranks"><span class="pill">${alone?'This month':`#${rankStore} of ${mates.length} in your store`}</span></div>
+      <div style="color:var(--ink2);font-size:13px;margin-top:4px">${topG?`You sell most: <b style="color:var(--ink)">${esc(topG.name)}</b>`:''}</div></div>
     <div class="kpis">
-      <div class="kpi"><div class="k">Invoices</div><div class="v num">${nf0.format(M.inv)}</div>${hasPeers?delta(M.inv,S.avgInv,'store avg'):''}</div>
-      <div class="kpi"><div class="k">Pieces sold</div><div class="v num">${nf0.format(M.qty)}</div>${hasPeers?delta(M.qty,S.avgQty,'store avg'):''}</div>
-      <div class="kpi"><div class="k">UPT</div><div class="v num">${nf2.format(M.upt)}</div>${hasPeers?delta(M.upt,S.upt,'store'):''}</div>
-      <div class="kpi"><div class="k">ATV</div><div class="v num">${nf0.format(M.atv)}</div>${hasPeers?delta(M.atv,S.atv,'store'):''}</div>
-      <div class="kpi"><div class="k">Share of store</div><div class="v num">${S.amt?pct(M.amt/S.amt):'—'}</div><div class="delta">${S.n} sales people</div></div>
-      <div class="kpi"><div class="k">Categories sold</div><div class="v num">${me.g.size}</div><div class="delta">item groups</div></div>
+      <div class="kpi"><div class="k">Customers served</div><div class="v num">${nf0.format(M.inv)}</div>${alone?'':delta(M.inv,B.avgInv,'the store average')}</div>
+      <div class="kpi"><div class="k">Pieces sold</div><div class="v num">${nf0.format(M.qty)}</div>${alone?'':delta(M.qty,B.avgQty,'the store average')}</div>
+      <div class="kpi"><div class="k">Pieces per customer</div><div class="v num">${nf1.format(M.upt)}</div>${delta(M.upt,B.upt,bname)}</div>
+      <div class="kpi"><div class="k">Spend per customer</div><div class="v num">${nf0.format(M.atv)} <small style="font-size:12px;color:var(--ink2)">EGP</small></div>${delta(M.atv,B.atv,bname)}</div>
     </div></section>`;
 
-  /* coaching */
-  const tips=coaching(G);
-  h+=`<section class="card"><div class="cardhead"><h2>What to work on</h2><span class="meta">Built from ${esc(wantName)}'s own numbers vs the ${hasPeers?'store':'file'}</span></div><div class="coach">`+
-    tips.map(t=>`<article class="tip ${t.cls}"><div class="tag"><span class="ic" aria-hidden="true">${t.ic}</span>${esc(t.tag)}</div><h3>${esc(t.h)}</h3><p>${esc(t.p)}</p>${t.est?`<div class="est num">${esc(t.est)}<small>${esc(t.estNote)}. An estimate, not a target.</small></div>`:''}</article>`).join('')+
-    `</div></section>`;
+  const T=tips(G);
+  h+=`<section class="card"><div class="cardhead"><h2>Tips for you</h2><span class="meta">Green = you do this well. Pink = a chance to grow</span></div><div class="coach">`+
+    T.map(t=>`<article class="tip ${t.cls}"><div class="tag"><span class="ic" aria-hidden="true">${t.ic}</span></div><h3>${esc(t.h)}</h3><p>${esc(t.p)}</p>${t.est?`<div class="est num">${esc(t.est)}<small>A rough guess, not a target.</small></div>`:''}</article>`).join('')+`</div></section>`;
 
   h+=`<div class="grid2">`;
-  /* categories */
-  h+=`<section class="card"><div class="cardhead"><h2>What ${esc(wantName.split(' ')[0])} sells most</h2><span class="meta">By item group</span></div>
-    <div class="chips sw" style="margin-bottom:10px"><button class="chip" type="button" data-cat="sales" aria-pressed="${VIEW.cat==='sales'}">By sales</button><button class="chip" type="button" data-cat="qty" aria-pressed="${VIEW.cat==='qty'}">By pieces</button></div>`;
-  const byQty=VIEW.cat==='qty', sorted=[...G].sort((a,b)=>byQty?b.q-a.q:b.a-a.a), shown=sorted.slice(0,10);
-  h+=bars(shown.map((g,i)=>({name:g.name,val:byQty?g.q:g.a,txt:byQty?nf0.format(g.q)+' pcs':nf0.format(g.a)+' EGP',sub:pct(byQty?(me.qty?g.q/me.qty:0):g.share),top:i===0,
-    tip:`${g.name} · ${nf0.format(g.a)} EGP incl. VAT · ${nf0.format(g.q)} pieces · ${pct(g.share)} of sales · in ${g.invCount} invoices`})));
-  if(sorted.length>10) h+=`<div class="hint">Top 10 of ${sorted.length} item groups. The table below lists all of them.</div>`;
-  h+=`<details class="tbl"><summary>View as table</summary><div class="tablewrap"><table><thead><tr><th>Item group</th><th>Sales incl. VAT</th><th>Pieces</th><th>Share</th><th>In your invoices</th>${hasPeers?'<th>In store invoices</th>':''}</tr></thead><tbody>`+
-    sorted.map(g=>`<tr><td>${esc(g.name)}</td><td class="num">${nf0.format(g.a)}</td><td class="num">${nf0.format(g.q)}</td><td class="num">${pct(g.share)}</td><td class="num">${pct(g.pen)}</td>${hasPeers?`<td class="num">${pct(g.storePen)}</td>`:''}</tr>`).join('')+`</tbody></table></div></details></section>`;
+  const shown=G.slice(0,6);
+  h+=`<section class="card"><div class="cardhead"><h2>What you sell most</h2><span class="meta">By sales</span></div>`+
+    bars(shown.map((g,i)=>({name:g.name,val:g.a,txt:nf0.format(g.a)+' EGP',sub:nf0.format(g.q)+' pieces',top:i===0,tip:`${g.name} · ${nf0.format(g.a)} EGP · ${nf0.format(g.q)} pieces`})))+`</section>`;
 
-  /* cross-sell bullets */
-  if(hasPeers){
-    const keys=new Set(G.map(g=>g.g)); S.pen.forEach((v,g)=>keys.add(g));
-    const rows=[...keys].map(g=>({name:d.groups[g],pen:(me.g.get(g)?me.g.get(g).inv.size:0)/M.inv,sp:(S.pen.get(g)||0)/S.inv})).filter(r=>r.sp>=0.05).sort((a,b)=>b.sp-a.sp).slice(0,8);
-    const mx=Math.max(...rows.map(r=>Math.max(r.pen,r.sp)),0.01)*1.08;
-    h+=`<section class="card"><div class="cardhead"><h2>Add-on rate vs the store</h2><span class="meta">Share of invoices that include each group</span></div>
-      <div class="legend"><span><i style="background:var(--accent)"></i>${esc(wantName.split(' ')[0])}</span><span><i class="tick"></i>Store (${S.n} people)</span></div>
-      <div class="bars bullet">`+rows.map(r=>{const behind=r.sp-r.pen>=0.05;
-        return `<div class="brow" tabindex="0" data-tip="${esc(`${r.name} · ${pct(r.pen)} of your invoices vs ${pct(r.sp)} across the store`)}"><span class="n" title="${esc(r.name)}">${esc(r.name)}</span>
-        <span class="track"><span class="fill" style="width:${r.pen/mx*100}%"></span><span class="mark" style="left:${r.sp/mx*100}%"></span></span>
-        <span class="val num">${pct(r.pen)}<small class="${behind?'gap':''}">${behind?'▼ ':''}store ${pct(r.sp)}</small></span></div>`}).join('')+`</div>
-      <div class="hint">A group in more of your invoices is a group you offer more. A gap marked ▼ is 5 points or more behind the store.</div></section>`;
+  if(X.hasItem&&me.item.size){
+    const items=[...me.item.entries()].map(([k,v])=>{const it=d.items&&d.items[k]; const nm=Array.isArray(it)?(it[0]||it[1]||'Item'):String(it||'Item'); return{name:nm,a:v.a*VAT,q:v.q}}).sort((a,b)=>b.a-a.a).slice(0,5);
+    h+=`<section class="card"><div class="cardhead"><h2>Your top products</h2><span class="meta">By sales</span></div>`+
+      bars(items.map((x,i)=>({name:x.name,val:x.a,txt:nf0.format(x.a)+' EGP',sub:nf0.format(x.q)+' pieces',top:i===0,tip:`${x.name} · ${nf0.format(x.a)} EGP`})))+`</section>`;
   }
 
-  /* basket build */
-  if(M.bt){
-    const seg=(b,bt)=>b.map((v,i)=>`<span style="width:${bt?v/bt*100:0}%;background:var(--s${i+1})"></span>`).join('');
-    const row=(lab,o)=>`<div class="srow" data-tip="${esc(`${lab} · 1 piece ${pct(o.bt?o.b[0]/o.bt:0)} · 2 pieces ${pct(o.bt?o.b[1]/o.bt:0)} · 3 pieces ${pct(o.bt?o.b[2]/o.bt:0)} · 4+ pieces ${pct(o.bt?o.b[3]/o.bt:0)}`)}" tabindex="0"><span class="n">${esc(lab)}</span><div class="stack">${seg(o.b,o.bt)}</div><span class="val num">${o.bt?pct(o.b[0]/o.bt):'—'}<small>single-piece</small></span></div>`;
-    h+=`<section class="card"><div class="cardhead"><h2>How big are the baskets?</h2><span class="meta">Pieces per invoice</span></div>
-      <div class="legend">${['1 piece','2 pieces','3 pieces','4+ pieces'].map((t,i)=>`<span><i style="background:var(--s${i+1})"></i>${t}</span>`).join('')}</div>
-      ${row(wantName.split(' ')[0],M)}${hasPeers?row('Store',S):''}${row('Company',C)}
-      <div class="hint">More of the bar in the stronger colours on the right means customers leave with more pieces.</div></section>`;
-  }
-
-  /* trend */
   if(X.hasDate){
-    const dc=dailyChart();
-    if(dc){
-      h+=`<section class="card" style="grid-column:1/-1"><div class="cardhead"><h2>Day by day</h2><span class="meta">${dc.active} selling day${dc.active===1?'':'s'} of ${dc.n}${dc.peak?` · best day ${dayLabel(dc.peak.dn)}: ${nf0.format(dc.peak.a)} EGP`:''}</span></div>${dc.svg}</section>`;
-    }
     const wd=weekdayStats();
-    if(wd&&wd.activeDays){
-      const mx=Math.max(...wd.rows.map(r=>r.avg),0), bestWd=wd.rows.reduce((a,b)=>b.avg>a.avg?b:a);
-      h+=`<section class="card"><div class="cardhead"><h2>Which weekday works best</h2><span class="meta">Average per selling day, incl. VAT</span></div>`+
-        bars(wd.rows.map(r=>({name:WDFULL[r.wd],val:r.avg,txt:r.n?nf0.format(r.avg)+' EGP':'—',sub:r.n?r.n+' day'+(r.n===1?'':'s'):'no sales',top:r===bestWd&&mx>0,tip:`${WDFULL[r.wd]} · ${r.n?nf0.format(r.avg)+' EGP average over '+r.n+' selling day'+(r.n===1?'':'s'):'no selling days'}`})))+`</section>`;
+    if(wd&&wd.activeDays>=3){
+      const mx=Math.max(...wd.rows.map(r=>r.avg),0), best=wd.rows.reduce((a,b)=>b.avg>a.avg?b:a);
+      h+=`<section class="card"><div class="cardhead"><h2>Your best days</h2><span class="meta">What you sell on an average day</span></div>`+
+        bars(wd.rows.map(r=>({name:WDFULL[r.wd],val:r.avg,txt:r.n?nf0.format(r.avg)+' EGP':'No sales',top:r===best&&mx>0,tip:`${WDFULL[r.wd]} · ${r.n?nf0.format(r.avg)+' EGP on an average day':'no sales'}`})))+`</section>`;
     }
   } else {
-    h+=`<section class="note" style="grid-column:1/-1"><b>Daily trend and weekday charts need dates.</b> The file loaded earlier was read before dates were kept. Open <a href="/staff" style="color:var(--accent);font-weight:700">Staff Performance</a> and load the query file once more to unlock them.</section>`;
-  }
-
-  /* products */
-  if(X.hasItem&&me.item.size){
-    const items=[...me.item.entries()].map(([k,v])=>{const it=d.items&&d.items[k]; const nm=Array.isArray(it)?(it[0]||it[1]||'Item'):String(it||'Item'); const cd=Array.isArray(it)?it[1]:'';return{name:nm,code:cd,a:v.a*VAT,q:v.q}}).sort((a,b)=>b.a-a.a).slice(0,8);
-    h+=`<section class="card"><div class="cardhead"><h2>Top products</h2><span class="meta">By sales incl. VAT</span></div>`+
-      bars(items.map((x,i)=>({name:x.name,val:x.a,txt:nf0.format(x.a)+' EGP',sub:nf0.format(x.q)+' pcs',top:i===0,tip:`${x.name}${x.code&&x.code!==x.name?' ('+x.code+')':''} · ${nf0.format(x.a)} EGP · ${nf0.format(x.q)} pieces`})))+`</section>`;
-  } else if(X.hasDate){
-    h+=`<section class="note"><b>Top products</b> appear here when the query file has an Item Code or Item Name column.</section>`;
-  }
-
-  /* team */
-  if(mates.length>1){
-    h+=`<section class="card"><div class="cardhead"><h2>The ${esc(wantStore)} team</h2><span class="meta">Sales incl. VAT · open a colleague's page</span></div>`+
-      bars(mates.map((i,k)=>({name:`${k+1}. ${d.people[i][0]}`,val:P[i].amt*VAT,txt:nf0.format(P[i].amt*VAT)+' EGP',sub:`UPT ${nf2.format(P[i].inv.size?P[i].qty/P[i].inv.size:0)}`,me:i===pi,href:personUrl(wantStore,d.people[i][0]),tip:`${d.people[i][0]} · ${nf0.format(P[i].amt*VAT)} EGP · ${P[i].inv.size} invoices`})))+`</section>`;
+    h+=`<section class="note"><b>Want to see your best days and top products?</b> Open <a href="/staff" style="color:var(--accent);font-weight:700">Staff Performance</a> and load the sales file again.</section>`;
   }
   h+=`</div>`;
   $('out').innerHTML=h;
