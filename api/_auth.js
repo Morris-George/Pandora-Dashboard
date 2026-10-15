@@ -29,7 +29,7 @@ function stafferUsername(token, secret) {
   } catch (_) { return null; }
 }
 
-// -> {kind:'env', account, info} | {kind:'staff', user, info} | null
+// -> {kind:'env', account, info} | {kind:'staff', user, info} | {kind:'vm', user, info} | null
 async function whoami(req) {
   const secret = process.env.PANDORA_AUTH_SECRET;
   const account = staffSession(readCookie(req, PROJECTS.staff.cookie), secret);
@@ -37,6 +37,9 @@ async function whoami(req) {
   const u = stafferUsername(readCookie(req, STAFFER_COOKIE), secret);
   if (u && store.configured()) {
     const rec = await users.getUser(u);
+    if (rec && rec.status === 'active' && rec.role === 'vm') {
+      return { kind: 'vm', user: rec, info: { role: 'vm', label: 'Visual Merchandiser', zone: null, allow: null, zones: null } };
+    }
     if (rec && rec.status === 'active') {
       return { kind: 'staff', user: rec, info: { role: 'staff', label: 'Sales person', zone: null, allow: null, zones: null, self: { store: rec.store, name: rec.name } } };
     }

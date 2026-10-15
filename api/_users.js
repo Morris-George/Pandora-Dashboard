@@ -65,16 +65,23 @@ async function createUser({ username, password, phone, store: st, name }) {
   return rec;
 }
 
+// An account made by the super admin for one special person (for example the Visual Merchandiser). No phone, no sales person link.
+async function createSpecial({ username, password, name, role }) {
+  const rec = { username, phone: '', store: '', name, role, linked: true, pass: hashPassword(password), status: 'active', fails: 0, lockUntil: 0, createdAt: new Date().toISOString() };
+  await putUser(rec);
+  return rec;
+}
+
 async function removeUser(rec) {
   await store.del('users/u/' + rec.username + '.json');
-  await store.del('users/p/' + phoneKey(rec.phone) + '.json');
+  if (rec.phone) await store.del('users/p/' + phoneKey(rec.phone) + '.json');
   await store.del('resets/' + rec.username + '.json');
-  if (rec.linked) await store.del('users/n/' + nameKey(rec.store, rec.name) + '.json');
+  if (rec.linked && !rec.role) await store.del('users/n/' + nameKey(rec.store, rec.name) + '.json');
 }
 
 // point the account at a sales person from the published file (one account per sales person)
 async function linkUser(rec, st, name) {
-  if (rec.linked) await store.del('users/n/' + nameKey(rec.store, rec.name) + '.json');
+  if (rec.linked && !rec.role) await store.del('users/n/' + nameKey(rec.store, rec.name) + '.json');
   rec.store = st; rec.name = name; rec.linked = true;
   await putUser(rec);
   await store.putJSON('users/n/' + nameKey(st, name) + '.json', { username: rec.username });
@@ -84,4 +91,4 @@ const getJSONByPhone = async phone => { const c = await store.getJSON('users/p/'
 const phoneTaken = async phone => !!(await store.getJSON('users/p/' + phoneKey(phone) + '.json'));
 const claimOwner = async (st, name) => { const c = await store.getJSON('users/n/' + nameKey(st, name) + '.json'); return c ? c.username : null; };
 
-module.exports = { normUsername, normalizePhone, hashPassword, verifyPassword, burn, getUser, putUser, listUsers, createUser, removeUser, linkUser, phoneTaken, getJSONByPhone, claimOwner, nameKey };
+module.exports = { normUsername, normalizePhone, hashPassword, verifyPassword, burn, getUser, putUser, listUsers, createUser, createSpecial, removeUser, linkUser, phoneTaken, getJSONByPhone, claimOwner, nameKey };

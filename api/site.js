@@ -31,7 +31,7 @@ function chromeScript(kind, multi) {
   'function sync(){var d=cur()==="dark";t.classList.toggle("is-dark",d);t.setAttribute("aria-checked",d);t.setAttribute("aria-label",d?"Switch to light mode":"Switch to dark mode");t.title=d?"Light mode":"Dark mode"}sync();' +
   't.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";' +
   'document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("pandora-theme",n)}catch(e){}sync()});' +
-  'if(kind==="staff"||kind==="dashboards"){if(multi){var hm=mk("Home");hm.addEventListener("click",function(){location.href="/"});place(hm);}}' +
+  'if(kind==="staff"||kind==="dashboards"||kind==="vm"){if(multi){var hm=mk("Home");hm.addEventListener("click",function(){location.href="/"});place(hm);}}' +
   'place(t);' +
   'if(kind!=="login"){' +
   'var lo=mk("Log out");lo.addEventListener("click",function(){lo.disabled=true;lo.textContent="Logging out\\u2026";' +
@@ -106,7 +106,7 @@ module.exports = async function handler(req, res) {
   const multi = appsFor(facts).length > 1;
   const toLogin = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/login.html'); return res.status(302).end(); };
   const toHome = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/'); return res.status(302).end(); };
-  if (!signedIn) return toLogin();
+  if (!signedIn && !facts.vm) return toLogin();
 
   // Home: the options this person can open
   if (requestedPath === '/' || requestedPath === '/home.html') {
@@ -130,6 +130,20 @@ module.exports = async function handler(req, res) {
     const chrome = withChrome('staff', multi);
     const info = JSON.stringify(who.info).replace(/</g, '\\u003c');
     return sendFile(res, page, 'text/html; charset=utf-8', function (buf) {
+      let html = buf.toString('utf8');
+      const h = html.search(/<\/head>/i);
+      if (h !== -1) html = html.slice(0, h) + '<script>window.__PANDORA_ROLE=' + info + ';</script>' + html.slice(h);
+      return chrome(Buffer.from(html, 'utf8'));
+    });
+  }
+
+  // VM report: the VM account (view only) and the super admin (who feeds it)
+  if (requestedPath === '/vm' || requestedPath === '/vm/' || requestedPath === '/vm.html') {
+    const admin = !!facts.staff && facts.staff.role === 'admin';
+    if (!admin && !facts.vm) return toHome();
+    const chrome = withChrome('vm', multi);
+    const info = JSON.stringify({ role: admin ? 'admin' : 'vm' });
+    return sendFile(res, 'vm.html', 'text/html; charset=utf-8', function (buf) {
       let html = buf.toString('utf8');
       const h = html.search(/<\/head>/i);
       if (h !== -1) html = html.slice(0, h) + '<script>window.__PANDORA_ROLE=' + info + ';</script>' + html.slice(h);

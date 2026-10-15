@@ -3,11 +3,12 @@
 const { PROJECTS, validSession, readCookie, staffAccounts } = require('./_projects');
 const { whoami } = require('./_auth');
 
-// f = { dash: true/false, staff: { role, label, name } | null }
+// f = { dash: true/false, staff: { role, label, name } | null, vm: true/false }
 const APPS = [
   { id: 'dashboards', title: 'Pandora Dashboards', desc: 'Sales dashboards for the whole business.', href: '/dashboards', allow: f => f.dash },
   { id: 'staff', title: 'Staff Performance', desc: 'How each store and each sales person is doing.', href: '/staff', allow: f => !!f.staff && f.staff.role !== 'staff' },
-  { id: 'mysales', title: 'My sales', desc: 'What you sold, what sells best for you, and tips to improve.', href: '/staff', allow: f => !!f.staff && f.staff.role === 'staff' }
+  { id: 'mysales', title: 'My sales', desc: 'What you sold, what sells best for you, and tips to improve.', href: '/staff', allow: f => !!f.staff && f.staff.role === 'staff' },
+  { id: 'vm', title: 'VM Report', desc: 'The Visual Merchandiser report.', href: '/vm', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') }
 ];
 
 function appsFor(f) {
@@ -22,8 +23,9 @@ async function sessionFacts(req) {
   const adminUser = (staffAccounts().find(a => a.role === 'admin') || {}).user;
   const dash = validSession('dashboards', tok, adminUser, secret);
   const who = await whoami(req);
-  const staff = who ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', who } : null;
-  return { dash, staff };
+  const vm = !!who && who.kind === 'vm';
+  const staff = who && !vm ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', who } : null;
+  return { dash, staff, vm, vmName: vm ? who.user.name : '' };
 }
 
 module.exports = { APPS, appsFor, sessionFacts };

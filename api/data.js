@@ -55,6 +55,7 @@ module.exports = async function handler(req, res) {
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   const who = await whoami(req);
   if (!who) return send(res, 401, { ok: false, error: 'sign-in-required' });
+  if (who.kind === 'vm') return send(res, 403, { ok: false, error: 'No access.' });
 
   if (req.method === 'GET') {
     const d = await store.getJSON(FILE);

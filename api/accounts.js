@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const store = require('./_store');
 const users = require('./_users');
 const { whoami } = require('./_auth');
+const { staffAccounts, normName } = require('./_projects');
 
 function send(res, code, obj) {
   res.setHeader('Cache-Control', 'no-store');
@@ -22,9 +23,9 @@ module.exports = async function handler(req, res) {
 
   if (req.method === 'GET') {
     const all = await users.listUsers();
-    const taken = new Map(all.filter(u => u.linked).map(u => [u.store + '|' + u.name, u.username]));
+    const taken = new Map(all.filter(u => u.linked && !u.role).map(u => [u.store + '|' + u.name, u.username]));
     const list = all.map(u => ({
-      username: u.username, phone: u.phone, store: u.store, name: u.name, linked: !!u.linked, status: u.status, createdAt: u.createdAt,
+      username: u.username, role: u.role || '', phone: u.phone, store: u.store, name: u.name, linked: !!u.linked, status: u.status, createdAt: u.createdAt,
       // suggested match from the sales file: same name (and store when it matches)
       suggest: (() => {
         const same = people.filter(p => norm(p.name) === norm(u.name));
@@ -48,6 +49,17 @@ module.exports = async function handler(req, res) {
 
   if (req.method === 'POST') {
     const b = req.body || {};
+    if (b.action === 'createspecial') {
+      const name = String(b.name || '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
+      const uname = users.normUsername(b.username), pw = String(b.password || '').trim();
+      if (name.length < 2) return send(res, 400, { ok: false, error: 'Type the person\'s full name.' });
+      if (!uname) return send(res, 400, { ok: false, error: 'Username: 3 to 30 letters or numbers (you can use . _ -), no spaces.' });
+      if (pw.length < 8 || pw.length > 100) return send(res, 400, { ok: false, error: 'Password must be at least 8 characters.' });
+      if (b.role !== 'vm') return send(res, 400, { ok: false, error: 'Unknown account type.' });
+      if (staffAccounts().some(a => normName(a.user) === uname) || await users.getUser(uname)) return send(res, 409, { ok: false, error: 'That username is taken. Choose another.' });
+      await users.createSpecial({ username: uname, password: pw, name, role: 'vm' });
+      return send(res, 200, { ok: true });
+    }
     const username = users.normUsername(b.username);
     const rec = username ? await users.getUser(username) : null;
     if (!rec) return send(res, 404, { ok: false, error: 'Account not found.' });

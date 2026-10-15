@@ -64,5 +64,6 @@ module.exports = async function handler(req, res) {
   if (rec.status === 'pending') return res.status(403).json({ ok: false, error: 'Your account is waiting for approval. You will be able to sign in once it is approved.' });
   if (rec.status !== 'active') return res.status(403).json({ ok: false, error: 'This account is not active. Please contact your manager.' });
   if (rec.fails) { rec.fails = 0; rec.lockUntil = 0; await users.putUser(rec); }
+  if (rec.role === 'vm') return finish([stafferCookie(rec.username, secret)], { dash: false, staff: null, vm: true });
   return finish([stafferCookie(rec.username, secret)], { dash: false, staff: { role: 'staff' } });
 };

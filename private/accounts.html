@@ -41,6 +41,10 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
   <section class="card" id="resetcard" hidden><h2>Forgot password requests</h2><div class="meta">These people asked for a new password. Call the number to check it is really them, then set a new password and send it to them.</div><div id="resets"></div></section>
   <section class="card"><h2>Waiting for approval</h2><div class="meta">Choose who this person is in the sales file, then press Approve.</div><div id="pending"></div></section>
   <section class="card"><h2>Active</h2><div class="meta">These people can sign in and see their own page.</div><div id="active"></div></section>
+  <section class="card" id="special"><h2>Special accounts</h2><div class="meta">For one person who needs a different report, for example the Visual Merchandiser. They sign in with their own username and password and open only what you give them.</div>
+    <div id="splist"></div>
+    <div class="pwline" style="margin-top:12px"><input id="spname" placeholder="Full name" maxlength="60"><input id="spuser" placeholder="Username" maxlength="30" autocapitalize="none" spellcheck="false"><input id="sppw" placeholder="Password (8+ characters)" maxlength="100" autocomplete="off"><select id="sprole" style="max-width:190px"><option value="vm">VM Report</option></select><button class="btn go" data-act="mkspecial" type="button">Create account</button></div>
+    <div class="note">Send the username and password to the person yourself. You can change the password here any time.</div></section>
   <section class="card" id="offcard"><h2>Switched off</h2><div class="meta">They cannot sign in. You can switch them on again.</div><div id="off"></div></section>
 </div>
 <script>
@@ -66,7 +70,9 @@ async function load(){
     PEOPLE=j.people||[];HASDATA=!!j.hasData;
     const rs=j.resets||[];$('resetcard').hidden=!rs.length;
     $('resets').innerHTML=rs.map(a=>`<div class="row"><div class="who">${esc(a.name)}<small>${esc(a.store)}</small></div><div>${esc(a.username)}<br><small style="color:var(--ink2)">Asked ${esc(a.requestedAt?new Date(a.requestedAt).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'')}</small></div><div><a href="tel:${esc(a.phone)}" style="color:var(--accent-text);font-weight:700">${esc(a.phone)}</a></div><div class="btns"><button class="btn go" data-act="pw" data-user="${esc(a.username)}">Set new password</button><button class="btn" data-act="dismissreset" data-user="${esc(a.username)}">Dismiss</button></div></div>`).join('');
-    const by=s=>j.accounts.filter(a=>a.status===s);
+    const by=s=>j.accounts.filter(a=>a.status===s&&!a.role);
+    const sp=j.accounts.filter(a=>a.role);
+    $('splist').innerHTML=sp.length?sp.map(a=>`<div class="row"><div class="who">${esc(a.name)}<small>${a.role==='vm'?'VM Report':esc(a.role)}${a.status==='active'?'':' · switched off'}</small></div><div>${esc(a.username)}</div><div></div><div class="btns"><button class="btn" data-act="pw" data-user="${esc(a.username)}">Change password</button><button class="btn" data-act="${a.status==='active'?'disable':'enable'}" data-user="${esc(a.username)}">${a.status==='active'?'Switch off':'Switch on'}</button><button class="btn bad" data-act="remove" data-user="${esc(a.username)}">Remove</button></div></div>`).join(''):'<div class="empty">None yet.</div>';
     const fill=(id,list,btns,none,pick)=>{$(id).innerHTML=list.length?list.map(a=>rowHtml(a,btns,pick)).join(''):`<div class="empty">${none}</div>`};
     fill('pending',by('pending'),[['approve','Approve','go'],['pw','Change password'],['remove','Reject','bad']],'Nobody is waiting.',true);
     fill('active',by('active'),[['link','Save link'],['pw','Change password'],['disable','Switch off'],['remove','Remove','bad']],'No active accounts yet.',true);
@@ -75,6 +81,10 @@ async function load(){
 }
 document.addEventListener('click',async e=>{
   const b=e.target.closest('button[data-act]'); if(!b)return;
+  if(b.dataset.act==='mkspecial'){b.disabled=true;showErr('');
+    try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'createspecial',name:$('spname').value,username:$('spuser').value,password:$('sppw').value,role:$('sprole').value})});const j=await r.json().catch(()=>({}));
+      if(!r.ok||!j.ok)showErr(j.error||'That did not work.');else{$('spname').value=$('spuser').value=$('sppw').value=''}}catch(_){showErr('No connection.')}
+    b.disabled=false;load();return}
   if(b.dataset.act==='pw'){openPw(b.dataset.user);return}
   if(b.dataset.act==='pwsave'){savePw(b);return}
   if(b.dataset.act==='pwclose'){$('pwbox').hidden=true;load();return}

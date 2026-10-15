@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>VM Report</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--bg:#FBF6F7;--surface:#FFFFFF;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--accent:#FF93A0;--accent-text:#2A1F24;--fill-soft:#FFE4E8;--hover:#FFF1F3;--good:#1F7A4D;--bad:#FF93A0;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--accent:#FF93A0;--accent-text:#FF93A0;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--bad:#FF93A0;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--accent:#FF93A0;--accent-text:#FF93A0;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--bad:#FF93A0;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{word-spacing:.09em;margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding:20px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between}
+h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(--ink2);font-size:12.5px}
+.crumb{color:var(--ink2);font-size:12.5px;font-weight:600;text-decoration:none}.crumb:hover{color:var(--accent-text)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}.btn:hover{background:var(--hover)}
+.btn.go{background:var(--accent);border-color:var(--accent);color:#2A1018}:root[data-theme="dark"] .btn.go{color:#2A1018}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.go{color:#2A1018}}
+.btn.bad{color:var(--accent-text)}.btn:disabled{opacity:.5;cursor:wait}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px}
+.card h2{margin:0 0 4px;font-size:17px;font-weight:800}.card .meta{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
+.row{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(110px,.9fr) minmax(200px,1.4fr) auto;gap:8px 14px;align-items:center;padding:10px 6px;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}.row .who{font-weight:700;overflow-wrap:anywhere}.row .who small{display:block;color:var(--ink2);font-weight:500}
+.row .btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);border-radius:10px;padding:0 8px;font:inherit;color:var(--ink);background:var(--bg)}
+.pwbox{border:2px solid var(--accent);background:var(--fill-soft)}.pwbox h2{font-size:16px}.pwline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.pwline input{height:38px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;color:var(--ink);background:var(--surface);min-width:220px}.big{font-size:22px;font-weight:800;letter-spacing:.04em;font-family:ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere}
+.note{color:var(--ink2);font-size:12px;margin-top:4px}
+.empty{color:var(--ink2);padding:8px 2px}.err{background:#FF93A0;color:#2A1018;border-radius:10px;padding:10px 14px;font-weight:600}
+@media (max-width:640px){.row{grid-template-columns:1fr}.row .btns{justify-content:flex-start}}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.tab{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px;font-weight:600;cursor:pointer}.tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#2A1018}
+.tw{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:12px}table{border-collapse:collapse;width:100%;min-width:max-content}th,td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{position:sticky;top:0;background:var(--surface);font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2)}td.n{text-align:right;font-variant-numeric:tabular-nums}
+.drop{border:1.5px dashed var(--line);border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.drop.on{border-color:var(--accent);background:var(--hover)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><div><h1 id="ttl">VM Report</h1><div class="sub" id="meta"></div></div><div class="actions"></div></header>
+  <div class="err" id="err" hidden></div>
+  <section class="card" id="feed" hidden><h2>Feed the report</h2><div class="meta">Only you (super admin) can do this. The VM account can only view what you publish here. Publishing again replaces the old report.</div>
+    <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" hidden>
+    <div class="drop" id="drop"><button class="btn go" id="pick" type="button">Choose Excel file</button><span>or drop it here</span><span id="status" class="note"></span></div></section>
+  <section class="card" id="view"><div class="empty">Loading…</div></section>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const $=id=>document.getElementById(id),ROLE=window.__PANDORA_ROLE||{role:'vm'},ADMIN=ROLE.role==='admin';
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=new Intl.NumberFormat('en-US',{maximumFractionDigits:2});
+function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
+let D=null,cur=0;
+function cell(v){if(v===null||v===undefined||v==='')return'<td></td>';if(typeof v==='number')return`<td class="n">${nf.format(v)}</td>`;return`<td>${esc(v)}</td>`}
+function draw(){
+  const v=$('view');
+  if(!D){v.innerHTML=ADMIN?'<div class="empty">Nothing is published yet. Choose the Excel file above.</div>':'<div class="empty">Your report is not ready yet. Please check again later.</div>';$('meta').textContent='';return}
+  $('ttl').textContent=D.title||'VM Report';
+  $('meta').textContent=[D.period,D.uploadedAt?'Updated '+new Date(D.uploadedAt).toLocaleDateString([],{day:'numeric',month:'short',year:'numeric'}):''].filter(Boolean).join(' · ');
+  const sh=D.sheets[cur]||D.sheets[0],MAX=500;
+  v.innerHTML=`<div class="tabs">${D.sheets.map((s,i)=>`<button class="tab" type="button" data-i="${i}" aria-pressed="${i===cur}">${esc(s.name)}</button>`).join('')}</div>
+   <div class="tw"><table><thead><tr>${sh.columns.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${sh.rows.slice(0,MAX).map(r=>`<tr>${sh.columns.map((_,i)=>cell(r[i])).join('')}</tr>`).join('')}</tbody></table></div>
+   ${sh.rows.length>MAX?`<div class="note">Showing the first ${MAX} of ${nf.format(sh.rows.length)} rows.</div>`:''}`;
+}
+document.addEventListener('click',e=>{const t=e.target.closest('.tab');if(t){cur=+t.dataset.i;draw()}});
+async function load(){
+  try{const r=await fetch('/api/vm',{credentials:'same-origin',cache:'no-store'});
+    if(r.status===401){location.replace('/login.html');return}
+    if(r.status===404){D=null}else{const j=await r.json();if(!r.ok)throw 0;D=j}
+    draw()}catch(_){showErr('Could not load the report. Please refresh the page.')}
+}
+if(ADMIN){$('feed').hidden=false;
+  const f=$('file'),drop=$('drop');$('pick').onclick=()=>f.click();f.onchange=()=>f.files[0]&&upload(f.files[0]);
+  ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('on')}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('on')}));
+  drop.addEventListener('drop',e=>{const x=e.dataTransfer.files[0];if(x)upload(x)});
+  async function upload(file){
+    showErr('');$('status').textContent='Reading…';
+    try{
+      const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
+      const iso=v=>v instanceof Date?v.toISOString().slice(0,10):v;
+      const sheets=wb.SheetNames.map(n=>{const g=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null,blankrows:false});
+        const cols=(g[0]||[]).map((c,i)=>c==null||c===''?'Column '+(i+1):String(c));
+        return{name:n,columns:cols,rows:g.slice(1).map(r=>cols.map((_,i)=>iso(r[i]===undefined?null:r[i])))}}).filter(s=>s.columns.length);
+      if(!sheets.length)throw new Error('The file has no data.');
+      $('status').textContent='Publishing…';
+      const body=JSON.stringify({title:file.name.replace(/\.[^.]+$/,'').slice(0,80),file:file.name,sheets});
+      const gz=await new Response(new Blob([body]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+      const r=await fetch('/api/vm',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:gz});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok||!j.ok)throw new Error(j.error||'Could not publish.');
+      $('status').textContent='Published: '+j.sheets+' sheet'+(j.sheets===1?'':'s');cur=0;load();
+    }catch(e){$('status').textContent='';showErr(e.message||'Could not read that file.')}
+    f.value='';
+  }
+}
+load();
+</script>
+</body>
+</html>
