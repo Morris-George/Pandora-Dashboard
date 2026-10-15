@@ -22,7 +22,7 @@
   --accent:#FF8A9A; --fill:#E8697C; --fill-soft:#3A2229; --hover:#2D2025; --good:#5CC48E; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;
+body{word-spacing:.09em;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;
   padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
 .wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 .num{font-variant-numeric:tabular-nums}
@@ -34,7 +34,7 @@ header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-
 .brand h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em;text-wrap:balance}
 .brand .sub{color:var(--ink2);font-size:12.5px}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
-.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none;border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer}
 .btn:hover{background:var(--hover)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 :root[data-theme="dark"] .btn.primary{color:#2A1018}
@@ -69,7 +69,7 @@ details.groups label span{overflow-wrap:anywhere}
 .kpi{padding:10px 12px;border-radius:12px;background:var(--bg);min-width:0}
 .kpi.hero{grid-column:span 2;background:var(--fill-soft)}
 .kpi .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);font-weight:700}
-.kpi .v{font-size:20px;font-weight:800;letter-spacing:-.02em;overflow-wrap:anywhere}
+.kpi{min-width:0}.kpi .v{font-size:20px;font-weight:800;letter-spacing:-.02em;white-space:nowrap}
 .kpi.hero .v{font-size:28px}
 @media (max-width:520px){.kpi.hero{grid-column:span 1}.kpi.hero .v{font-size:22px}}
 
@@ -79,7 +79,7 @@ details.groups label span{overflow-wrap:anywhere}
 .brow .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .brow .track{height:14px;border-radius:0 5px 5px 0;background:transparent;position:relative}
 .brow .fill{height:100%;background:var(--fill);border-radius:0 5px 5px 0;min-width:2px}
-.brow .val{text-align:right;font-weight:700}
+.brow .val{text-align:right;font-weight:700;white-space:nowrap;min-width:0}
 .hint{color:var(--ink2);font-size:12px;margin-top:8px}
 
 .tablewrap{overflow-x:auto}
@@ -174,7 +174,20 @@ const $=id=>document.getElementById(id);
 const nf0=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
 const nf2=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const fmt=(id,v)=>id==='upt'?nf2.format(v):nf0.format(v);
+
+/* long numbers never wrap: they get a little smaller until they fit */
+function fitNums(){
+  document.querySelectorAll('.kpi .v,.big,.brow .val,.srow .val').forEach(el=>{
+    el.style.fontSize='';
+    let fs=parseFloat(getComputedStyle(el).fontSize),n=0;
+    while(el.scrollWidth>el.clientWidth+1&&fs>9&&n++<40){fs-=0.5;el.style.fontSize=fs+'px'}
+  });
+}
+addEventListener('resize',()=>{clearTimeout(fitNums.t);fitNums.t=setTimeout(fitNums,80)});
+try{document.fonts&&document.fonts.ready.then(fitNums)}catch(_){}
+const MONEY=new Set(['incl','amt','atv']);
+const egp=v=>'EGP\u00a0'+nf0.format(v);
+const fmt=(id,v)=>id==='upt'?nf2.format(v):MONEY.has(id)?egp(v):nf0.format(v);
 
 function safeGet(k){for(const n of ['localStorage','sessionStorage']){try{const v=JSON.parse(window[n].getItem(k));if(v)return v}catch(e){}}return null}
 function safeSet(k,v){const j=JSON.stringify(v);try{localStorage.setItem(k,j);try{sessionStorage.removeItem(k)}catch(e){}}catch(e){try{sessionStorage.setItem(k,j)}catch(e2){}}}
@@ -240,12 +253,12 @@ function updGcount(){const n=st.ex.size;$('gcount').textContent=n?`(${n} left ou
 
 function kpis(t,label){
   return `<div class="kpis">
-   <div class="kpi hero"><div class="k">${label} incl. VAT</div><div class="v num">${nf0.format(t.incl)} EGP</div></div>
-   <div class="kpi"><div class="k">Before VAT</div><div class="v num">${nf0.format(t.amt)}</div></div>
+   <div class="kpi hero"><div class="k">${label} incl. VAT</div><div class="v num">${egp(t.incl)}</div></div>
+   <div class="kpi"><div class="k">Before VAT</div><div class="v num">${egp(t.amt)}</div></div>
    <div class="kpi"><div class="k">Invoices</div><div class="v num">${nf0.format(t.inv)}</div></div>
    <div class="kpi"><div class="k">Quantity</div><div class="v num">${nf0.format(t.qty)}</div></div>
    <div class="kpi"><div class="k">UPT</div><div class="v num">${nf2.format(t.upt)}</div></div>
-   <div class="kpi"><div class="k">ATV</div><div class="v num">${nf0.format(t.atv)}</div></div></div>`;
+   <div class="kpi"><div class="k">ATV</div><div class="v num">${egp(t.atv)}</div></div></div>`;
 }
 const pUrl=(store,name)=>'/staff/person?store='+encodeURIComponent(store)+'&name='+encodeURIComponent(name);
 function head(m){
@@ -254,7 +267,7 @@ function head(m){
 }
 function cells(p,m,max,extraShare){
   const mk=(id,txt)=>id===m?`<td class="cellbar"><i style="width:${max?Math.max(2,p[id]/max*100):0}%"></i><span class="num">${txt}</span></td>`:`<td class="num">${txt}</td>`;
-  return mk('inv',nf0.format(p.inv))+mk('qty',nf0.format(p.qty))+mk('amt',nf0.format(p.amt))+mk('incl',nf0.format(p.incl))+mk('upt',nf2.format(p.upt))+mk('atv',nf0.format(p.atv));
+  return mk('inv',nf0.format(p.inv))+mk('qty',nf0.format(p.qty))+mk('amt',egp(p.amt))+mk('incl',egp(p.incl))+mk('upt',nf2.format(p.upt))+mk('atv',egp(p.atv));
 }
 
 function render(){
@@ -303,7 +316,7 @@ function render(){
         <tr class="grand"><td></td><td class="l">${esc(s.name)} total</td>${cells(s.tot,'',0)}<td class="num">100%</td></tr></tbody></table></div></section>`;
     }
   }
-  $('out').innerHTML=html;
+  $('out').innerHTML=html;fitNums();
   document.querySelectorAll('#storeChips .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.store===st.store));
   document.querySelectorAll('#metricChips .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.metric===st.metric));
 }

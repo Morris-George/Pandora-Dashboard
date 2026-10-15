@@ -27,7 +27,7 @@
   --s1:#7A3A48; --s2:#B5566A; --s3:#E8697C; --s4:#FFA3B0; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;
+body{word-spacing:.09em;margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;
   padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));padding-block:20px 56px}
 .wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 .num{font-variant-numeric:tabular-nums}
@@ -57,8 +57,8 @@ header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-start;just
 .hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,2fr);gap:18px;align-items:stretch}
 @media (max-width:820px){.hero{grid-template-columns:1fr}}
 .heroleft{background:var(--fill-soft);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:6px;justify-content:center}
-.heroleft .big{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1.05;overflow-wrap:anywhere}
-.heroleft .big small{font-size:16px;font-weight:700;color:var(--ink2);margin-left:4px}
+.heroleft .big{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1.05;white-space:nowrap;min-width:0}
+.heroleft .big small{font-size:16px;font-weight:700;color:var(--ink2);margin-right:4px}
 .ranks{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .pill{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:var(--accent);color:#fff}
 :root[data-theme="dark"] .pill{color:#2A1018}
@@ -69,7 +69,7 @@ header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-start;just
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .kpi{padding:10px 12px;border-radius:12px;background:var(--bg);min-width:0;display:flex;flex-direction:column;gap:2px}
 .kpi .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);font-weight:700}
-.kpi .v{font-size:22px;font-weight:800;letter-spacing:-.02em;overflow-wrap:anywhere}
+.kpi{min-width:0}.kpi .v{font-size:22px;font-weight:800;letter-spacing:-.02em;white-space:nowrap}
 .delta{font-size:12px;font-weight:700;display:flex;gap:4px;align-items:center;color:var(--ink2)}
 .delta.up{color:var(--good)} .delta.down{color:var(--bad)}
 .delta svg{width:10px;height:10px;flex:none}
@@ -101,7 +101,7 @@ header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-start;just
 .brow .track{height:14px;position:relative}
 .brow .fill{display:block;height:100%;background:var(--mute);border-radius:0 5px 5px 0;min-width:2px}
 .brow.top .fill,.brow.me .fill{background:var(--accent)}
-.brow .val{text-align:right;font-weight:700}
+.brow .val{text-align:right;font-weight:700;white-space:nowrap;min-width:0}
 .brow .val small{display:block;font-weight:500;color:var(--ink2);font-size:11px;margin-top:-2px}
 .brow.me .n{color:var(--accent);font-weight:800}
 .bullet .track{background:color-mix(in srgb,var(--mute) 35%,transparent);border-radius:0 5px 5px 0}
@@ -117,7 +117,7 @@ header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-start;just
 .stack span:first-child{border-left:0}
 .srow{display:grid;grid-template-columns:70px 1fr 110px;gap:10px;align-items:center;padding:6px}
 .srow .n{font-weight:700}
-.srow .val{text-align:right;font-weight:700}
+.srow .val{text-align:right;font-weight:700;white-space:nowrap;min-width:0}
 .srow .val small{display:block;font-weight:500;color:var(--ink2);font-size:11px}
 
 svg.chart{width:100%;height:auto;display:block;overflow:visible}
@@ -193,6 +193,17 @@ const nf0=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
 const nf1=new Intl.NumberFormat('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
 const nf2=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* long numbers never wrap: they get a little smaller until they fit */
+function fitNums(){
+  document.querySelectorAll('.kpi .v,.big,.brow .val,.srow .val').forEach(el=>{
+    el.style.fontSize='';
+    let fs=parseFloat(getComputedStyle(el).fontSize),n=0;
+    while(el.scrollWidth>el.clientWidth+1&&fs>9&&n++<40){fs-=0.5;el.style.fontSize=fs+'px'}
+  });
+}
+addEventListener('resize',()=>{clearTimeout(fitNums.t);fitNums.t=setTimeout(fitNums,80)});
+try{document.fonts&&document.fonts.ready.then(fitNums)}catch(_){}
 const pct=v=>nf0.format(v*100)+'%';
 const short=v=>Math.abs(v)>=1e6?nf1.format(v/1e6)+'M':Math.abs(v)>=1e3?nf1.format(v/1e3).replace('.0','')+'k':nf0.format(v);
 const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], WDFULL=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -333,11 +344,11 @@ function tips(G){
   const {d,P,pi,M,B,bname}=CTX, out=[];
   const top=[...G].sort((a,b)=>b.a-a.a)[0];
   if(top) out.push({cls:'win',ic:'★',h:`Your best seller is ${top.name}`,
-    p:`${top.name} brought ${nf0.format(top.a)} EGP, which is ${nf0.format(top.share*100)} out of every 100 EGP you sold. Keep showing it first.`});
+    p:`${top.name} brought EGP ${nf0.format(top.a)}, which is ${nf0.format(top.share*100)} out of every EGP 100 you sold. Keep showing it first.`});
   const wd=weekdayStats();
   let dayTip=null;
   if(wd&&wd.activeDays>=7){const best=wd.rows.filter(r=>r.n>0).sort((a,b)=>b.avg-a.avg)[0];
-    if(best&&wd.overall&&best.avg>wd.overall*1.1) dayTip={cls:'win',ic:'★',h:`${WDFULL[best.wd]} is your best day`,p:`On ${WDFULL[best.wd]}s you sell about ${nf0.format(best.avg)} EGP, more than your usual ${nf0.format(wd.overall)} EGP on a selling day.`};}
+    if(best&&wd.overall&&best.avg>wd.overall*1.1) dayTip={cls:'win',ic:'★',h:`${WDFULL[best.wd]} is your best day`,p:`On ${WDFULL[best.wd]}s you sell about EGP ${nf0.format(best.avg)}, more than your usual EGP ${nf0.format(wd.overall)} on a selling day.`};}
   // add-on
   const keys=new Set(G.map(g=>g.g)); B.pen.forEach((v,g)=>keys.add(g));
   const gaps=[...keys].map(g=>({g,name:d.groups[g],pen:(P[pi].g.get(g)?P[pi].g.get(g).inv.size:0)/M.inv,bp:B.inv?(B.pen.get(g)||0)/B.inv:0}))
@@ -345,18 +356,18 @@ function tips(G){
   if(gaps.length){const x=gaps[0], cnt=B.pen.get(x.g)||0, avg=cnt?(B.gamt.get(x.g)*VAT)/cnt:0, est=(x.bp-x.pen)/2*M.inv*avg;
     out.push({cls:'',ic:'↗',h:`Offer ${x.name} to more customers`,
       p:`In ${bname}, ${nf0.format(x.bp*100)} out of every 100 customers buy ${x.name}. With you it is ${nf0.format(x.pen*100)} out of 100. Try suggesting it with the main piece.`,
-      est:est>=100?`If you close half of this gap you could add about ${nf0.format(est)} EGP`:''});}
+      est:est>=100?`If you close half of this gap you could add about EGP ${nf0.format(est)}`:''});}
   // pieces per customer
   if(M.upt<B.upt*0.98&&M.bt){
     const s1=M.b[0]/M.bt, t1=B.bt?B.b[0]/B.bt:0, unit=M.qty?M.incl/M.qty:0, est=0.25*M.b[0]*unit;
     out.push({cls:'',ic:'＋',h:'Help customers take one more piece',
       p:`${nf0.format(s1*100)} out of 100 of your customers leave with only one piece (${bname}: ${nf0.format(t1*100)}). Before closing, ask: “Would you like something to go with it?”`,
-      est:est>=100?`If 1 in 4 of them took one more piece you could add about ${nf0.format(est)} EGP`:''});
+      est:est>=100?`If 1 in 4 of them took one more piece you could add about EGP ${nf0.format(est)}`:''});
   }
   // spend per customer
   if(M.atv<B.atv*0.97) out.push({cls:'',ic:'↑',h:'Show one higher-priced choice',
-      p:`Your customer spends ${nf0.format(M.atv)} EGP on average. In ${bname} it is ${nf0.format(B.atv)} EGP. Showing a nicer option next to the first choice helps.`});
-  else if(M.atv>=B.atv*1.03) out.push({cls:'win',ic:'★',h:'Your customers spend well',p:`Your customer spends ${nf0.format(M.atv)} EGP on average, more than ${bname} (${nf0.format(B.atv)} EGP).`});
+      p:`Your customer spends EGP ${nf0.format(M.atv)} on average. In ${bname} it is EGP ${nf0.format(B.atv)}. Showing a nicer option next to the first choice helps.`});
+  else if(M.atv>=B.atv*1.03) out.push({cls:'win',ic:'★',h:'Your customers spend well',p:`Your customer spends EGP ${nf0.format(M.atv)} on average, more than ${bname} (EGP ${nf0.format(B.atv)}).`});
   if(M.upt>=B.upt*0.98 && out.filter(t=>!t.cls).length===0) out.push({cls:'win',ic:'★',h:'Good work',p:`You are at or above ${bname} on the main numbers. Keep it up.`});
   if(dayTip) out.push(dayTip);
   return out.slice(0,4);
@@ -368,14 +379,14 @@ function render(){
   let h='';
   h+=`<section class="card hero">
     <div class="heroleft"><div class="lbl">Your sales</div>
-      <div class="big num">${nf0.format(M.incl)}<small>EGP</small></div>
+      <div class="big num"><small>EGP</small> ${nf0.format(M.incl)}</div>
       <div class="ranks"><span class="pill">${alone?'This month':`#${rankStore} of ${CTX.storeCount} in your store`}</span></div>
       <div style="color:var(--ink2);font-size:13px;margin-top:4px">${topG?`You sell most: <b style="color:var(--ink)">${esc(topG.name)}</b>`:''}</div></div>
     <div class="kpis">
       <div class="kpi"><div class="k">Customers served</div><div class="v num">${nf0.format(M.inv)}</div>${alone?'':delta(M.inv,B.avgInv,'the store average')}</div>
       <div class="kpi"><div class="k">Pieces sold</div><div class="v num">${nf0.format(M.qty)}</div>${alone?'':delta(M.qty,B.avgQty,'the store average')}</div>
       <div class="kpi"><div class="k">Pieces per customer</div><div class="v num">${nf1.format(M.upt)}</div>${delta(M.upt,B.upt,bname)}</div>
-      <div class="kpi"><div class="k">Spend per customer</div><div class="v num">${nf0.format(M.atv)} <small style="font-size:12px;color:var(--ink2)">EGP</small></div>${delta(M.atv,B.atv,bname)}</div>
+      <div class="kpi"><div class="k">Spend per customer</div><div class="v num"><small style="font-size:12px;color:var(--ink2)">EGP</small> ${nf0.format(M.atv)}</div>${delta(M.atv,B.atv,bname)}</div>
     </div></section>`;
 
   const T=tips(G);
@@ -385,12 +396,12 @@ function render(){
   h+=`<div class="grid2">`;
   const shown=G.slice(0,6);
   h+=`<section class="card"><div class="cardhead"><h2>What you sell most</h2><span class="meta">By sales</span></div>`+
-    bars(shown.map((g,i)=>({name:g.name,val:g.a,txt:nf0.format(g.a)+' EGP',sub:nf0.format(g.q)+' pieces',top:i===0,tip:`${g.name} · ${nf0.format(g.a)} EGP · ${nf0.format(g.q)} pieces`})))+`</section>`;
+    bars(shown.map((g,i)=>({name:g.name,val:g.a,txt:'EGP '+nf0.format(g.a),sub:nf0.format(g.q)+' pieces',top:i===0,tip:`${g.name} · EGP ${nf0.format(g.a)} · ${nf0.format(g.q)} pieces`})))+`</section>`;
 
   if(X.hasItem&&me.item.size){
     const items=[...me.item.entries()].map(([k,v])=>{const it=d.items&&d.items[k]; const nm=Array.isArray(it)?(it[0]||it[1]||'Item'):String(it||'Item'); return{name:nm,a:v.a*VAT,q:v.q}}).sort((a,b)=>b.a-a.a).slice(0,5);
     h+=`<section class="card"><div class="cardhead"><h2>Your top products</h2><span class="meta">By sales</span></div>`+
-      bars(items.map((x,i)=>({name:x.name,val:x.a,txt:nf0.format(x.a)+' EGP',sub:nf0.format(x.q)+' pieces',top:i===0,tip:`${x.name} · ${nf0.format(x.a)} EGP`})))+`</section>`;
+      bars(items.map((x,i)=>({name:x.name,val:x.a,txt:'EGP '+nf0.format(x.a),sub:nf0.format(x.q)+' pieces',top:i===0,tip:`${x.name} · EGP ${nf0.format(x.a)}`})))+`</section>`;
   }
 
   if(X.hasDate){
@@ -398,13 +409,13 @@ function render(){
     if(wd&&wd.activeDays>=3){
       const mx=Math.max(...wd.rows.map(r=>r.avg),0), best=wd.rows.reduce((a,b)=>b.avg>a.avg?b:a);
       h+=`<section class="card"><div class="cardhead"><h2>Your best days</h2><span class="meta">What you sell on an average day</span></div>`+
-        bars(wd.rows.map(r=>({name:WDFULL[r.wd],val:r.avg,txt:r.n?nf0.format(r.avg)+' EGP':'No sales',top:r===best&&mx>0,tip:`${WDFULL[r.wd]} · ${r.n?nf0.format(r.avg)+' EGP on an average day':'no sales'}`})))+`</section>`;
+        bars(wd.rows.map(r=>({name:WDFULL[r.wd],val:r.avg,txt:r.n?'EGP '+nf0.format(r.avg):'No sales',top:r===best&&mx>0,tip:`${WDFULL[r.wd]} · ${r.n?'EGP '+nf0.format(r.avg)+' on an average day':'no sales'}`})))+`</section>`;
     }
   } else {
     h+=`<section class="note"><b>Want to see your best days and top products?</b> Open <a href="/staff" style="color:var(--accent);font-weight:700">Staff Performance</a> and load the sales file again.</section>`;
   }
   h+=`</div>`;
-  $('out').innerHTML=h;
+  $('out').innerHTML=h;fitNums();
 }
 
 /* ---------- events ---------- */
