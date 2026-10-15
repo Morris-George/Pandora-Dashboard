@@ -16,8 +16,8 @@
 .side{display:none}
 @media (min-width:900px){
  body{display:grid!important;grid-template-columns:minmax(360px,44%) 1fr;padding:0!important;place-items:stretch!important;background:var(--bg)!important}
- .side{display:flex;flex-direction:column;justify-content:center;gap:18px;padding:64px 56px;color:#2A1018;background:linear-gradient(155deg,#FF93A0 0%,#FFA9B3 55%,#FFC4CB 100%);position:sticky;top:0;height:100vh}
- .side img{width:min(280px,70%);max-height:150px;object-fit:contain;margin:0 0 10px}
+ .side{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:18px;padding:64px 56px;color:#2A1018;background:linear-gradient(155deg,#FF93A0 0%,#FFA9B3 55%,#FFC4CB 100%);position:sticky;top:0;height:100vh}
+ .side img{width:min(440px,78%);max-height:420px;object-fit:contain;margin:0}
  .side h2{margin:0;font-size:38px;line-height:1.1;letter-spacing:-.03em;font-weight:800}
  .side p{margin:0;font-size:16px;line-height:1.6;opacity:.9;max-width:420px}
  .side ul{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:10px;font-size:15px;font-weight:600}
@@ -29,7 +29,7 @@
 }
 @media (min-width:900px) and (prefers-color-scheme:dark){:root:not([data-theme="light"]) body{background:var(--bg)}}
 </style></head>
-<body><aside class="side"><img src="/pandora-logo.png" alt="Pandora"><h2>Sales Intelligence</h2><p>Your stores, your team and your sales, clear and in one place.</p></aside><main class="panel"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="rule"></div><div class="eyebrow">Sales people</div><h1 class="title">Forgot your password?</h1><p class="sub" id="sub">Type the mobile number you used to create your account. Your manager will be told, and will give you a new password.</p>
+<body><aside class="side"><img src="/pandora-logo.png" alt="Pandora"></aside><main class="panel"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="rule"></div><div class="eyebrow">Sales people</div><h1 class="title">Forgot your password?</h1><p class="sub" id="sub">Type the mobile number you used to create your account. Your manager will be told, and will give you a new password.</p>
 <div class="error" id="error" role="alert"></div><div class="ok" id="okbox" role="status"></div>
 <form id="f"><div class="field"><label for="phone">Mobile number</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="01012345678" required></div>
 <input class="hp" id="website" tabindex="-1" autocomplete="off" aria-hidden="true">

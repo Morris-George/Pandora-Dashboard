@@ -24,8 +24,8 @@
 .side{display:none}
 @media (min-width:900px){
  body{display:grid!important;grid-template-columns:minmax(360px,44%) 1fr;padding:0!important;place-items:stretch!important;background:var(--bg)!important}
- .side{display:flex;flex-direction:column;justify-content:center;gap:18px;padding:64px 56px;color:#2A1018;background:linear-gradient(155deg,#FF93A0 0%,#FFA9B3 55%,#FFC4CB 100%);position:sticky;top:0;height:100vh}
- .side img{width:min(280px,70%);max-height:150px;object-fit:contain;margin:0 0 10px}
+ .side{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:18px;padding:64px 56px;color:#2A1018;background:linear-gradient(155deg,#FF93A0 0%,#FFA9B3 55%,#FFC4CB 100%);position:sticky;top:0;height:100vh}
+ .side img{width:min(440px,78%);max-height:420px;object-fit:contain;margin:0}
  .side h2{margin:0;font-size:38px;line-height:1.1;letter-spacing:-.03em;font-weight:800}
  .side p{margin:0;font-size:16px;line-height:1.6;opacity:.9;max-width:420px}
  .side ul{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:10px;font-size:15px;font-weight:600}
@@ -37,7 +37,7 @@
 }
 @media (min-width:900px) and (prefers-color-scheme:dark){:root:not([data-theme="light"]) body{background:var(--bg)}}
 </style></head>
-<body><aside class="side"><img src="/pandora-logo.png" alt="Pandora"><h2>Sales Intelligence</h2><p>Your stores, your team and your sales, clear and in one place.</p></aside><main class="panel wide"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="rule"></div><h1 class="title" id="hello">Welcome</h1><p class="sub" id="sub">Choose what you want to open.</p>
+<body><aside class="side"><img src="/pandora-logo.png" alt="Pandora"></aside><main class="panel wide"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="rule"></div><h1 class="title" id="hello">Welcome</h1><p class="sub" id="sub">Choose what you want to open.</p>
 <div class="apps" id="apps"><div class="empty">Loading…</div></div></main>
 <script>
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
