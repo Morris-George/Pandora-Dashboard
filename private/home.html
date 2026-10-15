@@ -18,7 +18,7 @@
 .app:hover{border-color:var(--accent2);box-shadow:0 0 0 3px #FF93A044}.app:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
 .app .ic{flex:0 0 42px;height:42px;border-radius:12px;display:grid;place-items:center;background:light-dark(#FFE4E8,#33202a);color:var(--accent-text)}.app .ic svg{width:22px;height:22px}
 .app b{display:block;font-size:15px}.app span.d{display:block;color:var(--muted);font-size:13px;line-height:1.4;margin-top:2px}.app .go{margin-left:auto;color:var(--accent-text);font-weight:800;font-size:18px}
-.empty{color:var(--muted);font-size:14px}.pandora-fab{right:82px!important}
+.empty{color:var(--muted);font-size:14px}.pandora-fab{right:82px!important}a.upl{right:182px!important;text-decoration:none;display:inline-flex;align-items:center;gap:7px}a.upl svg{width:15px;height:15px}@media(max-width:560px){a.upl{top:56px!important;right:12px!important}}
 </style>
 <style id="desk">
 .side{display:none}
@@ -55,6 +55,8 @@ const DEF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-wid
   const j=await r.json();
   if(!j.ok)throw 0;
   document.getElementById('hello').textContent=j.label?'Hello, '+j.label:'Welcome';
+  if(j.apps.some(a=>a.id==='uploads')&&!document.querySelector('a.upl')){const u=document.createElement('a');u.className='pandora-fab upl';u.href='/uploads';u.innerHTML=ICON.uploads+'All Uploads';document.body.appendChild(u)}
+  j.apps=j.apps.filter(a=>a.id!=='uploads');
   const ap=j.apps.find(a=>a.id==='approvals');
   if(ap){try{const q=await fetch('/api/accounts',{credentials:'same-origin',cache:'no-store'});const d=q.ok?await q.json():null;
     const n=d&&d.accounts?d.accounts.filter(x=>x.status==='pending').length:0,f=d&&d.resets?d.resets.length:0;
