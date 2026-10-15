@@ -1,8 +1,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { PROJECTS, validSession, readCookie } = require('./_projects');
-const { whoami } = require('./_auth');
+const { appsFor, sessionFacts } = require('./_apps');
 
 const PRIVATE_DIR = path.join(process.cwd(), 'private');
 
@@ -17,10 +16,10 @@ const THEME_HEAD = '<style id="pandora-theme-css">' +
   '</style><script>(function(){try{var t=localStorage.getItem("pandora-theme");' +
   'if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>';
 
-// kind: 'dashboards' | 'staff' | 'login'
-function chromeScript(kind) {
+// kind: 'dashboards' | 'staff' | 'home' | 'login'.  multi: the person can open more than one thing, so a Home button is shown.
+function chromeScript(kind, multi) {
   return '<script>(function(){' +
-  'var kind=' + JSON.stringify(kind) + ';' +
+  'var kind=' + JSON.stringify(kind) + ',multi=' + (multi ? 'true' : 'false') + ';' +
   'var bar=document.querySelector(".top-actions")||document.querySelector(".actions");' +
   'var cls=document.querySelector(".top-actions")?"secondary":(document.querySelector(".actions")?"btn":"pandora-fab");' +
   'function mk(text){var b=document.createElement("button");b.type="button";b.className=(bar?cls:"pandora-fab")+" hideclean";b.textContent=text;' +
@@ -32,28 +31,26 @@ function chromeScript(kind) {
   'function sync(){var d=cur()==="dark";t.classList.toggle("is-dark",d);t.setAttribute("aria-checked",d);t.setAttribute("aria-label",d?"Switch to light mode":"Switch to dark mode");t.title=d?"Light mode":"Dark mode"}sync();' +
   't.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";' +
   'document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("pandora-theme",n)}catch(e){}sync()});' +
-  'if(kind!=="login"){' +
-  'var sw=mk("Switch project");sw.addEventListener("click",function(){sw.disabled=true;sw.textContent="Switching\u2026";if(kind==="staff"){try{localStorage.removeItem("storeStaffSummary.v1");sessionStorage.removeItem("storeStaffSummary.v1")}catch(e){}}fetch("/api/logout"+(kind==="staff"?"?project=staff":""),{method:"POST",credentials:"same-origin"}).finally(function(){location.replace("/login.html")});});place(sw);' +
-  '}' +
+  'if(kind==="staff"||kind==="dashboards"){if(multi){var hm=mk("Home");hm.addEventListener("click",function(){location.href="/"});place(hm);}}' +
   'place(t);' +
   'if(kind!=="login"){' +
   'var lo=mk("Log out");lo.addEventListener("click",function(){lo.disabled=true;lo.textContent="Logging out\\u2026";' +
-  'if(kind==="staff"){try{localStorage.removeItem("storeStaffSummary.v1");sessionStorage.removeItem("storeStaffSummary.v1")}catch(e){}}' +
-  'fetch("/api/logout"+(kind==="staff"?"?project=staff":""),{method:"POST",credentials:"same-origin"}).then(function(r){' +
-  'if(r.ok){location.replace("/login.html"+(kind==="staff"?"?project=staff":""));}else{throw new Error("x");}' +
+  'try{localStorage.removeItem("storeStaffSummary.v1");sessionStorage.removeItem("storeStaffSummary.v1")}catch(e){}' +
+  'fetch("/api/logout",{method:"POST",credentials:"same-origin"}).then(function(r){' +
+  'if(r.ok){location.replace("/login.html");}else{throw new Error("x");}' +
   '}).catch(function(){lo.disabled=false;lo.textContent="Log out";});});place(lo);' +
   '}' +
   '})();</script>';
 }
 
-function withChrome(kind) {
+function withChrome(kind, multi) {
   return function (buf) {
     let html = buf.toString('utf8');
     const h = html.search(/<\/head>/i);
     if (h !== -1) html = html.slice(0, h) + THEME_HEAD + html.slice(h);
     const i = html.lastIndexOf('</body>');
     const at = i === -1 ? html.length : i;
-    html = html.slice(0, at) + chromeScript(kind) + html.slice(at);
+    html = html.slice(0, at) + chromeScript(kind, multi) + html.slice(at);
     return Buffer.from(html, 'utf8');
   };
 }
@@ -99,17 +96,24 @@ module.exports = async function handler(req, res) {
     return res.status(404).end();
   }
 
-  const secret = process.env.PANDORA_AUTH_SECRET;
+  // Everything below needs a login. Which logins this browser holds decides what it can open.
+  const facts = await sessionFacts(req);
+  const signedIn = facts.dash || facts.staff;
+  const multi = appsFor(facts).length > 1;
+  const toLogin = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/login.html'); return res.status(302).end(); };
+  const toHome = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/'); return res.status(302).end(); };
+  if (!signedIn) return toLogin();
 
-  // Staff Performance project: super admin, area managers and sales people (each with their own login)
+  // Home: the options this person can open
+  if (requestedPath === '/' || requestedPath === '/home.html') {
+    return sendFile(res, 'home.html', 'text/html; charset=utf-8', withChrome('home', multi));
+  }
+
+  // Staff Performance: super admin, area managers and sales people (each sees only their part)
   const STAFF_PATHS = ['/staff', '/staff/', '/staff.html', '/staff/index.html', '/staff/person', '/staff/person/', '/staff/accounts', '/staff/accounts/'];
   if (STAFF_PATHS.includes(requestedPath)) {
-    const who = await whoami(req);
-    if (!who) {
-      res.setHeader('Cache-Control', 'no-store');
-      res.setHeader('Location', '/login.html?project=staff');
-      return res.status(302).end();
-    }
+    const who = facts.staff && facts.staff.who;
+    if (!who) return toHome();
     let page;
     if (who.kind === 'staff') {
       page = 'person.html'; // a sales person only ever sees their own page
@@ -119,7 +123,7 @@ module.exports = async function handler(req, res) {
     } else {
       page = requestedPath.startsWith('/staff/person') ? 'person.html' : 'staff.html';
     }
-    const chrome = withChrome('staff');
+    const chrome = withChrome('staff', multi);
     const info = JSON.stringify(who.info).replace(/</g, '\\u003c');
     return sendFile(res, page, 'text/html; charset=utf-8', function (buf) {
       let html = buf.toString('utf8');
@@ -129,16 +133,10 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  // Pandora Dashboards project (original login and cookie)
-  const dashOk = validSession('dashboards', readCookie(req, PROJECTS.dashboards.cookie), process.env[PROJECTS.dashboards.userEnv], secret);
-  if (!dashOk) {
-    res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('Location', '/login.html?project=dashboards');
-    return res.status(302).end();
-  }
-
-  if (requestedPath === '/' || requestedPath === '/index.html') {
-    return sendFile(res, 'index.html', 'text/html; charset=utf-8', withChrome('dashboards'));
+  // Pandora Dashboards
+  if (requestedPath === '/dashboards' || requestedPath === '/dashboards/' || requestedPath === '/index.html') {
+    if (!facts.dash) return toHome();
+    return sendFile(res, 'index.html', 'text/html; charset=utf-8', withChrome('dashboards', multi));
   }
 
   res.setHeader('Cache-Control', 'no-store');
