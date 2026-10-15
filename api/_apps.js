@@ -7,6 +7,7 @@ const { whoami } = require('./_auth');
 const APPS = [
   { id: 'dashboards', title: 'Pandora Dashboards', desc: 'Sales dashboards for the whole business.', href: '/dashboards', allow: f => f.dash },
   { id: 'staff', title: 'Staff Performance', desc: 'How each store and each sales person is doing.', href: '/staff', allow: f => !!f.staff && f.staff.role !== 'staff' },
+  { id: 'approvals', title: 'Staff approvals', desc: 'Approve new sales people, reset passwords and manage accounts.', href: '/staff/accounts', allow: f => !!f.staff && f.staff.role === 'admin' },
   { id: 'mysales', title: 'My sales', desc: 'What you sold, what sells best for you, and tips to improve.', href: '/staff', allow: f => !!f.staff && f.staff.role === 'staff' },
   { id: 'vm', title: 'VM Report', desc: 'The Visual Merchandiser report.', href: '/vm', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') }
 ];
