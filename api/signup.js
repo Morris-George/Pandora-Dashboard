@@ -41,7 +41,7 @@ module.exports = async function handler(req, res) {
   const pw = String(b.password || '');
   if (pw.length < 8 || pw.length > 100) return send(res, 400, { ok: false, error: 'Password must be at least 8 characters.' });
 
-  if (staffAccounts().some(a => safeEqual(username, normName(a.user))) || (process.env.PANDORA_USERNAME && safeEqual(username, normName(process.env.PANDORA_USERNAME))) || await users.getUser(username)) {
+  if (staffAccounts().some(a => safeEqual(username, normName(a.user))) || await users.getUser(username)) {
     return send(res, 409, { ok: false, error: 'That username is taken. Choose another.' });
   }
   if (await users.phoneTaken(phone)) return send(res, 409, { ok: false, error: 'This number already has an account. Go back and sign in.' });

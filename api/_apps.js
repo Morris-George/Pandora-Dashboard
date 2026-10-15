@@ -17,10 +17,10 @@ function appsFor(f) {
 // Read the cookies of this request: which logins are valid?
 async function sessionFacts(req) {
   const secret = process.env.PANDORA_AUTH_SECRET;
-  // the dashboards session belongs either to the dashboards login or to the super admin (who can open everything)
+  // only the super admin has a dashboards session (the old separate dashboards login was removed)
   const tok = readCookie(req, PROJECTS.dashboards.cookie);
   const adminUser = (staffAccounts().find(a => a.role === 'admin') || {}).user;
-  const dash = validSession('dashboards', tok, process.env[PROJECTS.dashboards.userEnv], secret) || validSession('dashboards', tok, adminUser, secret);
+  const dash = validSession('dashboards', tok, adminUser, secret);
   const who = await whoami(req);
   const staff = who ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', who } : null;
   return { dash, staff };

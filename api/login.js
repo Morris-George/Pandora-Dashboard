@@ -12,8 +12,7 @@ module.exports = async function handler(req, res) {
   const body = req.body || {};
   const secret = process.env.PANDORA_AUTH_SECRET;
   const accounts = staffAccounts();
-  const dUser = process.env[PROJECTS.dashboards.userEnv] || '', dPass = process.env[PROJECTS.dashboards.passEnv] || '';
-  if (!secret || secret.length < 32 || (!accounts.length && !(dUser && dPass))) {
+  if (!secret || secret.length < 32 || !accounts.length) {
     return res.status(500).json({ ok: false, error: 'Sign-in is not configured. Contact the site administrator.' });
   }
   const typedUser = normName(body.username), typedPass = String(body.password || '').trim();
@@ -25,7 +24,6 @@ module.exports = async function handler(req, res) {
     const okPass = safeEqual(typedPass, a.pass);
     if (okUser && okPass && !matched) matched = a;
   }
-  const dashMatch = !!(dUser && dPass) && safeEqual(typedUser, normName(dUser)) && safeEqual(typedPass, dPass);
 
   const cookie = (project, user) => {
     const exp = Math.floor(Date.now() / 1000) + 8 * 60 * 60;
@@ -39,18 +37,17 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok: true, next: apps.length === 1 ? apps[0].href : '/' });
   };
 
-  if (matched || dashMatch) {
+  if (matched) {
     const cookies = [];
     const facts = { dash: false, staff: null };
-    if (matched) { cookies.push(cookie('staff', matched.user)); facts.staff = { role: matched.role }; }
+    cookies.push(cookie('staff', matched.user)); facts.staff = { role: matched.role };
     // the super admin can open everything, so the super admin also gets the dashboards session
-    if (dashMatch) { cookies.push(cookie('dashboards', dUser)); facts.dash = true; }
-    else if (matched && matched.role === 'admin') { cookies.push(cookie('dashboards', matched.user)); facts.dash = true; }
+    if (matched.role === 'admin') { cookies.push(cookie('dashboards', matched.user)); facts.dash = true; }
     return finish(cookies, facts);
   }
 
   // not an admin, a manager or the dashboards user: maybe a sales person with their own account
-  const isEnvName = accounts.some(a => safeEqual(typedUser, normName(a.user))) || (dUser && safeEqual(typedUser, normName(dUser)));
+  const isEnvName = accounts.some(a => safeEqual(typedUser, normName(a.user)));
   const uname = users.normUsername(body.username);
   if (isEnvName || !uname || !store.configured()) { users.burn(body.password || ''); return res.status(401).json({ ok: false }); }
   const rec = await users.getUser(uname);
