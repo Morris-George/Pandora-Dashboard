@@ -96,8 +96,8 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'pandora-logo.png', 'image/png');
   }
 
-  if (requestedPath === '/favicon.ico') {
-    return res.status(404).end();
+  if (requestedPath === '/favicon.png' || requestedPath === '/favicon.ico') {
+    return sendFile(res, 'favicon.png', 'image/png');
   }
 
   // Everything below needs a login. Which logins this browser holds decides what it can open.
