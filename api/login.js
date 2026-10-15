@@ -1,4 +1,4 @@
-const { PROJECTS, projectFrom, safeEqual, signingKey, sign, staffAccounts } = require('./_projects');
+const { PROJECTS, projectFrom, safeEqual, signingKey, sign, staffAccounts, normName } = require('./_projects');
 const users = require('./_users');
 const store = require('./_store');
 const { stafferCookie } = require('./_auth');
@@ -23,13 +23,13 @@ module.exports = async function handler(req, res) {
     }
     let matched = null;
     for (const a of accounts) {
-      const okUser = safeEqual(body.username || '', a.user);
-      const okPass = safeEqual(body.password || '', a.pass);
+      const okUser = safeEqual(normName(body.username), normName(a.user));
+      const okPass = safeEqual(String(body.password || '').trim(), a.pass);
       if (okUser && okPass && !matched) matched = a;
     }
     if (!matched) {
       // not an admin or manager: maybe a sales person with their own account
-      const isEnvName = accounts.some(a => safeEqual(body.username || '', a.user));
+      const isEnvName = accounts.some(a => safeEqual(normName(body.username), normName(a.user)));
       const uname = users.normUsername(body.username);
       if (isEnvName || !uname || !store.configured()) { users.burn(body.password || ''); return res.status(401).json({ ok: false }); }
       const rec = await users.getUser(uname);

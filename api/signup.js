@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const store = require('./_store');
 const users = require('./_users');
-const { safeEqual, staffAccounts } = require('./_projects');
+const { safeEqual, staffAccounts, normName } = require('./_projects');
 
 const LIMIT_PER_HOUR = 6;   // sign-up attempts per visitor per hour
 const MAX_ACCOUNTS = 500;   // protects the storage from being filled with fake accounts
@@ -41,7 +41,7 @@ module.exports = async function handler(req, res) {
   const pw = String(b.password || '');
   if (pw.length < 8 || pw.length > 100) return send(res, 400, { ok: false, error: 'Password must be at least 8 characters.' });
 
-  if (staffAccounts().some(a => safeEqual(username, a.user.toLowerCase())) || await users.getUser(username)) {
+  if (staffAccounts().some(a => safeEqual(username, normName(a.user))) || await users.getUser(username)) {
     return send(res, 409, { ok: false, error: 'That username is taken. Choose another.' });
   }
   if (await users.phoneTaken(phone)) return send(res, 409, { ok: false, error: 'This number already has an account. Go back and sign in.' });

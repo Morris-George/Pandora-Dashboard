@@ -68,11 +68,13 @@ const STAFF_ACCOUNTS = [
 ];
 // Only accounts that have both a username and a password set. A manager whose username equals another account's is ignored,
 // so one login can never be read as a different role.
+// usernames of admin/managers ignore capital letters and extra spaces (phones auto-capitalise and add spaces)
+const normName = u => String(u || '').replace(/\s+/g, ' ').trim().toLowerCase();
 function staffAccounts() {
   const list = STAFF_ACCOUNTS
-    .map(a => ({ ...a, user: process.env[a.userEnv] || '', pass: process.env[a.passEnv] || '' }))
+    .map(a => ({ ...a, user: (process.env[a.userEnv] || '').trim(), pass: (process.env[a.passEnv] || '').trim() }))
     .filter(a => a.user && a.pass);
-  return list.filter(a => list.filter(b => b.user === a.user).length === 1);
+  return list.filter(a => list.filter(b => normName(b.user) === normName(a.user)).length === 1);
 }
 function staffSession(token, secret) {
   for (const a of staffAccounts()) {
@@ -91,4 +93,4 @@ function roleInfo(account) {
   };
 }
 
-module.exports = { PROJECTS, projectFrom, safeEqual, signingKey, sign, validSession, readCookie, ZONES, staffAccounts, staffSession, roleInfo };
+module.exports = { normName, PROJECTS, projectFrom, safeEqual, signingKey, sign, validSession, readCookie, ZONES, staffAccounts, staffSession, roleInfo };
