@@ -44,6 +44,7 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
   <section class="card" id="special"><h2>Special accounts</h2><div class="meta">For one person who needs a different report, for example the Visual Merchandiser. They sign in with their own username and password and open only what you give them.</div>
     <div id="splist"></div>
     <div class="pwline" style="margin-top:12px"><input id="spname" placeholder="Full name" maxlength="60"><input id="spuser" placeholder="Username" maxlength="30" autocapitalize="none" spellcheck="false"><input id="sppw" placeholder="Password (8+ characters)" maxlength="100" autocomplete="off"><select id="sprole" style="max-width:190px"><option value="vm">VM Report</option></select><button class="btn go" data-act="mkspecial" type="button">Create account</button></div>
+    <div id="spmsg" class="note" style="font-weight:700;margin:8px 0" role="status"></div>
     <div class="note">Send the username and password to the person yourself. You can change the password here any time.</div></section>
   <section class="card" id="offcard"><h2>Switched off</h2><div class="meta">They cannot sign in. You can switch them on again.</div><div id="off"></div></section>
 </div>
@@ -83,7 +84,9 @@ document.addEventListener('click',async e=>{
   const b=e.target.closest('button[data-act]'); if(!b)return;
   if(b.dataset.act==='mkspecial'){b.disabled=true;showErr('');
     try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'createspecial',name:$('spname').value,username:$('spuser').value,password:$('sppw').value,role:$('sprole').value})});const j=await r.json().catch(()=>({}));
-      if(!r.ok||!j.ok)showErr(j.error||'That did not work.');else{$('spname').value=$('spuser').value=$('sppw').value=''}}catch(_){showErr('No connection.')}
+      const m=$('spmsg');
+      if(!r.ok||!j.ok){m.textContent='Not created: '+(j.error||'that did not work.')}
+      else{m.textContent='Created. Username: '+j.username+'  ·  Password: the one you typed.';$('spname').value=$('spuser').value=$('sppw').value=''}}catch(_){$('spmsg').textContent='Not created: no connection.'}
     b.disabled=false;load();return}
   if(b.dataset.act==='pw'){openPw(b.dataset.user);return}
   if(b.dataset.act==='pwsave'){savePw(b);return}

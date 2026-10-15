@@ -8,7 +8,8 @@ const store = require('./_store');
 const USERNAME_RE = /^[a-z0-9_.-]{3,30}$/;
 
 function normUsername(u) {
-  const s = String(u || '').trim().toLowerCase();
+  // spaces become dots, so "Raef Wengat" and "raef.wengat" are the same username
+  const s = String(u || '').trim().toLowerCase().replace(/\s+/g, '.');
   return USERNAME_RE.test(s) ? s : '';
 }
 

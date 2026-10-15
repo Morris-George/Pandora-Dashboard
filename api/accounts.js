@@ -58,7 +58,7 @@ module.exports = async function handler(req, res) {
       if (b.role !== 'vm') return send(res, 400, { ok: false, error: 'Unknown account type.' });
       if (staffAccounts().some(a => normName(a.user) === uname) || await users.getUser(uname)) return send(res, 409, { ok: false, error: 'That username is taken. Choose another.' });
       await users.createSpecial({ username: uname, password: pw, name, role: 'vm' });
-      return send(res, 200, { ok: true });
+      return send(res, 200, { ok: true, username: uname });
     }
     const username = users.normUsername(b.username);
     const rec = username ? await users.getUser(username) : null;
