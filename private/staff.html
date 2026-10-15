@@ -122,6 +122,7 @@ body.clean .exit{display:block}
     <div class="brand">
       <h1>Staff Performance</h1>
       <div class="sub" id="source"></div>
+      <div class="sub" id="roleNote"></div>
     </div>
     <div class="actions">
       <button class="btn primary" id="loadBtn" type="button">Load new query</button>
@@ -147,6 +148,18 @@ body.clean .exit{display:block}
 <script>
 const VAT=1.14, KEY='storeStaffSummary.v1', EXKEY='storeStaffSummary.ex.v1';
 const SAMPLE=null;
+/* ---- who is signed in: the server tells the page the role. Managers only ever see the stores of their own zone. ---- */
+const ROLE=window.__PANDORA_ROLE||{role:'admin',label:'Super admin',allow:null,zones:null};
+const ALLOW=ROLE.allow?ROLE.allow.map(s=>new RegExp(s,'i')):null;
+const storeOk=n=>!ALLOW||ALLOW.some(r=>r.test(n));
+function scopeData(d){
+  if(!ALLOW) return d;
+  const sMap=new Map(),stores=[]; d.stores.forEach((s,i)=>{if(storeOk(s)){sMap.set(i,stores.length);stores.push(s)}});
+  const pMap=new Map(),people=[]; d.people.forEach((p,i)=>{if(sMap.has(p[1])){pMap.set(i,people.length);people.push([p[0],sMap.get(p[1])])}});
+  const rows=[]; for(const r of d.rows){const np=pMap.get(r[0]); if(np!==undefined){const c=r.slice();c[0]=np;rows.push(c)}}
+  return {...d,stores,people,rows};
+}
+
 const METRICS=[
  {id:'incl',label:'Amount incl. VAT',f:p=>p.incl},
  {id:'amt',label:'Before VAT',f:p=>p.amt},
@@ -166,7 +179,9 @@ function safeGet(k){for(const n of ['localStorage','sessionStorage']){try{const 
 function safeSet(k,v){const j=JSON.stringify(v);try{localStorage.setItem(k,j);try{sessionStorage.removeItem(k)}catch(e){}}catch(e){try{sessionStorage.setItem(k,j)}catch(e2){}}}
 
 function setData(d){
-  st.data=d; document.querySelector('.controls').hidden=false;
+  const full=d; d=scopeData(d);
+  if(!d.rows.length){document.querySelector('.controls').hidden=true;$('out').innerHTML='<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">No sales for your zone in this file</h2>The file has no stores from '+esc(ROLE.zone||'your zone')+'. Load the Query Report that includes them.</section>';$('source').textContent=ROLE.label;return}
+  st.data=d; st.full=full; document.querySelector('.controls').hidden=false;
   const saved=safeGet(EXKEY)||{ex:[],known:[]};
   st.ex=new Set();
   d.groups.forEach(g=>{
@@ -206,6 +221,14 @@ function buildControls(){
     `<label><input type="checkbox" data-g="${esc(g)}" ${st.ex.has(g)?'':'checked'}><span>${esc(g)}</span></label>`).join('');
   updGcount();
   $('source').textContent=`${d.file||'Query'} · ${d.period||''}`;
+  roleNote();
+}
+function roleNote(){
+  const el=$('roleNote'); if(!el||!st.data) return;
+  if(ALLOW){el.textContent=`${ROLE.label} · ${st.data.stores.length} store${st.data.stores.length===1?'':'s'}: ${[...st.data.stores].sort().join(', ')}`;return}
+  const all=(st.full||st.data).stores, zones=(ROLE.zones||[]).map(z=>{const rx=z.allow.map(x=>new RegExp(x,'i'));return{label:z.label,rx,n:all.filter(n=>rx.some(r=>r.test(n))).length}});
+  const loose=all.filter(n=>!zones.some(z=>z.rx.some(r=>r.test(n))));
+  el.textContent=`Super admin · `+zones.map(z=>`${z.label}: ${z.n} store${z.n===1?'':'s'}`).join(' · ')+(loose.length?` · Not in any zone (managers cannot see): ${loose.join(', ')}`:'');
 }
 function updGcount(){const n=st.ex.size;$('gcount').textContent=n?`(${n} left out)`:'(all counted)'}
 

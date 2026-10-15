@@ -1,7 +1,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { PROJECTS, validSession, readCookie } = require('./_projects');
+const { PROJECTS, validSession, readCookie, staffSession, roleInfo } = require('./_projects');
 
 const PRIVATE_DIR = path.join(process.cwd(), 'private');
 
@@ -98,14 +98,21 @@ module.exports = function handler(req, res) {
 
   // Staff Performance project (its own login and cookie)
   if (['/staff', '/staff/', '/staff.html', '/staff/index.html', '/staff/person', '/staff/person/'].includes(requestedPath)) {
-    const ok = validSession('staff', readCookie(req, PROJECTS.staff.cookie), process.env[PROJECTS.staff.userEnv], secret);
-    if (!ok) {
+    const account = staffSession(readCookie(req, PROJECTS.staff.cookie), secret);
+    if (!account) {
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('Location', '/login.html?project=staff');
       return res.status(302).end();
     }
     const isPerson = requestedPath.startsWith('/staff/person');
-    return sendFile(res, isPerson ? 'person.html' : 'staff.html', 'text/html; charset=utf-8', withChrome('staff'));
+    const chrome = withChrome('staff');
+    const info = JSON.stringify(roleInfo(account)).replace(/</g, '\\u003c');
+    return sendFile(res, isPerson ? 'person.html' : 'staff.html', 'text/html; charset=utf-8', function (buf) {
+      let html = buf.toString('utf8');
+      const h = html.search(/<\/head>/i);
+      if (h !== -1) html = html.slice(0, h) + '<script>window.__PANDORA_ROLE=' + info + ';</script>' + html.slice(h);
+      return chrome(Buffer.from(html, 'utf8'));
+    });
   }
 
   // Pandora Dashboards project (original login and cookie)

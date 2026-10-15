@@ -175,6 +175,18 @@ body.clean .exit{display:block}
 <script>
 const VAT=1.14, KEY='storeStaffSummary.v1', EXKEY='storeStaffSummary.ex.v1';
 const DEFAULT_EX=/packaging|services|jewellery boxes/i;
+/* ---- who is signed in: the server tells the page the role. Managers only ever see the stores of their own zone. ---- */
+const ROLE=window.__PANDORA_ROLE||{role:'admin',label:'Super admin',allow:null,zones:null};
+const ALLOW=ROLE.allow?ROLE.allow.map(s=>new RegExp(s,'i')):null;
+const storeOk=n=>!ALLOW||ALLOW.some(r=>r.test(n));
+function scopeData(d){
+  if(!ALLOW) return d;
+  const sMap=new Map(),stores=[]; d.stores.forEach((s,i)=>{if(storeOk(s)){sMap.set(i,stores.length);stores.push(s)}});
+  const pMap=new Map(),people=[]; d.people.forEach((p,i)=>{if(sMap.has(p[1])){pMap.set(i,people.length);people.push([p[0],sMap.get(p[1])])}});
+  const rows=[]; for(const r of d.rows){const np=pMap.get(r[0]); if(np!==undefined){const c=r.slice();c[0]=np;rows.push(c)}}
+  return {...d,stores,people,rows};
+}
+
 const $=id=>document.getElementById(id);
 const nf0=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
 const nf1=new Intl.NumberFormat('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
@@ -246,8 +258,9 @@ function noData(msg){
 }
 
 function build(){
-  const d=safeGet(KEY);
-  if(!d||!d.rows||!d.people) return noData('No sales file is loaded in this browser');
+  const d0=safeGet(KEY);
+  if(!d0||!d0.rows||!d0.people) return noData('No sales file is loaded in this browser');
+  const d=scopeData(d0);
   const si=d.stores.indexOf(wantStore);
   const pi=d.people.findIndex(p=>p[0]===wantName&&d.stores[p[1]]===wantStore);
   if(si<0||pi<0) return noData('That sales person was not found in the loaded file');
