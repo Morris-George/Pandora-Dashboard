@@ -364,13 +364,17 @@ async function publish(d){
   }catch(e){return 'Not published: no connection'}
 }
 function applyRoleUI(){
-  if(!SERVER) return;
-  if(ROLE.role!=='admin'){
+  if(SERVER&&ROLE.role!=='admin'){
     ['loadBtn','drop'].forEach(id=>{const el=$(id); if(el) el.hidden=true});
     const g=document.querySelector('details.groups'); if(g) g.hidden=true;
-  } else {
-    const a=document.createElement('a'); a.className='btn hideclean'; a.href='/staff/accounts'; a.textContent='Staff accounts';
+  }
+  if(ROLE.role==='admin'&&!document.getElementById('approvalsBtn')){
+    const a=document.createElement('a'); a.className='btn hideclean'; a.id='approvalsBtn'; a.href='/staff/accounts'; a.textContent='Staff approvals';
     document.querySelector('.actions').insertBefore(a,$('cleanBtn'));
+    fetch('/api/accounts',{credentials:'same-origin',cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{
+      const n=j&&j.accounts?j.accounts.filter(x=>x.status==='pending').length:0;
+      if(n){a.textContent='Staff approvals ('+n+' waiting)'; a.classList.add('primary')}
+    }).catch(()=>{});
   }
 }
 
@@ -403,6 +407,7 @@ function showEmpty(){
     :'<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">Load this month\u2019s query</h2>Drop the Query Report file (.xlsx or .csv) anywhere on this page, or press <b>Load new query</b>. The store and sales person summary appears here.</section>';
 }
 async function boot(){
+  applyRoleUI();
   try{
     const r=await fetch('/api/data',{credentials:'same-origin',cache:'no-store'});
     if(r.status===401){location.replace('/login.html?project=staff');return}

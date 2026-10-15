@@ -1,7 +1,7 @@
 // Staff accounts (sales people who sign up themselves). Stored as JSON files in the private store.
 //   users/u/<username>.json   the account
 //   users/p/<phone digits>.json   {username}   one account per phone number
-//   users/n/<sha1(store|name)>.json   {username}   one account per sales person
+//   users/n/<sha1(store|name)>.json   {username}   one account per sales person (written when the admin links it)
 const crypto = require('crypto');
 const store = require('./_store');
 
@@ -51,27 +51,35 @@ async function listUsers() {
   return out;
 }
 
+// A new account starts unlinked and pending. The super admin links it to the right sales person when approving.
 async function createUser({ username, password, phone, store: st, name }) {
   const rec = {
-    username, phone, store: st, name,
+    username, phone, store: st, name, linked: false,
     pass: hashPassword(password),
-    status: 'pending', // an admin approves each new account
+    status: 'pending',
     fails: 0, lockUntil: 0,
     createdAt: new Date().toISOString()
   };
   await putUser(rec);
   await store.putJSON('users/p/' + phoneKey(phone) + '.json', { username });
-  await store.putJSON('users/n/' + nameKey(st, name) + '.json', { username });
   return rec;
 }
 
 async function removeUser(rec) {
   await store.del('users/u/' + rec.username + '.json');
   await store.del('users/p/' + phoneKey(rec.phone) + '.json');
-  await store.del('users/n/' + nameKey(rec.store, rec.name) + '.json');
+  if (rec.linked) await store.del('users/n/' + nameKey(rec.store, rec.name) + '.json');
+}
+
+// point the account at a sales person from the published file (one account per sales person)
+async function linkUser(rec, st, name) {
+  if (rec.linked) await store.del('users/n/' + nameKey(rec.store, rec.name) + '.json');
+  rec.store = st; rec.name = name; rec.linked = true;
+  await putUser(rec);
+  await store.putJSON('users/n/' + nameKey(st, name) + '.json', { username: rec.username });
 }
 
 const phoneTaken = async phone => !!(await store.getJSON('users/p/' + phoneKey(phone) + '.json'));
-const nameTaken = async (st, name) => !!(await store.getJSON('users/n/' + nameKey(st, name) + '.json'));
+const claimOwner = async (st, name) => { const c = await store.getJSON('users/n/' + nameKey(st, name) + '.json'); return c ? c.username : null; };
 
-module.exports = { normUsername, normalizePhone, hashPassword, verifyPassword, burn, getUser, putUser, listUsers, createUser, removeUser, phoneTaken, nameTaken, nameKey };
+module.exports = { normUsername, normalizePhone, hashPassword, verifyPassword, burn, getUser, putUser, listUsers, createUser, removeUser, linkUser, phoneTaken, claimOwner, nameKey };

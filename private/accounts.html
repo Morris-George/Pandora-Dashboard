@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Staff accounts</title>
+<title>Staff approvals</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
 <style>
 :root{--bg:#FBF6F7;--surface:#FFFFFF;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--accent:#C93A53;--fill-soft:#FFE4E8;--hover:#FFF1F3;--good:#1F7A4D;--bad:#B3261E;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
@@ -22,18 +22,20 @@ h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(
 .btn.bad{color:var(--bad)}.btn:disabled{opacity:.5;cursor:wait}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px}
 .card h2{margin:0 0 4px;font-size:17px;font-weight:800}.card .meta{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
-.row{display:grid;grid-template-columns:minmax(150px,1.4fr) minmax(110px,1fr) minmax(90px,.8fr) auto;gap:8px 14px;align-items:center;padding:10px 6px;border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(110px,.9fr) minmax(200px,1.4fr) auto;gap:8px 14px;align-items:center;padding:10px 6px;border-top:1px solid var(--line)}
 .row:first-of-type{border-top:0}.row .who{font-weight:700;overflow-wrap:anywhere}.row .who small{display:block;color:var(--ink2);font-weight:500}
 .row .btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);border-radius:10px;padding:0 8px;font:inherit;color:var(--ink);background:var(--bg)}
+.note{color:var(--ink2);font-size:12px;margin-top:4px}
 .empty{color:var(--ink2);padding:8px 2px}.err{background:#B3261E;color:#fff;border-radius:10px;padding:10px 14px;font-weight:600}
 @media (max-width:640px){.row{grid-template-columns:1fr}.row .btns{justify-content:flex-start}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="top"><div><a class="crumb" href="/staff">&larr; Staff Performance</a><h1>Staff accounts</h1><div class="sub">Sales people create their own account. You approve each one before it opens.</div></div><div class="actions"></div></header>
+  <header class="top"><div><a class="crumb" href="/staff">&larr; Staff Performance</a><h1>Staff approvals</h1><div class="sub">Sales people create their own account. Nobody sees any sales until you approve and link them to the right sales person.</div></div><div class="actions"></div></header>
   <div class="err" id="err" hidden></div>
-  <section class="card"><h2>Waiting for approval</h2><div class="meta">Check the name and store match the person, then approve.</div><div id="pending"></div></section>
+  <section class="card"><h2>Waiting for approval</h2><div class="meta">Choose who this person is in the sales file, then press Approve.</div><div id="pending"></div></section>
   <section class="card"><h2>Active</h2><div class="meta">These people can sign in and see their own page.</div><div id="active"></div></section>
   <section class="card" id="offcard"><h2>Switched off</h2><div class="meta">They cannot sign in. You can switch them on again.</div><div id="off"></div></section>
 </div>
@@ -41,7 +43,15 @@ h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
-function rowHtml(a,btns){return `<div class="row"><div class="who">${esc(a.name)}<small>${esc(a.store)}</small></div><div>${esc(a.username)}<br><small style="color:var(--ink2)">${esc(a.phone)}</small></div><div style="color:var(--ink2)">${esc((a.createdAt||'').slice(0,10))}</div><div class="btns">${btns.map(b=>`<button class="btn ${b[2]||''}" data-act="${b[0]}" data-user="${esc(a.username)}">${b[1]}</button>`).join('')}</div></div>`}
+let PEOPLE=[],HASDATA=false;
+function pickHtml(a){
+  if(!HASDATA) return `<div class="note">No sales file is published yet. You can approve now and link later.</div>`;
+  const opts=PEOPLE.map(p=>{const v=p.store+'|'+p.name,mine=p.takenBy===a.username,taken=p.takenBy&&!mine;
+    const sel=(a.linked?(a.store+'|'+a.name)===v:a.suggest===v);
+    return `<option value="${esc(v)}" ${sel?'selected':''} ${taken?'disabled':''}>${esc(p.store)} · ${esc(p.name)}${taken?' (has an account)':''}</option>`}).join('');
+  return `<select data-pick="${esc(a.username)}"><option value="">Choose the sales person…</option>${opts}</select>${a.linked?'':`<div class="note">They typed: ${esc(a.name)} · ${esc(a.store)}</div>`}`;
+}
+function rowHtml(a,btns,pick){return `<div class="row"><div class="who">${esc(a.name)}<small>${esc(a.store)}</small></div><div>${esc(a.username)}<br><small style="color:var(--ink2)">${esc(a.phone)} · ${esc((a.createdAt||'').slice(0,10))}</small></div><div>${pick?pickHtml(a):''}</div><div class="btns">${btns.map(b=>`<button class="btn ${b[2]||''}" data-act="${b[0]}" data-user="${esc(a.username)}">${b[1]}</button>`).join('')}</div></div>`}
 async function load(){
   showErr('');
   try{
@@ -49,18 +59,25 @@ async function load(){
     if(r.status===401){location.replace('/login.html?project=staff');return}
     const j=await r.json();
     if(!r.ok||!j.ok){showErr(r.status===503?'Server storage is not set up yet.':(j.error||'Could not load accounts.'));return}
+    PEOPLE=j.people||[];HASDATA=!!j.hasData;
     const by=s=>j.accounts.filter(a=>a.status===s);
-    const fill=(id,list,btns,none)=>{$(id).innerHTML=list.length?list.map(a=>rowHtml(a,btns)).join(''):`<div class="empty">${none}</div>`};
-    fill('pending',by('pending'),[['approve','Approve','go'],['remove','Reject','bad']],'Nobody is waiting.');
-    fill('active',by('active'),[['disable','Switch off'],['remove','Remove','bad']],'No active accounts yet.');
-    fill('off',by('disabled'),[['enable','Switch on'],['remove','Remove','bad']],'None.');
+    const fill=(id,list,btns,none,pick)=>{$(id).innerHTML=list.length?list.map(a=>rowHtml(a,btns,pick)).join(''):`<div class="empty">${none}</div>`};
+    fill('pending',by('pending'),[['approve','Approve','go'],['remove','Reject','bad']],'Nobody is waiting.',true);
+    fill('active',by('active'),[['link','Save link'],['disable','Switch off'],['remove','Remove','bad']],'No active accounts yet.',true);
+    fill('off',by('disabled'),[['enable','Switch on'],['remove','Remove','bad']],'None.',false);
   }catch(e){showErr('Could not load accounts. Check your connection.')}
 }
 document.addEventListener('click',async e=>{
   const b=e.target.closest('button[data-act]'); if(!b)return;
   if(b.dataset.act==='remove'&&!confirm('Remove this account? The person can sign up again later.'))return;
   b.disabled=true;
-  try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:b.dataset.act,username:b.dataset.user})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)showErr(j.error||'That did not work.')}catch(_){showErr('No connection.')}
+  const body={action:b.dataset.act,username:b.dataset.user};
+  const sel=document.querySelector(`select[data-pick="${CSS.escape(b.dataset.user)}"]`);
+  if(sel&&(b.dataset.act==='approve'||b.dataset.act==='link')){
+    if(!sel.value&&HASDATA){showErr('Choose the sales person first.');b.disabled=false;return}
+    if(sel.value){const [st,...n]=sel.value.split('|');body.store=st;body.name=n.join('|')}
+  }
+  try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)showErr(j.error||'That did not work.')}catch(_){showErr('No connection.')}
   load();
 });
 load();
