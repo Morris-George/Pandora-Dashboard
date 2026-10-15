@@ -12,8 +12,24 @@
 
 .ok{display:none;color:light-dark(#14633b,#8fe0b4);background:light-dark(#eefaf3,#16301f);border:1px solid light-dark(#bfe6cd,#2c5a3b);border-radius:9px;padding:12px;font-size:14px;line-height:1.5;margin:0 0 16px;text-align:left}
 .small{font-size:12px;color:var(--muted);margin:6px 0 0}.link{color:var(--accent);font-weight:700}.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+</style><style id="desk">
+.side{display:none}
+@media (min-width:900px){
+ body{display:grid!important;grid-template-columns:minmax(360px,44%) 1fr;padding:0!important;place-items:stretch!important;background:var(--bg)!important}
+ .side{display:flex;flex-direction:column;justify-content:center;gap:18px;padding:64px 56px;color:#fff;background:linear-gradient(155deg,#7a0f3b 0%,#9e174d 48%,#d85b83 100%);position:sticky;top:0;height:100vh}
+ .side img{width:min(280px,70%);max-height:150px;object-fit:contain;filter:brightness(0) invert(1);margin:0 0 10px}
+ .side h2{margin:0;font-size:38px;line-height:1.1;letter-spacing:-.03em;font-weight:800}
+ .side p{margin:0;font-size:16px;line-height:1.6;opacity:.9;max-width:420px}
+ .side ul{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:10px;font-size:15px;font-weight:600}
+ .side li::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;margin-right:12px;opacity:.85}
+ .panel{align-self:center;justify-self:center;width:min(100%,460px)!important;margin:48px 24px;border:0!important;box-shadow:none!important;background:transparent!important;padding:0!important}
+ .panel .logo,.panel .rule{display:none}
+ .panel .eyebrow{text-align:left}.panel .title{font-size:34px;text-align:left}.panel .sub,.panel .hint,.panel .foot{text-align:left}
+ .panel.wide{width:min(100%,700px)!important}.panel.wide .apps{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+}
+@media (min-width:900px) and (prefers-color-scheme:dark){:root:not([data-theme="light"]) body{background:var(--bg)}}
 </style></head>
-<body><main class="panel"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="rule"></div><div class="eyebrow">Sales people</div><h1 class="title">Create your account</h1><p class="sub" id="sub">Fill in your details. Your manager will check them and open your account.</p>
+<body><aside class="side"><img src="/pandora-logo.png" alt="Pandora"><h2>Sales Intelligence</h2><p>Your stores, your team and your sales, clear and in one place.</p><ul><li>Simple numbers everyone understands</li><li>Each person sees only what they need</li><li>Updated every month</li></ul></aside><main class="panel"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="rule"></div><div class="eyebrow">Sales people</div><h1 class="title">Create your account</h1><p class="sub" id="sub">Fill in your details. Your manager will check them and open your account.</p>
 <div class="error" id="error" role="alert"></div><div class="ok" id="okbox" role="status"></div>
 <form id="f">
 <div class="field"><label for="name">Your full name</label><input id="name" autocomplete="name" required maxlength="60"><p class="small">The same way it appears in the sales report.</p></div>
