@@ -46,6 +46,7 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
 <div class="wrap">
   <header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>All Uploads</h1><div class="sub">Every document in one place, listed under the part of the site it feeds. Saved documents stay until you remove them here.</div></div><div class="actions"></div></header>
   <div class="err" id="err" hidden></div>
+  <section class="card grp" id="erp"><div class="top2"><div><h2>Sync from ERP</h2><div class="meta" style="margin:0">Pulls this month's sales and staff reports straight from ERPNext into Pandora Dashboards and Staff Performance. It also runs by itself every morning.</div></div><div class="actions"><input type="month" id="erpMonth" class="btn" style="padding:6px 10px"><button class="btn go" id="erpGo" type="button">Sync now</button></div></div><div class="st" id="erpSt"></div></section>
   <div id="groups"><div class="empty">Loading…</div></div>
 </div>
 <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" hidden>
@@ -104,6 +105,10 @@ document.addEventListener('click',async e=>{
 $('file').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f&&pending)add(pending,f)});
 ['dragover','dragenter'].forEach(ev=>document.addEventListener(ev,e=>{const z=e.target.closest&&e.target.closest('[data-drop]');if(z){e.preventDefault();z.classList.add('on')}}));
 ['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{const z=e.target.closest&&e.target.closest('[data-drop]');if(z){e.preventDefault();z.classList.remove('on');if(ev==='drop'){const f=e.dataTransfer.files[0];if(f)add(z.dataset.drop,f)}}}));
+async function erpStatus(){try{const r=await fetch('/api/erp',{credentials:'same-origin',cache:'no-store'});const j=await r.json();const s=j.status;$('erpSt').textContent=!r.ok?(j.error||''):s?`Last sync: ${when(s.at)} · ${s.month} · ${s.sales.toLocaleString()} sales lines · ${s.staff.toLocaleString()} staff rows`:'Not synced yet.'}catch(_){}}
+$('erpMonth').value=new Date().toISOString().slice(0,7);
+$('erpGo').addEventListener('click',async()=>{const b=$('erpGo');b.disabled=true;$('erpSt').textContent='Syncing from ERP… this can take up to a minute.';try{await post('/api/erp?month='+encodeURIComponent($('erpMonth').value),'{}','application/json');await load();await erpStatus()}catch(e){$('erpSt').textContent='Sync failed: '+e.message}b.disabled=false});
+erpStatus();
 load();
 </script>
 </body>

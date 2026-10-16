@@ -23,3 +23,8 @@ ALL UPLOADS (super admin home screen -> "All Uploads", /uploads)
 - The Upload button on the Dashboards page saves into the same place (it no longer keeps data in the browser only).
 - Staff Performance data (one month, data/current.json) and VM reports (vm/) are listed here too and can be removed here; their own upload buttons still work.
 - Shared file readers: private/parsers.js (window.PandoraParse), served to the super admin only.
+
+ERP SYNC (api/erp.js)
+- Pulls "Sales Report by Item & SKU" into Pandora Dashboards (saved as dash/f/erp-YYYY-MM.json, one file per month, replaced on each sync) and "Sales Person-wise Transaction Summary By Store" into Staff Performance (data/current.json).
+- Super admin: "Sync from ERP" card on All Uploads (pick a month, Sync now). Vercel cron (vercel.json) syncs the current month every day at 04:00 UTC.
+- Env vars: ERP_URL, ERP_API_KEY, ERP_API_SECRET (read-only ERPNext user), CRON_SECRET (any long random text; Vercel sends it to the cron call).

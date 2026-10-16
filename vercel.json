@@ -3,8 +3,14 @@
   "functions": {
     "api/site.js": {
       "includeFiles": "private/**"
+    },
+    "api/erp.js": {
+      "maxDuration": 60
     }
   },
+  "crons": [
+    { "path": "/api/erp", "schedule": "0 4 * * *" }
+  ],
   "rewrites": [
     {
       "source": "/((?!api/).*)",
