@@ -5,7 +5,7 @@
 //   GET  /api/erp?status=1               super admin: when the last sync ran
 // Sales Report by Item & SKU  -> Pandora Dashboards (dash/f/erp-YYYY-MM.json)
 // Sales Person-wise ... Store -> Staff Performance   (data/current.json)
-// Env vars: ERP_URL, ERP_API_KEY, ERP_API_SECRET (read-only ERPNext user), CRON_SECRET.
+// Env vars: ERP_URL, ERP_API_KEY, ERP_API_SECRET (read-only ERPNext user), CRON_SECRET; ERP_COMPANY optional (else taken from the sales rows).
 const store = require('./_store');
 const { whoami } = require('./_auth');
 
@@ -30,7 +30,8 @@ function monthRange(m) {
   return { key: `${y}-${pad(mo)}`, from: `${y}-${pad(mo)}-01`, to: `${y}-${pad(mo)}-${pad(last)}` };
 }
 
-async function runReport(name, from, to) {
+// These are Custom Reports with saved filters; are_default_filters:false makes ERPNext use ours instead.
+async function runReport(name, filters) {
   const base = String(process.env.ERP_URL || '').replace(/\/+$/, '');
   const r = await fetch(base + '/api/method/frappe.desk.query_report.run', {
     method: 'POST',
@@ -39,7 +40,7 @@ async function runReport(name, from, to) {
       'Content-Type': 'application/json',
       Accept: 'application/json'
     },
-    body: JSON.stringify({ report_name: name, filters: { from_date: from, to_date: to } }),
+    body: JSON.stringify({ report_name: name, filters, are_default_filters: false }),
     signal: AbortSignal.timeout(50000)
   });
   if (!r.ok) throw new Error(`ERP answered ${r.status} for "${name}"` + (r.status === 401 || r.status === 403 ? ' (check ERP_API_KEY / ERP_API_SECRET and the user roles)' : ''));
@@ -110,7 +111,9 @@ const fmtPeriod = (a, b) => {
 async function sync(m) {
   const { key, from, to } = monthRange(m);
   const t0 = Date.now();
-  const [salesList, staffList] = await Promise.all([runReport(SALES_REPORT, from, to), runReport(STAFF_REPORT, from, to)]);
+  const salesList = await runReport(SALES_REPORT, { from_date: from, to_date: to });
+  const company = process.env.ERP_COMPANY || (salesList.find(r => r.company) || {}).company || '';
+  const staffList = company ? await runReport(STAFF_REPORT, { from_date: from, to_date: to, company, doc_type: 'Sales Invoice' }) : [];
 
   // Pandora Dashboards: one saved file per month, replaced on every sync.
   const rows = salesRows(salesList);
