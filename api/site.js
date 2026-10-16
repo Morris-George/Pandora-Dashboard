@@ -110,7 +110,15 @@ module.exports = async function handler(req, res) {
 
   // Home: the options this person can open
   if (requestedPath === '/' || requestedPath === '/home.html') {
-    return sendFile(res, 'home.html', 'text/html; charset=utf-8', withChrome('home', multi));
+    const label = facts.vm ? facts.vmName : facts.staff ? (facts.staff.role === 'staff' ? facts.staff.name : facts.staff.label) : 'Pandora Dashboards';
+    const boot = JSON.stringify({ ok: true, label, apps: appsFor(facts) }).replace(/</g, '\\u003c');
+    const chrome = withChrome('home', multi);
+    return sendFile(res, 'home.html', 'text/html; charset=utf-8', function (buf) {
+      let html = buf.toString('utf8');
+      const h = html.search(/<\/head>/i);
+      if (h !== -1) html = html.slice(0, h) + '<script>window.__HOME=' + boot + ';</script>' + html.slice(h);
+      return chrome(Buffer.from(html, 'utf8'));
+    });
   }
 
   // Staff Performance: super admin, area managers and sales people (each sees only their part)

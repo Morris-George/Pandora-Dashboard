@@ -37,8 +37,8 @@
 }
 @media (min-width:900px) and (prefers-color-scheme:dark){:root:not([data-theme="light"]) body{background:var(--bg)}}
 </style></head>
-<body><aside class="side"><img src="/pandora-logo.png" alt="Pandora"></aside><main class="panel wide"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="rule"></div><h1 class="title" id="hello">Welcome</h1><p class="sub" id="sub">Choose what you want to open.</p>
-<div class="apps" id="apps"><div class="empty">Loading…</div></div></main>
+<body><aside class="side"><img src="/pandora-logo.png" alt="Pandora"></aside><main class="panel wide"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="rule"></div><h1 class="title" id="hello">&nbsp;</h1><p class="sub" id="sub">Choose what you want to open.</p>
+<div class="apps" id="apps"></div></main>
 <script>
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ICON={dashboards:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
@@ -48,21 +48,33 @@ const ICON={dashboards:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
  vm:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4zM3 12l9 4 9-4M3 17l9 4 9-4"/></svg>',
  mysales:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-9M15 7h5v5"/></svg>'};
 const DEF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>';
-(async()=>{
- try{
-  const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});
-  if(r.status===401){location.replace('/login.html');return}
-  const j=await r.json();
-  if(!j.ok)throw 0;
+function paint(j){
   document.getElementById('hello').textContent=j.label?'Hello, '+j.label:'Welcome';
   if(j.apps.some(a=>a.id==='uploads')&&!document.querySelector('a.upl')){const u=document.createElement('a');u.className='pandora-fab upl';u.href='/uploads';u.innerHTML=ICON.uploads+'All Uploads';document.body.appendChild(u)}
-  j.apps=j.apps.filter(a=>a.id!=='uploads');
-  const ap=j.apps.find(a=>a.id==='approvals');
-  if(ap){try{const q=await fetch('/api/accounts',{credentials:'same-origin',cache:'no-store'});const d=q.ok?await q.json():null;
-    const n=d&&d.accounts?d.accounts.filter(x=>x.status==='pending').length:0,f=d&&d.resets?d.resets.length:0;
+  const apps=j.apps.filter(a=>a.id!=='uploads');
+  document.getElementById('apps').innerHTML=apps.length?apps.map(a=>`<a class="app" href="${esc(a.href)}"><span class="ic">${ICON[a.id]||DEF}</span><span><b>${esc(a.title)}</b><span class="d">${esc(a.desc||'')}</span></span><span class="go" aria-hidden="true">&rsaquo;</span></a>`).join(''):'<div class="empty">There is nothing to open for your account yet. Please contact your manager.</div>';
+  return apps;
+}
+// the server already put who-you-are and what-you-can-open into the page, so it draws at once (no loading flash)
+async function badge(){
+  // waiting-for-approval count: fills in afterwards without redrawing anything
+  try{const q=await fetch('/api/accounts',{credentials:'same-origin',cache:'no-store'});const d=q.ok?await q.json():null;if(!d)return;
+    const n=d.accounts?d.accounts.filter(x=>x.status==='pending').length:0,f=d.resets?d.resets.length:0;
     const parts=[n?n+' waiting for approval':'',f?f+' forgot password':''].filter(Boolean);
-    if(parts.length){ap.desc=parts.join(' · ');ap.badge=n+f}}catch(_){}}
-  document.getElementById('apps').innerHTML=j.apps.length?j.apps.map(a=>`<a class="app" href="${esc(a.href)}"><span class="ic">${ICON[a.id]||DEF}</span><span><b>${esc(a.title)}${a.badge?` <span class="bdg">${a.badge}</span>`:''}</b><span class="d">${esc(a.desc||'')}</span></span><span class="go" aria-hidden="true">&rsaquo;</span></a>`).join(''):'<div class="empty">There is nothing to open for your account yet. Please contact your manager.</div>';
+    const card=document.querySelector('a.app[href="/staff/accounts"]');if(!card||!parts.length)return;
+    card.querySelector('.d').textContent=parts.join(' · ');
+    card.querySelector('b').insertAdjacentHTML('beforeend',' <span class="bdg">'+(n+f)+'</span>')}catch(_){}
+}
+(async()=>{
+ try{
+  let j=window.__HOME;
+  if(!j){
+    const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});
+    if(r.status===401){location.replace('/login.html');return}
+    j=await r.json();if(!j.ok)throw 0;
+  }
+  const apps=paint(j);
+  if(apps.some(a=>a.id==='approvals'))badge();
  }catch(_){document.getElementById('apps').innerHTML='<div class="empty">Could not load. Please refresh the page.</div>'}
 })();
 </script></body></html>
