@@ -307,8 +307,11 @@ function bakeSvg(orig,clone){
   const o=[orig,...orig.querySelectorAll('*')],c=[clone,...clone.querySelectorAll('*')];
   o.forEach((el,i)=>{const t=c[i];if(!t)return;const cs=getComputedStyle(el);SVGPROPS.forEach(p=>{const v=cs.getPropertyValue(p);if(v)t.style.setProperty(p,v)})});
 }
-async function shot(el,bg,fo){
-  return html2canvas(el,{scale:2,backgroundColor:bg,useCORS:true,logging:false,foreignObjectRendering:!!fo,onclone:(doc,cl)=>{
+async function shot(el,bg,stripAll){
+  return html2canvas(el,{scale:2,backgroundColor:bg,useCORS:true,logging:false,onclone:(doc,cl)=>{
+    // A gradient on an element that has no width or height (a 0% bar, an empty progress line) makes html2canvas fail, so drop those backgrounds (second try: every gradient).
+    const oa=[...el.querySelectorAll('*')],ca=[...cl.querySelectorAll('*')];
+    oa.forEach((o,i)=>{const c=ca[i];if(!c||c.closest&&c.closest('svg'))return;const r=o.getBoundingClientRect(),bi=getComputedStyle(o).backgroundImage;if(bi&&bi!=='none'&&(stripAll||r.width<2||r.height<2||/gradient/.test(bi)&&(r.width<2||r.height<2)))c.style.setProperty('background-image','none','important')});
     // html2canvas cannot draw SVG that depends on the page's CSS (and fails on SVG with no size), so turn every chart into a plain picture first.
     const os=[...el.querySelectorAll('svg')],cs=[...cl.querySelectorAll('svg')];
     os.forEach((s,i)=>{const c=cs[i];if(!c)return;const r=s.getBoundingClientRect();
@@ -350,7 +353,7 @@ async function run(){
     const secs=[...document.querySelectorAll('main.wrap > section')].filter(s=>!s.hidden&&s.offsetParent!==null&&!s.classList.contains('hero')&&!s.classList.contains('filterbar'));
     for(const s of secs){
       const rc=s.getBoundingClientRect();if(!(rc.width>0&&rc.height>0))continue;
-      let cv;try{cv=await shot(s,bg)}catch(e){try{cv=await shot(s,bg,true)}catch(e2){cv=null}}
+      let cv;try{cv=await shot(s,bg)}catch(e){try{cv=await shot(s,bg,true)}catch(e2){cv=null;console.warn('Excel export: could not draw a section',e2)}}
       if(!cv){skipped.push((s.querySelector('h3')||{}).textContent||s.id||'a section');continue}
       if(!(cv.width>0&&cv.height>0)){skipped.push((s.querySelector('h3')||{}).textContent||'a section');continue}
       const w=Math.min(W,cv.width/2),h=cv.height/2*(w/(cv.width/2));
