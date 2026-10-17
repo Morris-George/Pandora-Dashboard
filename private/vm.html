@@ -251,13 +251,16 @@ document.addEventListener('input',e=>{if(e.target.id==='xSearch'){X.q=e.target.v
 document.addEventListener('change',e=>{if(e.target.id==='xBranch'){X.branch=e.target.value;X.sel=null;drawExplorer()}});
 
 /* ---------- Store UPT and ATV (whole store only, never people) ---------- */
-const SP={from:'',to:'',min:'',max:''};
+const SP={from:'',to:'',min:'',max:'',n:0,t:0};
 const egp0=n=>'EGP '+nf.format(n),upt2=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const DIN='height:38px;border:1px solid var(--line);border-radius:10px;padding:0 8px;font:inherit;color:var(--ink);background:var(--bg)';
 async function loadStores(){
   const box=$('sp');if(!box)return;
-  if(!box.innerHTML)box.innerHTML='<h2>Store UPT &amp; ATV</h2><div class="meta">Loading…</div>';
-  let j;
-  try{const r=await get('/api/vm?stores=1'+(SP.from?'&from='+SP.from:'')+(SP.to?'&to='+SP.to:''));j=await r.json();if(!r.ok)throw 0}catch(_){box.innerHTML='<h2>Store UPT &amp; ATV</h2><div class="empty">Could not load this. Please refresh the page.</div>';return}
+  if(!$('spBody'))box.innerHTML='<h2>Store UPT &amp; ATV</h2><div class="meta">Loading…</div>';
+  else $('spBody').style.opacity='.5';
+  const my=++SP.n;let j;
+  try{const r=await get('/api/vm?stores=1'+(SP.from?'&from='+SP.from:'')+(SP.to?'&to='+SP.to:''));j=await r.json();if(!r.ok)throw 0}catch(_){if(my===SP.n&&$('sp'))$('sp').innerHTML='<h2>Store UPT &amp; ATV</h2><div class="empty">Could not load this. Please refresh the page.</div>';return}
+  if(my!==SP.n||!$('sp'))return; // a newer date pick is already on its way
   SP.min=j.min;SP.max=j.max;
   if(!SP.from&&j.max){SP.from=j.max.slice(0,8)+'01';SP.to=j.max;return loadStores()} // first time: the latest month with sales
   drawStores(j);
@@ -265,18 +268,25 @@ async function loadStores(){
 function drawStores(j){
   const box=$('sp');if(!box)return;
   const rows=j.stores||[];
-  const maxU=Math.max(0.0001,...rows.map(x=>x.upt)),maxA=Math.max(1,...rows.map(x=>x.atv));
   const line=(name,x,strong)=>`<tr${strong?' style="font-weight:800;background:var(--fill-soft)"':''}><td>${esc(name)}</td><td class="n">${upt2.format(x.upt)}</td><td class="n">${egp0(x.atv)}</td></tr>`;
-  box.innerHTML=`<h2>Store UPT &amp; ATV</h2><div class="meta">UPT is pieces per invoice. ATV is the average invoice value, including VAT. Whole-store numbers only.</div>
-   <div class="frow" style="margin-bottom:12px"><span class="lbl">From</span><input type="date" id="spFrom" value="${esc(SP.from)}" min="${esc(SP.min)}" max="${esc(SP.max)}" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 8px;font:inherit;color:var(--ink);background:var(--bg)"><span class="lbl">To</span><input type="date" id="spTo" value="${esc(SP.to)}" min="${esc(SP.min)}" max="${esc(SP.max)}" style="height:38px;border:1px solid var(--line);border-radius:10px;padding:0 8px;font:inherit;color:var(--ink);background:var(--bg)"></div>
-   ${rows.length?`<div class="tw"><table><thead><tr><th>Store</th><th>UPT</th><th>ATV</th></tr></thead><tbody>${line('All stores',j.all,true)}${rows.map(x=>line(shortStore(x.branch),x,false)).join('')}</tbody></table></div>`:'<div class="empty">There are no sales saved for these dates.</div>'}`;
-}
-document.addEventListener('change',e=>{
-  if(e.target.id==='spFrom'||e.target.id==='spTo'){
-    let f=$('spFrom').value,t=$('spTo').value;if(!f||!t)return;if(f>t){const x=f;f=t;t=x}
-    SP.from=f;SP.to=t;loadStores();
+  if(!$('spFrom')){ // the date boxes are drawn once and then left alone, so the calendar never closes under the VM's hand
+    box.innerHTML=`<h2>Store UPT &amp; ATV</h2><div class="meta">UPT is pieces per invoice. ATV is the average invoice value, including VAT. Whole-store numbers only. <span id="spRange"></span></div>
+     <div class="frow" style="margin-bottom:12px"><span class="lbl">From</span><input type="date" id="spFrom" style="${DIN}"><span class="lbl">To</span><input type="date" id="spTo" style="${DIN}"></div><div id="spBody"></div>`;
   }
-});
+  if($('spFrom').value!==SP.from)$('spFrom').value=SP.from;
+  if($('spTo').value!==SP.to)$('spTo').value=SP.to;
+  $('spRange').textContent=SP.min?'Sales are saved from '+fmtDay(SP.min)+' to '+fmtDay(SP.max)+'.':'';
+  $('spBody').style.opacity='1';
+  $('spBody').innerHTML=rows.length?`<div class="tw"><table><thead><tr><th>Store</th><th>UPT</th><th>ATV</th></tr></thead><tbody>${line('All stores',j.all,true)}${rows.map(x=>line(shortStore(x.branch),x,false)).join('')}</tbody></table></div>`:'<div class="empty">There are no sales saved for these dates.</div>';
+}
+function spPicked(){
+  const a=$('spFrom'),b=$('spTo');if(!a||!b||!a.value||!b.value)return; // wait until both dates are filled in
+  let f=a.value,t=b.value;
+  if(f>t){if(document.activeElement===a)t=f;else f=t} // keep the range valid: move the other date, never swap them
+  SP.from=f;SP.to=t;a.value=f;b.value=t;
+  clearTimeout(SP.t);SP.t=setTimeout(loadStores,200);
+}
+['change','input'].forEach(ev=>document.addEventListener(ev,e=>{if(e.target.id==='spFrom'||e.target.id==='spTo')spPicked()}));
 /* tooltips */
 const tip=$('tip');
 document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]');if(!t){tip.style.display='none';return}tip.textContent=t.dataset.tip;tip.style.display='block'});
