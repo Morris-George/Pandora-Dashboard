@@ -61,8 +61,9 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     const d = ex.filterStaff(await store.getJSON(FILE));
     if (!d) return send(res, 404, { ok: false, error: 'no-data' });
-    if (who.kind === 'staff') return send(res, 200, staffView(d, who.user.store, who.user.name));
-    if (who.info.allow) return send(res, 200, scopeByStores(d, who.info.allow));
+    const wantMe = new URL(req.url, 'https://x.invalid').searchParams.get('me');
+    if (who.kind === 'staff' && (wantMe || !who.info.storeManager)) return send(res, 200, staffView(d, who.user.store, who.user.name)); // own page only
+    if (who.info.allow) return send(res, 200, scopeByStores(d, who.info.allow)); // area managers: their zone; store managers: their own store
     return send(res, 200, d);
   }
 

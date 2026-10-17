@@ -25,7 +25,7 @@ module.exports = async function handler(req, res) {
     const all = await users.listUsers();
     const taken = new Map(all.filter(u => u.linked && !u.role).map(u => [u.store + '|' + u.name, u.username]));
     const list = all.map(u => ({
-      username: u.username, role: u.role || '', phone: u.phone, store: u.store, name: u.name, linked: !!u.linked, status: u.status, createdAt: u.createdAt,
+      username: u.username, role: u.role || '', storeManager: !!u.storeManager, phone: u.phone, store: u.store, name: u.name, linked: !!u.linked, status: u.status, createdAt: u.createdAt,
       // suggested match from the sales file: same name (and store when it matches)
       suggest: (() => {
         const same = people.filter(p => norm(p.name) === norm(u.name));
@@ -91,8 +91,19 @@ module.exports = async function handler(req, res) {
     if (b.action === 'approve') {
       if (b.store && b.name) { const err = await doLink(b.store, b.name); if (err) return send(res, 400, { ok: false, error: err }); }
       else if (!rec.linked && data) return send(res, 400, { ok: false, error: 'Choose the sales person for this account first.' });
+      if (b.storeManager === true && !rec.role) {
+        if (!rec.linked) return send(res, 400, { ok: false, error: 'Choose the sales person for this account first, so we know which store they manage.' });
+        rec.storeManager = true;
+      }
       rec.status = 'active'; rec.fails = 0; rec.lockUntil = 0; await users.putUser(rec);
       return send(res, 200, { ok: true, linked: !!rec.linked });
+    }
+    if (b.action === 'setmanager') {
+      if (rec.role) return send(res, 400, { ok: false, error: 'That account type cannot be a store manager.' });
+      if (b.on === true && !rec.linked) return send(res, 400, { ok: false, error: 'Link this account to a sales person first, so we know which store they manage.' });
+      if (b.on === true) rec.storeManager = true; else delete rec.storeManager;
+      await users.putUser(rec);
+      return send(res, 200, { ok: true });
     }
     if (b.action === 'setpassword') {
       // Passwords are stored as one-way hashes, so nobody can look one up. The admin sets a new one (typed, or made here) and gives it to the person.

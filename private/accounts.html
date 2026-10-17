@@ -53,14 +53,15 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
 let PEOPLE=[],HASDATA=false;
+function mgrBox(a){return a.status==='pending'?`<label class="note" style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" data-mgr="${esc(a.username)}"> Store manager (sees the staff of this store)</label>`:''}
 function pickHtml(a){
-  if(!HASDATA) return `<div class="note">No sales file is published yet. You can approve now and link later.</div>`;
+  if(!HASDATA) return `<div class="note">No sales file is published yet. You can approve now and link later.</div>${mgrBox(a)}`;
   const opts=PEOPLE.map(p=>{const v=p.store+'|'+p.name,mine=p.takenBy===a.username,taken=p.takenBy&&!mine;
     const sel=(a.linked?(a.store+'|'+a.name)===v:a.suggest===v);
     return `<option value="${esc(v)}" ${sel?'selected':''} ${taken?'disabled':''}>${esc(p.store)} · ${esc(p.name)}${taken?' (has an account)':''}</option>`}).join('');
-  return `<select data-pick="${esc(a.username)}"><option value="">Choose the sales person…</option>${opts}</select>${a.linked?'':`<div class="note">They typed: ${esc(a.name)} · ${esc(a.store)}</div>`}`;
+  return `<select data-pick="${esc(a.username)}"><option value="">Choose the sales person…</option>${opts}</select>${a.linked?'':`<div class="note">They typed: ${esc(a.name)} · ${esc(a.store)}</div>`}${mgrBox(a)}`;
 }
-function rowHtml(a,btns,pick){return `<div class="row"><div class="who">${esc(a.name)}<small>${esc(a.store)}</small></div><div>${esc(a.username)}<br><small style="color:var(--ink2)">${esc(a.phone)} · ${esc((a.createdAt||'').slice(0,10))}</small></div><div>${pick?pickHtml(a):''}</div><div class="btns">${btns.map(b=>`<button class="btn ${b[2]||''}" data-act="${b[0]}" data-user="${esc(a.username)}">${b[1]}</button>`).join('')}</div></div>`}
+function rowHtml(a,btns0,pick){const btns=typeof btns0==='function'?btns0(a):btns0;return `<div class="row"><div class="who">${esc(a.name)}<small>${esc(a.store)}${a.storeManager?' · Store manager':''}</small></div><div>${esc(a.username)}<br><small style="color:var(--ink2)">${esc(a.phone)} · ${esc((a.createdAt||'').slice(0,10))}</small></div><div>${pick?pickHtml(a):''}</div><div class="btns">${btns.map(b=>`<button class="btn ${b[2]||''}" data-act="${b[0]}" data-user="${esc(a.username)}"${b[3]?' '+b[3]:''}>${b[1]}</button>`).join('')}</div></div>`}
 async function load(){
   showErr('');
   try{
@@ -78,7 +79,7 @@ async function load(){
     fill('pending',by('pending'),[['approve','Approve','go'],['pw','Change password'],['remove','Reject','bad']],'Nobody is waiting.',true);
     const adm=(j.admins||[]).map(a=>`<div class="row"><div class="who">${esc(a.username)}<small>${esc(a.label)} · ${a.off?'switched off':'active'}</small></div><div></div><div></div><div class="btns">${a.role==='admin'?'':`<button class="btn" data-act="${a.off?'envenable':'envdisable'}" data-user="${esc(a.username)}">${a.off?'Switch on':'Switch off'}</button>`}</div></div>`).join('');
     const spa=sp.filter(a=>a.status==='active').map(a=>`<div class="row"><div class="who">${esc(a.name)}<small>${a.role==='vm'?'VM Report':esc(a.role)} · active</small></div><div>${esc(a.username)}</div><div></div><div class="btns"><button class="btn" data-act="pw" data-user="${esc(a.username)}">Change password</button><button class="btn" data-act="disable" data-user="${esc(a.username)}">Switch off</button><button class="btn bad" data-act="remove" data-user="${esc(a.username)}">Remove</button></div></div>`).join('');
-    fill('active',by('active'),[['link','Save link'],['pw','Change password'],['disable','Switch off'],['remove','Remove','bad']],'No sales people yet.',true);
+    fill('active',by('active'),a=>[['link','Save link'],a.storeManager?['setmanager','Remove store manager','','data-on="0"']:['setmanager','Make store manager','','data-on="1"'],['pw','Change password'],['disable','Switch off'],['remove','Remove','bad']],'No sales people yet.',true);
     $('active').insertAdjacentHTML('afterbegin',adm+spa);
     fill('off',by('disabled'),[['enable','Switch on'],['pw','Change password'],['remove','Remove','bad']],'None.',false);
   }catch(e){showErr('Could not load accounts. Check your connection.')}
@@ -98,6 +99,8 @@ document.addEventListener('click',async e=>{
   if(b.dataset.act==='remove'&&!confirm('Remove this account? The person can sign up again later.'))return;
   b.disabled=true;
   const body={action:b.dataset.act,username:b.dataset.user};
+  if(b.dataset.act==='setmanager')body.on=b.dataset.on==='1';
+  if(b.dataset.act==='approve'){const cb=document.querySelector(`input[data-mgr="${CSS.escape(b.dataset.user)}"]`);if(cb&&cb.checked)body.storeManager=true}
   const sel=document.querySelector(`select[data-pick="${CSS.escape(b.dataset.user)}"]`);
   if(sel&&(b.dataset.act==='approve'||b.dataset.act==='link')){
     if(!sel.value&&HASDATA){showErr('Choose the sales person first.');b.disabled=false;return}

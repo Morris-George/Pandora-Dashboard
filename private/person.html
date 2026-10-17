@@ -279,7 +279,7 @@ function benchPool(o){
 }
 async function loadData(){
   try{
-    const r=await fetch('/api/data',{credentials:'same-origin',cache:'no-store'});
+    const r=await fetch('/api/data'+(ROLE.role==='staff'?'?me=1':''),{credentials:'same-origin',cache:'no-store'});
     if(r.status===401){location.replace('/login.html');return{err:'Signing you in…'}}
     if(r.ok){SERVER=true;return{d:await r.json()}}
     if(r.status===404) return{err:'No sales have been published yet'};

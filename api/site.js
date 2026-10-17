@@ -110,7 +110,7 @@ module.exports = async function handler(req, res) {
 
   // Home: the options this person can open
   if (requestedPath === '/' || requestedPath === '/home.html') {
-    const label = facts.vm ? facts.vmName : facts.staff ? (facts.staff.role === 'staff' ? facts.staff.name : facts.staff.label) : 'Pandora Dashboards';
+    const label = facts.vm ? facts.vmName : facts.staff ? (facts.staff.role === 'staff' || facts.staff.role === 'store' ? facts.staff.name : facts.staff.label) : 'Pandora Dashboards';
     const boot = JSON.stringify({ ok: true, label, apps: appsFor(facts) }).replace(/</g, '\\u003c');
     const chrome = withChrome('home', multi);
     return sendFile(res, 'home.html', 'text/html; charset=utf-8', function (buf) {
@@ -122,13 +122,19 @@ module.exports = async function handler(req, res) {
   }
 
   // Staff Performance: super admin, area managers and sales people (each sees only their part)
-  const STAFF_PATHS = ['/staff', '/staff/', '/staff.html', '/staff/index.html', '/staff/person', '/staff/person/', '/staff/accounts', '/staff/accounts/'];
+  const STAFF_PATHS = ['/staff', '/staff/', '/staff.html', '/staff/index.html', '/staff/person', '/staff/person/', '/staff/accounts', '/staff/accounts/', '/staff/me', '/staff/me/'];
   if (STAFF_PATHS.includes(requestedPath)) {
     const who = facts.staff && facts.staff.who;
     if (!who) return toHome();
-    let page;
-    if (who.kind === 'staff') {
+    let page, roleInfo = who.info;
+    const isMe = requestedPath === '/staff/me' || requestedPath === '/staff/me/';
+    if (who.kind === 'staff' && !who.info.storeManager) {
       page = 'person.html'; // a sales person only ever sees their own page
+    } else if (who.kind === 'staff' && isMe) {
+      page = 'person.html'; // a store manager's own sales page: shown exactly like a sales person's
+      roleInfo = { role: 'staff', label: 'Sales person', zone: null, allow: null, zones: null, self: who.info.self };
+    } else if (isMe) {
+      return toHome();
     } else if (requestedPath.startsWith('/staff/accounts')) {
       if (who.info.role !== 'admin') { res.setHeader('Location', '/staff'); return res.status(302).end(); }
       page = 'accounts.html';
@@ -136,7 +142,7 @@ module.exports = async function handler(req, res) {
       page = requestedPath.startsWith('/staff/person') ? 'person.html' : 'staff.html';
     }
     const chrome = withChrome('staff', multi);
-    const info = JSON.stringify(who.info).replace(/</g, '\\u003c');
+    const info = JSON.stringify(roleInfo).replace(/</g, '\\u003c');
     return sendFile(res, page, 'text/html; charset=utf-8', function (buf) {
       let html = buf.toString('utf8');
       const h = html.search(/<\/head>/i);

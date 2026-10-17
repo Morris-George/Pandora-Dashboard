@@ -44,6 +44,11 @@ async function whoami(req) {
     if (rec && rec.status === 'active' && rec.role === 'vm') {
       return { kind: 'vm', user: rec, info: { role: 'vm', label: 'Visual Merchandiser', zone: null, allow: null, zones: null } };
     }
+    if (rec && rec.status === 'active' && rec.storeManager && rec.linked && rec.store) {
+      // a store manager: still a sales person (own page at /staff/me), and also sees the team of their own store, nothing else
+      const rx = '^' + String(rec.store).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$';
+      return { kind: 'staff', user: rec, info: { role: 'store', label: 'Store manager', zone: rec.store, allow: [rx], zones: null, self: { store: rec.store, name: rec.name }, storeManager: true } };
+    }
     if (rec && rec.status === 'active') {
       return { kind: 'staff', user: rec, info: { role: 'staff', label: 'Sales person', zone: null, allow: null, zones: null, self: { store: rec.store, name: rec.name } } };
     }
