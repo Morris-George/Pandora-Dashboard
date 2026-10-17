@@ -174,11 +174,14 @@ const TYPE_RULES={
  Bracelets:[['Tennis',/tennis/],['Bangle',/bangle|cuff/],['Leather & cord',/leather|cord|braided|textile/],['Snake chain',/snake/],['Heart clasp',/clasp/],['Other chains & plain',/./]],
  Charms:[['Spacer',/spacer/],['Clip',/\bclips?\b/],['Medallion',/medallion/],['Murano glass',/murano/],['Mini dangle',/\bmini\b/],['Dangle',/dangle/],['Charm',/./]],
  Earrings:[['Stud',/stud/],['Hoop & huggie',/hoop|huggie/],['Drop & other',/./]],
- Necklaces:[['Collier',/collier/],['Pendant',/pendant/],['Chain necklace',/chain|rope|link/],['Necklace',/./]],
+ 'Necklace and Pendant':[['Collier',/collier/],['Pendant',/pendant/],['Chain necklace',/chain|rope|link/],['Necklace',/./]],
  Rings:[['Heart',/heart/],['Crown & tiara',/crown|tiara/],['Star, moon & sun',/star|moon|sun/],['Other rings',/./]],
- Other:[['Pendant',/pendant/],['Safety chain',/safety/],['Care & tools',/./]]
+ Other:[['Care & tools',/./]]
 };
 const METAL_RULES=[['Rose gold-plated',/rose gold/],['Silver & gold two-tone',/(silver|sterling).*(14k|gold-plated)|(14k|gold-plated).*(silver|sterling)/],['14K gold-plated',/14k|gold-plated/],['Rhodium-plated',/rhodium/],['Sterling silver',/sterling|silver/],['Not stated',/./]];
+const recat=(c,name)=>{const n=String(name||'').toLowerCase();if(c==='Necklaces')return 'Necklace and Pendant';if(c&&c!=='Other'&&c!=='Unspecified')return c;
+  if(/safety/.test(n))return 'Charms';if(/bracelet|bangle/.test(n))return 'Bracelets';if(/pendant|necklace|collier/.test(n))return 'Necklace and Pendant';
+  if(/charm|clip|dangle|spacer|medallion|murano/.test(n))return 'Charms';if(/earring|stud|hoop|huggie/.test(n))return 'Earrings';if(/\bring/.test(n))return 'Rings';return 'Other'};
 const xpick=(rules,name)=>{const n=String(name||'').toLowerCase();for(const [label,re] of rules)if(re.test(n))return label;return 'Other'};
 const xType=r=>TYPE_RULES[r.category]?xpick(TYPE_RULES[r.category],r.name):(r.name||'Unspecified');
 const xKey=r=>X.grp==='metal'?xpick(METAL_RULES,r.name):xType(r);
@@ -194,7 +197,7 @@ async function loadExplorer(id){
   try{const r=await get('/api/vm?explorer='+encodeURIComponent(id));j=await r.json();if(!r.ok)throw 0}catch(_){box.innerHTML='<h2>Category explorer</h2><div class="empty">Could not load the explorer. Please refresh the page.</div>';return}
   if(XID!==id)return;
   if(j.noDates){box.innerHTML='<h2>Category explorer</h2><div class="empty">The explorer needs the dates of this report, and they could not be found in the file name. Please ask for the report to be added again with its dates in the name.</div>';return}
-  XD={from:j.from,to:j.to,rows:(j.rows||[]).map(r=>({branch:r[0]||'Unspecified',category:r[1]||'Unspecified',sku:r[2],name:r[3],qty:r[4]}))};
+  XD={from:j.from,to:j.to,rows:(j.rows||[]).map(r=>({branch:r[0]||'Unspecified',category:recat(r[1],r[3]),sku:r[2],name:r[3],qty:r[4]})).filter(r=>r.category!=='Other')};
   drawExplorer();
 }
 function drawExplorer(){
