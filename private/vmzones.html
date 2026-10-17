@@ -69,6 +69,8 @@ table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}th,td
     <div class="row"><label class="sub" for="store">Store</label><select id="store"></select><button class="btn" id="xlsx" type="button">Download Excel report</button></div>
   </header>
   <div class="err" id="err" hidden></div>
+  <section class="card" id="vis" hidden><h2>What the VM account sees</h2><div class="meta">Untick a part to hide it from the VM account. You always see everything.</div>
+    <div class="row" style="margin-top:8px" id="visopts"></div><div class="sub" id="vismsg"></div></section>
   <div id="main" hidden>
   <div class="grid">
     <section class="card">
@@ -77,9 +79,9 @@ table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}th,td
       <div class="row" id="editbar" hidden style="margin-top:8px"><button class="btn sm" id="addz" type="button">+ Add zone</button><button class="btn sm" id="delz" type="button">Remove selected zone</button><input type="text" id="where" placeholder="Where is it? (e.g. Left wall)" maxlength="40"><button class="btn sm go" id="savez" type="button">Save layout</button><button class="btn sm" id="cancelz" type="button">Cancel</button><span class="sub">Drag a zone to move it, drag its corner to resize.</span></div>
       <div class="plan" id="plan"></div>
       <div class="zd" id="zd" hidden></div>
-      <h2 style="margin-top:14px;font-size:14px">Floor plans and photos</h2>
+      <div id="photos"><h2 style="margin-top:14px;font-size:14px">Floor plans and photos</h2>
       <div class="row" style="margin-top:6px"><button class="btn sm" id="up" type="button">Add PDF / photo</button><label class="sub"><input type="checkbox" id="asplan"> Use as floor plan (behind the zones)</label><span class="sub" id="upmsg"></span></div>
-      <div class="files" id="files"></div>
+      <div class="files" id="files"></div></div>
     </section>
     <section class="card">
       <h2 id="zt">Zone history</h2>
@@ -93,13 +95,13 @@ table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}th,td
       <div class="plist" id="plist"></div>
     </section>
   </div>
-  <section class="card" style="margin-top:16px">
+  <section class="card" style="margin-top:16px" id="cmpcard">
     <h2>Impact on sales</h2>
     <div class="meta" id="cmpmeta">Compare two placements. Daily averages are used, so periods of different lengths compare fairly. Results are the store's sales of that collection while it was in the zone.</div>
     <div class="row" style="margin-top:6px"><select id="pa"></select><b>vs</b><select id="pb"></select><label class="sub"><input type="checkbox" id="ctl" checked> Adjust for the whole store's trend</label></div>
     <div class="cmp" id="kpis"></div>
     <div class="grid" style="margin-top:14px">
-      <div><b style="font-size:13px" id="charttitle">Daily sales of the collection</b><div class="legend" id="lg"></div><div id="chart"></div></div>
+      <div id="chartbox"><b style="font-size:13px" id="charttitle">Daily sales of the collection</b><div class="legend" id="lg"></div><div id="chart"></div></div>
       <div><b style="font-size:13px">Side by side</b><table id="tbl"></table><div class="note" id="verdict"></div></div>
     </div>
   </section>
@@ -115,6 +117,8 @@ const PAL=['#FF93A0','#8FB8DE','#B9A3D9','#F2C46D','#7FC8A9','#E8A87C','#A3C4BC'
 let D=null,S={store:'',zone:null,pa:null,pb:null,edit:null},COLOR={};
 const colColor=c=>COLOR[c]||(COLOR[c]=PAL[Object.keys(COLOR).length%PAL.length]);
 const money=()=>D&&D.role==='admin';
+const hidden=k=>!!(D&&D.role!=='admin'&&D.hide&&D.hide[k]);
+const VIS=[['zone','Zone performance panel'],['compare','Impact on sales (comparison)'],['daily','Daily sales chart and daily sheet'],['excel','Excel report'],['photos','Floor plans and photos']];
 function showErr(t){$('err').hidden=!t;$('err').textContent=t||''}
 async function api(url,body){const r=await fetch(url,body?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{credentials:'same-origin',cache:'no-store'});if(r.status===401){location.replace('/login.html');throw new Error('sign in')}const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('error '+r.status));return j}
 const zoneById=id=>D.zones.find(z=>z.id===id);
@@ -122,6 +126,9 @@ const zName=z=>z?'Zone #'+z.n:'?';
 
 async function boot(){
   try{const j=await api('/api/vmzones');const sel=$('store');
+    if(j.role==='admin'){const h=(j.settings&&j.settings.hide)||{};$('vis').hidden=false;
+      $('visopts').innerHTML=VIS.map(([k,l])=>`<label class="sub" style="margin-right:12px"><input type="checkbox" data-vis="${k}" ${h[k]?'':'checked'}> ${l}</label>`).join('');
+      $('visopts').onchange=async()=>{const hide={};document.querySelectorAll('[data-vis]').forEach(c=>{if(!c.checked)hide[c.dataset.vis]=true});try{await api('/api/vmzones?op=settings',{store:'-',hide});$('vismsg').textContent='Saved. The VM account sees this the next time the page opens.'}catch(e){$('vismsg').textContent='Not saved: '+e.message}}}
     if(!j.stores.length){showErr('No sales data yet. The super admin can load it with Sync from ERP on All Uploads.');return}
     let saved='';try{saved=localStorage.getItem('vmz.store')||''}catch(_){}
     sel.innerHTML=j.stores.map(s=>`<option ${s===saved?'selected':''}>${esc(s)}</option>`).join('');
@@ -150,10 +157,11 @@ function renderPlan(){
     plan.appendChild(e)});
 }
 function render(){
+  $('photos').hidden=hidden('photos');$('cmpcard').hidden=hidden('compare');$('chartbox').hidden=hidden('daily');$('xlsx').hidden=hidden('excel');
   renderPlan();zoneDetail();renderFiles();renderTimeline();renderAssign();renderCompare();
 }
 function zoneDetail(){
-  const box=$('zd'),z=zoneById(S.zone);if(!z||S.edit){box.hidden=true;return}box.hidden=false;
+  const box=$('zd'),z=zoneById(S.zone);if(!z||S.edit||hidden('zone')){box.hidden=true;return}box.hidden=false;
   const cur=current(z.id),hist=D.placements.filter(p=>p.zone===z.id);
   if(!cur){box.innerHTML=`<h3>${zName(z)} · ${esc(z.where)}</h3><div class="sub">Nothing placed here yet. Use “Place a collection”.</div>`;return}
   const s=cur.stats,prev=hist.filter(p=>p.end).pop();
@@ -279,7 +287,7 @@ $('xlsx').onclick=()=>{if(!D)return;const m=money(),zs=id=>zoneById(id)||{};
   const daily=[['Store','Zone','Collection','Date','Pieces',m?'Sales (EGP)':'Sales index']];
   D.placements.forEach(p=>p.stats.daily.forEach(d=>daily.push([S.store,'Zone #'+zs(p.zone).n,p.col,d[0],d[1],d[2]])));
   const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([head,...rows]);ws['!cols']=head.map(h=>({wch:Math.max(10,Math.min(26,h.length+2))}));
-  XLSX.utils.book_append_sheet(wb,ws,'Placements');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(daily),'Daily');
+  XLSX.utils.book_append_sheet(wb,ws,'Placements');if(!hidden('daily'))XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(daily),'Daily');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['VM Zones report'],['Store',S.store],['Made on',D.today],['Sales data up to',D.lastSalesDay],[],['End date is the last day before the next collection went into the zone.'],['Results are the store’s sales of that collection while it was in the zone.'],['Sales index = the collection’s sales per day as % of an average day of the whole store.'],['Trend-adjusted change compares the share of store sales, so a busy or quiet week for the whole store does not count.']]),'Notes');
   XLSX.writeFile(wb,`VM Zones - ${S.store} - ${D.today}.xlsx`)};
 boot();

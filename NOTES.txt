@@ -36,3 +36,4 @@ VM ZONES (/vm/zones, private/vmzones.html, api/vmzones.js)
 - Results = the store's sales of that collection while it was in the zone (ERP does not record sales per zone). The collection comes from the ERP item group ("Pandora Moments - Charm" -> Moments), saved as the 11th column of ERP sales lines (api/erp.js); lines from older Excel uploads borrow it by SKU. Run Sync from ERP once so collections appear.
 - Money: the super admin sees EGP; the VM account sees pieces, UPT, ATV, shares, a sales index (% of the store's average day) and % changes, never sales totals.
 - Storage: vmz/<store>.json (zones, placements, files), vmz/f/<store>-<id>-<n>.json (file pieces). Shared sales reader: api/_sales.js.
+- What the VM account sees: the super admin ticks/unticks parts on the VM Zones page (zone panel, impact comparison, daily chart + daily sheet, Excel report, floor plans/photos). Saved in vmz/settings.json and enforced on the server (hidden data is not sent).

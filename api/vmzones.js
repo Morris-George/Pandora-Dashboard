@@ -9,6 +9,7 @@
 //   POST /api/vmzones?op=file     {store, name, type, data(base64 piece), part, parts, upload, plan}
 //                                 big files come in pieces (each request stays under Vercel's 4.5 MB); plan:true = image shown behind the zones
 //   POST /api/vmzones?op=delfile  {store, id}
+//   POST /api/vmzones?op=settings {hide:{zone, compare, daily, excel, photos}}   super admin: parts of the page the VM account does not get
 // A placement's results are the store's sales of that collection while it sat in the zone (sales are not recorded per zone).
 // Money: the super admin gets EGP figures. The VM account gets pieces, UPT, ATV, shares and % changes only, never sales totals.
 const crypto = require('crypto');
@@ -17,6 +18,8 @@ const { whoami } = require('./_auth');
 const { dashRows } = require('./_sales');
 
 const MAX_FILE = 25 * 1024 * 1024;
+const SETTINGS = 'vmz/settings.json';
+const PARTS = ['zone', 'compare', 'daily', 'excel', 'photos']; // what the super admin can hide from the VM account
 const MAX_PART = 3500000; // base64 characters per piece
 const TYPES = /^(image\/(png|jpeg|webp)|application\/pdf)$/;
 
@@ -124,7 +127,9 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     const st = url.searchParams.get('store');
     const fileId = url.searchParams.get('file');
+    const hide = admin ? {} : (((await store.getJSON(SETTINGS)) || {}).hide || {});
     if (st && fileId) {
+      if (hide.photos) return res.status(404).end();
       const part = Number(url.searchParams.get('part') || 0);
       if (!/^[a-f0-9]{12}$/.test(fileId) || !(part >= 0 && part < 20)) return res.status(404).end();
       const f = await store.getJSON('vmz/f/' + slug(st) + '-' + fileId + '-' + part + '.json');
@@ -136,22 +141,35 @@ module.exports = async function handler(req, res) {
     }
     if (!st) {
       const sd = await storeDaily('');
-      return send(res, 200, { ok: true, role: admin ? 'admin' : 'vm', stores: sd.branches });
+      const settings = admin ? (await store.getJSON(SETTINGS)) || { hide: {} } : undefined;
+      return send(res, 200, { ok: true, role: admin ? 'admin' : 'vm', stores: sd.branches, hide, settings });
     }
     const [layout, sd] = await Promise.all([load(st), storeDaily(st)]);
     let total = 0; sd.days.forEach(d => { total += d.s.net; });
     const avg = sd.days.size ? total / sd.days.size : 0;
     const placements = layout.placements.slice().sort((a, b) => a.start.localeCompare(b.start))
-      .map(p => ({ ...p, stats: placementStats(p, sd, avg, admin) }));
+      .map(p => {
+        const stats = placementStats(p, sd, avg, admin);
+        if (hide.daily) stats.daily = [];
+        // nothing that shows results is open to the VM account: send the placements without them
+        return hide.zone && hide.compare && hide.excel ? { ...p, stats: { days: stats.days, daily: [] } } : { ...p, stats };
+      });
     return send(res, 200, {
       ok: true, role: admin ? 'admin' : 'vm', store: st, today: today(), lastSalesDay: sd.maxDay,
-      collections: sd.collections, zones: layout.zones, files: layout.files, plan: layout.plan || null, placements
+      collections: sd.collections, zones: layout.zones, files: hide.photos ? [] : layout.files, plan: layout.plan || null, placements, hide
     });
   }
 
   if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
   const op = url.searchParams.get('op');
   const b = await readJSON(req);
+  if (op === 'settings') {
+    if (!admin) return send(res, 403, { ok: false, error: 'Only the super admin can change this.' });
+    const hide = {};
+    PARTS.forEach(k => { if (b && b.hide && b.hide[k]) hide[k] = true; });
+    await store.putJSON(SETTINGS, { hide, at: new Date().toISOString() });
+    return send(res, 200, { ok: true, hide });
+  }
   if (!b || typeof b.store !== 'string' || !b.store.trim() || b.store.length > 80) return send(res, 400, { ok: false, error: 'Pick a store.' });
   const st = b.store.trim();
   const layout = await load(st);
@@ -186,6 +204,7 @@ module.exports = async function handler(req, res) {
     const prev = layout.placements.filter(x => x.zone === p.zone && x.end === p.start)[0];
     if (prev) prev.end = p.end;
   } else if (op === 'file') {
+    if (!admin && (((await store.getJSON(SETTINGS)) || {}).hide || {}).photos) return send(res, 403, { ok: false, error: 'Floor plans and photos are switched off for this account.' });
     const type = String(b.type || ''), name = String(b.name || 'file').slice(0, 100);
     if (!TYPES.test(type)) return send(res, 400, { ok: false, error: 'Use a PDF, JPG, PNG or WEBP file.' });
     const data = String(b.data || ''), part = Number(b.part) || 0, parts = Number(b.parts) || 1;
