@@ -2,6 +2,7 @@
 // Money never reaches storage: every upload is cleaned on the server, and only item/category/store/date/quantity columns are kept.
 //   GET  /api/vm            list of reports (super admin and VM account)
 //   GET  /api/vm?id=<id>    one report
+//   GET  /api/vm?explorer=<id>  Category explorer data for that report's dates: quantities only, never any amount
 //   POST /api/vm            super admin: upload {file, sheets:[{name, columns, rows}]} (gzip or plain JSON)
 //   POST /api/vm?op=delete  super admin: {id}
 const zlib = require('zlib');
@@ -36,15 +37,16 @@ const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').repl
 // "Sales_QTY_and_Volume_by_category-Jewelry_2026-10-01_2026-10-15_Pandora.xlsx" -> title + period
 function describe(file) {
   let n = String(file || 'VM report').replace(/\.[^.]+$/, '');
-  let period = '';
+  let period = '', from = '', to = '';
   const m = n.match(/(\d{4})-(\d{2})-(\d{2})[_\s-]+(\d{4})-(\d{2})-(\d{2})/);
   if (m) {
     const mo = i => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+i - 1] || m[i];
     period = (m[2] === m[5] && m[1] === m[4]) ? `${+m[3]}–${+m[6]} ${mo(m[2])} ${m[1]}` : `${+m[3]} ${mo(m[2])} ${m[1]} – ${+m[6]} ${mo(m[5])} ${m[4]}`;
+    from = `${m[1]}-${m[2]}-${m[3]}`; to = `${m[4]}-${m[5]}-${m[6]}`;
     n = n.replace(m[0], ' ');
   }
   n = n.replace(/[_]+/g, ' ').replace(/\s*-\s*/g, ' – ').replace(/\s+/g, ' ').replace(/(\s*[–-]\s*)+$/, '').trim();
-  return { title: n.slice(0, 80) || 'VM report', period };
+  return { title: n.slice(0, 80) || 'VM report', period, from, to };
 }
 
 function cleanSheet(sh) {
@@ -65,6 +67,57 @@ function cleanSheet(sh) {
   return { columns, rows, dropped, kind };
 }
 
+// The dates a report covers. New reports store them; older ones are read back from the period text ("1–15 Oct 2026" or "1 Oct 2026 – 15 Nov 2026"),
+// and as a last resort from a date column in the report itself.
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const pad = n => String(n).padStart(2, '0');
+function reportDates(rec) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(rec.from || '') && /^\d{4}-\d{2}-\d{2}$/.test(rec.to || '')) return { from: rec.from, to: rec.to };
+  const per = String(rec.period || '');
+  let m = per.match(/^(\d{1,2})\s*[–-]\s*(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+  if (m && MONTHS.includes(m[3].toLowerCase())) { const mo = pad(MONTHS.indexOf(m[3].toLowerCase()) + 1); return { from: `${m[4]}-${mo}-${pad(m[1])}`, to: `${m[4]}-${mo}-${pad(m[2])}` }; }
+  m = per.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})\s*[–-]\s*(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+  if (m && MONTHS.includes(m[2].toLowerCase()) && MONTHS.includes(m[5].toLowerCase())) {
+    return { from: `${m[3]}-${pad(MONTHS.indexOf(m[2].toLowerCase()) + 1)}-${pad(m[1])}`, to: `${m[6]}-${pad(MONTHS.indexOf(m[5].toLowerCase()) + 1)}-${pad(m[4])}` };
+  }
+  const ci = (rec.columns || []).findIndex(c => /date|day/i.test(String(c)));
+  if (ci >= 0) {
+    const ds = (rec.rows || []).map(r => String(r[ci] || '').slice(0, 10)).filter(v => /^\d{4}-\d{2}-\d{2}$/.test(v)).sort();
+    if (ds.length) return { from: ds[0], to: ds[ds.length - 1] };
+  }
+  return null;
+}
+
+// Category explorer data for one report: the saved Pandora Dashboards sales lines inside the report's dates, reduced to
+// branch / category / SKU / name / quantity. Amounts, invoices and payment methods are never copied into the answer.
+async function explorerData(rec) {
+  const dates = reportDates(rec);
+  if (!dates) return { ok: true, noDates: true, rows: [] };
+  const dash = (await store.getJSON('dash/index.json')) || [];
+  const seen = new Set(), agg = new Map();
+  for (const f of dash.slice().sort((a, b) => String(a.uploadedAt).localeCompare(String(b.uploadedAt)))) {
+    const d = await store.getJSON('dash/f/' + f.id + '.json');
+    if (!d || !Array.isArray(d.rows)) continue;
+    const mine = [];
+    for (const r of d.rows) {
+      if (!ex.filterSales([r]).length) continue; // Laderach is left out
+      const k = r[1] + '|' + r[5] + '|' + r[0] + '|' + r[2] + '|' + r[3]; // same line twice = counted once, as on the dashboards
+      if (seen.has(k)) continue;
+      mine.push([k, r]);
+    }
+    for (const [k, r] of mine) {
+      seen.add(k);
+      const day = String(r[0] || '').slice(0, 10);
+      if (day < dates.from || day > dates.to) continue;
+      const qty = Number(r[2]); if (!isFinite(qty)) continue;
+      const branch = String(r[7] || ''), cat = String(r[8] || ''), sku = String(r[5] || ''), name = String(r[6] || '');
+      const key = branch + '\u0001' + cat + '\u0001' + sku + '\u0001' + name;
+      const o = agg.get(key); if (o) o[4] += qty; else agg.set(key, [branch, cat, sku, name, qty]);
+    }
+  }
+  return { ok: true, from: dates.from, to: dates.to, rows: [...agg.values()].map(r => [r[0], r[1], r[2], r[3], Math.round(r[4] * 1000) / 1000]) };
+}
+
 module.exports = async function handler(req, res) {
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   const who = await whoami(req);
@@ -74,6 +127,12 @@ module.exports = async function handler(req, res) {
   const url = new URL(req.url, 'https://x.invalid');
 
   if (req.method === 'GET') {
+    const xid = url.searchParams.get('explorer');
+    if (xid) {
+      if (!/^[a-z0-9-]{1,60}$/.test(xid)) return send(res, 400, { ok: false, error: 'Bad id.' });
+      const rec = await store.getJSON('vm/r/' + xid + '.json');
+      return rec ? send(res, 200, await explorerData(rec)) : send(res, 404, { ok: false, error: 'no-data' });
+    }
     const id = url.searchParams.get('id');
     if (id) {
       if (!/^[a-z0-9-]{1,60}$/.test(id)) return send(res, 400, { ok: false, error: 'Bad id.' });
@@ -119,7 +178,7 @@ module.exports = async function handler(req, res) {
       const multi = d.sheets.length > 1;
       const title = multi ? meta.title + ' · ' + String(sh.name).slice(0, 40) : meta.title;
       const id = slug(multi ? meta.title + '-' + sh.name : meta.title);
-      const rec = { id, title, period: meta.period, kind: c.kind, columns: c.columns, rows: c.rows, uploadedAt: new Date().toISOString() };
+      const rec = { id, title, period: meta.period, from: meta.from, to: meta.to, kind: c.kind, columns: c.columns, rows: c.rows, uploadedAt: new Date().toISOString() };
       await store.putJSON('vm/r/' + id + '.json', rec);
       idx = idx.filter(r => r.id !== id);
       idx.push({ id, title, period: meta.period, kind: c.kind, rows: c.rows.length, uploadedAt: rec.uploadedAt });

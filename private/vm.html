@@ -47,6 +47,24 @@ details.tbl summary{cursor:pointer;font-weight:700;margin-bottom:10px}
 .drop{border:1.5px dashed var(--line);border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.drop.on{border-color:var(--accent);background:var(--hover)}
 #tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:600;max-width:260px;display:none}
 @media (max-width:640px){.brow{grid-template-columns:96px 1fr 84px}.brow .val small{display:none}}
+.xhead{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}.seg button{border:0;background:var(--surface);color:var(--ink2);padding:7px 13px;font:inherit;font-weight:650;cursor:pointer;font-size:12px}.seg button[aria-pressed="true"]{background:var(--accent);color:#2A1018}
+.xsearch{width:100%;max-width:460px;height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;background:var(--bg);color:var(--ink);font:inherit;margin:4px 0 16px}.xsearch:focus{outline:0;border-color:var(--accent)}
+.exp-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:18px;align-items:start}
+.xlist{display:flex;flex-direction:column;gap:2px;min-width:0}
+.xrow{display:grid;grid-template-columns:minmax(110px,1.2fr) 2fr auto;gap:12px;align-items:center;width:100%;border:0;background:none;color:var(--ink);text-align:left;padding:9px 10px;border-radius:10px;cursor:pointer;font:inherit;font-size:12.5px}
+.xrow:hover,.xrow[aria-pressed="true"]{background:var(--hover)}
+.xrow .xname{display:block;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.xrow .xmeta{display:block;color:var(--ink2);font-size:11px;font-weight:500;margin-top:2px}
+.xrow .xval{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}.xrow .xval small{display:block;color:var(--ink2);font-weight:500;font-size:11px}
+.xdetail{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}.xdetail h4{margin:0;font-size:15px}
+.xk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 16px}.xk div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.xk b{display:block;font-size:17px;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.xk span{font-size:10px;color:var(--ink2);font-weight:800;letter-spacing:.08em;text-transform:uppercase}.xk small{display:block;font-size:11px;color:var(--ink2);margin-top:2px}
+.xh{font-size:10px;color:var(--ink2);font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin:14px 0 8px}
+.xtop5{display:flex;flex-direction:column;gap:8px;font-size:12.5px}.xp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}.xp span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.xp em{font-style:normal;color:var(--ink2);font-size:11px;display:block}.xp b{text-align:right;font-variant-numeric:tabular-nums}.xp b small{display:block;color:var(--ink2);font-weight:500;font-size:11px}
+.xbr{display:flex;flex-direction:column;gap:6px}.xbr .brow{grid-template-columns:minmax(90px,150px) 1fr 96px}
+.xsku{font-style:normal;font-weight:700;color:var(--ink)}.xempty{padding:22px;text-align:center;color:var(--ink2)}
+@media (max-width:600px){.xk{grid-template-columns:1fr 1fr}.xk div:last-child{grid-column:span 2}}
+@media (max-width:900px){.exp-grid{grid-template-columns:1fr}.xrow{grid-template-columns:minmax(90px,1fr) 1.4fr auto}}
 </style>
 </head>
 <body>
@@ -57,6 +75,7 @@ details.tbl summary{cursor:pointer;font-weight:700;margin-bottom:10px}
     <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" hidden>
     <div class="drop" id="drop"><button class="btn go" id="pick" type="button">Choose Excel file</button><span>or drop it here</span><span id="status" class="note"></span></div></section>
   <div id="main"></div>
+  <section class="card" id="explorer" hidden></section>
 </div>
 <div id="tip" role="tooltip"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -72,6 +91,7 @@ const ICON='<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"
 let LIST=[];
 async function showLibrary(){
   history.replaceState(null,'',location.pathname);
+  $('explorer').hidden=true;XD=null;
   $('back').hidden=true;$('ttl').textContent='Reports';$('meta').textContent=ADMIN?'These are the reports the VM can open.':'Choose a report to open.';
   try{const j=await (await get('/api/vm')).json();LIST=j.reports||[]}catch(_){showErr('Could not load the reports. Please refresh the page.');return}
   $('main').innerHTML=LIST.length?`<div class="libgrid">${LIST.map(r=>`<div class="rep" role="button" tabindex="0" data-open="${esc(r.id)}"><span class="ic">${ICON}</span><b>${esc(r.title)}</b><span class="d">${esc(r.period||'')}${r.period?' · ':''}${nf.format(r.rows)} lines</span>${ADMIN?`<span><button class="btn bad" data-del="${esc(r.id)}" type="button">Remove</button></span>`:''}</div>`).join('')}</div>`
@@ -96,6 +116,7 @@ async function openReport(id){
   history.replaceState(null,'','#'+id);S={store:'ALL',ops:false};
   $('back').hidden=false;$('ttl').textContent=R.title;$('meta').textContent=R.period||'';
   R.kind==='qty-by-category'?drawQty():drawTable();
+  loadExplorer(id);
 }
 function drawTable(){
   const MAX=500;
@@ -148,6 +169,85 @@ document.addEventListener('click',e=>{
   const s=e.target.closest('[data-store]');if(s&&R){S.store=S.store===s.dataset.store&&s.dataset.store!=='ALL'?'ALL':s.dataset.store;drawQty();return}
   if(e.target.closest('[data-ops]')&&R){S.ops=!S.ops;if(S.store!=='ALL'&&!prep().stores.includes(S.store))S.store='ALL';drawQty()}
 });
+
+/* ---------- Category explorer: pieces and shares only, for the dates of this report ---------- */
+let XD=null,XID=null;const X={cat:'All',grp:'type',sel:null,q:'',branch:'All'};
+const TYPE_RULES={
+ Bracelets:[['Tennis',/tennis/],['Bangle',/bangle|cuff/],['Leather & cord',/leather|cord|braided|textile/],['Snake chain',/snake/],['Heart clasp',/clasp/],['Other chains & plain',/./]],
+ Charms:[['Spacer',/spacer/],['Clip',/\bclips?\b/],['Medallion',/medallion/],['Murano glass',/murano/],['Mini dangle',/\bmini\b/],['Dangle',/dangle/],['Charm',/./]],
+ Earrings:[['Stud',/stud/],['Hoop & huggie',/hoop|huggie/],['Drop & other',/./]],
+ Necklaces:[['Collier',/collier/],['Pendant',/pendant/],['Chain necklace',/chain|rope|link/],['Necklace',/./]],
+ Rings:[['Heart',/heart/],['Crown & tiara',/crown|tiara/],['Star, moon & sun',/star|moon|sun/],['Other rings',/./]],
+ Other:[['Pendant',/pendant/],['Safety chain',/safety/],['Care & tools',/./]]
+};
+const METAL_RULES=[['Rose gold-plated',/rose gold/],['Silver & gold two-tone',/(silver|sterling).*(14k|gold-plated)|(14k|gold-plated).*(silver|sterling)/],['14K gold-plated',/14k|gold-plated/],['Rhodium-plated',/rhodium/],['Sterling silver',/sterling|silver/],['Not stated',/./]];
+const xpick=(rules,name)=>{const n=String(name||'').toLowerCase();for(const [label,re] of rules)if(re.test(n))return label;return 'Other'};
+const xType=r=>TYPE_RULES[r.category]?xpick(TYPE_RULES[r.category],r.name):(r.name||'Unspecified');
+const xKey=r=>X.grp==='metal'?xpick(METAL_RULES,r.name):xType(r);
+const xsum=(rows,f)=>rows.reduce((n,r)=>n+f(r),0);
+const xpct=(a,b)=>b>0?(a/b*100).toFixed(a/b<0.1?1:0)+'%':'—';
+const xgroup=(rows,f)=>{const m={};rows.forEach(r=>{const k=f(r);const o=m[k]||(m[k]={name:k,units:0});o.units+=r.qty});return Object.values(m).sort((a,b)=>b.units-a.units)};
+const fmtDay=d=>{const t=new Date(d+'T12:00:00');return isNaN(t)?d:t.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][t.getMonth()]+' '+t.getFullYear()};
+async function loadExplorer(id){
+  const box=$('explorer');box.hidden=false;XD=null;XID=id;
+  box.innerHTML='<h2>Category explorer</h2><div class="meta">Loading…</div>';
+  Object.assign(X,{cat:'All',grp:'type',sel:null,q:'',branch:'All'});
+  let j;
+  try{const r=await get('/api/vm?explorer='+encodeURIComponent(id));j=await r.json();if(!r.ok)throw 0}catch(_){box.innerHTML='<h2>Category explorer</h2><div class="empty">Could not load the explorer. Please refresh the page.</div>';return}
+  if(XID!==id)return;
+  if(j.noDates){box.innerHTML='<h2>Category explorer</h2><div class="empty">The explorer needs the dates of this report, and they could not be found in the file name. Please ask for the report to be added again with its dates in the name.</div>';return}
+  XD={from:j.from,to:j.to,rows:(j.rows||[]).map(r=>({branch:r[0]||'Unspecified',category:r[1]||'Unspecified',sku:r[2],name:r[3],qty:r[4]}))};
+  drawExplorer();
+}
+function drawExplorer(){
+  const box=$('explorer');if(!XD)return;
+  const dates=XD.from===XD.to?fmtDay(XD.from):fmtDay(XD.from)+' – '+fmtDay(XD.to);
+  const head='<h2>Category explorer</h2>';
+  if(!XD.rows.length){box.innerHTML=head+`<div class="meta">${esc(dates)}</div><div class="empty">There are no sales lines saved for these dates yet.</div>`;return}
+  const branches=[...new Set(XD.rows.map(r=>r.branch))].sort((a,b)=>a.localeCompare(b));
+  if(X.branch!=='All'&&!branches.includes(X.branch))X.branch='All';
+  const scope=XD.rows.filter(r=>X.branch==='All'||r.branch===X.branch),cats=xgroup(scope,r=>r.category||'Unspecified').map(c=>c.name);
+  if(X.cat!=='All'&&!cats.includes(X.cat)){X.cat='All';X.sel=null}
+  const totalAll=xsum(scope,r=>r.qty);
+  const catRows=X.cat==='All'?scope:scope.filter(r=>(r.category||'Unspecified')===X.cat);
+  const words=X.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const qRows=words.length?catRows.filter(r=>{const hay=((r.sku||'')+' '+r.name+' '+(r.category||'')+' '+xType(r)+' '+xpick(METAL_RULES,r.name)).toLowerCase();return words.every(w=>hay.includes(w))}):catRows;
+  const totalCat=xsum(catRows,r=>r.qty);
+  const keyFn=X.cat==='All'?(r=>r.category||'Unspecified'):xKey;
+  const list=xgroup(qRows,keyFn);
+  if(X.sel&&!list.some(x=>x.name===X.sel))X.sel=null;
+  const max=Math.max(1,...list.map(x=>Math.abs(x.units))),total=xsum(qRows,r=>r.qty);
+  const chips=['All',...cats].map(c=>`<button class="chip" type="button" data-xcat="${esc(c)}" aria-pressed="${c===X.cat}">${c==='All'?'All categories':esc(c)}</button>`).join('');
+  const sel=`<select id="xBranch" aria-label="Store" style="width:auto;min-width:150px"><option value="All">All stores</option>${branches.map(b=>`<option value="${esc(b)}"${b===X.branch?' selected':''}>${esc(shortStore(b))}</option>`).join('')}</select>`;
+  const seg=X.cat==='All'?'':`<div class="seg" role="group" aria-label="Group by"><button type="button" data-xg="type" aria-pressed="${X.grp==='type'}">By type</button><button type="button" data-xg="metal" aria-pressed="${X.grp==='metal'}">By metal</button></div>`;
+  const rowsHtml=list.length?list.map(x=>`<button class="xrow" type="button" data-xsel="${esc(x.name)}" aria-pressed="${x.name===X.sel}" title="${esc(x.name)}"><span><span class="xname">${esc(x.name)}</span><span class="xmeta">${xpct(x.units,total)} of ${X.cat==='All'?'all pieces':esc(X.cat.toLowerCase())}</span></span><span class="track"><span class="fill" style="display:block;width:${Math.max(2,Math.abs(x.units)/max*100)}%"></span></span><span class="xval">${nf.format(x.units)}<small>pieces</small></span></button>`).join(''):'<div class="xempty">Nothing matches that search for these dates and this store.</div>';
+  const selRows=X.sel?qRows.filter(r=>keyFn(r)===X.sel):qRows;
+  let title=X.sel?(X.cat==='All'?X.sel:X.cat+' · '+X.sel):(X.cat==='All'?'All categories':'All '+X.cat.toLowerCase());
+  if(words.length)title+=` matching “${X.q.trim()}”`;
+  const un=xsum(selRows,r=>r.qty);
+  const pm={};selRows.forEach(r=>{const k=(r.sku||'—')+'|'+(r.name||'Unspecified');const o=pm[k]||(pm[k]={sku:r.sku||'—',name:r.name||'Unspecified',units:0});o.units+=r.qty});
+  const prods=Object.values(pm).sort((a,b)=>b.units-a.units).slice(0,5);
+  const br=xgroup(selRows,r=>r.branch||'Unspecified').slice(0,6),brMax=Math.max(1,...br.map(x=>Math.abs(x.units)));
+  const detail=selRows.length?`<h4>${esc(title)}</h4>
+   <div class="xk"><div><span>Pieces</span><b>${nf.format(un)}</b></div><div><span>Share</span><b>${xpct(un,totalAll)}</b><small>of all pieces</small></div><div><span>${X.cat==='All'?'Categories':'Of '+esc(X.cat.toLowerCase())}</span><b>${X.cat==='All'?new Set(selRows.map(r=>r.category)).size:xpct(un,totalCat)}</b></div></div>
+   <div class="xh">Top products</div><div class="xtop5">${prods.map(p=>`<div class="xp"><span title="${esc(p.sku)} · ${esc(p.name)}">${esc(p.name)}<em><i class="xsku">${esc(p.sku)}</i></em></span><b>${nf.format(p.units)}<small>${xpct(p.units,un)}</small></b></div>`).join('')}</div>
+   <div class="xh">By store</div><div class="xbr">${br.map(b=>`<div class="brow"><span class="n" title="${esc(b.name)}">${esc(shortStore(b.name))}</span><span class="track"><span class="fill" style="display:block;width:${Math.max(2,Math.abs(b.units)/brMax*100)}%"></span></span><span class="val">${nf.format(b.units)}<small>${xpct(b.units,un)}</small></span></div>`).join('')}</div>`:'<div class="xempty">Nothing to show.</div>';
+  const keep=document.activeElement&&document.activeElement.id==='xSearch';
+  box.innerHTML=`${head}<div class="meta">${esc(dates)} · the dates of this report. Pieces and shares only.</div>
+   <div class="xhead"><div class="chips">${chips}</div>${seg}</div>
+   <div class="frow" style="margin-bottom:6px"><span class="lbl">Store</span>${sel}</div>
+   <input class="xsearch" id="xSearch" type="search" placeholder="Ask about a type, product or SKU, e.g. bangle, dangle, 590745" aria-label="Search types, products and SKUs" value="${esc(X.q)}">
+   <div class="exp-grid"><div class="xlist">${rowsHtml}</div><div class="xdetail">${detail}</div></div>`;
+  if(keep){const i=$('xSearch');i.focus();i.setSelectionRange(i.value.length,i.value.length)}
+}
+document.addEventListener('click',e=>{
+  const c=e.target.closest('[data-xcat]'),g=e.target.closest('[data-xg]'),s=e.target.closest('[data-xsel]');
+  if(c){X.cat=c.dataset.xcat;X.sel=null;drawExplorer()}
+  else if(g){X.grp=g.dataset.xg;X.sel=null;drawExplorer()}
+  else if(s){X.sel=X.sel===s.dataset.xsel?null:s.dataset.xsel;drawExplorer()}
+});
+document.addEventListener('input',e=>{if(e.target.id==='xSearch'){X.q=e.target.value;X.sel=null;drawExplorer()}});
+document.addEventListener('change',e=>{if(e.target.id==='xBranch'){X.branch=e.target.value;X.sel=null;drawExplorer()}});
 /* tooltips */
 const tip=$('tip');
 document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]');if(!t){tip.style.display='none';return}tip.textContent=t.dataset.tip;tip.style.display='block'});
