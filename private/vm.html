@@ -133,7 +133,7 @@ function drawQty(){
    ${cats.map(c=>`<tr><th class="r">${esc(c)}</th>${P.stores.map(s=>{const v=q(s,c);return v>0?`<td style="background:${col(v)}" data-tip="${esc(c)} · ${esc(s)}: ${nf.format(v)} pieces">${nf.format(v)}</td>`:`<td class="z">–</td>`}).join('')}<td class="t">${nf.format(catTot_all(c))}</td></tr>`).join('')}
    <tr><th class="r t">All categories</th>${P.stores.map(s=>`<td class="t">${nf.format(stTot.find(x=>x.n===s).v)}</td>`).join('')}<td class="t">${nf.format(allTotal)}</td></tr></tbody></table></div>
    <div class="scale"><span>Fewer</span><i></i><span>More pieces</span></div>`;
-  const cards=stTot.map(s=>{const l=P.cats.map(c=>({n:c,v:q(s.n,c)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,4),m=l[0]?l[0].v:1;
+  const cards=stTot.map(s=>{const l=P.cats.map(c=>({n:c,v:q(s.n,c)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v),m=l[0]?l[0].v:1;
     return`<div class="sc"><h3>${esc(s.n)}</h3><div class="tot">${nf.format(s.v)} pieces</div>${l.map(x=>`<div class="mini" data-tip="${esc(x.n)}: ${nf.format(x.v)} pieces (${pc(x.v/s.v)} of ${esc(s.n)})"><span class="n">${esc(x.n)}</span><span class="q">${nf.format(x.v)}</span><span class="b" style="width:${Math.max(3,x.v/m*100)}%"></span></div>`).join('')}</div>`}).join('');
   const tbl=`<div class="tw"><table><thead><tr><th>Store</th>${cats.map(c=>`<th>${esc(c)}</th>`).join('')}<th>All</th></tr></thead><tbody>${stTot.map(s=>`<tr><td>${esc(s.n)}</td>${cats.map(c=>`<td class="n">${nf.format(q(s.n,c))}</td>`).join('')}<td class="n">${nf.format(s.v)}</td></tr>`).join('')}</tbody></table></div>`;
   $('main').innerHTML=`<section class="card filters"><div class="frow"><span class="lbl">Store</span><div class="chips">${chips}</div></div>
@@ -141,7 +141,7 @@ function drawQty(){
    <section class="card">${kpis}</section>
    <section class="card"><h2>Pieces sold by category</h2><div class="meta">${S.store==='ALL'?'All stores together':esc(S.store)}. The darkest bar is the best seller.</div><div class="bars">${bars}</div></section>
    <section class="card"><h2>Which store sells what</h2><div class="meta">Each box is the number of pieces. Select a store name to focus on it.</div>${heat}</section>
-   <section class="card"><h2>Each store at a glance</h2><div class="meta">The four categories that sell most in each store.</div><div class="stores">${cards}</div></section>
+   <section class="card"><h2>Each store at a glance</h2><div class="meta">Every category in each store, best seller first.</div><div class="stores">${cards}</div></section>
    <section class="card"><details class="tbl"><summary>Show the numbers as a table</summary>${tbl}</details></section>`;
 }
 document.addEventListener('click',e=>{
