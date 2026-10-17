@@ -123,12 +123,10 @@ body.clean .exit{display:block}
       <h1>Staff Performance</h1>
     </div>
     <div class="actions">
-      <button class="btn primary" id="loadBtn" type="button">Load new query</button>
       <button class="btn hideclean" id="cleanBtn" type="button">Screenshot view</button>
     </div>
   </header>
-  <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" hidden>
-  <div class="drop" id="drop"><span><b>Drop the new query file here</b> (the Query Report .xlsx or .csv) and the summary rebuilds.</span><span id="dropStatus"></span></div>
+  <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" hidden><span id="dropStatus" hidden></span>
   <div class="err" id="err" hidden></div>
 
   <section class="controls" aria-label="Filters">
@@ -378,18 +376,12 @@ async function publish(d){
 }
 function applyRoleUI(){
   if(SERVER&&ROLE.role!=='admin'){
-    ['loadBtn','drop'].forEach(id=>{const el=$(id); if(el) el.hidden=true});
-    const g=document.querySelector('details.groups'); if(g) g.hidden=true;
+        const g=document.querySelector('details.groups'); if(g) g.hidden=true;
   }
 }
 
 /* ---- events ---- */
-$('loadBtn').onclick=()=>$('file').click();
 $('file').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);e.target.value=''};
-const dz=$('drop');
-['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over')}));
-['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over')}));
-document.addEventListener('drop',e=>{const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)loadFile(f)});
 document.addEventListener('click',e=>{
   const row=e.target.closest('tr.person[data-href]');
   if(row&&!e.target.closest('a')&&!getSelection().toString()){location.href=row.dataset.href;return}
@@ -409,7 +401,7 @@ function showEmpty(){
   $('source').textContent='No query loaded yet';
   $('out').innerHTML=(SERVER&&ROLE.role!=='admin')
     ?'<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">No sales published yet</h2>The super admin has not published this month\u2019s sales file yet.</section>'
-    :'<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">Load this month\u2019s query</h2>Drop the Query Report file (.xlsx or .csv) anywhere on this page, or press <b>Load new query</b>. The store and sales person summary appears here.</section>';
+    :'<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">Load this month\u2019s query</h2>The super admin adds the Query Report on the <b>All Uploads</b> page. The store and sales person summary appears here once it is added.</section>';
 }
 async function boot(){
   applyRoleUI();

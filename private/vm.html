@@ -71,9 +71,6 @@ details.tbl summary{cursor:pointer;font-weight:700;margin-bottom:10px}
 <div class="wrap">
   <header class="top"><div><button class="crumb" id="back" type="button" hidden>&larr; All reports</button><h1 id="ttl">Reports</h1><div class="sub" id="meta"></div></div><div class="actions"></div></header>
   <div class="err" id="err" hidden></div>
-  <section class="card" id="feed" hidden><h2>Add a report</h2><div class="meta">Only you (super admin) can do this. Choose an Excel file: any amounts, prices and sales values are removed automatically before it is saved, so the VM only ever sees items, categories and quantities. Reports you add stay in the list until you remove them.</div>
-    <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" hidden>
-    <div class="drop" id="drop"><button class="btn go" id="pick" type="button">Choose Excel file</button><span>or drop it here</span><span id="status" class="note"></span></div></section>
   <div id="main"></div>
   <section class="card" id="explorer" hidden></section>
 </div>
@@ -95,7 +92,7 @@ async function showLibrary(){
   $('back').hidden=true;$('ttl').textContent='Reports';$('meta').textContent=ADMIN?'These are the reports the VM can open.':'Choose a report to open.';
   try{const j=await (await get('/api/vm')).json();LIST=j.reports||[]}catch(_){showErr('Could not load the reports. Please refresh the page.');return}
   $('main').innerHTML=(LIST.length?`<div class="libgrid">${LIST.map(r=>`<div class="rep" role="button" tabindex="0" data-open="${esc(r.id)}"><span class="ic">${ICON}</span><b>${esc(r.title)}</b><span class="d">${esc(r.period||'')}${r.period?' · ':''}${nf.format(r.rows)} lines</span>${ADMIN?`<span><button class="btn bad" data-del="${esc(r.id)}" type="button">Remove</button></span>`:''}</div>`).join('')}</div>`
-   :`<section class="card"><div class="empty">${ADMIN?'No report yet. Choose an Excel file above.':'There is no report yet. Please check again later.'}</div></section>`)+'<section class="card" id="sp"></section>';
+   :`<section class="card"><div class="empty">${ADMIN?'No report yet. Add one on the All Uploads page.':'There is no report yet. Please check again later.'}</div></section>`)+'<section class="card" id="sp"></section>';
   loadStores();
 }
 document.addEventListener('click',async e=>{
@@ -292,31 +289,6 @@ const tip=$('tip');
 document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tip]');if(!t){tip.style.display='none';return}tip.textContent=t.dataset.tip;tip.style.display='block'});
 document.addEventListener('mousemove',e=>{if(tip.style.display==='block'){tip.style.left=Math.min(e.clientX+14,innerWidth-270)+'px';tip.style.top=(e.clientY+16)+'px'}});
 
-/* ---------- super admin: add a report ---------- */
-if(ADMIN){$('feed').hidden=false;
-  const f=$('file'),drop=$('drop');$('pick').onclick=()=>f.click();f.onchange=()=>f.files[0]&&upload(f.files[0]);
-  ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('on')}));
-  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('on')}));
-  drop.addEventListener('drop',e=>{const x=e.dataTransfer.files[0];if(x)upload(x)});
-  async function upload(file){
-    showErr('');$('status').textContent='Reading…';
-    try{
-      const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
-      const iso=v=>v instanceof Date?v.toISOString().slice(0,10):v;
-      const sheets=wb.SheetNames.map(n=>{const g=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null,blankrows:false});
-        const cols=(g[0]||[]).map((c,i)=>c==null||c===''?'Column '+(i+1):String(c));
-        return{name:n,columns:cols,rows:g.slice(1).map(r=>cols.map((_,i)=>iso(r[i]===undefined?null:r[i])))}}).filter(s=>s.columns.length);
-      if(!sheets.length)throw new Error('The file has no data.');
-      $('status').textContent='Cleaning and publishing…';
-      const gz=await new Response(new Blob([JSON.stringify({file:file.name,sheets})]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
-      const r=await fetch('/api/vm',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:gz});
-      const j=await r.json().catch(()=>({}));
-      if(!r.ok||!j.ok)throw new Error(j.error||'Could not publish.');
-      $('status').textContent='Added.'+(j.removed&&j.removed.length?' Removed automatically: '+j.removed.join(', ')+'.':'');showLibrary();
-    }catch(e){$('status').textContent='';showErr(e.message||'Could not read that file.')}
-    f.value='';
-  }
-}
 showLibrary().then(()=>{const id=location.hash.slice(1);if(id)openReport(id)});
 </script>
 </body>
