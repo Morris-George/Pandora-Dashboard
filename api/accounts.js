@@ -41,8 +41,10 @@ module.exports = async function handler(req, res) {
     }
     resets.sort((a, b) => String(b.requestedAt).localeCompare(String(a.requestedAt)));
     list.sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || String(b.createdAt).localeCompare(String(a.createdAt)));
+    const admins = [];
+    for (const a of staffAccounts()) admins.push({ username: a.user, role: a.role, label: a.label, off: a.role !== 'admin' && await users.envOff(a.user) });
     return send(res, 200, {
-      ok: true, accounts: list, admins: staffAccounts().map(a => ({ username: a.user, role: a.role, label: a.label })), resets, hasData: !!data,
+      ok: true, accounts: list, admins, resets, hasData: !!data,
       people: people.map(p => ({ ...p, takenBy: taken.get(p.store + '|' + p.name) || '' })).sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name))
     });
   }
@@ -59,6 +61,13 @@ module.exports = async function handler(req, res) {
       if (staffAccounts().some(a => normName(a.user) === uname) || await users.getUser(uname)) return send(res, 409, { ok: false, error: 'That username is taken. Choose another.' });
       await users.createSpecial({ username: uname, password: pw, name, role: 'vm' });
       return send(res, 200, { ok: true, username: uname });
+    }
+    if (b.action === 'envdisable' || b.action === 'envenable') {
+      // area managers (accounts kept in Vercel settings): switch off / on, same as anyone else. The super admin cannot be switched off.
+      const mgr = staffAccounts().find(a => a.role !== 'admin' && normName(a.user) === normName(b.username));
+      if (!mgr) return send(res, 404, { ok: false, error: 'Account not found.' });
+      await users.setEnvOff(mgr.user, b.action === 'envdisable');
+      return send(res, 200, { ok: true });
     }
     const username = users.normUsername(b.username);
     const rec = username ? await users.getUser(username) : null;

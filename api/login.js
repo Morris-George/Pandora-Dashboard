@@ -38,6 +38,9 @@ module.exports = async function handler(req, res) {
   };
 
   if (matched) {
+    if (matched.role !== 'admin' && store.configured() && await users.envOff(matched.user)) {
+      return res.status(403).json({ ok: false, error: 'This account is not active. Please contact your manager.' });
+    }
     const cookies = [];
     const facts = { dash: false, staff: null };
     cookies.push(cookie('staff', matched.user)); facts.staff = { role: matched.role };

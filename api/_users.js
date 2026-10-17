@@ -92,4 +92,10 @@ const getJSONByPhone = async phone => { const c = await store.getJSON('users/p/'
 const phoneTaken = async phone => !!(await store.getJSON('users/p/' + phoneKey(phone) + '.json'));
 const claimOwner = async (st, name) => { const c = await store.getJSON('users/n/' + nameKey(st, name) + '.json'); return c ? c.username : null; };
 
-module.exports = { normUsername, normalizePhone, hashPassword, verifyPassword, burn, getUser, putUser, listUsers, createUser, createSpecial, removeUser, linkUser, phoneTaken, getJSONByPhone, claimOwner, nameKey };
+// Area managers sign in with usernames/passwords kept in Vercel settings, so they have no account file of their own.
+// Switching one off writes a small marker here; login and every request check it.
+const offKey = user => 'users/off/' + nameKey('env', String(user || '').replace(/\s+/g, ' ').trim().toLowerCase()) + '.json';
+const envOff = async user => !!(await store.getJSON(offKey(user)));
+const setEnvOff = async (user, off) => off ? store.putJSON(offKey(user), { username: String(user), at: new Date().toISOString() }) : store.del(offKey(user));
+
+module.exports = { envOff, setEnvOff, normUsername, normalizePhone, hashPassword, verifyPassword, burn, getUser, putUser, listUsers, createUser, createSpecial, removeUser, linkUser, phoneTaken, getJSONByPhone, claimOwner, nameKey };

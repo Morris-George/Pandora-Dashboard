@@ -33,7 +33,11 @@ function stafferUsername(token, secret) {
 async function whoami(req) {
   const secret = process.env.PANDORA_AUTH_SECRET;
   const account = staffSession(readCookie(req, PROJECTS.staff.cookie), secret);
-  if (account) return { kind: 'env', account, info: roleInfo(account) };
+  if (account) {
+    // a switched-off area manager is signed out at once (the super admin can never be switched off)
+    if (account.role !== 'admin' && store.configured() && await users.envOff(account.user)) return null;
+    return { kind: 'env', account, info: roleInfo(account) };
+  }
   const u = stafferUsername(readCookie(req, STAFFER_COOKIE), secret);
   if (u && store.configured()) {
     const rec = await users.getUser(u);
