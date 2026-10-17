@@ -52,6 +52,7 @@
 .xk span{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 .xk small{display:block;font-size:10.5px;color:var(--muted);margin-top:2px}
 .xh{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin:14px 0 8px}
+.xallbtn{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:3px 10px;font:inherit;font-size:11px;font-weight:700;letter-spacing:0;text-transform:none;cursor:pointer}.xallbtn:hover{border-color:var(--accent);background:var(--fill-soft,transparent)}.xhrow{display:flex;justify-content:space-between;align-items:center}.xrank{color:var(--muted);font-weight:700;margin-right:8px}
 .xtop5{display:flex;flex-direction:column;gap:8px;font-size:12px}
 .xtop5 .xp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
 .xtop5 .xp span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -177,7 +178,7 @@ const METAL_RULES=[['Rose gold-plated',/rose gold/],['Silver & gold two-tone',/(
 const recat=(c,name)=>{const n=String(name||'').toLowerCase();if(c==='Necklaces')return 'Necklace and Pendant';if(c&&c!=='Other'&&c!=='Unspecified')return c;
   if(/safety/.test(n))return 'Charms';if(/bracelet|bangle/.test(n))return 'Bracelets';if(/pendant|necklace|collier/.test(n))return 'Necklace and Pendant';
   if(/charm|clip|dangle|spacer|medallion|murano/.test(n))return 'Charms';if(/earring|stud|hoop|huggie/.test(n))return 'Earrings';if(/\bring/.test(n))return 'Rings';return 'Other'};
-const ex={cat:'All',grp:'type',sel:null,q:''};
+const ex={cat:'All',grp:'type',sel:null,q:'',all:false};
 const pick=(rules,name)=>{const n=String(name||'').toLowerCase();for(const [label,re] of rules)if(re.test(n))return label;return 'Other'};
 const typeOf=r=>TYPE_RULES[r.category]?pick(TYPE_RULES[r.category],r.name):(r.name||'Unspecified');
 const keyOf=r=>ex.grp==='metal'?pick(METAL_RULES,r.name):typeOf(r);
@@ -209,21 +210,25 @@ function renderExplorer(){
   let title=ex.sel?(ex.cat==='All'?ex.sel:ex.cat+' · '+ex.sel):(ex.cat==='All'?'All categories':'All '+ex.cat.toLowerCase());
   if(words.length)title+=` matching “${ex.q.trim()}”`;
   const rv=sum(selRows,rev),un=sum(selRows,r=>r.qty);
-  const pm={};selRows.forEach(r=>{const k=(r.sku||'—')+'|'+(r.name||'Unspecified');const o=pm[k]||(pm[k]={sku:r.sku||'—',name:r.name||'Unspecified',value:0,units:0});o.value+=rev(r);o.units+=r.qty});const prods=Object.values(pm).sort((a,b)=>b.value-a.value).slice(0,5);
+  const pm={};selRows.forEach(r=>{const k=(r.sku||'—')+'|'+(r.name||'Unspecified');const o=pm[k]||(pm[k]={sku:r.sku||'—',name:r.name||'Unspecified',value:0,units:0});o.value+=rev(r);o.units+=r.qty});const allProds=Object.values(pm).sort((a,b)=>b.value-a.value),prods=allProds.slice(0,5);
   const br=group(selRows,r=>r.branch||'Unspecified').slice(0,5);
+  if(ex.all&&!selRows.length)ex.all=false;
+  const prodRow=(p,i)=>`<div class="xp"><span title="${esc(p.sku)} · ${esc(p.name)}"><b class="xrank">${i+1}</b>${esc(p.name)}<em><i class="xsku">${esc(p.sku)}</i> · ${num(p.units)} units</em></span><b>${money(p.value)}</b></div>`;
+  if(ex.all){$('xDetail').innerHTML=`<h4>${esc(title)}</h4><div class="xh xhrow"><span>All products (${num(allProds.length)})</span><button type="button" class="xallbtn" data-all="0">← Back</button></div><div class="xtop5">${allProds.map(prodRow).join('')}</div>`;return}
   $('xDetail').innerHTML=selRows.length?`<h4>${esc(title)}</h4>
    <div class="xk"><div><span>Revenue</span><b>${money(rv)}</b></div><div><span>Units</span><b>${num(un)}</b></div><div><span>Share</span><b>${pct(rv,totalAll)}</b><small>of all sales${ex.cat!=='All'?' · '+pct(rv,totalCat)+' of '+esc(ex.cat.toLowerCase()):''}</small></div></div>
-   <div class="xh">Top products</div><div class="xtop5">${prods.map(p=>`<div class="xp"><span title="${esc(p.sku)} · ${esc(p.name)}">${esc(p.name)}<em><i class="xsku">${esc(p.sku)}</i> · ${num(p.units)} units</em></span><b>${money(p.value)}</b></div>`).join('')}</div>
+   <div class="xh xhrow"><span>Top products</span>${allProds.length>prods.length?`<button type="button" class="xallbtn" data-all="1">View all (${num(allProds.length)})</button>`:''}</div><div class="xtop5">${prods.map(prodRow).join('')}</div>
    <div class="xh">By branch</div><div class="bars" id="xBranch"></div>`:'<div class="xempty">No sales to show.</div>';
   if($('xBranch'))bars('xBranch',br);
 }
 document.addEventListener('click',e=>{
-  const c=e.target.closest('#xChips [data-cat]'),g=e.target.closest('#xGroup [data-g]'),s=e.target.closest('#xList [data-sel]');
-  if(c){ex.cat=c.dataset.cat;ex.sel=null;renderExplorer()}
-  else if(g){ex.grp=g.dataset.g;ex.sel=null;renderExplorer()}
-  else if(s){ex.sel=ex.sel===s.dataset.sel?null:s.dataset.sel;renderExplorer()}
+  const c=e.target.closest('#xChips [data-cat]'),g=e.target.closest('#xGroup [data-g]'),s=e.target.closest('#xList [data-sel]'),a=e.target.closest('#xDetail [data-all]');
+  if(c){ex.cat=c.dataset.cat;ex.sel=null;ex.all=false;renderExplorer()}
+  else if(g){ex.grp=g.dataset.g;ex.sel=null;ex.all=false;renderExplorer()}
+  else if(s){ex.sel=ex.sel===s.dataset.sel?null:s.dataset.sel;ex.all=false;renderExplorer()}
+  else if(a){ex.all=a.dataset.all==='1';renderExplorer();$('xDetail').scrollIntoView({block:'nearest'})}
 });
-$('xSearch').addEventListener('input',e=>{ex.q=e.target.value;ex.sel=null;renderExplorer()});
+$('xSearch').addEventListener('input',e=>{ex.q=e.target.value;ex.sel=null;ex.all=false;renderExplorer()});
 const baseRender=render;
 render=function(){baseRender.apply(this,arguments);renderExplorer()};
 })();

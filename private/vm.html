@@ -60,6 +60,7 @@ details.tbl summary{cursor:pointer;font-weight:700;margin-bottom:10px}
 .xk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 16px}.xk div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
 .xk b{display:block;font-size:17px;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.xk span{font-size:10px;color:var(--ink2);font-weight:800;letter-spacing:.08em;text-transform:uppercase}.xk small{display:block;font-size:11px;color:var(--ink2);margin-top:2px}
 .xh{font-size:10px;color:var(--ink2);font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin:14px 0 8px}
+.xallbtn{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:3px 10px;font:inherit;font-size:11px;font-weight:700;letter-spacing:0;text-transform:none;cursor:pointer}.xallbtn:hover{border-color:var(--accent)}.xhrow{display:flex;justify-content:space-between;align-items:center}.xrank{color:var(--ink2);font-weight:700;margin-right:8px}
 .xtop5{display:flex;flex-direction:column;gap:8px;font-size:12.5px}.xp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}.xp span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.xp em{font-style:normal;color:var(--ink2);font-size:11px;display:block}.xp b{text-align:right;font-variant-numeric:tabular-nums}.xp b small{display:block;color:var(--ink2);font-weight:500;font-size:11px}
 .xbr{display:flex;flex-direction:column;gap:6px}.xbr .brow{grid-template-columns:minmax(90px,150px) 1fr 96px}
 .xsku{font-style:normal;font-weight:700;color:var(--ink)}.xempty{padding:22px;text-align:center;color:var(--ink2)}
@@ -192,7 +193,7 @@ const fmtDay=d=>{const t=new Date(d+'T12:00:00');return isNaN(t)?d:t.getDate()+'
 async function loadExplorer(id){
   const box=$('explorer');box.hidden=false;XD=null;XID=id;
   box.innerHTML='<h2>Category explorer</h2><div class="meta">Loading…</div>';
-  Object.assign(X,{cat:'All',grp:'type',sel:null,q:'',branch:'All'});
+  Object.assign(X,{cat:'All',grp:'type',sel:null,q:'',branch:'All',all:false});
   let j;
   try{const r=await get('/api/vm?explorer='+encodeURIComponent(id));j=await r.json();if(!r.ok)throw 0}catch(_){box.innerHTML='<h2>Category explorer</h2><div class="empty">Could not load the explorer. Please refresh the page.</div>';return}
   if(XID!==id)return;
@@ -227,11 +228,14 @@ function drawExplorer(){
   if(words.length)title+=` matching “${X.q.trim()}”`;
   const un=xsum(selRows,r=>r.qty);
   const pm={};selRows.forEach(r=>{const k=(r.sku||'—')+'|'+(r.name||'Unspecified');const o=pm[k]||(pm[k]={sku:r.sku||'—',name:r.name||'Unspecified',units:0});o.units+=r.qty});
-  const prods=Object.values(pm).sort((a,b)=>b.units-a.units).slice(0,5);
+  const allProds=Object.values(pm).sort((a,b)=>b.units-a.units),prods=allProds.slice(0,5);
   const br=xgroup(selRows,r=>r.branch||'Unspecified').slice(0,6),brMax=Math.max(1,...br.map(x=>Math.abs(x.units)));
-  const detail=selRows.length?`<h4>${esc(title)}</h4>
+  if(X.all&&!selRows.length)X.all=false;
+  const prodRow=(p,i)=>`<div class="xp"><span title="${esc(p.sku)} · ${esc(p.name)}"><b class="xrank">${i+1}</b>${esc(p.name)}<em><i class="xsku">${esc(p.sku)}</i></em></span><b>${nf.format(p.units)}<small>${xpct(p.units,un)}</small></b></div>`;
+  const allView=`<h4>${esc(title)}</h4><div class="xh xhrow"><span>All products (${nf.format(allProds.length)})</span><button type="button" class="xallbtn" data-xall="0">← Back</button></div><div class="xtop5">${allProds.map(prodRow).join('')}</div>`;
+  const detail=X.all?allView:selRows.length?`<h4>${esc(title)}</h4>
    <div class="xk"><div><span>Pieces</span><b>${nf.format(un)}</b></div><div><span>Share</span><b>${xpct(un,totalAll)}</b><small>of all pieces</small></div><div><span>${X.cat==='All'?'Categories':'Of '+esc(X.cat.toLowerCase())}</span><b>${X.cat==='All'?new Set(selRows.map(r=>r.category)).size:xpct(un,totalCat)}</b></div></div>
-   <div class="xh">Top products</div><div class="xtop5">${prods.map(p=>`<div class="xp"><span title="${esc(p.sku)} · ${esc(p.name)}">${esc(p.name)}<em><i class="xsku">${esc(p.sku)}</i></em></span><b>${nf.format(p.units)}<small>${xpct(p.units,un)}</small></b></div>`).join('')}</div>
+   <div class="xh xhrow"><span>Top products</span>${allProds.length>prods.length?`<button type="button" class="xallbtn" data-xall="1">View all (${nf.format(allProds.length)})</button>`:''}</div><div class="xtop5">${prods.map(prodRow).join('')}</div>
    <div class="xh">By store</div><div class="xbr">${br.map(b=>`<div class="brow"><span class="n" title="${esc(b.name)}">${esc(shortStore(b.name))}</span><span class="track"><span class="fill" style="display:block;width:${Math.max(2,Math.abs(b.units)/brMax*100)}%"></span></span><span class="val">${nf.format(b.units)}<small>${xpct(b.units,un)}</small></span></div>`).join('')}</div>`:'<div class="xempty">Nothing to show.</div>';
   const keep=document.activeElement&&document.activeElement.id==='xSearch';
   box.innerHTML=`${head}<div class="meta">${esc(dates)} · the dates of this report. Pieces and shares only.</div>
@@ -242,13 +246,14 @@ function drawExplorer(){
   if(keep){const i=$('xSearch');i.focus();i.setSelectionRange(i.value.length,i.value.length)}
 }
 document.addEventListener('click',e=>{
-  const c=e.target.closest('[data-xcat]'),g=e.target.closest('[data-xg]'),s=e.target.closest('[data-xsel]');
-  if(c){X.cat=c.dataset.xcat;X.sel=null;drawExplorer()}
-  else if(g){X.grp=g.dataset.xg;X.sel=null;drawExplorer()}
-  else if(s){X.sel=X.sel===s.dataset.xsel?null:s.dataset.xsel;drawExplorer()}
+  const c=e.target.closest('[data-xcat]'),g=e.target.closest('[data-xg]'),s=e.target.closest('[data-xsel]'),a=e.target.closest('[data-xall]');
+  if(c){X.cat=c.dataset.xcat;X.sel=null;X.all=false;drawExplorer()}
+  else if(g){X.grp=g.dataset.xg;X.sel=null;X.all=false;drawExplorer()}
+  else if(s){X.sel=X.sel===s.dataset.xsel?null:s.dataset.xsel;X.all=false;drawExplorer()}
+  else if(a){X.all=a.dataset.xall==='1';drawExplorer();const d=document.querySelector('.xdetail');if(d)d.scrollIntoView({block:'nearest'})}
 });
-document.addEventListener('input',e=>{if(e.target.id==='xSearch'){X.q=e.target.value;X.sel=null;drawExplorer()}});
-document.addEventListener('change',e=>{if(e.target.id==='xBranch'){X.branch=e.target.value;X.sel=null;drawExplorer()}});
+document.addEventListener('input',e=>{if(e.target.id==='xSearch'){X.q=e.target.value;X.sel=null;X.all=false;drawExplorer()}});
+document.addEventListener('change',e=>{if(e.target.id==='xBranch'){X.branch=e.target.value;X.sel=null;X.all=false;drawExplorer()}});
 
 /* ---------- Store UPT and ATV (whole store only, never people) ---------- */
 const SP={from:'',to:'',min:'',max:'',n:0,t:0};
