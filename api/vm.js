@@ -128,8 +128,10 @@ async function explorerData(rec) {
 
 // Store UPT (pieces per invoice) and ATV (average invoice value, incl. VAT, in EGP) for a date range.
 // Only these two averages leave the server: no totals, no invoice counts, and nothing about sales people.
+// The online shop is not a store the VM works on, so it is left out of this card, and out of the all-stores figure too.
+const ONLINE = /online|e-?commerce|web\s*-?\s*(shop|store|site)/i;
 async function storeAverages(from, to) {
-  const rows = await dashRows();
+  const rows = (await dashRows()).filter(r => !ONLINE.test(String(r[7] || '')));
   const days = rows.map(r => String(r[0] || '').slice(0, 10)).filter(Boolean).sort();
   const min = days[0] || '', max = days[days.length - 1] || '';
   const per = new Map(), all = { inv: new Set(), qty: 0, val: 0 };
