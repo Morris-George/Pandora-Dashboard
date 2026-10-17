@@ -307,9 +307,16 @@ function bakeSvg(orig,clone){
   const o=[orig,...orig.querySelectorAll('*')],c=[clone,...clone.querySelectorAll('*')];
   o.forEach((el,i)=>{const t=c[i];if(!t)return;const cs=getComputedStyle(el);SVGPROPS.forEach(p=>{const v=cs.getPropertyValue(p);if(v)t.style.setProperty(p,v)})});
 }
-async function shot(el,bg){
-  return html2canvas(el,{scale:2,backgroundColor:bg,useCORS:true,logging:false,onclone:(doc,cl)=>{
-    const os=el.querySelectorAll('svg'),cs=cl.querySelectorAll('svg');os.forEach((s,i)=>cs[i]&&bakeSvg(s,cs[i]));
+async function shot(el,bg,fo){
+  return html2canvas(el,{scale:2,backgroundColor:bg,useCORS:true,logging:false,foreignObjectRendering:!!fo,onclone:(doc,cl)=>{
+    // html2canvas cannot draw SVG that depends on the page's CSS (and fails on SVG with no size), so turn every chart into a plain picture first.
+    const os=[...el.querySelectorAll('svg')],cs=[...cl.querySelectorAll('svg')];
+    os.forEach((s,i)=>{const c=cs[i];if(!c)return;const r=s.getBoundingClientRect();
+      if(!(r.width>0&&r.height>0)){c.remove();return}
+      try{bakeSvg(s,c);c.setAttribute('width',Math.round(r.width));c.setAttribute('height',Math.round(r.height));if(!c.getAttribute('xmlns'))c.setAttribute('xmlns','http://www.w3.org/2000/svg');
+        const img=doc.createElement('img');img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(c));
+        img.style.width=Math.round(r.width)+'px';img.style.height=Math.round(r.height)+'px';img.style.display='block';c.replaceWith(img)}catch(_){c.remove()}});
+    cl.querySelectorAll('canvas').forEach(c=>{if(!(c.width>0&&c.height>0))c.remove()});
     cl.querySelectorAll('.hideclean').forEach(x=>x.style.visibility='hidden');
   }});
 }
@@ -339,10 +346,14 @@ async function run(){
     for(let i=1;i<=12;i++)ws.getColumn(i).width=11.4;
     ws.mergeCells('A1:L1');const t=ws.getCell('A1');t.value='Pandora Egypt · Sales dashboard';t.font={bold:true,size:20,color:{argb:INK}};t.fill={type:'pattern',pattern:'solid',fgColor:{argb:PINK}};t.alignment={vertical:'middle',indent:1};ws.getRow(1).height=38;
     ws.mergeCells('A2:L2');ws.getCell('A2').value=`${s0} to ${e0}  ·  Branch: ${br}  ·  Category: ${cat}  ·  ${basis}  ·  Exported ${new Date().toLocaleString('en-GB')}`;ws.getCell('A2').font={italic:true,color:{argb:'FF6B5560'}};
-    let row=4;const W=1020;
+    let row=4;const W=1020,skipped=[];
     const secs=[...document.querySelectorAll('main.wrap > section')].filter(s=>!s.hidden&&s.offsetParent!==null&&!s.classList.contains('hero')&&!s.classList.contains('filterbar'));
     for(const s of secs){
-      const cv=await shot(s,bg),w=Math.min(W,cv.width/2),h=cv.height/2*(w/(cv.width/2));
+      const rc=s.getBoundingClientRect();if(!(rc.width>0&&rc.height>0))continue;
+      let cv;try{cv=await shot(s,bg)}catch(e){try{cv=await shot(s,bg,true)}catch(e2){cv=null}}
+      if(!cv){skipped.push((s.querySelector('h3')||{}).textContent||s.id||'a section');continue}
+      if(!(cv.width>0&&cv.height>0)){skipped.push((s.querySelector('h3')||{}).textContent||'a section');continue}
+      const w=Math.min(W,cv.width/2),h=cv.height/2*(w/(cv.width/2));
       const id=wb.addImage({base64:cv.toDataURL('image/png'),extension:'png'});
       ws.addImage(id,{tl:{col:0,row:row-1},ext:{width:w,height:h}});
       row+=Math.ceil(h/20)+2;
@@ -372,7 +383,7 @@ async function run(){
     const buf=await wb.xlsx.writeBuffer();
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
     a.download=`Pandora_Dashboard_${s0}_to_${e0}.xlsx`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-    showNotice('Excel file downloaded: the Dashboard sheet looks like this page, and the other sheets hold the numbers behind each visual.');
+    showNotice('Excel file downloaded: the Dashboard sheet looks like this page, and the other sheets hold the numbers behind each visual.'+(skipped.length?' These sections could not be drawn as pictures (their numbers are in the other sheets): '+skipped.join(', ')+'.':''));
   }catch(err){showNotice('Could not create the Excel file: '+(err&&err.message||err))}
   finally{btn.disabled=false;btn.textContent=label}
 }
