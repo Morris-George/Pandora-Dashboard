@@ -3,6 +3,7 @@
 //   GET  /api/vm            list of reports (super admin and VM account)
 //   GET  /api/vm?id=<id>    one report
 //   GET  /api/vm?explorer=<id>  Category explorer data for that report's dates: quantities only, never any amount
+//   GET  /api/vm?stores=1&from=YYYY-MM-DD&to=YYYY-MM-DD  UPT and ATV for each store (and all stores) in those dates; nothing about people
 //   POST /api/vm            super admin: upload {file, sheets:[{name, columns, rows}]} (gzip or plain JSON)
 //   POST /api/vm?op=delete  super admin: {id}
 const zlib = require('zlib');
@@ -88,34 +89,60 @@ function reportDates(rec) {
   return null;
 }
 
-// Category explorer data for one report: the saved Pandora Dashboards sales lines inside the report's dates, reduced to
-// branch / category / SKU / name / quantity. Amounts, invoices and payment methods are never copied into the answer.
-async function explorerData(rec) {
-  const dates = reportDates(rec);
-  if (!dates) return { ok: true, noDates: true, rows: [] };
+// Every saved Pandora Dashboards sales line, merged the way the dashboards do it: Laderach left out, a line that is in two files counted once.
+// Line: [date, invoice, qty, net, gross, sku, name, branch, category, payment]
+async function dashRows() {
   const dash = (await store.getJSON('dash/index.json')) || [];
-  const seen = new Set(), agg = new Map();
+  const seen = new Set(), out = [];
   for (const f of dash.slice().sort((a, b) => String(a.uploadedAt).localeCompare(String(b.uploadedAt)))) {
     const d = await store.getJSON('dash/f/' + f.id + '.json');
     if (!d || !Array.isArray(d.rows)) continue;
     const mine = [];
     for (const r of d.rows) {
-      if (!ex.filterSales([r]).length) continue; // Laderach is left out
-      const k = r[1] + '|' + r[5] + '|' + r[0] + '|' + r[2] + '|' + r[3]; // same line twice = counted once, as on the dashboards
+      if (!ex.filterSales([r]).length) continue;
+      const k = r[1] + '|' + r[5] + '|' + r[0] + '|' + r[2] + '|' + r[3];
       if (seen.has(k)) continue;
       mine.push([k, r]);
     }
-    for (const [k, r] of mine) {
-      seen.add(k);
-      const day = String(r[0] || '').slice(0, 10);
-      if (day < dates.from || day > dates.to) continue;
-      const qty = Number(r[2]); if (!isFinite(qty)) continue;
-      const branch = String(r[7] || ''), cat = String(r[8] || ''), sku = String(r[5] || ''), name = String(r[6] || '');
-      const key = branch + '\u0001' + cat + '\u0001' + sku + '\u0001' + name;
-      const o = agg.get(key); if (o) o[4] += qty; else agg.set(key, [branch, cat, sku, name, qty]);
-    }
+    for (const [k, r] of mine) { seen.add(k); out.push(r); }
+  }
+  return out;
+}
+
+// Category explorer data for one report: the saved sales lines inside the report's dates, reduced to
+// branch / category / SKU / name / quantity. Amounts, invoices and payment methods are never copied into the answer.
+async function explorerData(rec) {
+  const dates = reportDates(rec);
+  if (!dates) return { ok: true, noDates: true, rows: [] };
+  const agg = new Map();
+  for (const r of await dashRows()) {
+    const day = String(r[0] || '').slice(0, 10);
+    if (day < dates.from || day > dates.to) continue;
+    const qty = Number(r[2]); if (!isFinite(qty)) continue;
+    const branch = String(r[7] || ''), cat = String(r[8] || ''), sku = String(r[5] || ''), name = String(r[6] || '');
+    const key = branch + '\u0001' + cat + '\u0001' + sku + '\u0001' + name;
+    const o = agg.get(key); if (o) o[4] += qty; else agg.set(key, [branch, cat, sku, name, qty]);
   }
   return { ok: true, from: dates.from, to: dates.to, rows: [...agg.values()].map(r => [r[0], r[1], r[2], r[3], Math.round(r[4] * 1000) / 1000]) };
+}
+
+// Store UPT (pieces per invoice) and ATV (average invoice value, incl. VAT, in EGP) for a date range.
+// Only these two averages leave the server: no totals, no invoice counts, and nothing about sales people.
+async function storeAverages(from, to) {
+  const rows = await dashRows();
+  const days = rows.map(r => String(r[0] || '').slice(0, 10)).filter(Boolean).sort();
+  const min = days[0] || '', max = days[days.length - 1] || '';
+  const per = new Map(), all = { inv: new Set(), qty: 0, val: 0 };
+  for (const r of rows) {
+    const day = String(r[0] || '').slice(0, 10);
+    if (day < from || day > to) continue;
+    const branch = String(r[7] || 'Unspecified'), qty = Number(r[2]) || 0, gross = Number(r[4]) || 0;
+    let o = per.get(branch); if (!o) per.set(branch, o = { inv: new Set(), qty: 0, val: 0 });
+    o.qty += qty; o.val += gross; all.qty += qty; all.val += gross;
+    if (gross > 0) { const id = branch + '|' + r[1]; o.inv.add(id); all.inv.add(id); }
+  }
+  const fin = o => { const n = o.inv.size; return { upt: n ? Math.round(o.qty / n * 100) / 100 : 0, atv: n ? Math.round(o.val / n) : 0 }; };
+  return { ok: true, min, max, from, to, all: fin(all), stores: [...per.entries()].filter(([, o]) => o.inv.size).map(([branch, o]) => ({ branch, ...fin(o) })).sort((a, b) => a.branch.localeCompare(b.branch)) };
 }
 
 module.exports = async function handler(req, res) {
@@ -127,6 +154,12 @@ module.exports = async function handler(req, res) {
   const url = new URL(req.url, 'https://x.invalid');
 
   if (req.method === 'GET') {
+    if (url.searchParams.get('stores')) {
+      const ok = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
+      const from = url.searchParams.get('from'), to = url.searchParams.get('to');
+      if ((from && !ok(from)) || (to && !ok(to))) return send(res, 400, { ok: false, error: 'Bad dates.' });
+      return send(res, 200, await storeAverages(from || '0000-01-01', to || '9999-12-31'));
+    }
     const xid = url.searchParams.get('explorer');
     if (xid) {
       if (!/^[a-z0-9-]{1,60}$/.test(xid)) return send(res, 400, { ok: false, error: 'Bad id.' });
