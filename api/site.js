@@ -161,6 +161,13 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'parsers.js', 'application/javascript; charset=utf-8');
   }
 
+  // VM Zones: the VM account and the super admin place collections in store zones and see the effect on sales
+  if (requestedPath === '/vm/zones' || requestedPath === '/vm/zones/' || requestedPath === '/vmzones.html') {
+    const admin = !!facts.staff && facts.staff.role === 'admin';
+    if (!admin && !facts.vm) return toHome();
+    return sendFile(res, 'vmzones.html', 'text/html; charset=utf-8', withChrome('vm', multi));
+  }
+
   // VM report: the VM account (view only) and the super admin (who feeds it)
   if (requestedPath === '/vm' || requestedPath === '/vm/' || requestedPath === '/vm.html') {
     const admin = !!facts.staff && facts.staff.role === 'admin';

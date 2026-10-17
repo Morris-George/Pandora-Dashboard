@@ -63,6 +63,8 @@ function category(group) {
   if (['charm', 'clip', 'dangle', 'medallion', 'spacer'].some(x => low.includes(x))) return 'Charms';
   return 'Other';
 }
+// "Pandora Moments - Charm" -> "Moments" (the collection, used by the VM Zones page)
+const collection = group => (String(group).split(' - ')[0] || '').replace(/^Pandora\s+/i, '').trim().slice(0, 60);
 function salesRows(list) {
   const out = [];
   for (const r of list) {
@@ -82,7 +84,7 @@ function salesRows(list) {
     let name = String(r.description || '').replace(/<[^>]*>/g, ' ').replace(/[|]/g, ' ').replace(/---/g, ' ').replace(/\s+/g, ' ').trim() || String(r.item_name || '');
     name = name.replace(/-one size$/i, '').replace(/-\d+\s*cm$/i, '').replace(/-\d{2}$/, '');
     out.push([date, String(invoice).slice(0, 40), cat === 'Services' ? 0 : num(r.stock_qty), net, gross,
-      String(r['sku-item'] || r.sku || '').slice(0, 40), name.slice(0, 120), branch.slice(0, 80), cat, payment.slice(0, 40)]);
+      String(r['sku-item'] || r.sku || '').slice(0, 40), name.slice(0, 120), branch.slice(0, 80), cat, payment.slice(0, 40), collection(group)]);
   }
   return out;
 }

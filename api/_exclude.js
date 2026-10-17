@@ -5,7 +5,7 @@ const RX = /laderach/i;
 const hit = v => typeof v === 'string' && RX.test(plain(v));
 const anyHit = (...vals) => vals.some(hit);
 
-// Pandora Dashboards sales line: [date, invoice, qty, net, gross, sku, name, branch, category, payment]
+// Pandora Dashboards sales line: [date, invoice, qty, net, gross, sku, name, branch, category, payment, collection (ERP lines only)]
 const keepSale = r => !anyHit(r[5], r[6], r[7], r[8]);
 const filterSales = rows => rows.filter(keepSale);
 

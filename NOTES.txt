@@ -28,3 +28,11 @@ ERP SYNC (api/erp.js)
 - Pulls "Sales Report by Item & SKU" into Pandora Dashboards (saved as dash/f/erp-YYYY-MM.json, one file per month, replaced on each sync) and "Sales Person-wise Transaction Summary By Store" into Staff Performance (data/current.json).
 - Super admin: "Sync from ERP" card on All Uploads (pick a month, Sync now). Vercel cron (vercel.json) syncs the current month every day at 04:00 UTC.
 - Env vars: ERP_URL, ERP_API_KEY, ERP_API_SECRET (read-only ERPNext user), CRON_SECRET (any long random text; Vercel sends it to the cron call).
+
+VM ZONES (/vm/zones, private/vmzones.html, api/vmzones.js)
+- Super admin and the VM account: pick a store, see its zones on the floor plan, place a collection in a zone from a start date (the previous one in that zone ends that day), compare two placements, download an Excel report (Placements with start/end dates and results, Daily, Notes).
+- Zones are numbered right to left as you face the store from the entrance (entrance = bottom of the plan); numbers are recalculated whenever the layout is saved. "Edit zones" = drag, resize, add, remove, name the location.
+- Floor plans / photos per store (PDF, JPG, PNG, WEBP, up to 25 MB, uploaded in pieces under Vercel's 4.5 MB limit). Ticking "Use as floor plan" on a PDF asks for the page and saves that page as an image behind the zones.
+- Results = the store's sales of that collection while it was in the zone (ERP does not record sales per zone). The collection comes from the ERP item group ("Pandora Moments - Charm" -> Moments), saved as the 11th column of ERP sales lines (api/erp.js); lines from older Excel uploads borrow it by SKU. Run Sync from ERP once so collections appear.
+- Money: the super admin sees EGP; the VM account sees pieces, UPT, ATV, shares, a sales index (% of the store's average day) and % changes, never sales totals.
+- Storage: vmz/<store>.json (zones, placements, files), vmz/f/<store>-<id>-<n>.json (file pieces). Shared sales reader: api/_sales.js.
