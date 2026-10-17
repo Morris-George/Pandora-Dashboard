@@ -8,6 +8,7 @@
 // Env vars: ERP_URL, ERP_API_KEY, ERP_API_SECRET (read-only ERPNext user), CRON_SECRET; ERP_COMPANY optional (else taken from the sales rows).
 const store = require('./_store');
 const { whoami } = require('./_auth');
+const ex = require('./_exclude');
 
 const DASH_INDEX = 'dash/index.json';
 const STATUS = 'erp/status.json';
@@ -69,6 +70,7 @@ function salesRows(list) {
     if (!invoice || !date) continue;
     const group = String(r.item_group || '');
     if (group.toLowerCase().includes('packaging')) continue;
+    if (ex.anyHit(group, r.cost_center, r.item_name, r.description, r.warehouse, r.brand)) continue; // Laderach is left out
     const cat = category(group);
     const net = num(r.amount), gross = num(r.total);
     if (Math.round(net * 100) === 0 && Math.round(gross * 100) === 0) continue;
@@ -129,7 +131,7 @@ async function sync(m) {
   // Staff Performance: one month at a time, keeps the admin's hidden item groups.
   const names = new Map();
   for (const r of salesList) if (r.item_code && r.item_name && !names.has(r.item_code)) names.set(r.item_code, String(r.item_name));
-  const sd = staffData(staffList, fmtPeriod(from, to), names, 'ERP ' + key);
+  const sd = ex.filterStaff(staffData(staffList, fmtPeriod(from, to), names, 'ERP ' + key));
   if (sd.rows.length) {
     const prev = await store.getJSON('data/current.json');
     await store.putJSON('data/current.json', { ...sd, ex: (prev && prev.ex) || undefined, uploadedAt });

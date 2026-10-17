@@ -6,6 +6,7 @@ const zlib = require('zlib');
 const store = require('./_store');
 const { whoami } = require('./_auth');
 const { staffView } = require('./_stats');
+const ex = require('./_exclude');
 
 const FILE = 'data/current.json';
 const MAX_ROWS = 600000;
@@ -58,7 +59,7 @@ module.exports = async function handler(req, res) {
   if (who.kind === 'vm') return send(res, 403, { ok: false, error: 'No access.' });
 
   if (req.method === 'GET') {
-    const d = await store.getJSON(FILE);
+    const d = ex.filterStaff(await store.getJSON(FILE));
     if (!d) return send(res, 404, { ok: false, error: 'no-data' });
     if (who.kind === 'staff') return send(res, 200, staffView(d, who.user.store, who.user.name));
     if (who.info.allow) return send(res, 200, scopeByStores(d, who.info.allow));
@@ -89,13 +90,14 @@ module.exports = async function handler(req, res) {
     const problem = validate(d);
     if (problem) return send(res, 400, { ok: false, error: problem });
     const prev = await store.getJSON(FILE);
-    const clean = {
+    const clean0 = {
       file: String(d.file || '').slice(0, 70), period: String(d.period || '').slice(0, 60),
       stores: d.stores.map(String), people: d.people.map(p => [String(p[0]), p[1]]), groups: d.groups.map(String),
       items: Array.isArray(d.items) ? d.items.map(i => Array.isArray(i) ? [String(i[0] || ''), String(i[1] || '')] : [String(i || ''), '']) : [],
       ex: Array.isArray(d.ex) ? d.ex.filter(x => typeof x === 'string') : (prev && prev.ex) || undefined,
       rows: d.rows, uploadedAt: new Date().toISOString()
     };
+    const clean = ex.filterStaff(clean0);
     await store.putJSON(FILE, clean);
     return send(res, 200, { ok: true, rows: clean.rows.length });
   }

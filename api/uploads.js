@@ -8,6 +8,7 @@
 const zlib = require('zlib');
 const store = require('./_store');
 const { whoami } = require('./_auth');
+const ex = require('./_exclude');
 
 const DASH_INDEX = 'dash/index.json';
 const MAX_ROWS = 600000;
@@ -48,6 +49,7 @@ module.exports = async function handler(req, res) {
         if (!d || !Array.isArray(d.rows)) continue;
         const mine = [];
         for (const r of d.rows) {
+          if (!ex.filterSales([r]).length) continue; // Laderach is left out
           const k = r[1] + '|' + r[5] + '|' + r[0] + '|' + r[2] + '|' + r[3];
           if (seen.has(k)) continue; // the same line already came from an earlier file
           mine.push(r);
@@ -107,6 +109,7 @@ module.exports = async function handler(req, res) {
       if (!r || !r.date || !r.invoice) continue;
       rows.push([iso(r.date), String(r.invoice).slice(0, 40), num(r.qty), num(r.net), num(r.gross), String(r.sku || '').slice(0, 40), String(r.name || '').slice(0, 120), String(r.branch || '').slice(0, 80), String(r.category || '').slice(0, 60), String(r.payment || '').slice(0, 40)]);
     }
+    const kept = ex.filterSales(rows); rows.length = 0; rows.push(...kept);
     if (!rows.length) return send(res, 400, { ok: false, error: 'No valid sales lines were found in that file.' });
     const dates = rows.map(r => r[0]).sort();
     const name = String(d.file || 'Sales file').slice(0, 100);

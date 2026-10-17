@@ -7,6 +7,7 @@
 const zlib = require('zlib');
 const store = require('./_store');
 const { whoami } = require('./_auth');
+const ex = require('./_exclude');
 
 const INDEX = 'vm/index.json';
 const MAX_CELLS = 400000;
@@ -58,6 +59,7 @@ function cleanSheet(sh) {
     const out = keep.map(i => { const v = r[i]; return v === undefined ? null : (typeof v === 'string' ? v.slice(0, 120) : v); });
     if (out.some(v => v !== null && v !== '')) rows.push(out);
   }
+  const clean = ex.filterTable(rows); rows.length = 0; rows.push(...clean);
   const find = re => columns.findIndex(c => re.test(c));
   const kind = find(/categor|group|class/i) >= 0 && find(/qty|quantity|units|pieces|pcs/i) >= 0 && find(/store|branch|location|shop/i) >= 0 ? 'qty-by-category' : 'table';
   return { columns, rows, dropped, kind };
@@ -76,6 +78,7 @@ module.exports = async function handler(req, res) {
     if (id) {
       if (!/^[a-z0-9-]{1,60}$/.test(id)) return send(res, 400, { ok: false, error: 'Bad id.' });
       const d = await store.getJSON('vm/r/' + id + '.json');
+      if (d && Array.isArray(d.rows)) d.rows = ex.filterTable(d.rows); // Laderach is left out
       return d ? send(res, 200, d) : send(res, 404, { ok: false, error: 'no-data' });
     }
     return send(res, 200, { ok: true, reports: (await store.getJSON(INDEX)) || [] });
