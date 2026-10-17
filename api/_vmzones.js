@@ -1,4 +1,4 @@
-// VM Zones: which collection is merchandised in which zone of each store, and what it did to sales.
+// VM Zones (reached at /api/vmzones, rewritten to api/vm.js): which collection is merchandised in which zone of each store, and what it did to sales.
 // The super admin and the VM account both use it (place collections, draw zones, add floor plans / photos).
 //   GET  /api/vmzones                          stores that have sales, plus the caller's role
 //   GET  /api/vmzones?store=<name>             layout, placements and the results of every placement

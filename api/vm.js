@@ -129,6 +129,8 @@ async function storeAverages(from, to) {
 }
 
 module.exports = async function handler(req, res) {
+  // /api/vmzones is rewritten here (vercel.json) so it does not count as one more function on the Hobby plan (12 max)
+  if (new URL(req.url, 'https://x.invalid').searchParams.get('vmzones')) return require('./_vmzones')(req, res);
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   const who = await whoami(req);
   if (!who) return send(res, 401, { ok: false, error: 'sign-in-required' });

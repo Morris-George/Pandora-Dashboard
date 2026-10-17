@@ -29,7 +29,7 @@ ERP SYNC (api/erp.js)
 - Super admin: "Sync from ERP" card on All Uploads (pick a month, Sync now). Vercel cron (vercel.json) syncs the current month every day at 04:00 UTC.
 - Env vars: ERP_URL, ERP_API_KEY, ERP_API_SECRET (read-only ERPNext user), CRON_SECRET (any long random text; Vercel sends it to the cron call).
 
-VM ZONES (/vm/zones, private/vmzones.html, api/vmzones.js)
+VM ZONES (/vm/zones, private/vmzones.html, api/_vmzones.js reached at /api/vmzones via a rewrite to api/vm.js: the Hobby plan allows 12 functions, so new APIs must be _helpers routed through an existing function)
 - Super admin and the VM account: pick a store, see its zones on the floor plan, place a collection in a zone from a start date (the previous one in that zone ends that day), compare two placements, download an Excel report (Placements with start/end dates and results, Daily, Notes).
 - Zones are numbered right to left as you face the store from the entrance (entrance = bottom of the plan); numbers are recalculated whenever the layout is saved. "Edit zones" = drag, resize, add, remove, name the location.
 - Floor plans / photos per store (PDF, JPG, PNG, WEBP, up to 25 MB, uploaded in pieces under Vercel's 4.5 MB limit). Ticking "Use as floor plan" on a PDF asks for the page and saves that page as an image behind the zones.

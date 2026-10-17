@@ -9,9 +9,16 @@
     }
   },
   "crons": [
-    { "path": "/api/erp", "schedule": "0 4 * * *" }
+    {
+      "path": "/api/erp",
+      "schedule": "0 4 * * *"
+    }
   ],
   "rewrites": [
+    {
+      "source": "/api/vmzones",
+      "destination": "/api/vm?vmzones=1"
+    },
     {
       "source": "/((?!api/).*)",
       "destination": "/api/site?path=$1"
