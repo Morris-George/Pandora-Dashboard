@@ -119,7 +119,8 @@ function showNotice(msg){$('notice').textContent=msg;$('notice').classList.add('
 function clearNotice(){$('notice').classList.remove('show')}
 function setOptions(id,values){const el=$(id),old=el.value;el.innerHTML='<option value="All">All</option>'+values.map(v=>'<option>'+esc(v)+'</option>').join('');if(values.includes(old))el.value=old}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function normalizeRows(rows){return rows.map(r=>{const date=r.date;return {...r,date,net:Number(r.net)||0,gross:Number(r.gross)||0,qty:Number(r.qty)||0}}).filter(r=>r.date&&r.invoice)}
+const payOf=v=>{const t=String(v||'').toLowerCase();return /valu/.test(t)?'Valu':/visa|card|master|credit|debit|pos/.test(t)?'Visa':'Cash'};
+function normalizeRows(rows){return rows.map(r=>{const date=r.date;return {...r,date,payment:payOf(r.payment),net:Number(r.net)||0,gross:Number(r.gross)||0,qty:Number(r.qty)||0}}).filter(r=>r.date&&r.invoice)}
 function dateIso(v){if(v instanceof Date)return v.toISOString().slice(0,10);return String(v||'').slice(0,10)}
 function filtered(){let s=$('startDate').value,e=$('endDate').value,b=$('branchFilter').value,c=$('catFilter').value;return data.filter(r=>r.date>=s&&r.date<=e&&(b==='All'||r.branch===b)&&(c==='All'||r.category===c))}
 function rev(r){return $('basisFilter').value==='gross'?r.gross:r.net}

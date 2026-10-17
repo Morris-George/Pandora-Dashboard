@@ -80,7 +80,8 @@ function salesRows(list) {
     let branch = cc.includes(' - ') ? cc.split(' - ').slice(1).join(' - ') : cc;
     branch = branch.replace(/ - AN/g, '').replace(/Pandora /g, '').replace(/ Of /g, ' of ').trim() || 'Unspecified';
     const pay = String(r.mode_of_payment || '').trim(), pl = pay.toLowerCase();
-    const payment = pl.includes('cash') && pl.includes('visa') ? 'Cash + Visa' : pl.includes('visa') ? 'Visa' : pl.includes('cash') ? 'Cash' : pay || 'Unspecified';
+    // Only Cash, Visa or Valu are kept: Valu wins, then card, everything else is Cash.
+    const payment = /valu/.test(pl) ? 'Valu' : /visa|card|master|credit|debit|pos/.test(pl) ? 'Visa' : 'Cash';
     let name = String(r.description || '').replace(/<[^>]*>/g, ' ').replace(/[|]/g, ' ').replace(/---/g, ' ').replace(/\s+/g, ' ').trim() || String(r.item_name || '');
     name = name.replace(/-one size$/i, '').replace(/-\d+\s*cm$/i, '').replace(/-\d{2}$/, '');
     out.push([date, String(invoice).slice(0, 40), cat === 'Services' ? 0 : num(r.stock_qty), net, gross,
