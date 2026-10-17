@@ -4,6 +4,8 @@ const plain = v => String(v == null ? '' : v).normalize('NFD').replace(/[̀-ͯ]/
 const RX = /laderach/i;
 const hit = v => typeof v === 'string' && RX.test(plain(v));
 const anyHit = (...vals) => vals.some(hit);
+// "Sales Team" is not a store: it is left out of every Staff Performance report (all roles, including super admin).
+const hideTeam = v => typeof v === 'string' && /^\s*sales\s*team\s*$/i.test(v);
 
 // Pandora Dashboards sales line: [date, invoice, qty, net, gross, sku, name, branch, category, payment, collection (ERP lines only)]
 const keepSale = r => !anyHit(r[5], r[6], r[7], r[8]);
@@ -13,7 +15,7 @@ const filterSales = rows => rows.filter(keepSale);
 function filterStaff(d) {
   if (!d || !Array.isArray(d.stores) || !Array.isArray(d.people) || !Array.isArray(d.groups) || !Array.isArray(d.rows)) return d;
   const items = Array.isArray(d.items) ? d.items : [];
-  const badStore = d.stores.map(hit), badGroup = d.groups.map(hit), badItem = items.map(i => Array.isArray(i) ? anyHit(i[0], i[1]) : hit(i));
+  const badStore = d.stores.map(v => hit(v) || hideTeam(v)), badGroup = d.groups.map(hit), badItem = items.map(i => Array.isArray(i) ? anyHit(i[0], i[1]) : hit(i));
   if (![...badStore, ...badGroup, ...badItem].some(Boolean)) return d;
   const remap = (flags, list) => { const m = new Map(), out = []; list.forEach((x, i) => { if (!flags[i]) { m.set(i, out.length); out.push(x); } }); return { m, out }; };
   const S = remap(badStore, d.stores), G = remap(badGroup, d.groups), I = remap(badItem, items);

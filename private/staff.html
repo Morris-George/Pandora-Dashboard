@@ -151,9 +151,10 @@ const SAMPLE=null;
 const ROLE=window.__PANDORA_ROLE||{role:'admin',label:'Super admin',allow:null,zones:null};
 const ALLOW=ROLE.allow?ROLE.allow.map(s=>new RegExp(s,'i')):null;
 const storeOk=n=>!ALLOW||ALLOW.some(r=>r.test(n));
+const hideTeam=n=>/^\s*sales\s*team\s*$/i.test(n);
 function scopeData(d){
-  if(!ALLOW) return d;
-  const sMap=new Map(),stores=[]; d.stores.forEach((s,i)=>{if(storeOk(s)){sMap.set(i,stores.length);stores.push(s)}});
+  if(!ALLOW&&!d.stores.some(hideTeam)) return d;
+  const sMap=new Map(),stores=[]; d.stores.forEach((s,i)=>{if(storeOk(s)&&!hideTeam(s)){sMap.set(i,stores.length);stores.push(s)}});
   const pMap=new Map(),people=[]; d.people.forEach((p,i)=>{if(sMap.has(p[1])){pMap.set(i,people.length);people.push([p[0],sMap.get(p[1])])}});
   const rows=[]; for(const r of d.rows){const np=pMap.get(r[0]); if(np!==undefined){const c=r.slice();c[0]=np;rows.push(c)}}
   return {...d,stores,people,rows};
