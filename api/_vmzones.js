@@ -4,7 +4,8 @@
 //   GET  /api/vmzones?store=<name>             layout, placements and the results of every placement
 //   GET  /api/vmzones?store=<name>&file=<id>&part=<n>   one piece of an uploaded floor plan / photo / PDF (the page joins the pieces)
 //   POST /api/vmzones?op=layout   {store, zones:[{id, x, y, w, h, where}]}   zones are numbered right to left from the entrance
-//   POST /api/vmzones?op=place    {store, zone, col, start}                  ends whatever was in that zone the day before
+//   POST /api/vmzones?op=place    {store, zone, col, start} or {store, zone, start, list:{name, file, skus, dvs}}
+//                                 a whole collection, or the SKUs / DVs of an uploaded Excel list; ends whatever was in that zone the day before
 //   POST /api/vmzones?op=unplace  {store, id}                                 removes a placement made by mistake
 //   POST /api/vmzones?op=file     {store, name, type, data(base64 piece), part, parts, upload, plan}
 //                                 big files come in pieces (each request stays under Vercel's 4.5 MB); plan:true = image shown behind the zones
@@ -64,52 +65,75 @@ async function load(st) {
   return { store: st, zones: numberZones(DEFAULT_ZONES.map((z, i) => ({ id: 'default0000' + (i + 1), ...z }))), placements: [], files: [] };
 }
 
-// Daily sales of one store: whole store, and per collection. Lines without a collection (older Excel uploads)
+// Daily sales of one store: whole store, per collection and per SKU. Lines without a collection (older Excel uploads)
 // borrow it from any ERP line with the same SKU.
 async function storeDaily(st) {
   const rows = await dashRows();
   const colBySku = new Map();
   for (const r of rows) if (r[10] && r[5] && !colBySku.has(r[5])) colBySku.set(r[5], r[10]);
-  const days = new Map(), cols = new Set(), branches = new Set();
+  const days = new Map(), cols = new Set(), branches = new Set(), names = new Map();
   let maxDay = '';
   const cell = () => ({ net: 0, qty: 0, inv: new Set() });
+  const add = (c, net, qty, inv) => { c.net += net; c.qty += qty; if (net > 0) c.inv.add(inv); };
   for (const r of rows) {
     const branch = String(r[7] || ''); branches.add(branch);
     if (branch !== st) continue;
     const day = String(r[0] || '').slice(0, 10); if (!isDay(day)) continue;
     if (day > maxDay) maxDay = day;
-    let d = days.get(day); if (!d) days.set(day, d = { s: cell(), c: new Map() });
+    let d = days.get(day); if (!d) days.set(day, d = { s: cell(), c: new Map(), k: new Map() });
     const net = Number(r[3]) || 0, qty = Number(r[2]) || 0, inv = String(r[1]);
-    d.s.net += net; d.s.qty += qty; if (net > 0) d.s.inv.add(inv);
+    add(d.s, net, qty, inv);
+    const sku = String(r[5] || '').trim().toUpperCase();
+    if (sku) { let k = d.k.get(sku); if (!k) d.k.set(sku, k = cell()); add(k, net, qty, inv); if (!names.has(sku)) names.set(sku, String(r[6] || '')); }
     const col = r[10] || colBySku.get(r[5]);
     if (!col) continue;
     cols.add(col);
     let c = d.c.get(col); if (!c) d.c.set(col, c = cell());
-    c.net += net; c.qty += qty; if (net > 0) c.inv.add(inv);
+    add(c, net, qty, inv);
   }
-  return { days, maxDay, collections: [...cols].sort(), branches: [...branches].filter(Boolean).sort() };
+  return { days, maxDay, names, colOf: sku => colBySku.get(sku), collections: [...cols].sort(), branches: [...branches].filter(Boolean).sort() };
+}
+
+// "395078C01-45" -> "395078C01": the design (DV) of a sized SKU
+const dvOf = sku => sku.replace(/-[^-]+$/, '');
+// Which sales lines belong to a placement: a whole collection, or the SKUs / DVs of an uploaded list.
+function matcher(p, sd) {
+  if (!p.list) return sku => sd.colOf(sku) === p.col;
+  const skus = new Set(p.list.skus || []), dvs = new Set(p.list.dvs || []);
+  return sku => skus.has(sku) || dvs.has(sku) || dvs.has(dvOf(sku));
 }
 
 // Results of one placement: [start, end) where end is the next placement's start (open = up to the last day with sales).
 function placementStats(p, sd, avgStoreDay, money) {
   const last = sd.maxDay;
   const stop = p.end || addDay(today(), 1);
+  const hit = matcher(p, sd), byItem = new Map();
   let n = 0, net = 0, qty = 0, inv = 0, sNet = 0, sInv = 0;
   const daily = [];
   for (let d = p.start; d < stop && d <= last; d = addDay(d, 1)) {
     const x = sd.days.get(d); n++;
-    const c = (x && x.c.get(p.col)) || { net: 0, qty: 0, inv: new Set() };
+    const c = { net: 0, qty: 0, inv: new Set() };
+    if (x) {
+      x.k.forEach((k, sku) => {
+        if (!hit(sku)) return;
+        c.net += k.net; c.qty += k.qty; k.inv.forEach(i => c.inv.add(i));
+        const it = byItem.get(sku) || { qty: 0, net: 0 }; it.qty += k.qty; it.net += k.net; byItem.set(sku, it);
+      });
+      sNet += x.s.net; sInv += x.s.inv.size;
+    }
     net += c.net; qty += c.qty; inv += c.inv.size;
-    if (x) { sNet += x.s.net; sInv += x.s.inv.size; }
     daily.push(money ? [d, c.qty, Math.round(c.net)] : [d, c.qty, avgStoreDay ? r2(c.net / avgStoreDay * 100) : 0]);
   }
+  // every item that sold, best first: [sku, name, pieces, sales EGP (super admin) or % of the placement's sales]
+  const items = [...byItem.entries()].sort((a, b) => b[1].net - a[1].net)
+    .map(([sku, it]) => [sku, sd.names.get(sku) || '', it.qty, money ? Math.round(it.net) : (net ? r2(it.net / net * 100) : 0)]);
   const o = {
     days: n, qty, qtyDay: n ? r2(qty / n) : 0,
     upt: inv ? r2(qty / inv) : 0, atv: inv ? Math.round(net / inv) : 0,
     share: sNet ? r2(net / sNet * 100) : 0,                       // % of the store's sales in those days
     index: n && avgStoreDay ? r2(net / n / avgStoreDay * 100) : 0, // sales per day as % of the store's average day (no money)
     storeIndex: n && avgStoreDay ? r2(sNet / n / avgStoreDay * 100) : 0,
-    daily
+    daily, items
   };
   if (money) Object.assign(o, { net: Math.round(net), netDay: n ? Math.round(net / n) : 0, storeNetDay: n ? Math.round(sNet / n) : 0, invoices: inv, storeInvoices: sInv });
   return o;
@@ -188,14 +212,20 @@ module.exports = async function handler(req, res) {
     layout.zones = numberZones(zones);
   } else if (op === 'place') {
     const z = layout.zones.find(z => z.id === b.zone);
-    const col = String(b.col || '').trim().slice(0, 60);
+    let col = String(b.col || '').trim().slice(0, 60), list = null;
+    if (b.list) { // an uploaded Excel list of SKUs and / or DVs instead of a whole collection
+      const codes = v => Array.isArray(v) ? [...new Set(v.map(x => String(x || '').trim().toUpperCase()).filter(x => /^[A-Z0-9][A-Z0-9\-_.]{1,39}$/.test(x)))] : [];
+      list = { file: String(b.list.file || '').slice(0, 100), skus: codes(b.list.skus).slice(0, 5000), dvs: codes(b.list.dvs).slice(0, 5000) };
+      if (!list.skus.length && !list.dvs.length) return send(res, 400, { ok: false, error: 'No SKU or DV codes were found in that file.' });
+      col = String(b.list.name || list.file || 'SKU list').trim().slice(0, 60);
+    }
     if (!z || !col || !isDay(b.start)) return send(res, 400, { ok: false, error: 'Pick a zone, a collection and a start date.' });
     const inZone = layout.placements.filter(p => p.zone === z.id);
     if (inZone.some(p => p.start >= b.start)) return send(res, 400, { ok: false, error: 'This zone already has a placement on or after that date. Remove it first.' });
     const cur = inZone.find(p => !p.end);
-    if (cur && cur.col === col) return send(res, 400, { ok: false, error: col + ' is already in this zone.' });
+    if (cur && !list && !cur.list && cur.col === col) return send(res, 400, { ok: false, error: col + ' is already in this zone.' });
     if (cur) cur.end = b.start;
-    layout.placements.push({ id: newId(), zone: z.id, col, start: b.start, end: null, by, at: new Date().toISOString() });
+    layout.placements.push({ id: newId(), zone: z.id, col, ...(list ? { list } : {}), start: b.start, end: null, by, at: new Date().toISOString() });
   } else if (op === 'unplace') {
     const p = layout.placements.find(p => p.id === b.id);
     if (!p) return send(res, 404, { ok: false, error: 'Not found.' });

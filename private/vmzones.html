@@ -88,8 +88,12 @@ table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}th,td
       <div class="meta">Each bar is one placement: a collection in a zone, from its start date until it was replaced. Tap a bar to compare it.</div>
       <div class="tl" id="tl"></div><div class="axis" id="axis"></div>
       <div class="assign">
-        <b style="font-size:13px;width:100%">Place a collection</b>
-        <select id="az"></select><select id="ac"></select><input type="date" id="ad">
+        <b style="font-size:13px;width:100%">Place a collection or a list of items</b>
+        <select id="az"></select>
+        <select id="amode"><option value="col">Whole collection</option><option value="list">Items from an Excel list (SKU / DV)</option></select>
+        <select id="ac"></select>
+        <span id="alist" hidden class="row"><button class="btn sm" id="afile" type="button">Choose Excel file</button><input type="text" id="aname" placeholder="Name for this list" maxlength="60"><span class="sub" id="ainfo">Columns: SKU and/or DV (first row = headings).</span></span>
+        <input type="date" id="ad">
         <button class="btn go" id="ago" type="button">Start placement</button><span class="sub" id="amsg"></span>
       </div>
       <div class="plist" id="plist"></div>
@@ -108,6 +112,7 @@ table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}th,td
   </div>
 </div>
 <input type="file" id="file" accept=".pdf,.jpg,.jpeg,.png,.webp" hidden>
+<input type="file" id="listfile" accept=".xlsx,.xls,.csv" hidden>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const $=id=>document.getElementById(id);
@@ -171,7 +176,7 @@ function zoneDetail(){
   const spark=ser.length>1?`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}"><polyline fill="none" stroke="currentColor" stroke-width="2" points="${ser.map((v,i)=>(i*W/(ser.length-1)).toFixed(1)+','+(H-4-v/mx*(H-8)).toFixed(1)).join(' ')}"/></svg>`:'';
   box.innerHTML=`<h3>${zName(z)} · ${esc(z.where)}</h3><div class="sub">Now: <span class="pill" style="background:${colColor(cur.col)}">${esc(cur.col)}</span> since ${cur.start} (${s.days} day${s.days==1?'':'s'} of sales)</div>
    <div class="k">${money()?`<div><small>Sales / day (EGP)</small><b>${fmt(s.netDay)}</b></div>`:`<div><small>Pieces / day</small><b>${f2(s.qtyDay)}</b></div>`}<div><small>UPT</small><b>${f2(s.upt)}</b></div><div><small>ATV (EGP)</small><b>${fmt(s.atv)}</b></div><div><small>Share of store sales</small><b>${s.share.toFixed(1)}%</b></div></div>
-   ${spark}<div class="sub">#${rank} of ${D.zones.length} zones by sales per day${d!=null?` · <b class="${d>=0?'up':'dn'}">${pct(d)}</b> vs previous (${esc(prev.col)})`:''}</div>`;
+   ${spark}${s.items&&s.items.length?`<details style="margin-top:6px"><summary class="sub" style="cursor:pointer">Items sold (${s.items.length})</summary><table><tr><th>SKU</th><th>Item</th><th>Pieces</th><th>${money()?'Sales (EGP)':'% of sales'}</th></tr>${s.items.slice(0,30).map(i=>`<tr><td>${esc(i[0])}</td><td>${esc(i[1])}</td><td>${fmt(i[2])}</td><td>${money()?fmt(i[3]):i[3]+'%'}</td></tr>`).join('')}</table></details>`:''}<div class="sub">#${rank} of ${D.zones.length} zones by sales per day${d!=null?` · <b class="${d>=0?'up':'dn'}">${pct(d)}</b> vs previous (${esc(prev.col)})`:''}</div>`;
 }
 function renderFiles(){
   $('files').innerHTML=D.files.length?D.files.map(f=>`<div class="file"><span>${f.type==='application/pdf'?'📄':'🖼️'} ${esc(f.name)} <span class="sub">· ${(f.size/1048576).toFixed(1)} MB${D.plan===f.id?' · floor plan':''}</span></span><span class="row"><button class="btn sm" data-open="${f.id}" type="button">Open</button>${f.type.startsWith('image/')&&D.plan!==f.id?`<button class="btn sm" data-plan="${f.id}" type="button">Use as plan</button>`:''}<button class="btn sm" data-del="${f.id}" type="button">Remove</button></span></div>`).join(''):'<div class="empty">No floor plan or photos for this store yet.</div>';
@@ -187,7 +192,7 @@ function renderTimeline(){
   $('tl').innerHTML=zs.map(zz=>`<div class="tlrow"><span style="font-weight:${zz.id===S.zone?800:500};cursor:pointer" data-zone="${zz.id}">${zName(zz)}</span><div class="bar">${D.placements.filter(p=>p.zone===zz.id).map(p=>{const a=pos(p.start),w=Math.max(1.5,pos(p.end||sp.b)-a+(p.end?0:100/sp.n));return`<div class="seg ${(p.id===S.pa||p.id===S.pb)?'on':''}" data-p="${p.id}" title="${esc(p.col)}: ${p.start} → ${p.end||'now'}" style="left:${a}%;width:${Math.min(w,100-a)}%;background:${colColor(p.col)};opacity:${zz.id===S.zone?1:.5}">${esc(p.col)}</div>`}).join('')}</div></div>`).join('');
   $('axis').innerHTML=[0,.5,1].map(t=>{const d=new Date(Date.parse(sp.a)+t*(sp.n-1)*864e5).toISOString().slice(5,10);return`<span>${d}</span>`}).join('');
   const hist=D.placements.filter(p=>p.zone===S.zone).slice().reverse();
-  $('plist').innerHTML=hist.length?hist.map(p=>`<div><span><span class="pill" style="background:${colColor(p.col)}">${esc(p.col)}</span> ${p.start} → ${p.end||'now'} <span class="sub">· by ${esc(p.by||'')}</span></span><button class="btn sm" data-unplace="${p.id}" type="button">Remove</button></div>`).join(''):'';
+  $('plist').innerHTML=hist.length?hist.map(p=>`<div><span><span class="pill" style="background:${colColor(p.col)}">${esc(p.col)}</span>${p.list?` <span class="sub">(list: ${p.list.skus.length} SKUs, ${p.list.dvs.length} DVs)</span>`:''} ${p.start} → ${p.end||'now'} <span class="sub">· by ${esc(p.by||'')}</span></span><button class="btn sm" data-unplace="${p.id}" type="button">Remove</button></div>`).join(''):'';
 }
 function renderAssign(){
   const zs=D.zones.slice().sort((a,b)=>a.n-b.n);
@@ -245,8 +250,24 @@ $('delz').onclick=()=>{if(D.placements.some(p=>p.zone===S.zone)){alert('This zon
 $('savez').onclick=async()=>{try{await api('/api/vmzones?op=layout',{store:S.store,zones:S.edit.map(z=>({...z,x:+z.x.toFixed(1),y:+z.y.toFixed(1),w:+z.w.toFixed(1),h:+z.h.toFixed(1)}))});const keep=S.zone;await load(S.store);S.zone=D.zones.some(z=>z.id===keep)?keep:S.zone;render()}catch(e){alert('Not saved: '+e.message)}};
 
 // ---- placements ----
-$('ago').onclick=async()=>{const col=$('ac').value;if(!col){$('amsg').textContent='No collections yet.';return}
-  $('ago').disabled=true;try{await api('/api/vmzones?op=place',{store:S.store,zone:$('az').value,col,start:$('ad').value});const z=$('az').value;await load(S.store);S.zone=z;render();$('amsg').textContent=col+' placed from '+$('ad').value+'.'}catch(e){$('amsg').textContent=e.message}$('ago').disabled=false};
+// An Excel list of items: a SKU column (sized code, e.g. 395078C01-45) and/or a DV column (the design, e.g. 395078C01).
+// A DV counts every size of that design. Without headings the first column is read as SKUs.
+let LIST=null;
+$('amode').onchange=()=>{const l=$('amode').value==='list';$('ac').hidden=l;$('alist').hidden=!l};
+$('afile').onclick=()=>$('listfile').click();
+$('listfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}),g=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,defval:''});
+    let h=-1,si=-1,di=-1;for(let i=0;i<Math.min(10,g.length)&&h<0;i++){const r=g[i].map(x=>String(x).trim().toLowerCase());si=r.findIndex(x=>/^(sku|item|item code|variant)$/.test(x));di=r.findIndex(x=>/^(dv|design|design variant)$/.test(x));if(si>=0||di>=0)h=i}
+    if(h<0){h=-1;si=0}
+    const code=v=>String(v||'').trim().toUpperCase(),skus=[],dvs=[];
+    g.slice(h+1).forEach(r=>{if(si>=0&&code(r[si]))skus.push(code(r[si]));if(di>=0&&code(r[di]))dvs.push(code(r[di]))});
+    if(!skus.length&&!dvs.length)throw new Error('no codes found');
+    LIST={file:f.name,skus:[...new Set(skus)],dvs:[...new Set(dvs)]};if(!$('aname').value)$('aname').value=f.name.replace(/\.[^.]+$/,'').slice(0,60);
+    $('ainfo').textContent=`${LIST.skus.length} SKUs · ${LIST.dvs.length} DVs from ${f.name}`;
+  }catch(x){LIST=null;$('ainfo').textContent='Could not read that file: '+x.message}};
+$('ago').onclick=async()=>{const isList=$('amode').value==='list',col=$('ac').value;
+  if(isList&&!LIST){$('amsg').textContent='Choose the Excel file first.';return}if(!isList&&!col){$('amsg').textContent='No collections yet.';return}
+  $('ago').disabled=true;try{await api('/api/vmzones?op=place',isList?{store:S.store,zone:$('az').value,start:$('ad').value,list:{...LIST,name:$('aname').value}}:{store:S.store,zone:$('az').value,col,start:$('ad').value});if(isList){LIST=null;$('aname').value='';$('ainfo').textContent='Columns: SKU and/or DV (first row = headings).'}const z=$('az').value;await load(S.store);S.zone=z;render();$('amsg').textContent=(D.placements.find(p=>p.zone===z&&!p.end)||{col}).col+' placed from '+$('ad').value+'.'}catch(e){$('amsg').textContent=e.message}$('ago').disabled=false};
 $('pa').onchange=()=>{S.pa=$('pa').value;render()};$('pb').onchange=()=>{S.pb=$('pb').value;render()};$('ctl').onchange=renderCompare;
 
 document.addEventListener('click',async e=>{const t=e.target;
@@ -281,13 +302,19 @@ $('file').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)r
 
 // ---- Excel report ----
 $('xlsx').onclick=()=>{if(!D)return;const m=money(),zs=id=>zoneById(id)||{};
-  const head=['Store','Zone','Location','Collection','Start date','End date','Days with sales','Pieces','Pieces / day','UPT','ATV (EGP)','Share of store sales %','Sales index',...(m?['Sales (EGP)','Sales / day (EGP)','Invoices']:[]),'Sales change vs previous in zone %','Trend-adjusted change %','Placed by'];
+  const head=['Store','Zone','Location','Collection / list','Type','Start date','End date','Days with sales','Pieces','Pieces / day','UPT','ATV (EGP)','Share of store sales %','Sales index',...(m?['Sales (EGP)','Sales / day (EGP)','Invoices']:[]),'Sales change vs previous in zone %','Trend-adjusted change %','Placed by'];
   const rows=D.placements.slice().sort((a,b)=>(zs(a.zone).n-zs(b.zone).n)||a.start.localeCompare(b.start)).map(p=>{const s=p.stats,prev=D.placements.filter(x=>x.zone===p.zone&&x.end===p.start)[0];
-    return[S.store,'Zone #'+zs(p.zone).n,zs(p.zone).where||'',p.col,p.start,p.end?new Date(Date.parse(p.end)-864e5).toISOString().slice(0,10):'(ongoing)',s.days,s.qty,s.qtyDay,s.upt,s.atv,s.share,s.index,...(m?[s.net,s.netDay,s.invoices]:[]),prev&&prev.stats.index?+((s.index/prev.stats.index-1)*100).toFixed(1):'',prev&&prev.stats.share?+((s.share/prev.stats.share-1)*100).toFixed(1):'',p.by||'']});
+    return[S.store,'Zone #'+zs(p.zone).n,zs(p.zone).where||'',p.col,p.list?`Excel list (${p.list.skus.length} SKUs, ${p.list.dvs.length} DVs)`:'Collection',p.start,p.end?new Date(Date.parse(p.end)-864e5).toISOString().slice(0,10):'(ongoing)',s.days,s.qty,s.qtyDay,s.upt,s.atv,s.share,s.index,...(m?[s.net,s.netDay,s.invoices]:[]),prev&&prev.stats.index?+((s.index/prev.stats.index-1)*100).toFixed(1):'',prev&&prev.stats.share?+((s.share/prev.stats.share-1)*100).toFixed(1):'',p.by||'']});
   const daily=[['Store','Zone','Collection','Date','Pieces',m?'Sales (EGP)':'Sales index']];
   D.placements.forEach(p=>p.stats.daily.forEach(d=>daily.push([S.store,'Zone #'+zs(p.zone).n,p.col,d[0],d[1],d[2]])));
   const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([head,...rows]);ws['!cols']=head.map(h=>({wch:Math.max(10,Math.min(26,h.length+2))}));
-  XLSX.utils.book_append_sheet(wb,ws,'Placements');if(!hidden('daily'))XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(daily),'Daily');
+  XLSX.utils.book_append_sheet(wb,ws,'Placements');
+  const items=[['Store','Zone','Placement','Type','Start date','End date','SKU','Item','Pieces',m?'Sales (EGP)':'% of placement sales']];
+  D.placements.forEach(p=>(p.stats.items||[]).forEach(i=>items.push([S.store,'Zone #'+zs(p.zone).n,p.col,p.list?'Excel list':'Collection',p.start,p.end?new Date(Date.parse(p.end)-864e5).toISOString().slice(0,10):'(ongoing)',i[0],i[1],i[2],i[3]])));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(items),'Items');
+  const lists=[['Zone','Placement','Start date','SKU','DV']];D.placements.filter(p=>p.list).forEach(p=>{const n=Math.max(p.list.skus.length,p.list.dvs.length);for(let i=0;i<n;i++)lists.push(['Zone #'+zs(p.zone).n,p.col,p.start,p.list.skus[i]||'',p.list.dvs[i]||''])});
+  if(lists.length>1)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(lists),'Lists');
+  if(!hidden('daily'))XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(daily),'Daily');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['VM Zones report'],['Store',S.store],['Made on',D.today],['Sales data up to',D.lastSalesDay],[],['End date is the last day before the next collection went into the zone.'],['Results are the store’s sales of that collection while it was in the zone.'],['Sales index = the collection’s sales per day as % of an average day of the whole store.'],['Trend-adjusted change compares the share of store sales, so a busy or quiet week for the whole store does not count.']]),'Notes');
   XLSX.writeFile(wb,`VM Zones - ${S.store} - ${D.today}.xlsx`)};
 boot();
