@@ -13,6 +13,7 @@ const ex = require('./_exclude');
 
 const CURRENT = 'stock/current.json';
 const CACHE_INDEX = 'stock/index.json';
+const STATUS = 'stock/status.json'; // last ERP sync, shown on All Uploads
 const MAX_CACHE = 20;
 const MAX_ROWS = 200000;
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -74,6 +75,7 @@ async function erpStock(from, to, fresh) {
   const list = await runReport(process.env.ERP_STOCK_REPORT || 'Branches Stock Balance', { from_date: from, to_date: to });
   const rec = { at: new Date().toISOString(), from, to, rows: fromErp(list) };
   rec.diag = { company: 'Branches Stock Balance', raw: list.length, keys: list[0] ? Object.keys(list[0]).slice(0, 25) : [], kept: rec.rows.length };
+  await store.putJSON(STATUS, { ok: true, at: rec.at, from, to, lines: rec.rows.length, raw: list.length });
   if (!rec.rows.length) return rec; // nothing to cache: show what ERP said instead
   await store.putJSON(key, rec);
   let idx = ((await store.getJSON(CACHE_INDEX)) || []).filter(k => k !== key);
@@ -104,6 +106,12 @@ module.exports = async function handler(req, res) {
     if (!isAdmin) return send(res, 403, { ok: false, error: 'Only the super admin can change stock files.' });
     const op = url.searchParams.get('op');
     if (op === 'delete') { await store.del(CURRENT); return send(res, 200, { ok: true }); }
+    if (op === 'sync') {
+      const t = cairoToday();
+      try { await erpStock(t.slice(0, 8) + '01', t, true); }
+      catch (e) { const st = { ok: false, at: new Date().toISOString(), error: String(e && e.message || e).slice(0, 200) }; await store.putJSON(STATUS, st).catch(() => {}); return send(res, 502, { ok: false, error: st.error, status: st }); }
+      return send(res, 200, { ok: true, status: await store.getJSON(STATUS) });
+    }
     if (op !== 'upload') return send(res, 400, { ok: false, error: 'Unknown action.' });
     let d;
     try {
@@ -120,6 +128,10 @@ module.exports = async function handler(req, res) {
   }
   if (req.method !== 'GET') { res.setHeader('Allow', 'GET, POST'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
 
+  if (url.searchParams.get('op') === 'status') {
+    if (!isAdmin) return send(res, 403, { ok: false, error: 'Only the super admin can see the sync status.' });
+    return send(res, 200, { ok: true, status: await store.getJSON(STATUS) });
+  }
   const today = cairoToday();
   let from = ISO.test(url.searchParams.get('from') || '') ? url.searchParams.get('from') : today.slice(0, 8) + '01';
   let to = ISO.test(url.searchParams.get('to') || '') ? url.searchParams.get('to') : today;
@@ -134,8 +146,10 @@ module.exports = async function handler(req, res) {
       const d = await erpStock(from, to, isAdmin && url.searchParams.get('fresh') === '1');
       return send(res, 200, { ...base, source: 'erp', from, to, fetchedAt: d.at, diag: d.rows.length ? undefined : d.diag, canChangeDates: true, hasExcel: !!snap, rows: scope(d.rows, who) });
     } catch (e) {
+      if (!snap) await store.putJSON(STATUS, { ok: false, at: new Date().toISOString(), error: String(e && e.message || e).slice(0, 200) }).catch(() => {});
       if (!snap) return send(res, 502, { ok: false, error: 'ERP could not give the stock balance: ' + String(e && e.message || e).slice(0, 240) });
       note = 'ERP could not be reached, so this is the last Excel file that was added.';
+      await store.putJSON(STATUS, { ok: false, at: new Date().toISOString(), error: String(e && e.message || e).slice(0, 200) }).catch(() => {});
     }
   }
   if (!snap) return send(res, 404, { ok: false, error: 'no-stock' });

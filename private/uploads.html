@@ -66,10 +66,12 @@ async function load(){
     const j=await r.json();
     if(!r.ok||!j.ok){showErr(j.error||'Could not load.');return}
     showErr('');
-    $('groups').innerHTML=j.groups.map(g=>`<section class="card grp" data-g="${g.id}"><div class="top2"><div><h2>${esc(g.title)}</h2><div class="meta" style="margin:0">${esc(g.hint)}</div></div><button class="btn go" data-add="${g.id}" type="button">Add a file</button></div>
+    $('groups').innerHTML=j.groups.map(g=>`<section class="card grp" data-g="${g.id}"><div class="top2"><div><h2>${esc(g.title)}</h2><div class="meta" style="margin:0">${esc(g.hint)}</div></div><div class="actions">${g.id==='stock'?'<button class="btn go" data-sync="stock" type="button">Sync now</button>':''}<button class="btn go" data-add="${g.id}" type="button">Add a file</button></div></div>
+      ${g.id==='stock'?'<div class="st" id="stockSt"></div>':''}
       <div class="drop" data-drop="${g.id}">Drop a file here to add it to <b>${esc(g.title)}</b></div><div class="st" data-st="${g.id}"></div>
       ${g.items.length?g.items.map(it=>`<div class="item"><div class="nm">${esc(it.name)}<small>${esc(it.detail||'')}</small></div><div class="dt">${it.uploadedAt?'Added '+esc(when(it.uploadedAt)):''}</div><div class="btns"><button class="btn bad" type="button" data-del="${g.id}" data-id="${esc(it.id)}">Remove</button></div></div>`).join(''):'<div class="empty">Nothing uploaded yet.</div>'}
     </section>`).join('');
+    stockStatus();
   }catch(_){showErr('Could not load. Check your connection.')}
 }
 function say(area,t,bad){const s=document.querySelector('[data-st="'+area+'"]');if(s){s.textContent=t;s.style.color=bad?'var(--accent-text)':'var(--ink2)'}}
@@ -99,6 +101,8 @@ async function add(area,file){
 document.addEventListener('click',async e=>{
   const a=e.target.closest('[data-add]');
   if(a){pending=a.dataset.add;const f=$('file');f.accept=ACCEPT[pending]||'';f.click();return}
+  const sy=e.target.closest('[data-sync]');
+  if(sy){sy.disabled=true;const el=$('stockSt');if(el)el.textContent='Syncing stock from ERP… this can take up to a minute.';try{const j=await post('/api/stock?op=sync','{}','application/json');if(el)el.textContent=stockLine(j.status)}catch(x){if(el)el.textContent='Sync failed: '+x.message}sy.disabled=false;return}
   const d=e.target.closest('[data-del]');
   if(d){
     if(!d.dataset.sure){d.dataset.sure='1';d.textContent='Sure? Remove';setTimeout(()=>{if(d.isConnected){delete d.dataset.sure;d.textContent='Remove'}},4000);return}
@@ -109,6 +113,9 @@ document.addEventListener('click',async e=>{
 $('file').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f&&pending)add(pending,f)});
 ['dragover','dragenter'].forEach(ev=>document.addEventListener(ev,e=>{const z=e.target.closest&&e.target.closest('[data-drop]');if(z){e.preventDefault();z.classList.add('on')}}));
 ['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{const z=e.target.closest&&e.target.closest('[data-drop]');if(z){e.preventDefault();z.classList.remove('on');if(ev==='drop'){const f=e.dataTransfer.files[0];if(f)add(z.dataset.drop,f)}}}));
+function stockLine(s){const d=x=>{const p=String(x||'').split('-');return p.length===3?(+p[2])+'/'+(+p[1]):x};
+  return !s?'Not synced yet. Press Sync now, or open the Stock balance page to read from ERP.':s.ok?`Last sync: ${when(s.at)} · ${d(s.from)} to ${d(s.to)} · ${Number(s.lines||0).toLocaleString()} stock lines`:`Last sync failed: ${when(s.at)} · ${s.error||'ERP did not answer'}`}
+async function stockStatus(){const el=$('stockSt');if(!el)return;try{const r=await fetch('/api/stock?op=status',{credentials:'same-origin',cache:'no-store'});const j=await r.json();el.textContent=r.ok&&j.ok?stockLine(j.status):(j.error||'')}catch(_){}}
 async function erpStatus(){try{const r=await fetch('/api/erp',{credentials:'same-origin',cache:'no-store'});const j=await r.json();const s=j.status;$('erpSt').textContent=!r.ok?(j.error||''):s?`Last sync: ${when(s.at)} · ${s.month} · ${s.sales.toLocaleString()} sales lines · ${s.staff.toLocaleString()} staff rows`:'Not synced yet.'}catch(_){}}
 $('erpMonth').value=new Date().toISOString().slice(0,7);
 $('erpGo').addEventListener('click',async()=>{const b=$('erpGo');b.disabled=true;$('erpSt').textContent='Syncing from ERP… this can take up to a minute.';try{await post('/api/erp?month='+encodeURIComponent($('erpMonth').value),'{}','application/json');await load();await erpStatus()}catch(e){$('erpSt').textContent='Sync failed: '+e.message}b.disabled=false});
