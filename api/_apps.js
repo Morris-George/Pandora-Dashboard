@@ -17,17 +17,20 @@ const APPS = [
 ];
 
 function appsFor(f) {
-  return APPS.filter(a => a.allow(f)).map(a => ({ id: a.id, title: a.title, desc: a.desc, href: a.href }));
+  // area managers open the same Dashboards as the super admin, but the server only sends them the stores of their zone
+  const zoneManager = !!f.staff && f.staff.role !== 'admin' && f.staff.role !== 'staff' && f.staff.role !== 'store';
+  return APPS.filter(a => a.allow(f)).map(a => ({ id: a.id, title: a.title, desc: a.id === 'dashboards' && zoneManager ? 'Sales dashboards for the stores in your zone.' : a.desc, href: a.href }));
 }
 
 // Read the cookies of this request: which logins are valid?
 async function sessionFacts(req) {
   const secret = process.env.PANDORA_AUTH_SECRET;
-  // only the super admin has a dashboards session (the old separate dashboards login was removed)
+  // the super admin has a dashboards session (the old separate dashboards login was removed);
+  // area managers open Dashboards with their staff login, limited to their zone by the server (api/uploads.js)
   const tok = readCookie(req, PROJECTS.dashboards.cookie);
   const adminUser = (staffAccounts().find(a => a.role === 'admin') || {}).user;
-  const dash = validSession('dashboards', tok, adminUser, secret);
   const who = await whoami(req);
+  const dash = validSession('dashboards', tok, adminUser, secret) || (!!who && who.kind === 'env' && !!who.info.allow);
   const vm = !!who && who.kind === 'vm';
   const staff = who && !vm ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', who } : null;
   return { dash, staff, vm, vmName: vm ? who.user.name : '' };

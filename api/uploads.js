@@ -35,9 +35,13 @@ module.exports = async function handler(req, res) {
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   const who = await whoami(req);
   if (!who) return send(res, 401, { ok: false, error: 'sign-in-required' });
-  if (!(who.kind === 'env' && who.info.role === 'admin')) return send(res, 403, { ok: false, error: 'Only the super admin can manage uploads.' });
   const url = new URL(req.url, 'https://x.invalid');
   const area = url.searchParams.get('area') || '';
+  const isAdmin = who.kind === 'env' && who.info.role === 'admin';
+  // Area managers may only READ the Dashboards sales lines, and only for the stores of their zone.
+  const zoneRead = req.method === 'GET' && area === 'dashboards' && !!url.searchParams.get('rows') && who.kind === 'env' && !!who.info.allow;
+  if (!isAdmin && !zoneRead) return send(res, 403, { ok: false, error: 'Only the super admin can manage uploads.' });
+  const zoneRx = zoneRead ? who.info.allow.map(s => new RegExp(s, 'i')) : null;
 
   if (req.method === 'GET') {
     const dash = (await store.getJSON(DASH_INDEX)) || [];
@@ -50,6 +54,7 @@ module.exports = async function handler(req, res) {
         const mine = [];
         for (const r of d.rows) {
           if (!ex.filterSales([r]).length) continue; // Laderach is left out
+          if (zoneRx && !zoneRx.some(x => x.test(String(r[7] || '')))) continue; // area manager: only the stores of their zone
           const k = r[1] + '|' + r[5] + '|' + r[0] + '|' + r[2] + '|' + r[3];
           if (seen.has(k)) continue; // the same line already came from an earlier file
           mine.push(r);

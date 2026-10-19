@@ -46,6 +46,8 @@ module.exports = async function handler(req, res) {
     const cookies = [];
     const facts = { dash: false, staff: null };
     cookies.push(cookie('staff', matched.user)); facts.staff = { role: matched.role };
+    // area managers can also open Pandora Dashboards, but only see the stores of their zone (enforced in api/uploads.js)
+    if (matched.role !== 'admin') facts.dash = true;
     // the super admin can open everything, so the super admin also gets the dashboards session
     if (matched.role === 'admin') { cookies.push(cookie('dashboards', matched.user)); facts.dash = true; }
     return finish(cookies, facts);
