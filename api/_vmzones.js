@@ -264,3 +264,5 @@ module.exports = async function handler(req, res) {
   await store.putJSON(key(st), layout);
   return send(res, 200, { ok: true });
 };
+// shared with the zone stock page (api/_zonestock.js)
+Object.assign(module.exports, { load, storeDaily, slug, readJSON, send, today });

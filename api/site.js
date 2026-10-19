@@ -168,6 +168,14 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'vmzones.html', 'text/html; charset=utf-8', withChrome('vm', multi));
   }
 
+  // Zone stock: what is in each VM zone; store managers open it for their own store
+  if (requestedPath === '/vm/stock' || requestedPath === '/vm/stock/' || requestedPath === '/zonestock.html') {
+    const admin = !!facts.staff && facts.staff.role === 'admin';
+    const mgr = !!facts.staff && facts.staff.role === 'store';
+    if (!admin && !mgr && !facts.vm) return toHome();
+    return sendFile(res, 'zonestock.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
+  }
+
   // VM report: the VM account (view only) and the super admin (who feeds it)
   if (requestedPath === '/vm' || requestedPath === '/vm/' || requestedPath === '/vm.html') {
     const admin = !!facts.staff && facts.staff.role === 'admin';

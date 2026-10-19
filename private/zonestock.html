@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head><link rel="icon" type="image/png" href="/favicon.png?v=2">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Zone Stock</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--bg:#FBF6F7;--surface:#FFFFFF;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--accent:#FF93A0;--fill-soft:#FFE4E8;--hover:#FFF1F3;--good:#1F7A4D;--bad:#C2414F;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--bad:#FF8A96;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--bad:#FF8A96;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{word-spacing:.09em;margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding:20px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;justify-content:space-between}
+h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(--ink2);font-size:12.5px}
+.crumb{color:var(--ink2);font-size:12.5px;font-weight:600;text-decoration:none}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}.btn:hover{background:var(--hover)}
+.btn.go{background:var(--accent);border-color:var(--accent);color:#2A1018}.btn.sm{padding:4px 10px;font-size:12.5px}.btn:disabled{opacity:.5;cursor:wait}
+select,input[type=date],input[type=text],input[type=number]{height:38px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;color:var(--ink);background:var(--surface);max-width:100%}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;min-width:0}
+.card h2{margin:0 0 4px;font-size:16px;font-weight:800}.meta{color:var(--ink2);font-size:12.5px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:16px}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.err{background:#FF93A0;color:#2A1018;border-radius:10px;padding:10px 14px;font-weight:600}
+.empty{color:var(--ink2);padding:8px 2px}
+.plan{position:relative;width:100%;aspect-ratio:4/3;border:2px solid var(--line);border-radius:12px;margin-top:10px;overflow:hidden;background:repeating-linear-gradient(45deg,transparent 0 14px,rgba(0,0,0,.02) 14px 28px)}
+.plan img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:.85;pointer-events:none}
+.plan .door{position:absolute;bottom:0;left:40%;width:20%;height:18px;border-top:3px solid var(--ink2);text-align:center;font-size:10px;letter-spacing:.14em;color:var(--ink2);background:var(--bg)}
+.zone{position:absolute;border-radius:10px;border:3px solid var(--line);background:color-mix(in srgb,var(--surface) 88%,transparent);cursor:pointer;padding:5px 7px;display:flex;flex-direction:column;gap:1px;overflow:hidden;font-size:11px}
+.zone b{font-size:13px}.zone.sel{outline:3px solid var(--ink);outline-offset:2px}
+.bschip{margin-top:10px;display:flex;justify-content:space-between;align-items:center;border:2px dashed var(--line);border-radius:12px;padding:8px 12px;cursor:pointer}.bschip.sel{outline:3px solid var(--ink)}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}@media(max-width:700px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px}.kpi .l{font-size:11.5px;color:var(--ink2);font-weight:600}.kpi .v{font-size:22px;font-weight:800}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}th,td{text-align:right;padding:6px 7px;border-top:1px solid var(--line)}th:nth-child(-n+2),td:nth-child(-n+2){text-align:left}th{font-size:11.5px;color:var(--ink2)}
+.tw{overflow-x:auto;max-height:520px;overflow-y:auto}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 10px}.tabs .btn.on{background:var(--accent);border-color:var(--accent);color:#2A1018}
+.note{font-size:12px;color:var(--ink2);margin-top:6px}.ok{color:var(--good);font-weight:700}.bad{color:var(--bad);font-weight:700}
+input.q{width:70px;height:32px}
+.lines div{display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--line);padding:4px 0;font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div><a class="crumb" href="/">&larr; Home</a><h1>Zone Stock</h1><div class="sub">What is in each zone: counts, goods received, moves, and ERP sales taken off every day. Pieces only.</div></div>
+    <div class="row"><label class="sub" for="store">Store</label><select id="store"></select><button class="btn" id="xlsx" type="button">Download Excel</button></div>
+  </header>
+  <div class="err" id="err" hidden></div>
+  <div id="main" hidden>
+    <div class="card" id="start" hidden><h2>Start with a count</h2><div class="meta">Nothing is tracked until each zone has been counted once. Use <b>Count</b> below: type it here, or load the Excel file exported from the Stock Count tool (it keeps the zone of every scan).</div></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="grid" style="margin-top:16px">
+      <div class="card"><h2>Store layout</h2><div class="meta">Pieces in each zone now, and the share sold since its last count. Zones are numbered right to left from the entrance. Click a zone.</div>
+        <div class="plan" id="plan"></div><div class="bschip" id="bschip"></div></div>
+      <div class="card"><h2 id="zt"></h2><div class="meta" id="zm"></div>
+        <div class="row" style="margin-top:8px"><input type="text" id="zq" placeholder="Search SKU or name"></div>
+        <div class="tw" id="zitems"></div></div>
+    </div>
+    <div class="card" style="margin-top:16px"><h2>In the store</h2><div class="tabs" id="tabs"></div><div id="act"></div><div class="note" id="actmsg"></div></div>
+    <div class="grid" style="margin-top:16px">
+      <div class="card"><h2>Movements</h2><div class="meta">Newest first. Whoever saved it (or the super admin) can undo.</div><div class="tw" id="log"></div></div>
+      <div class="card"><h2>Count differences</h2><div class="meta">At each count: what the zone should have had (counted + in − sold − out) against what was found.</div><div class="tw" id="var"></div>
+        <div id="unpl"></div></div>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Math.round(n||0).toLocaleString('en-US');
+let D=null,S={store:'',zone:null,tab:null},planUrl=null,draft=[];
+function showErr(t){$('err').hidden=!t;$('err').textContent=t||''}
+async function api(url,body){const r=await fetch(url,body?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{credentials:'same-origin',cache:'no-store'});if(r.status===401){location.replace('/login.html');throw new Error('sign in')}const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('error '+r.status));return j}
+const zById=id=>D.zones.find(z=>z.id===id);
+const zLabel=id=>{const z=zById(id);return !z?id:z.id==='BS'?'Back stock':'Zone #'+z.n+(z.where?' · '+z.where:'')};
+const zShort=id=>{const z=zById(id);return !z?id:z.id==='BS'?'Back stock':'Zone #'+z.n};
+const st=z=>z.sold+z.pcs?z.sold/(z.sold+z.pcs):0;
+const stColor=z=>z.id==='BS'||!z.counted?'var(--line)':st(z)>=.25?'var(--good)':st(z)>=.1?'#D9A13B':'var(--bad)';
+const zoneOpts=(sel,withBS=true)=>D.zones.filter(z=>withBS||z.id!=='BS').sort((a,b)=>(a.n||99)-(b.n||99)).map(z=>`<option value="${z.id}" ${z.id===sel?'selected':''}>${esc(zLabel(z.id))}</option>`).join('');
+const TABS={distribute:'Distribute back stock',in:'Receive goods',move:'Move between zones',count:'Count'};
+
+async function boot(){
+  try{const j=await api('/api/zonestock');const sel=$('store');
+    if(!j.stores.length){showErr('No sales data yet.');return}
+    let saved='';try{saved=localStorage.getItem('zs.store')||''}catch(_){}
+    sel.innerHTML=j.stores.map(s=>`<option ${s===saved?'selected':''}>${esc(s)}</option>`).join('');
+    sel.disabled=j.stores.length<2;
+    sel.onchange=()=>{try{localStorage.setItem('zs.store',sel.value)}catch(_){}load(sel.value)};
+    load(sel.value);
+  }catch(e){showErr('Could not load: '+e.message)}
+}
+async function load(st,keep){
+  const zone=keep?S.zone:null,tab=keep?S.tab:null;
+  S={store:st,zone,tab};
+  try{D=await api('/api/zonestock?store='+encodeURIComponent(st));showErr('');$('main').hidden=false;
+    if(!S.zone||!zById(S.zone))S.zone=(D.zones.find(z=>z.n===1)||D.zones[0]).id;
+    if(!keep){if(planUrl){URL.revokeObjectURL(planUrl);planUrl=null}
+      if(D.plan){try{const parts=[];for(let i=0;i<D.plan.parts;i++){const r=await fetch(`/api/zonestock?store=${encodeURIComponent(st)}&plan=1&part=${i}`,{credentials:'same-origin'});if(!r.ok)throw 0;parts.push(await r.arrayBuffer())}planUrl=URL.createObjectURL(new Blob(parts))}catch(_){}}}
+    render();
+  }catch(e){showErr('Could not load '+st+': '+e.message)}
+}
+function render(){
+  $('start').hidden=!!D.started;
+  const disp=D.zones.filter(z=>z.id!=='BS'),bs=zById('BS');
+  const pcs=D.zones.reduce((a,z)=>a+z.pcs,0),sold=D.zones.reduce((a,z)=>a+z.sold,0);
+  $('kpis').innerHTML=[[fmt(pcs),'Pieces in the store now'],[fmt(sold),'Sold since the counts'],[fmt(refills().length),'Items to refill from back stock'],[fmt(D.unplaced),'Sold, not in any zone']]
+    .map(k=>`<div class="kpi"><div class="l">${k[1]}</div><div class="v">${k[0]}</div></div>`).join('');
+  const plan=$('plan');plan.innerHTML=(planUrl?`<img class="bg" src="${planUrl}" alt="">`:'')+'<div class="door">ENTRANCE</div>';
+  disp.forEach(z=>{const e=document.createElement('div');e.className='zone'+(S.zone===z.id?' sel':'');
+    Object.assign(e.style,{left:z.x+'%',top:z.y+'%',width:z.w+'%',height:z.h+'%',borderColor:stColor(z)});
+    e.innerHTML=`<b>#${z.n}</b><span>${fmt(z.pcs)} pcs</span>${z.counted?`<span>${Math.round(st(z)*100)}% sold</span>`:'<span class="bad">not counted</span>'}`;
+    e.onclick=()=>{S.zone=z.id;render()};plan.appendChild(e)});
+  const c=$('bschip');c.className='bschip'+(S.zone==='BS'?' sel':'');c.innerHTML=`<b>Back stock</b><span>${fmt(bs.pcs)} pcs${bs.counted?'':' · <span class="bad">not counted</span>'}</span>`;c.onclick=()=>{S.zone='BS';render()};
+  renderZone();renderAct();renderLog();renderVar();
+}
+function renderZone(){
+  const z=zById(S.zone);$('zt').textContent=zLabel(z.id);
+  $('zm').innerHTML=z.counted?`Last count ${z.counted} · ${fmt(z.pcs)} pcs now · ${fmt(z.sold)} sold · ${fmt(z.inQ)} in · ${fmt(z.outQ)} out`:'<span class="bad">Not counted yet.</span> Count it to start tracking.';
+  const q=($('zq').value||'').trim().toLowerCase();
+  const rows=z.items.filter(i=>!q||i[0].toLowerCase().includes(q)||i[1].toLowerCase().includes(q));
+  const bs=new Map(zById('BS').items.map(i=>[i[0],i[5]]));
+  $('zitems').innerHTML=rows.length?`<table><tr><th>SKU</th><th>Item</th><th>Counted</th><th>In</th><th>Sold</th><th>Now</th><th>Sell-through</th></tr>`+
+    rows.map(i=>{const low=z.id!=='BS'&&i[5]<=1&&(bs.get(i[0])||0)>0;return `<tr><td>${esc(i[0])}</td><td>${esc(i[1])}</td><td>${fmt(i[2])}</td><td>${fmt(i[3])}</td><td>${fmt(i[4])}</td><td class="${low?'bad':''}">${fmt(i[5])}${low?' ⚠':''}</td><td>${i[4]+i[5]?Math.round(i[4]/(i[4]+i[5])*100):0}%</td></tr>`}).join('')+'</table><div class="note">Now = counted + in − sold − moved out. ⚠ = low here, back stock has more.</div>'
+    :'<div class="empty">No items in this zone.</div>';
+}
+$('zq').oninput=()=>renderZone();
+function refills(){const bs=new Map(zById('BS').items.map(i=>[i[0],i[5]]));const o=[];D.zones.forEach(z=>{if(z.id==='BS')return;z.items.forEach(i=>{if(i[5]<=1&&i[4]>0&&(bs.get(i[0])||0)>0)o.push([z.id,i[0]])})});return o}
+
+/* ---------- actions ---------- */
+function renderAct(){
+  const tabs=Object.keys(TABS).filter(k=>D.role!=='vm'||k==='distribute'||k==='move');
+  if(!tabs.includes(S.tab))S.tab=D.started?tabs[0]:(tabs.includes('count')?'count':tabs[0]);
+  $('tabs').innerHTML=tabs.map(k=>`<button class="btn sm ${S.tab===k?'on':''}" data-t="${k}">${TABS[k]}</button>`).join('');
+  $('tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.tab=b.dataset.t;draft=[];$('actmsg').textContent='';renderAct()});
+  ({distribute:actDistribute,in:actIn,move:actMove,count:actCount})[S.tab]();
+}
+function msg(t,ok){$('actmsg').innerHTML=`<span class="${ok?'ok':'bad'}">${esc(t)}</span>`}
+async function post(op,body,done){try{await api('/api/zonestock?op='+op,Object.assign({store:S.store,day:$('day')?$('day').value:undefined},body));draft=[];await load(S.store,true);msg(done,true)}catch(e){msg(e.message)}}
+const dayInput=()=>`<label class="sub">Date <input type="date" id="day" value="${D.today}" max="${D.today}"></label>`;
+
+function actDistribute(){
+  const bs=zById('BS').items.filter(i=>i[5]>0),disp=D.zones.filter(z=>z.id!=='BS').sort((a,b)=>a.n-b.n);
+  $('act').innerHTML=`<div class="meta">Share what is in back stock across the zones: type how many pieces go to each zone, then save.</div>`+
+    (bs.length?`<div class="row" style="margin-top:6px"><input type="text" id="dq" placeholder="Search SKU or name">${dayInput()}</div><div class="tw"><table id="dt"><tr><th>SKU</th><th>Item</th><th>Back stock</th>${disp.map(z=>`<th>#${z.n}</th>`).join('')}</tr>`+
+      bs.map(i=>`<tr data-k="${esc((i[0]+' '+i[1]).toLowerCase())}"><td>${esc(i[0])}</td><td>${esc(i[1])}</td><td>${fmt(i[5])}</td>${disp.map(z=>`<td><input class="q" type="number" min="0" max="${i[5]}" data-s="${esc(i[0])}" data-z="${z.id}"></td>`).join('')}</tr>`).join('')+
+      `</table></div><div class="row" style="margin-top:8px"><button class="btn go" id="dgo">Save distribution</button></div>`:'<div class="empty">Back stock is empty. Receive goods into back stock first, or count it.</div>');
+  if(!bs.length)return;
+  $('dq').oninput=e=>{const q=e.target.value.trim().toLowerCase();$('dt').querySelectorAll('tr[data-k]').forEach(r=>r.hidden=!!q&&!r.dataset.k.includes(q))};
+  $('dgo').onclick=()=>{const by=new Map();$('act').querySelectorAll('input[data-s]').forEach(i=>{const q=parseInt(i.value)||0;if(q>0){if(!by.has(i.dataset.z))by.set(i.dataset.z,[]);by.get(i.dataset.z).push([i.dataset.s,q])}});
+    if(!by.size)return msg('Type at least one quantity.');
+    post('move',{note:'Distribute',moves:[...by].map(([to,lines])=>({from:'BS',to,lines}))},'Distribution saved.')};
+}
+/* a small list of lines: type or scan a SKU, or load an Excel sheet with SKU and quantity columns */
+function linesBox(){
+  return `<div class="row" style="margin-top:8px"><input type="text" id="lsku" placeholder="SKU" autocomplete="off" style="width:180px"><input type="number" id="lqty" class="q" value="1" min="1"><button class="btn sm" id="ladd">Add</button>
+    <label class="btn sm">Load Excel<input type="file" id="lfile" accept=".xlsx,.xls,.csv" hidden></label><span class="sub" id="lsum"></span></div><div class="lines tw" id="lines"></div>`;
+}
+function bindLines(){
+  const draw=()=>{$('lines').innerHTML=draft.map((l,k)=>`<div><span>${esc(l[0])} ${l[2]?'· '+esc(l[2]):''}</span><span><b>${fmt(l[1])}</b> <button class="btn sm" data-k="${k}">✕</button></span></div>`).join('');
+    $('lsum').textContent=draft.length?`${draft.length} items · ${fmt(draft.reduce((a,l)=>a+l[1],0))} pcs`:'';
+    $('lines').querySelectorAll('button').forEach(b=>b.onclick=()=>{draft.splice(+b.dataset.k,1);draw()})};
+  const add=(s,q,n)=>{s=String(s||'').trim().toUpperCase();q=Math.round(Number(q));if(!s||!(q>0))return;const f=draft.find(l=>l[0]===s);if(f)f[1]+=q;else draft.push([s,q,n||''])};
+  $('ladd').onclick=()=>{add($('lsku').value,$('lqty').value);$('lsku').value='';$('lqty').value=1;$('lsku').focus();draw()};
+  $('lsku').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('ladd').click()}};
+  $('lfile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const rows=await readSheet(f);let n=0;
+      for(const r of rows){const s=pick(r,/^(matched\s*)?sku$|^item\s*code$|^dv$/i),q=pick(r,/^(qty|quantity|units|pcs|pieces|actual)$/i);if(s&&q!==''&&s!=='Not in ERP'){add(s,q===undefined?1:q,pick(r,/^item\s*name$|^name$/i));n++}}
+      msg(n?n+' lines loaded from '+f.name:'No SKU / quantity columns found in '+f.name,!!n);draw()}catch(er){msg('Could not read the file: '+er.message)}e.target.value=''};
+  draw();
+}
+async function readSheet(f,sheet){const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});const ws=wb.Sheets[sheet&&wb.Sheets[sheet]?sheet:wb.SheetNames[0]];return XLSX.utils.sheet_to_json(ws,{defval:''})}
+function pick(r,rx){for(const k in r)if(rx.test(k.trim()))return r[k];return undefined}
+function actIn(){
+  $('act').innerHTML=`<div class="meta">New goods: pick where they go (usually back stock, then distribute), then add the items. Load the delivery Excel if you have one.</div>
+    <div class="row" style="margin-top:6px"><select id="iz">${zoneOpts('BS')}</select>${dayInput()}</div>${linesBox()}<div class="row" style="margin-top:8px"><button class="btn go" id="igo">Save receipt</button></div>`;
+  bindLines();
+  $('igo').onclick=()=>draft.length?post('in',{zone:$('iz').value,lines:draft},'Receipt saved.'):msg('Add at least one item.');
+}
+function actMove(){
+  $('act').innerHTML=`<div class="meta">Move pieces from one zone to another.</div>
+    <div class="row" style="margin-top:6px"><select id="mf">${zoneOpts(S.zone)}</select><span>→</span><select id="mt">${zoneOpts('BS')}</select>${dayInput()}</div>${linesBox()}<div class="row" style="margin-top:8px"><button class="btn go" id="mgo">Save move</button></div>`;
+  bindLines();
+  $('mgo').onclick=()=>draft.length?post('move',{moves:[{from:$('mf').value,to:$('mt').value,lines:draft}]},'Move saved.'):msg('Add at least one item.');
+}
+/* Count: type one zone, or load the Stock Count tool's export (sheet "Scan log": Zone, Matched SKU, Units, Manual) */
+let imp=null;
+function actCount(){
+  $('act').innerHTML=`<div class="meta">A count replaces what the zone holds. Items not in the count are set to 0 for that zone.</div>
+    <div class="row" style="margin-top:8px"><label class="btn">Load Stock Count export<input type="file" id="cfile" accept=".xlsx" hidden></label><span class="sub">or type one zone:</span></div>
+    <div id="cimp"></div>
+    <div class="row" style="margin-top:10px"><select id="cz">${zoneOpts(S.zone)}</select>${dayInput()}</div>${linesBox()}<div class="row" style="margin-top:8px"><button class="btn go" id="cgo">Save count for this zone</button></div>`;
+  bindLines();
+  $('cgo').onclick=()=>{if(!draft.length&&!confirm('Save this zone as empty (0 pieces)?'))return;post('count',{counts:[{zone:$('cz').value,lines:draft}]},'Count saved.')};
+  $('cfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+    try{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});const ws=wb.Sheets['Scan log'];
+      if(!ws)throw new Error('This file has no "Scan log" sheet. Export it from the Stock Count tool.');
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});const z=new Map();let skipped=0;
+      for(const r of rows){const sku=String(r['Matched SKU']||'').trim().toUpperCase(),lab=String(r['Zone']||'').trim()||'(no zone)',n=Number(r['Units'])||0,re=String(r['Manual']||'')==='Recount';
+        if(!sku||sku==='NOT IN ERP'){skipped+=n;continue}
+        if(!z.has(lab))z.set(lab,new Map());const m=z.get(lab);const c=m.get(sku)||{n:0,re:0,hasRe:false};if(re){c.re+=n;c.hasRe=true}else c.n+=n;m.set(sku,c)}
+      imp={file:f.name,zones:[...z].map(([lab,m])=>({lab,lines:[...m].map(([s,c])=>[s,c.hasRe?c.re:c.n]).filter(l=>l[1]>0),to:guess(lab)})),skipped};
+      drawImp()}catch(er){msg(er.message)}};
+  if(imp)drawImp();
+}
+function guess(lab){const l=lab.toLowerCase();if(/back|stock|store\s*room|مخزن|درج|drawer/.test(l))return 'BS';const m=l.match(/\d+/);if(m){const z=D.zones.find(z=>z.n===+m[0]);if(z)return z.id}return ''}
+function drawImp(){
+  $('cimp').innerHTML=`<div class="card" style="margin-top:8px;padding:12px"><b>${esc(imp.file)}</b><div class="meta">Match each zone name used in the count to a zone here. ${imp.skipped?fmt(imp.skipped)+' scanned pieces not in ERP are left out.':''} A recount replaces the first count of that item.</div>
+    <table><tr><th>Zone in the count</th><th>Items</th><th>Pieces</th><th>Save as</th></tr>${imp.zones.map((z,k)=>`<tr><td>${esc(z.lab)}</td><td>${fmt(z.lines.length)}</td><td>${fmt(z.lines.reduce((a,l)=>a+l[1],0))}</td><td><select data-k="${k}"><option value="">Skip</option>${zoneOpts(z.to)}</select></td></tr>`).join('')}</table>
+    <div class="row" style="margin-top:8px"><button class="btn go" id="igo2">Save these counts</button><button class="btn" id="ix">Cancel</button></div></div>`;
+  $('cimp').querySelectorAll('select').forEach(s=>{if(!imp.zones[s.dataset.k].to)s.value='';s.onchange=()=>{imp.zones[s.dataset.k].to=s.value}});
+  $('ix').onclick=()=>{imp=null;$('cimp').innerHTML=''};
+  $('igo2').onclick=()=>{const by=new Map();imp.zones.forEach(z=>{if(!z.to)return;if(!by.has(z.to))by.set(z.to,new Map());const m=by.get(z.to);z.lines.forEach(([s,q])=>m.set(s,(m.get(s)||0)+q))});
+    if(!by.size)return msg('Pick a zone for at least one row.');
+    post('count',{note:imp.file.slice(0,100),counts:[...by].map(([zone,m])=>({zone,lines:[...m]}))},'Counts saved.').then(()=>{imp=null;$('cimp')&&($('cimp').innerHTML='')})};
+}
+
+/* ---------- movements and differences ---------- */
+const TYPE={count:'Count',in:'Received',move:'Move'};
+function renderLog(){
+  $('log').innerHTML=D.events.length?`<table><tr><th>Date</th><th>What</th><th>Zones</th><th>Pieces</th><th>By</th><th></th></tr>`+D.events.map(e=>`<tr><td>${e.day}</td><td>${TYPE[e.type]}${e.note?' · '+esc(e.note):''}</td><td>${esc(e.zones.map(z=>z.includes('>')?z.split('>').map(zShort).join(' → '):zShort(z)).join(', '))}</td><td>${fmt(e.pcs)}</td><td>${esc(e.by)}</td><td><button class="btn sm" data-u="${e.id}">Undo</button></td></tr>`).join('')+'</table>':'<div class="empty">Nothing yet.</div>';
+  $('log').querySelectorAll('[data-u]').forEach(b=>b.onclick=async()=>{if(!confirm('Undo this movement?'))return;try{await api('/api/zonestock?op=undo',{store:S.store,id:b.dataset.u});load(S.store,true)}catch(e){alert(e.message)}});
+}
+function renderVar(){
+  const v=D.variance.slice().reverse();
+  $('var').innerHTML=v.length?`<table><tr><th>Date</th><th>Zone</th><th>SKU</th><th>Item</th><th>Expected</th><th>Found</th><th>Diff</th></tr>`+v.map(x=>`<tr><td>${x[0]}</td><td>${esc(zShort(x[1]))}</td><td>${esc(x[2])}</td><td>${esc(x[3])}</td><td>${fmt(x[4])}</td><td>${fmt(x[5])}</td><td class="${x[5]<x[4]?'bad':'ok'}">${x[5]-x[4]>0?'+':''}${x[5]-x[4]}</td></tr>`).join('')+'</table>':'<div class="empty">No differences yet. They show from the second count of a zone.</div>';
+  $('unpl').innerHTML=D.unplaced?`<div class="note"><b>${fmt(D.unplaced)} pcs sold that were not in any zone.</b> They were never counted or received here: ${D.unplacedItems.slice(0,8).map(i=>esc(i[0])+' ('+i[2]+')').join(', ')}${D.unplacedItems.length>8?'…':''}</div>`:'';
+}
+
+/* ---------- Excel ---------- */
+$('xlsx').onclick=()=>{if(!D)return;const wb=XLSX.utils.book_new();
+  const add=(n,rows)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{'':'Nothing yet'}]),n);
+  add('Zones',D.zones.map(z=>({'Zone':zLabel(z.id),'Last count':z.counted||'','Pieces now':z.pcs,'Sold since count':z.sold,'In':z.inQ,'Out':z.outQ,'Sell-through %':Math.round(st(z)*100)})));
+  add('Stock',D.zones.flatMap(z=>z.items.map(i=>({'Zone':zShort(z.id),'SKU':i[0],'Item':i[1],'Counted':i[2],'In':i[3],'Sold':i[4],'Now':i[5]}))));
+  add('Movements',D.events.map(e=>({'Date':e.day,'What':TYPE[e.type],'Note':e.note,'Zones':e.zones.map(z=>z.includes('>')?z.split('>').map(zShort).join(' → '):zShort(z)).join(', '),'Pieces':e.pcs,'By':e.by})));
+  add('Differences',D.variance.map(x=>({'Date':x[0],'Zone':zShort(x[1]),'SKU':x[2],'Item':x[3],'Expected':x[4],'Found':x[5],'Diff':x[5]-x[4],'Counted by':x[6]})));
+  add('Not in a zone',D.unplacedItems.map(i=>({'SKU':i[0],'Item':i[1],'Sold pcs':i[2]})));
+  XLSX.writeFile(wb,`Zone Stock ${S.store} ${D.today}.xlsx`)};
+boot();
+</script>
+</body>
+</html>

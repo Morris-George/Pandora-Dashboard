@@ -57,3 +57,12 @@ UPDATE: Stock balance now reads ONLY the Excel file added on All Uploads (Branch
 UPDATE 2 (Oct 19): Stock balance is live from ERPNext again: it runs the Custom Report "Branches Stock Balance" (override the name with env ERP_STOCK_REPORT), no company needed, cached 30 min (24 h for past dates), super admin has "Refresh from ERP". If ERP fails, the last Excel file on All Uploads is shown with a note. New "Balance Qty by item" table on /stock: one column per branch plus the total.
 STOCK SYNC STATUS: All Uploads > Stock balance shows "Last sync" (time, dates, stock lines, or the error) and a "Sync now" button (super admin). Stored in stock/status.json; updated by Sync now and by every ERP read. API: GET /api/stock?op=status, POST /api/stock?op=sync.
 VM LIVE REPORT: the VM page (/vm) has a first card "Sales QTY and Volume by category - Jewelry" read live from the ERP Custom Report of that name (override with env VM_REPORT) for From/To dates the VM picks (quick buttons too). Server cleans it like an upload: only store/category/item/date/quantity columns are kept; money and "volume" columns are dropped. Cached 30 min (24 h for past ranges). The Category explorer follows the same dates. API: GET /api/vm?live=1&from=&to=, GET /api/vm?explorer=live&from=&to=. Excel uploads in All Uploads > VM Report still work as before.
+
+ZONE STOCK (/vm/stock, api/_zonestock.js via /api/zonestock -> /api/vm?zonestock=1)
+- Pieces of each SKU in each VM zone (zones come from VM Zones) plus "Back stock". Stored as events in zs/<store>.json.
+- Count (typed, or the Stock Count tool's Excel export: sheet "Scan log", Zone + Matched SKU + Units; a Recount replaces) sets a zone.
+  Receive adds to a zone, Move / Distribute takes from one zone to another (checked against stock now).
+- ERP sales come off automatically: each piece from the display zone holding the most of that SKU, then back stock;
+  the rest shows as "sold, not in any zone". Returns go to back stock. A day's counts/moves apply before that day's sales.
+- Count differences = expected vs found at each count after the first. Pieces only, never money.
+- Access: super admin + VM (all stores; VM cannot count or receive), store managers (role 'store') their own store only.
