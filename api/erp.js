@@ -140,12 +140,14 @@ async function sync(m) {
     await store.putJSON('data/current.json', { ...sd, ex: (prev && prev.ex) || undefined, uploadedAt });
   }
 
-  const status = { month: key, at: uploadedAt, seconds: Math.round((Date.now() - t0) / 100) / 10, sales: rows.length, staff: sd.rows.length };
+  const status = { month: key, company, at: uploadedAt, seconds: Math.round((Date.now() - t0) / 100) / 10, sales: rows.length, staff: sd.rows.length };
   await store.putJSON(STATUS, status);
   return status;
 }
 
 module.exports = async function handler(req, res) {
+  // /api/stock is rewritten here (vercel.json): the Hobby plan allows 12 functions, so the stock balance lives in _stock.js
+  if (new URL(req.url, 'https://x.invalid').searchParams.get('stock')) return require('./_stock')(req, res);
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   if (!process.env.ERP_URL || !process.env.ERP_API_KEY || !process.env.ERP_API_SECRET) return send(res, 503, { ok: false, error: 'ERP_URL / ERP_API_KEY / ERP_API_SECRET are not set in Vercel.' });
   const url = new URL(req.url, 'https://x.invalid');
@@ -165,3 +167,4 @@ module.exports = async function handler(req, res) {
     return send(res, 502, { ok: false, error: String(e && e.message || e).slice(0, 300) });
   }
 };
+module.exports.runReport = runReport;

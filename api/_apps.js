@@ -13,6 +13,7 @@ const APPS = [
   { id: 'storeteam', title: 'My store team', desc: 'How each sales person in your store is doing.', href: '/staff', allow: f => !!f.staff && f.staff.role === 'store' },
   { id: 'mysales2', title: 'My sales', desc: 'What you sold, what sells best for you, and tips to improve.', href: '/staff/me', allow: f => !!f.staff && f.staff.role === 'store' },
   { id: 'vmzones', title: 'VM Zones', desc: 'Which collection is in which zone of each store, and its effect on sales.', href: '/vm/zones', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') },
+  { id: 'stock', title: 'Stock balance', desc: 'How many pieces are in stock in each category, store by store, for the dates you pick.', href: '/stock', allow: f => !!f.vm || (!!f.staff && f.staff.role !== 'staff' && f.staff.role !== 'store') },
   { id: 'vm', title: 'VM Report', desc: 'The Visual Merchandiser report.', href: '/vm', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') }
 ];
 

@@ -70,6 +70,7 @@ module.exports = async function handler(req, res) {
 
     const cur = await store.getJSON('data/current.json');
     const vm = (await store.getJSON('vm/index.json')) || [];
+    const stock = await store.getJSON('stock/current.json');
     return send(res, 200, {
       ok: true,
       groups: [
@@ -78,7 +79,9 @@ module.exports = async function handler(req, res) {
         { id: 'staff', title: 'Staff Performance', hint: 'The monthly Query Report (.xlsx or .csv). One month at a time: a new file replaces the old one.',
           items: cur ? [{ id: 'current', name: cur.file || 'Query Report', detail: [cur.period, (cur.rows || []).length + ' rows'].filter(Boolean).join(' · '), uploadedAt: cur.uploadedAt || '' }] : [] },
         { id: 'vm', title: 'VM Report', hint: 'Quantity reports for the Visual Merchandiser (.xlsx). Amounts are removed automatically.',
-          items: vm.map(r => ({ id: r.id, name: r.title, detail: [r.period, r.rows + ' lines'].filter(Boolean).join(' · '), uploadedAt: r.uploadedAt })) }
+          items: vm.map(r => ({ id: r.id, name: r.title, detail: [r.period, r.rows + ' lines'].filter(Boolean).join(' · '), uploadedAt: r.uploadedAt })) },
+        { id: 'stock', title: 'Stock balance', hint: 'The Stock Balance report from ERP (.xlsx). Used when ERP is not connected; with ERP the Stock balance page reads live stock for any dates. One file at a time: a new file replaces the old one.',
+          items: stock ? [{ id: 'current', name: stock.file || 'Stock balance', detail: (stock.rows || []).length.toLocaleString('en-US') + ' lines · as of ' + (stock.asOf || ''), uploadedAt: stock.uploadedAt || '' }] : [] }
       ]
     });
   }
@@ -93,6 +96,8 @@ module.exports = async function handler(req, res) {
         await store.putJSON(DASH_INDEX, ((await store.getJSON(DASH_INDEX)) || []).filter(f => f.id !== id));
       } else if (a === 'staff') {
         await store.del('data/current.json');
+      } else if (a === 'stock') {
+        await store.del('stock/current.json');
       } else if (a === 'vm') {
         await store.del('vm/r/' + id + '.json');
         await store.putJSON('vm/index.json', ((await store.getJSON('vm/index.json')) || []).filter(r => r.id !== id));
