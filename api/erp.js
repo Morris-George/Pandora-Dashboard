@@ -66,8 +66,11 @@ async function runReportRaw(name, filters) {
   });
   if (!r.ok) {
     let why = '';
+    const txt = await r.text().catch(() => '');
+    console.error('ERP_REPORT_ERROR', name, r.status, JSON.stringify(filters), txt.slice(0, 1500));
     try { // ERPNext explains itself in the body: pull out the short reason
-      const e = await r.json();
+      const e = JSON.parse(txt);
+      if (!why && e.exc) { try { const t = JSON.parse(e.exc); why = String(t[t.length - 1] || '').trim().split('\n').filter(Boolean).pop() || ''; } catch (_) {} }
       if (e._server_messages) { const ms = JSON.parse(e._server_messages); why = ms.map(x => { try { return JSON.parse(x).message; } catch (_) { return String(x); } }).join(' ').replace(/<[^>]+>/g, ' '); }
       if (!why && e.exception) why = String(e.exception);
       if (!why && Array.isArray(e.exc_type ? [e.exc_type] : [])) why = String(e.exc_type || '');
