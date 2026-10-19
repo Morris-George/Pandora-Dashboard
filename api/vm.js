@@ -4,6 +4,8 @@
 //   GET  /api/vm?id=<id>    one report
 //   GET  /api/vm?explorer=<id>  Category explorer data for that report's dates: quantities only, never any amount
 //   GET  /api/vm?stores=1&from=YYYY-MM-DD&to=YYYY-MM-DD  UPT and ATV for each store (and all stores) in those dates; nothing about people
+//   GET  /api/vm?live=1&from=&to=   the ERP report "Sales QTY and Volume by category-Jewelry" for chosen dates: quantities only, amounts and volumes are dropped on the server
+//   GET  /api/vm?explorer=live&from=&to=  Category explorer for chosen dates
 //   POST /api/vm            super admin: upload {file, sheets:[{name, columns, rows}]} (gzip or plain JSON)
 //   POST /api/vm?op=delete  super admin: {id}
 const zlib = require('zlib');
@@ -18,7 +20,7 @@ const MAX_REPORTS = 60;
 
 // Keep a column only if it is clearly about where / what / when / how many, and never if it is about money.
 const ALLOW = /(^|[^a-z])(store|branch|location|shop|year|month|date|day|week|category|group|class|brand|collection|item|product|sku|code|description|name|material|colou?r|size|qty|quantity|units|pieces|pcs)([^a-z]|$)/i;
-const DENY = /(amount|value|revenue|price|vat|tax|cost|margin|profit|gross|net|discount|atv|trx|transaction|invoice|egp|incl|excl|sales\s*(?:amt|amount|value)|turnover|payment)/i;
+const DENY = /(amount|value|revenue|price|vat|tax|cost|margin|profit|gross|net|discount|atv|trx|transaction|invoice|egp|incl|excl|sales\s*(?:amt|amount|value)|turnover|payment|volume)/i;
 const keepColumn = name => ALLOW.test(String(name)) && !DENY.test(String(name));
 
 function send(res, code, obj) {
@@ -49,6 +51,34 @@ function describe(file) {
   }
   n = n.replace(/[_]+/g, ' ').replace(/\s*-\s*/g, ' – ').replace(/\s+/g, ' ').replace(/(\s*[–-]\s*)+$/, '').trim();
   return { title: n.slice(0, 80) || 'VM report', period, from, to };
+}
+
+// ---- live from ERP: the Custom Report for chosen dates, cleaned exactly like an upload (no money ever leaves) ----
+const LIVE_REPORT = () => process.env.VM_REPORT || 'Sales QTY and Volume by category-Jewelry';
+const cairoToday = () => new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+async function liveReport(from, to) {
+  const key = 'vm/live/' + from + '_' + to + '.json';
+  const ttl = to < cairoToday() ? 24 * 3600 * 1000 : 30 * 60 * 1000; // a past range does not change
+  const c = await store.getJSON(key);
+  if (c && Array.isArray(c.rows) && c.rows.length && Date.now() - Date.parse(c.at) < ttl) return c;
+  if (!process.env.ERP_URL || !process.env.ERP_API_KEY || !process.env.ERP_API_SECRET) throw new Error('ERP is not connected for this site yet.');
+  const raw = await require('./erp').runReportRaw(LIVE_REPORT(), { from_date: from, to_date: to });
+  const cols = raw.columns.map(x => typeof x === 'string' ? { label: x.split(':')[0], field: x.split(':')[0] } : { label: String(x.label || x.fieldname || ''), field: String(x.fieldname || x.label || '') });
+  const objs = raw.rows.some(r => r && !Array.isArray(r));
+  const keepIdx = [], names = [];
+  cols.forEach((x, i) => {
+    if (DENY.test(x.label) || DENY.test(x.field)) return; // money and volume columns never get past here
+    names.push(ALLOW.test(x.label) || !ALLOW.test(x.field) ? x.label : x.field); keepIdx.push(i);
+  });
+  const rows = raw.rows.filter(r => r && (objs ? !Array.isArray(r) : Array.isArray(r))).map(r => keepIdx.map(i => objs ? r[cols[i].field] : r[i]));
+  const clean = cleanSheet({ name: 'live', columns: names, rows });
+  const rec = { ok: true, live: true, title: 'Sales QTY and Volume by category - Jewelry', from, to, kind: clean.kind, columns: clean.columns, rows: clean.rows, at: new Date().toISOString(), raw: raw.rows.length };
+  if (!rec.rows.length) return rec; // never cache an empty answer
+  await store.putJSON(key, rec);
+  let idx = ((await store.getJSON('vm/live/index.json')) || []).filter(k => k !== key); idx.push(key);
+  while (idx.length > 30) await store.del(idx.shift());
+  await store.putJSON('vm/live/index.json', idx);
+  return rec;
 }
 
 function cleanSheet(sh) {
@@ -144,6 +174,16 @@ module.exports = async function handler(req, res) {
       const from = url.searchParams.get('from'), to = url.searchParams.get('to');
       if ((from && !ok(from)) || (to && !ok(to))) return send(res, 400, { ok: false, error: 'Bad dates.' });
       return send(res, 200, await storeAverages(from || '0000-01-01', to || '9999-12-31'));
+    }
+    const okDay = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
+    if (url.searchParams.get('live') || url.searchParams.get('explorer') === 'live') {
+      const t = cairoToday();
+      const from = url.searchParams.get('from') || t.slice(0, 8) + '01', to = url.searchParams.get('to') || t;
+      if (!okDay(from) || !okDay(to) || from > to) return send(res, 400, { ok: false, error: 'Please choose valid dates.' });
+      if ((Date.parse(to) - Date.parse(from)) / 86400000 > 400) return send(res, 400, { ok: false, error: 'Please choose a range of 13 months or less.' });
+      if (url.searchParams.get('explorer') === 'live') return send(res, 200, await explorerData({ from, to }));
+      try { return send(res, 200, await liveReport(from, to)); }
+      catch (e) { return send(res, 502, { ok: false, error: 'ERP could not give this report: ' + String(e && e.message || e).slice(0, 200) }); }
     }
     const xid = url.searchParams.get('explorer');
     if (xid) {

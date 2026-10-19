@@ -51,6 +51,24 @@ async function runReport(name, filters) {
   return rows.filter(x => x && !Array.isArray(x));
 }
 
+// Like runReport, but also returns the report's columns (label + fieldname) so a caller can decide which columns to keep.
+async function runReportRaw(name, filters) {
+  const base = String(process.env.ERP_URL || '').replace(/\/+$/, '');
+  const r = await fetch(base + '/api/method/frappe.desk.query_report.run', {
+    method: 'POST',
+    headers: {
+      Authorization: `token ${process.env.ERP_API_KEY}:${process.env.ERP_API_SECRET}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify({ report_name: name, filters, are_default_filters: false }),
+    signal: AbortSignal.timeout(50000)
+  });
+  if (!r.ok) throw new Error(`ERP answered ${r.status} for "${name}"` + (r.status === 401 || r.status === 403 ? ' (check ERP_API_KEY / ERP_API_SECRET and the user roles)' : r.status === 404 ? ' (is the report name right?)' : ''));
+  const m = (await r.json()).message || {};
+  return { columns: m.columns || [], rows: m.result || [] };
+}
+
 // Same cleaning as PandoraParse.dash (private/parsers.js), from ERP fieldnames instead of Excel headers.
 function category(group) {
   const low = group.toLowerCase();
@@ -168,3 +186,4 @@ module.exports = async function handler(req, res) {
   }
 };
 module.exports.runReport = runReport;
+module.exports.runReportRaw = runReportRaw;
