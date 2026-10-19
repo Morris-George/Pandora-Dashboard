@@ -152,6 +152,13 @@ body.clean .nav, body.clean .hideclean, body.clean .hint, body.clean details.tbl
 body.clean .exit{display:block}
 @media (max-width:620px){.brow{grid-template-columns:96px 1fr 88px}.heroleft .big{font-size:32px}}
 @media (prefers-reduced-motion:no-preference){.brow .fill{transition:width .3s ease}}
+
+.datebar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+.datebar .dlbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);font-weight:700}
+.datebar .dlab{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink2)}
+.datebar input[type=date]{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:6px 10px;font:inherit}
+.datebar .dmsg{color:var(--ink2);font-size:12.5px;font-weight:600}
+body.clean .datebar{display:none}
 </style>
 </head>
 <body>
@@ -168,6 +175,12 @@ body.clean .exit{display:block}
       <button class="btn hideclean" id="cleanBtn" type="button">Screenshot view</button>
     </div>
   </header>
+  <section class="datebar hideclean" id="dateRow" hidden aria-label="Dates">
+    <span class="dlbl">Dates</span>
+    <label class="dlab">From <input type="date" id="dFrom"></label><label class="dlab">To <input type="date" id="dTo"></label>
+    <button class="btn" type="button" id="dLast7">Last 7 days</button><button class="btn" type="button" id="dAll">Whole period</button>
+    <span class="dmsg" id="dMsg" role="status"></span>
+  </section>
   <button class="btn exit" id="exitClean" type="button">Exit screenshot view</button>
   <main id="out" style="display:flex;flex-direction:column;gap:16px;width:100%"></main>
 </div>
@@ -214,7 +227,7 @@ const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','De
 function safeGet(k){for(const name of ['localStorage','sessionStorage']){try{const v=JSON.parse(window[name].getItem(k));if(v)return v}catch(e){}}return null}
 const dayDate=n=>new Date(n*86400000); // UTC based
 const dayLabel=n=>{const d=dayDate(n);return d.getUTCDate()+' '+MON[d.getUTCMonth()]};
-const personUrl=(store,name)=>'/staff/person?store='+encodeURIComponent(store)+'&name='+encodeURIComponent(name);
+const personUrl=(store,name)=>'/staff/person?store='+encodeURIComponent(store)+'&name='+encodeURIComponent(name)+(dateQs()?'&'+dateQs():'');
 
 /* ---------- data ---------- */
 function prep(d){
@@ -264,6 +277,10 @@ function bars(rows){ // rows: {name,val,txt,sub,tip,top}
 /* ---------- page ---------- */
 const q=new URLSearchParams(location.search);
 let wantStore=q.get('store')||'', wantName=q.get('name')||'';
+const ISOD=/^\d{4}-\d{2}-\d{2}$/;
+let wantFrom=ISOD.test(q.get('from')||'')?q.get('from'):'', wantTo=ISOD.test(q.get('to')||'')?q.get('to'):'';
+let DAYMIN='',DAYMAX='';
+const dateQs=()=>[wantFrom?'from='+encodeURIComponent(wantFrom):'',wantTo?'to='+encodeURIComponent(wantTo):''].filter(Boolean).join('&');
 let SERVER=false;
 let CTX=null;
 
@@ -280,7 +297,7 @@ function benchPool(o){
 }
 async function loadData(){
   try{
-    const r=await fetch('/api/data'+(ROLE.role==='staff'?'?me=1':''),{credentials:'same-origin',cache:'no-store'});
+    const r=await fetch('/api/data?'+[ROLE.role==='staff'?'me=1':'',dateQs()].filter(Boolean).join('&'),{credentials:'same-origin',cache:'no-store'});
     if(r.status===401){location.replace('/login.html');return{err:'Signing you in…'}}
     if(r.ok){SERVER=true;return{d:await r.json()}}
     if(r.status===404) return{err:'No sales have been published yet'};
@@ -290,18 +307,48 @@ async function loadData(){
   return d&&d.rows&&d.people?{d}:{err:'No sales file is loaded in this browser'};
 }
 
+/* ---- dates: change the period of the performance shown (the server only sends rows inside the range) ---- */
+const rangeOn=()=>!!(wantFrom||wantTo);
+function syncDates(d){
+  const row=$('dateRow'); if(!row) return;
+  if(!SERVER||!d.dayMin||!d.dayMax){row.hidden=true;return}
+  row.hidden=false; DAYMIN=d.dayMin; DAYMAX=d.dayMax;
+  $('dFrom').min=$('dTo').min=d.dayMin; $('dFrom').max=$('dTo').max=d.dayMax;
+  $('dFrom').value=d.from||d.dayMin; $('dTo').value=d.to||d.dayMax;
+  $('dMsg').textContent='';
+  const back=document.querySelector('a.nav'); if(back) back.href='/staff'+(dateQs()?'?'+dateQs():'');
+}
+async function applyDates(from,to){
+  if(!DAYMIN) return;
+  if(from&&to&&from>to){const x=from;from=to;to=x}
+  if(from<=DAYMIN) from=''; if(to>=DAYMAX) to='';
+  wantFrom=from; wantTo=to;
+  try{history.replaceState(null,'','?'+[ 'store='+encodeURIComponent(wantStore),'name='+encodeURIComponent(wantName),dateQs() ].filter(Boolean).join('&'))}catch(_){}
+  $('dMsg').textContent='Loading…';
+  await build();
+}
+$('dFrom').addEventListener('change',()=>{if($('dFrom').value&&$('dTo').value) applyDates($('dFrom').value,$('dTo').value)});
+$('dTo').addEventListener('change',()=>{if($('dFrom').value&&$('dTo').value) applyDates($('dFrom').value,$('dTo').value)});
+$('dAll').addEventListener('click',()=>applyDates('',''));
+$('dLast7').addEventListener('click',()=>{
+  if(!DAYMAX) return;
+  const t=new Date(DAYMAX+'T00:00:00Z'); t.setUTCDate(t.getUTCDate()-6);
+  applyDates(t.toISOString().slice(0,10),DAYMAX);
+});
+
 async function build(){
   const L=await loadData();
   if(L.err) return noData(L.err);
+  syncDates(L.d);
   const d=scopeData(L.d);
   let si,pi,M,S,C,P,X,mates,storeCount,rankStore;
   if(ROLE.role==='staff'){
     // a sales person only receives their own rows, plus store and company totals worked out on the server
     document.body.classList.add('solo');
-    if(!d.rows.length||!d.bench) return noData('No sales found for you in this month’s file yet');
+    if(!d.rows.length||!d.bench) return noData(rangeOn()?'No sales found for you between these dates':'No sales found for you in this month’s file yet');
     wantStore=d.self.store; wantName=d.self.name; si=0; pi=0;
     X=prep(d); P=X.P;
-    if(!P[0].inv.size) return noData('No sales found for you this month yet');
+    if(!P[0].inv.size) return noData(rangeOn()?'No sales found for you between these dates':'No sales found for you this month yet');
     M=pool(P,[0]); S=benchPool(d.bench.store); C=benchPool(d.bench.company);
     mates=[0]; storeCount=d.bench.storeCount; rankStore=d.bench.rankStore;
   } else {
@@ -309,7 +356,7 @@ async function build(){
     pi=d.people.findIndex(p=>p[0]===wantName&&d.stores[p[1]]===wantStore);
     if(si<0||pi<0) return noData('That sales person was not found in the loaded file');
     X=prep(d); P=X.P;
-    if(!P[pi].inv.size) return noData('No sales for this person this month');
+    if(!P[pi].inv.size) return noData(rangeOn()?'No sales for this person between these dates':'No sales for this person this month');
     const storeIdx=d.people.map((p,i)=>i).filter(i=>d.people[i][1]===si);
     const allIdx=d.people.map((p,i)=>i);
     M=pool(P,[pi]); S=pool(P,storeIdx); C=pool(P,allIdx);

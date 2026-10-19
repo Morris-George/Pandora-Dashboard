@@ -57,6 +57,9 @@ header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chip[aria-pressed="true"]{color:#2A1018}}
 .search{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:7px 12px;min-width:180px;flex:1;max-width:280px}
 details.groups summary{cursor:pointer;color:var(--ink2);font-weight:600}
+.dlab{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink2)}
+.dlab input[type=date]{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:6px 10px;font:inherit}
+.dmsg{color:var(--ink2);font-size:12.5px;font-weight:600}
 details.groups .glist{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:4px 16px;margin-top:10px;max-height:220px;overflow:auto}
 details.groups label{display:flex;gap:8px;align-items:center;font-size:12.5px;min-width:0}
 details.groups label span{overflow-wrap:anywhere}
@@ -131,6 +134,10 @@ body.clean .exit{display:block}
 
   <section class="controls" aria-label="Filters">
     <div class="row"><span class="lbl">Store</span><div class="chips" id="storeChips"></div></div>
+    <div class="row" id="dateRow" hidden><span class="lbl">Dates</span>
+      <label class="dlab">From <input type="date" id="dFrom"></label><label class="dlab">To <input type="date" id="dTo"></label>
+      <div class="chips"><button class="chip" type="button" id="dLast7">Last 7 days</button><button class="chip" type="button" id="dAll">Whole period</button></div>
+      <span class="dmsg" id="dMsg" role="status"></span></div>
     <div class="row"><span class="lbl">Rank by</span><div class="chips" id="metricChips"></div>
       <input class="search" id="q" type="search" placeholder="Search sales person or store" aria-label="Search sales person or store"></div>
     <details class="groups"><summary>Item groups counted <span id="gcount"></span></summary><div class="glist" id="glist"></div></details>
@@ -166,7 +173,9 @@ const METRICS=[
  {id:'upt',label:'UPT',f:p=>p.upt},
  {id:'atv',label:'ATV',f:p=>p.atv}];
 const DEFAULT_EX=/packaging|services|jewellery boxes/i;
-const st={data:null,store:'ALL',metric:'incl',q:'',ex:new Set()};
+const st={data:null,store:'ALL',metric:'incl',q:'',ex:new Set(),from:'',to:''};
+{const u=new URLSearchParams(location.search);st.from=/^\d{4}-\d{2}-\d{2}$/.test(u.get('from')||'')?u.get('from'):'';st.to=/^\d{4}-\d{2}-\d{2}$/.test(u.get('to')||'')?u.get('to'):''}
+const dateQs=()=>[st.from?'from='+encodeURIComponent(st.from):'',st.to?'to='+encodeURIComponent(st.to):''].filter(Boolean).join('&');
 let SERVER=null; // true: the sales data lives on the server; false: this browser only (old way)
 const $=id=>document.getElementById(id);
 const nf0=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
@@ -202,7 +211,7 @@ function setData(d){
     if(known?saved.ex.includes(g):DEFAULT_EX.test(g)) st.ex.add(g);
   });
   if(st.store!=='ALL' && !d.stores.includes(st.store)) st.store='ALL';
-  buildControls(); render();
+  buildControls(); syncDates(d); render();
 }
 let exTimer=null;
 function persistEx(){
@@ -258,7 +267,7 @@ function kpis(t,label){
    <div class="kpi"><div class="k">UPT</div><div class="v num">${nf2.format(t.upt)}</div></div>
    <div class="kpi"><div class="k">ATV</div><div class="v num">${egp(t.atv)}</div></div></div>`;
 }
-const pUrl=(store,name)=>'/staff/person?store='+encodeURIComponent(store)+'&name='+encodeURIComponent(name);
+const pUrl=(store,name)=>'/staff/person?store='+encodeURIComponent(store)+'&name='+encodeURIComponent(name)+(dateQs()?'&'+dateQs():'');
 function head(m){
   const cols=[['inv','# Invoices'],['qty','Total Qty'],['amt','Before VAT'],['incl','Incl. VAT'],['upt','UPT'],['atv','ATV']];
   return cols.map(c=>`<th class="${c[0]===m?'sortcol':''}">${c[1]}</th>`).join('');
@@ -403,10 +412,44 @@ function showEmpty(){
     ?'<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">No sales published yet</h2>The super admin has not published this month\u2019s sales file yet.</section>'
     :'<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">Load this month\u2019s query</h2>The super admin adds the Query Report on the <b>All Uploads</b> page. The store and sales person summary appears here once it is added.</section>';
 }
+/* ---- dates: everyone can change the dates of the performance they see (the server only sends rows inside the range) ---- */
+function syncDates(d){
+  const row=$('dateRow'); if(!row) return;
+  if(!SERVER||!d.dayMin||!d.dayMax){row.hidden=true;return}
+  row.hidden=false;
+  st.dayMin=d.dayMin; st.dayMax=d.dayMax;
+  $('dFrom').min=$('dTo').min=d.dayMin; $('dFrom').max=$('dTo').max=d.dayMax;
+  $('dFrom').value=d.from||d.dayMin; $('dTo').value=d.to||d.dayMax;
+  $('dMsg').textContent='';
+}
+async function applyDates(from,to){
+  const msg=$('dMsg'); if(!st.dayMin) return;
+  if(from&&to&&from>to){const x=from;from=to;to=x}
+  if(from<=st.dayMin) from=''; if(to>=st.dayMax) to='';
+  const qs=[from?'from='+encodeURIComponent(from):'',to?'to='+encodeURIComponent(to):''].filter(Boolean).join('&');
+  msg.textContent='Loading…';
+  try{
+    const r=await fetch('/api/data'+(qs?'?'+qs:''),{credentials:'same-origin',cache:'no-store'});
+    if(r.status===401){location.replace('/login.html');return}
+    if(!r.ok){msg.textContent='Could not load those dates.';return}
+    const j=await r.json();
+    if(!scopeData(j).rows.length){msg.textContent='No sales between these dates. Pick other dates.';return}
+    st.from=from; st.to=to; setData(j);
+    try{history.replaceState(null,'',location.pathname+(qs?'?'+qs:''))}catch(_){}
+  }catch(e){msg.textContent='No connection.'}
+}
+$('dFrom').addEventListener('change',()=>{if($('dFrom').value&&$('dTo').value) applyDates($('dFrom').value,$('dTo').value)});
+$('dTo').addEventListener('change',()=>{if($('dFrom').value&&$('dTo').value) applyDates($('dFrom').value,$('dTo').value)});
+$('dAll').addEventListener('click',()=>applyDates('',''));
+$('dLast7').addEventListener('click',()=>{
+  if(!st.dayMax) return;
+  const t=new Date(st.dayMax+'T00:00:00Z'); t.setUTCDate(t.getUTCDate()-6);
+  applyDates(t.toISOString().slice(0,10),st.dayMax);
+});
 async function boot(){
   applyRoleUI();
   try{
-    const r=await fetch('/api/data',{credentials:'same-origin',cache:'no-store'});
+    const r=await fetch('/api/data'+(dateQs()?'?'+dateQs():''),{credentials:'same-origin',cache:'no-store'});
     if(r.status===401){location.replace('/login.html');return}
     if(r.ok){SERVER=true; applyRoleUI(); setData(await r.json()); return}
     if(r.status===404){SERVER=true; applyRoleUI(); showEmpty(); return}

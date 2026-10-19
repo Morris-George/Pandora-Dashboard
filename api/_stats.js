@@ -37,7 +37,7 @@ function rankOf(P, idxs, me) {
 function staffView(d, store, name) {
   const si = d.stores.indexOf(store);
   const pi = d.people.findIndex(p => p[0] === name && d.stores[p[1]] === store);
-  const base = { file: d.file, period: d.period, groups: d.groups, ex: d.ex || [], self: { store, name } };
+  const base = { file: d.file, period: d.period, groups: d.groups, ex: d.ex || [], self: { store, name }, dayMin: d.dayMin || null, dayMax: d.dayMax || null, from: d.from || null, to: d.to || null };
   if (si < 0 || pi < 0) return { ...base, stores: [store], people: [], items: [], rows: [], bench: null };
   const P = aggregate(d);
   const all = d.people.map((_, i) => i), mates = all.filter(i => d.people[i][1] === si);

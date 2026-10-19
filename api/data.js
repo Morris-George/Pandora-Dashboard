@@ -38,6 +38,25 @@ function scopeByStores(d, allowRegexes) {
   return { ...d, stores, people, rows };
 }
 
+// Date range: rows carry the day number (days since 1970-01-01) in column 5. ?from=YYYY-MM-DD&to=YYYY-MM-DD keeps only those days,
+// for everyone (super admin, area managers, store managers, sales people). dayMin/dayMax always describe the whole file.
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+const isoToDay = s => ISO.test(String(s || '')) ? Math.round(Date.parse(s + 'T00:00:00Z') / 86400000) : null;
+const dayToIso = n => new Date(n * 86400000).toISOString().slice(0, 10);
+const fmtDay = (n, year) => new Date(n * 86400000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC', ...(year ? { year: 'numeric' } : {}) });
+function byDate(d, from, to) {
+  let mn = null, mx = null;
+  for (const r of d.rows) if (r[5] != null) { if (mn === null || r[5] < mn) mn = r[5]; if (mx === null || r[5] > mx) mx = r[5]; }
+  const meta = { dayMin: mn === null ? null : dayToIso(mn), dayMax: mx === null ? null : dayToIso(mx) };
+  let f = isoToDay(from), t = isoToDay(to);
+  if (f === null && t === null) return { ...d, ...meta };
+  if (f !== null && t !== null && f > t) { const x = f; f = t; t = x; }
+  const rows = d.rows.filter(r => r[5] != null && (f === null || r[5] >= f) && (t === null || r[5] <= t));
+  const a = f !== null ? f : mn, b = t !== null ? t : mx;
+  const period = a !== null && b !== null ? fmtDay(a) + ' – ' + fmtDay(b, true) : d.period;
+  return { ...d, rows, period, ...meta, from: f === null ? null : dayToIso(f), to: t === null ? null : dayToIso(t) };
+}
+
 function validate(d) {
   if (!d || typeof d !== 'object') return 'The file is not valid.';
   for (const k of ['stores', 'people', 'groups', 'rows']) if (!Array.isArray(d[k])) return 'The file is missing ' + k + '.';
@@ -59,9 +78,11 @@ module.exports = async function handler(req, res) {
   if (who.kind === 'vm') return send(res, 403, { ok: false, error: 'No access.' });
 
   if (req.method === 'GET') {
-    const d = ex.filterStaff(await store.getJSON(FILE));
-    if (!d) return send(res, 404, { ok: false, error: 'no-data' });
-    const wantMe = new URL(req.url, 'https://x.invalid').searchParams.get('me');
+    const q = new URL(req.url, 'https://x.invalid').searchParams;
+    const d0 = ex.filterStaff(await store.getJSON(FILE));
+    if (!d0) return send(res, 404, { ok: false, error: 'no-data' });
+    const d = byDate(d0, q.get('from'), q.get('to'));
+    const wantMe = q.get('me');
     if (who.kind === 'staff' && (wantMe || !who.info.storeManager)) return send(res, 200, staffView(d, who.user.store, who.user.name)); // own page only
     if (who.info.allow) return send(res, 200, scopeByStores(d, who.info.allow)); // area managers: their zone; store managers: their own store
     return send(res, 200, d);
