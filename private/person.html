@@ -441,6 +441,17 @@ function render(){
   h+=`<section class="card"><div class="cardhead"><h2>Tips for you</h2><span class="meta">Green = you do this well. Pink = a chance to grow</span></div><div class="coach">`+
     T.map(t=>`<article class="tip ${t.cls}"><div class="tag"><span class="ic" aria-hidden="true">${t.ic}</span></div><h3>${esc(t.h)}</h3><p>${esc(t.p)}</p>${t.est?`<div class="est num">${esc(t.est)}<small>A rough guess, not a target.</small></div>`:''}</article>`).join('')+`</div></section>`;
 
+  // collections (Pandora families): "Pandora Moments - Charm" -> Moments
+  {
+    const famOf=g=>String(g||'').split(' - ')[0].replace(/^\s*Pandora\s+/i,'').trim()||'Other';
+    const fam=new Map(), get=f=>{let o=fam.get(f);if(!o){o={name:f,a:0,q:0,b:0};fam.set(f,o)}return o};
+    let myTot=0,bTot=0;
+    G.forEach(x=>{const o=get(famOf(x.name));o.a+=x.a;o.q+=x.q;myTot+=x.a});
+    B.gamt.forEach((v,g)=>{const o=get(famOf(d.groups[g]));o.b+=v;bTot+=v});
+    const F=[...fam.values()].filter(o=>o.a>0).sort((a,b)=>b.a-a.a);
+    if(F.length) h+=`<section class="card"><div class="cardhead"><h2>Your collections</h2><span class="meta">Moments, Timeless, Essence and the other families</span></div>`+
+      bars(F.slice(0,8).map((o,i)=>({name:o.name,val:o.a,txt:'EGP '+nf0.format(o.a),sub:nf0.format(o.a/myTot*100)+'% of your sales'+(bTot?' · '+bname+': '+nf0.format(o.b/bTot*100)+'%':''),top:i===0,tip:`${o.name} · EGP ${nf0.format(o.a)} · ${nf0.format(o.q)} pieces`})))+`</section>`;
+  }
   h+=`<div class="grid2">`;
   const shown=G.slice(0,6);
   h+=`<section class="card"><div class="cardhead"><h2>What you sell most</h2><span class="meta">By sales</span></div>`+

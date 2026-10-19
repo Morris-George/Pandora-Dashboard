@@ -101,6 +101,8 @@ a.pname{color:inherit;text-decoration:none}
 a.pname:hover{color:var(--accent-text);text-decoration:underline}
 a.pname::after{content:' \203A';color:var(--accent-text);font-weight:800}
 tr.person[data-href]{cursor:pointer}
+tr.famrow{cursor:pointer}tr.famrow:hover td{background:var(--hover)}tr.famrow[aria-selected="true"] td{background:var(--fill-soft)}
+.famdetail{margin-top:14px}.famdetail h3{margin:0 0 8px;font-size:15px;font-weight:800}
 .pill{display:inline-block;margin-left:8px;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--accent);color:#2A1018;vertical-align:1px}
 :root[data-theme="dark"] .pill{color:#2A1018}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pill{color:#2A1018}}
@@ -173,7 +175,7 @@ const METRICS=[
  {id:'upt',label:'UPT',f:p=>p.upt},
  {id:'atv',label:'ATV',f:p=>p.atv}];
 const DEFAULT_EX=/packaging|services|jewellery boxes/i;
-const st={data:null,store:'ALL',metric:'incl',q:'',ex:new Set(),from:'',to:''};
+const st={data:null,store:'ALL',metric:'incl',q:'',ex:new Set(),from:'',to:'',fam:''};
 {const u=new URLSearchParams(location.search);st.from=/^\d{4}-\d{2}-\d{2}$/.test(u.get('from')||'')?u.get('from'):'';st.to=/^\d{4}-\d{2}-\d{2}$/.test(u.get('to')||'')?u.get('to'):''}
 const dateQs=()=>[st.from?'from='+encodeURIComponent(st.from):'',st.to?'to='+encodeURIComponent(st.to):''].filter(Boolean).join('&');
 let SERVER=null; // true: the sales data lives on the server; false: this browser only (old way)
@@ -277,6 +279,36 @@ function cells(p,m,max,extraShare){
   return mk('inv',nf0.format(p.inv))+mk('qty',nf0.format(p.qty))+mk('amt',egp(p.amt))+mk('incl',egp(p.incl))+mk('upt',nf2.format(p.upt))+mk('atv',egp(p.atv));
 }
 
+/* ---- collections (Pandora families): "Pandora Moments - Charm" -> Moments. Follows the store chip, the dates and the item groups counted. ---- */
+const famOf=g=>String(g||'').split(' - ')[0].replace(/^\s*Pandora\s+/i,'').trim()||'Other';
+function collectionsHtml(){
+  const d=st.data; if(!d||!d.rows.length) return '';
+  const exIdx=new Set(); d.groups.forEach((g,i)=>{if(st.ex.has(g))exIdx.add(i)});
+  const fg=d.groups.map(famOf), F=new Map(); let tot=0;
+  for(const r of d.rows){ // [person, group, invoice, qty, amt]
+    if(exIdx.has(r[1])) continue;
+    const pi=r[0], si=d.people[pi][1];
+    if(st.store!=='ALL'&&d.stores[si]!==st.store) continue;
+    let f=F.get(fg[r[1]]); if(!f) F.set(fg[r[1]],f={name:fg[r[1]],amt:0,qty:0,inv:new Set(),p:new Map()});
+    f.amt+=r[4]; f.qty+=r[3]; f.inv.add(r[2]); tot+=r[4];
+    const o=f.p.get(pi)||{amt:0,qty:0}; o.amt+=r[4]; o.qty+=r[3]; f.p.set(pi,o);
+  }
+  const list=[...F.values()].filter(f=>f.amt!==0||f.qty!==0).sort((a,b)=>b.amt-a.amt);
+  if(!list.length) return '';
+  if(st.fam&&!F.has(st.fam)) st.fam='';
+  const max=Math.max(...list.map(f=>f.amt),1), all=st.store==='ALL';
+  const top=f=>{let b=null;for(const [pi,o] of f.p) if(!b||o.amt>b.o.amt) b={pi,o};return b?d.people[b.pi][0]+(all?' · '+d.stores[d.people[b.pi][1]]:''):'—'};
+  const rows=list.map(f=>`<tr class="famrow" data-fam="${esc(f.name)}" aria-selected="${f.name===st.fam}"><td class="l"><b>${esc(f.name)}</b></td><td class="cellbar"><i style="width:${Math.max(2,f.amt/max*100)}%"></i><span class="num">${egp(f.amt*VAT)}</span></td><td class="num">${tot?nf0.format(f.amt/tot*100):0}%</td><td class="num">${nf0.format(f.qty)}</td><td class="num">${nf0.format(f.inv.size)}</td><td class="l">${esc(top(f))}</td></tr>`).join('');
+  let detail='';
+  if(st.fam){
+    const f=F.get(st.fam), ppl=[...f.p.entries()].map(([pi,o])=>({pi,...o})).sort((a,b)=>b.amt-a.amt).slice(0,10);
+    detail=`<div class="famdetail"><h3>Who sells the most ${esc(f.name)}</h3><div class="tablewrap"><table><thead><tr><th>#</th><th class="l">Sales person</th><th class="l">Store</th><th>Qty</th><th>Incl. VAT</th><th>Share of ${esc(f.name)}</th></tr></thead><tbody>`+
+      ppl.map((p,i)=>{const s=d.stores[d.people[p.pi][1]],n=d.people[p.pi][0];return `<tr class="person" data-href="${esc(pUrl(s,n))}"><td class="rank num">${i+1}</td><td class="l"><a class="pname" href="${esc(pUrl(s,n))}">${esc(n)}</a></td><td class="l">${esc(s)}</td><td class="num">${nf0.format(p.qty)}</td><td class="num">${egp(p.amt*VAT)}</td><td class="num">${f.amt?nf0.format(p.amt/f.amt*100):0}%</td></tr>`}).join('')+`</tbody></table></div></div>`;
+  }
+  return `<section class="card" id="collections"><div class="cardhead"><h2>Sales by collection</h2><span class="meta">${all?'All stores':esc(st.store)} · ${esc(st.data.period||'')} · select a collection to see who sells it most</span></div>
+    <div class="tablewrap"><table><thead><tr><th class="l">Collection</th><th>Incl. VAT</th><th>Share</th><th>Qty</th><th>Invoices</th><th class="l">Top seller</th></tr></thead><tbody>${rows}</tbody></table></div>${detail}</section>`;
+}
+
 function render(){
   if(!st.data) return;
   const {stores,grand}=compute(), m=METRICS.find(x=>x.id===st.metric), mf=m.f;
@@ -323,6 +355,7 @@ function render(){
         <tr class="grand"><td></td><td class="l">${esc(s.name)} total</td>${cells(s.tot,'',0)}<td class="num">100%</td></tr></tbody></table></div></section>`;
     }
   }
+  html+=collectionsHtml();
   $('out').innerHTML=html;fitNums();
   document.querySelectorAll('#storeChips .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.store===st.store));
   document.querySelectorAll('#metricChips .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.metric===st.metric));
@@ -392,6 +425,8 @@ function applyRoleUI(){
 /* ---- events ---- */
 $('file').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);e.target.value=''};
 document.addEventListener('click',e=>{
+  const fr=e.target.closest('tr[data-fam]');
+  if(fr&&!getSelection().toString()){st.fam=st.fam===fr.dataset.fam?'':fr.dataset.fam;render();return}
   const row=e.target.closest('tr.person[data-href]');
   if(row&&!e.target.closest('a')&&!getSelection().toString()){location.href=row.dataset.href;return}
   const c=e.target.closest('[data-store]'),m=e.target.closest('[data-metric]'),p=e.target.closest('[data-pick]');
