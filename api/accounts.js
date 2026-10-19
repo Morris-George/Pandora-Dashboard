@@ -69,6 +69,16 @@ module.exports = async function handler(req, res) {
       await users.setEnvOff(mgr.user, b.action === 'envdisable');
       return send(res, 200, { ok: true });
     }
+    if (b.action === 'envsetpassword') {
+      // area managers (Joseph, Hassan): the new password is saved here and replaces the one in Vercel settings. The super admin's own password is not changed here.
+      const mgr = staffAccounts().find(a => a.role !== 'admin' && normName(a.user) === normName(b.username));
+      if (!mgr) return send(res, 404, { ok: false, error: 'Account not found.' });
+      let pw = String(b.password || '').trim();
+      if (!pw) { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'; pw = Array.from({ length: 10 }, () => A[crypto.randomInt(A.length)]).join(''); }
+      if (pw.length < 8 || pw.length > 100) return send(res, 400, { ok: false, error: 'Password must be at least 8 characters.' });
+      await users.setEnvPw(mgr.user, pw);
+      return send(res, 200, { ok: true, password: pw });
+    }
     const username = users.normUsername(b.username);
     const rec = username ? await users.getUser(username) : null;
     if (!rec) return send(res, 404, { ok: false, error: 'Account not found.' });

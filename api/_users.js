@@ -98,4 +98,10 @@ const offKey = user => 'users/off/' + nameKey('env', String(user || '').replace(
 const envOff = async user => !!(await store.getJSON(offKey(user)));
 const setEnvOff = async (user, off) => off ? store.putJSON(offKey(user), { username: String(user), at: new Date().toISOString() }) : store.del(offKey(user));
 
-module.exports = { envOff, setEnvOff, normUsername, normalizePhone, hashPassword, verifyPassword, burn, getUser, putUser, listUsers, createUser, createSpecial, removeUser, linkUser, phoneTaken, getJSONByPhone, claimOwner, nameKey };
+// A password the super admin set here for an area manager. When one exists it replaces the password kept in Vercel settings
+// (the old Vercel password stops working). Stored as a one-way hash, like every other account.
+const envPwKey = user => 'users/envpw/' + nameKey('envpw', String(user || '').replace(/\s+/g, ' ').trim().toLowerCase()) + '.json';
+const getEnvPw = async user => { const r = await store.getJSON(envPwKey(user)); return r && r.pass ? r : null; };
+const setEnvPw = async (user, password) => store.putJSON(envPwKey(user), { username: String(user), pass: hashPassword(password), at: new Date().toISOString() });
+
+module.exports = { getEnvPw, setEnvPw, envOff, setEnvOff, normUsername, normalizePhone, hashPassword, verifyPassword, burn, getUser, putUser, listUsers, createUser, createSpecial, removeUser, linkUser, phoneTaken, getJSONByPhone, claimOwner, nameKey };

@@ -77,7 +77,7 @@ async function load(){
     $('splist').innerHTML=sp.length?sp.map(a=>`<div class="row"><div class="who">${esc(a.name)}<small>${a.role==='vm'?'VM Report':esc(a.role)}${a.status==='active'?'':' · switched off'}</small></div><div>${esc(a.username)}</div><div></div><div class="btns"><button class="btn" data-act="pw" data-user="${esc(a.username)}">Change password</button><button class="btn" data-act="${a.status==='active'?'disable':'enable'}" data-user="${esc(a.username)}">${a.status==='active'?'Switch off':'Switch on'}</button><button class="btn bad" data-act="remove" data-user="${esc(a.username)}">Remove</button></div></div>`).join(''):'<div class="empty">None yet.</div>';
     const fill=(id,list,btns,none,pick)=>{$(id).innerHTML=list.length?list.map(a=>rowHtml(a,btns,pick)).join(''):`<div class="empty">${none}</div>`};
     fill('pending',by('pending'),[['approve','Approve','go'],['pw','Change password'],['remove','Reject','bad']],'Nobody is waiting.',true);
-    const adm=(j.admins||[]).map(a=>`<div class="row"><div class="who">${esc(a.username)}<small>${esc(a.label)} · ${a.off?'switched off':'active'}</small></div><div></div><div></div><div class="btns">${a.role==='admin'?'':`<button class="btn" data-act="${a.off?'envenable':'envdisable'}" data-user="${esc(a.username)}">${a.off?'Switch on':'Switch off'}</button>`}</div></div>`).join('');
+    const adm=(j.admins||[]).map(a=>`<div class="row"><div class="who">${esc(a.username)}<small>${esc(a.label)} · ${a.off?'switched off':'active'}</small></div><div></div><div></div><div class="btns">${a.role==='admin'?'':`<button class="btn" data-act="pw" data-env="1" data-user="${esc(a.username)}">Change password</button><button class="btn" data-act="${a.off?'envenable':'envdisable'}" data-user="${esc(a.username)}">${a.off?'Switch on':'Switch off'}</button>`}</div></div>`).join('');
     const spa=sp.filter(a=>a.status==='active').map(a=>`<div class="row"><div class="who">${esc(a.name)}<small>${a.role==='vm'?'VM Report':esc(a.role)} · active</small></div><div>${esc(a.username)}</div><div></div><div class="btns"><button class="btn" data-act="pw" data-user="${esc(a.username)}">Change password</button><button class="btn" data-act="disable" data-user="${esc(a.username)}">Switch off</button><button class="btn bad" data-act="remove" data-user="${esc(a.username)}">Remove</button></div></div>`).join('');
     fill('active',by('active'),a=>[['link','Save link'],a.storeManager?['setmanager','Remove store manager','','data-on="0"']:['setmanager','Make store manager','','data-on="1"'],['pw','Change password'],['disable','Switch off'],['remove','Remove','bad']],'No sales people yet.',true);
     $('active').insertAdjacentHTML('afterbegin',adm+spa);
@@ -92,7 +92,7 @@ document.addEventListener('click',async e=>{
       if(!r.ok||!j.ok){m.textContent='Not created: '+(j.error||'that did not work.')}
       else{m.textContent='Created. Username: '+j.username+'  ·  Password: the one you typed.';$('spname').value=$('spuser').value=$('sppw').value=''}}catch(_){$('spmsg').textContent='Not created: no connection.'}
     b.disabled=false;load();return}
-  if(b.dataset.act==='pw'){openPw(b.dataset.user);return}
+  if(b.dataset.act==='pw'){openPw(b.dataset.user,b.dataset.env==='1');return}
   if(b.dataset.act==='pwsave'){savePw(b);return}
   if(b.dataset.act==='pwclose'){$('pwbox').hidden=true;load();return}
   if(b.dataset.act==='pwcopy'){try{await navigator.clipboard.writeText(b.dataset.pw);b.textContent='Copied'}catch(_){b.textContent='Select and copy it'}return}
@@ -109,11 +109,11 @@ document.addEventListener('click',async e=>{
   try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)showErr(j.error||'That did not work.')}catch(_){showErr('No connection.')}
   load();
 });
-function openPw(u){showErr('');const box=$('pwbox');box.hidden=false;
-  box.innerHTML=`<h2>New password for ${esc(u)}</h2><div class="note">Passwords are kept scrambled for safety, so an old password cannot be shown. Type a new one (at least 8 characters), or leave it empty and one will be made for you. Then give it to the person.</div><div class="pwline"><input id="pwin" maxlength="100" placeholder="Leave empty to make one" autocomplete="off"><button class="btn go" data-act="pwsave" data-user="${esc(u)}">Save new password</button><button class="btn" data-act="pwclose">Cancel</button></div>`;
+function openPw(u,env){showErr('');const box=$('pwbox');box.hidden=false;
+  box.innerHTML=`<h2>New password for ${esc(u)}</h2><div class="note">Passwords are kept scrambled for safety, so an old password cannot be shown. Type a new one (at least 8 characters), or leave it empty and one will be made for you. Then give it to the person.</div><div class="pwline"><input id="pwin" maxlength="100" placeholder="Leave empty to make one" autocomplete="off"><button class="btn go" data-act="pwsave" data-env="${env?1:0}" data-user="${esc(u)}">Save new password</button><button class="btn" data-act="pwclose">Cancel</button></div>`;
   box.scrollIntoView({block:'center'});$('pwin').focus()}
 async function savePw(b){b.disabled=true;
-  try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'setpassword',username:b.dataset.user,password:$('pwin').value})});const j=await r.json().catch(()=>({}));
+  try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:b.dataset.env==='1'?'envsetpassword':'setpassword',username:b.dataset.user,password:$('pwin').value})});const j=await r.json().catch(()=>({}));
     if(!r.ok||!j.ok){showErr(j.error||'That did not work.');b.disabled=false;return}
     $('pwbox').innerHTML=`<h2>Password changed for ${esc(b.dataset.user)}</h2><div class="note">Copy it now and send it to the person. It will not be shown again.</div><div class="pwline"><span class="big">${esc(j.password)}</span><button class="btn go" data-act="pwcopy" data-pw="${esc(j.password)}">Copy</button><button class="btn" data-act="pwclose">Done</button></div>`;
   }catch(_){showErr('No connection.');b.disabled=false}}

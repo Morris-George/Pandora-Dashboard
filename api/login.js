@@ -21,7 +21,9 @@ module.exports = async function handler(req, res) {
   let matched = null;
   for (const a of accounts) {
     const okUser = safeEqual(typedUser, normName(a.user));
-    const okPass = safeEqual(typedPass, a.pass);
+    // an area manager whose password was changed by the super admin signs in with the new one; the Vercel password no longer works
+    const custom = okUser && a.role !== 'admin' && store.configured() ? await users.getEnvPw(a.user) : null;
+    const okPass = custom ? users.verifyPassword(typedPass, custom.pass) : safeEqual(typedPass, a.pass);
     if (okUser && okPass && !matched) matched = a;
   }
 
