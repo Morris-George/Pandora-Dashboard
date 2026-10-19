@@ -127,7 +127,7 @@ async function load(){
     const r=await fetch('/api/stock?from='+encodeURIComponent(S.from)+'&to='+encodeURIComponent(S.to),{credentials:'same-origin',cache:'no-store'});
     if(r.status===401){location.replace('/login.html');return}
     const j=await r.json().catch(()=>({}));
-    if(r.status===404){empty('No stock balance yet','The super admin adds the Stock Balance report on the All Uploads page, or connects ERP so it can be read live.');return}
+    if(r.status===404){empty('No stock balance yet','The super admin adds the Stock Balance report (.xlsx) on the All Uploads page.');return}
     if(!r.ok||!j.ok){$('dMsg').textContent='';showErr(j.error||'Could not load the stock balance.');return}
     S.meta=j;S.rows=j.rows||[];
     if(j.source==='erp'){S.from=j.from;S.to=j.to}
@@ -141,7 +141,7 @@ function syncDates(){
   $('dFrom').value=S.from;$('dTo').value=S.to;$('dFrom').disabled=$('dTo').disabled=!can;
   document.querySelectorAll('[data-preset]').forEach(b=>b.hidden=!can);
   $('refresh').hidden=!(can&&m.isAdmin);
-  $('dMsg').textContent=can?'':'This is an Excel file, so the dates are fixed. Connect ERP to change them.'+(m.note?' '+m.note:'');
+  $('dMsg').textContent=can?'':'The dates are those of the uploaded Excel file.'+(m.note?' '+m.note:'');
   $('subtitle').textContent=can?'Closing balance on '+nice(S.to)+' · movement since '+nice(S.from):'From the Excel file “'+(m.file||'Stock balance')+'” · added '+nice(String(m.uploadedAt||m.asOf||'').slice(0,10));
   $('foot').textContent=can?('Read from ERP'+(m.fetchedAt?' at '+new Date(m.fetchedAt).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'')+'. In = pieces that came into the location, Out = pieces that left it (sales and transfers).'):'Pieces and values are as in the uploaded file.';
 }

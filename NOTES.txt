@@ -53,3 +53,4 @@ STOCK BALANCE (page /stock, API /api/stock -> api/erp.js?stock=1, helper api/_st
 - The company comes from ERP_COMPANY or from the last "Sync from ERP" (erp/status.json). If neither exists, press Sync from ERP once.
 - Excel path: All Uploads > Stock balance (the ERP Stock Balance report .xlsx). It is one fixed snapshot, so dates are locked. Used when ERP is off or fails.
 - Categories are derived on the page from item group + item name (same rules as the dashboards); can also group by Collection. Click a row for locations and top items.
+UPDATE: Stock balance now reads ONLY the Excel file added on All Uploads (Branches_Stock_Balance_All-Niche report). ERP is not used for stock; dates are those of that file.

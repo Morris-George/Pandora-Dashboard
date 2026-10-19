@@ -123,7 +123,7 @@ module.exports = async function handler(req, res) {
   if (from > to) { const x = from; from = to; to = x; }
   const base = { ok: true, canSeeValue: who.kind !== 'vm', isAdmin, today };
   const snap = await store.getJSON(CURRENT);
-  const erpOn = !!(process.env.ERP_URL && process.env.ERP_API_KEY && process.env.ERP_API_SECRET);
+  const erpOn = false; // the stock page uses only the Excel file added on All Uploads (ERP is not read for stock)
   let note = '';
 
   if (erpOn) {
