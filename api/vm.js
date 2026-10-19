@@ -62,7 +62,16 @@ async function liveReport(from, to) {
   const c = await store.getJSON(key);
   if (c && Array.isArray(c.rows) && c.rows.length && Date.now() - Date.parse(c.at) < ttl) return c;
   if (!process.env.ERP_URL || !process.env.ERP_API_KEY || !process.env.ERP_API_SECRET) throw new Error('ERP is not connected for this site yet.');
-  const raw = await require('./erp').runReportRaw(LIVE_REPORT(), { from_date: from, to_date: to });
+  const erp = require('./erp');
+  let raw;
+  try { raw = await erp.runReportRaw(LIVE_REPORT(), { from_date: from, to_date: to }); }
+  catch (e1) { // some reports also want the company: try again with it, and say what both attempts said if that fails too
+    const status = await store.getJSON('erp/status.json');
+    const company = process.env.ERP_COMPANY || (status && status.company) || '';
+    if (!company) throw e1;
+    try { raw = await erp.runReportRaw(LIVE_REPORT(), { from_date: from, to_date: to, company }); }
+    catch (e2) { throw new Error(String(e1.message) + ' | with company "' + company + '": ' + String(e2.message)); }
+  }
   const cols = raw.columns.map(x => typeof x === 'string' ? { label: x.split(':')[0], field: x.split(':')[0] } : { label: String(x.label || x.fieldname || ''), field: String(x.fieldname || x.label || '') });
   const objs = raw.rows.some(r => r && !Array.isArray(r));
   const keepIdx = [], names = [];
@@ -183,7 +192,7 @@ module.exports = async function handler(req, res) {
       if ((Date.parse(to) - Date.parse(from)) / 86400000 > 400) return send(res, 400, { ok: false, error: 'Please choose a range of 13 months or less.' });
       if (url.searchParams.get('explorer') === 'live') return send(res, 200, await explorerData({ from, to }));
       try { return send(res, 200, await liveReport(from, to)); }
-      catch (e) { return send(res, 502, { ok: false, error: 'ERP could not give this report: ' + String(e && e.message || e).slice(0, 200) }); }
+      catch (e) { return send(res, 502, { ok: false, error: 'ERP could not give this report: ' + String(e && e.message || e).slice(0, 520) }); }
     }
     const xid = url.searchParams.get('explorer');
     if (xid) {

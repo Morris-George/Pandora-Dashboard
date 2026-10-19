@@ -64,7 +64,17 @@ async function runReportRaw(name, filters) {
     body: JSON.stringify({ report_name: name, filters, are_default_filters: false }),
     signal: AbortSignal.timeout(50000)
   });
-  if (!r.ok) throw new Error(`ERP answered ${r.status} for "${name}"` + (r.status === 401 || r.status === 403 ? ' (check ERP_API_KEY / ERP_API_SECRET and the user roles)' : r.status === 404 ? ' (is the report name right?)' : ''));
+  if (!r.ok) {
+    let why = '';
+    try { // ERPNext explains itself in the body: pull out the short reason
+      const e = await r.json();
+      if (e._server_messages) { const ms = JSON.parse(e._server_messages); why = ms.map(x => { try { return JSON.parse(x).message; } catch (_) { return String(x); } }).join(' ').replace(/<[^>]+>/g, ' '); }
+      if (!why && e.exception) why = String(e.exception);
+      if (!why && Array.isArray(e.exc_type ? [e.exc_type] : [])) why = String(e.exc_type || '');
+    } catch (_) {}
+    why = why.replace(/\s+/g, ' ').trim().slice(0, 240);
+    throw new Error(`ERP answered ${r.status} for "${name}"` + (r.status === 401 || r.status === 403 ? ' (check ERP_API_KEY / ERP_API_SECRET and the user roles)' : r.status === 404 ? ' (is the report name right?)' : '') + (why ? ': ' + why : ''));
+  }
   const m = (await r.json()).message || {};
   return { columns: m.columns || [], rows: m.result || [] };
 }
