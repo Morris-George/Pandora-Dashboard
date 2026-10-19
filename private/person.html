@@ -104,6 +104,8 @@ header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-start;just
 .brow .val{text-align:right;font-weight:700;white-space:nowrap;min-width:0}
 .brow .val small{display:block;font-weight:500;color:var(--ink2);font-size:11px;margin-top:-2px}
 .brow.me .n{color:var(--accent-text);font-weight:800}
+.colbars .brow{grid-template-columns:minmax(90px,150px) 1fr minmax(128px,auto)}
+@media (max-width:620px){.colbars .brow{grid-template-columns:84px 1fr minmax(112px,auto)}}
 .bullet .track{background:color-mix(in srgb,var(--mute) 35%,transparent);border-radius:0 5px 5px 0}
 .bullet .fill{background:var(--accent)}
 .bullet .mark{position:absolute;top:-3px;bottom:-3px;width:3px;margin-left:-1.5px;background:var(--ink);border-radius:2px}
@@ -449,8 +451,8 @@ function render(){
     G.forEach(x=>{const o=get(famOf(x.name));o.a+=x.a;o.q+=x.q;myTot+=x.a});
     B.gamt.forEach((v,g)=>{const o=get(famOf(d.groups[g]));o.b+=v;bTot+=v});
     const F=[...fam.values()].filter(o=>o.a>0).sort((a,b)=>b.a-a.a);
-    if(F.length) h+=`<section class="card"><div class="cardhead"><h2>Your collections</h2><span class="meta">Moments, Timeless, Essence and the other families</span></div>`+
-      bars(F.slice(0,8).map((o,i)=>({name:o.name,val:o.a,txt:'EGP '+nf0.format(o.a),sub:nf0.format(o.a/myTot*100)+'% of your sales'+(bTot?' · '+bname+': '+nf0.format(o.b/bTot*100)+'%':''),top:i===0,tip:`${o.name} · EGP ${nf0.format(o.a)} · ${nf0.format(o.q)} pieces`})))+`</section>`;
+    if(F.length) h+=`<section class="card"><div class="cardhead"><h2>Your collections</h2><span class="meta">Share of your sales, next to your ${bname==='all stores'?'all-store':'store'} share</span></div><div class="colbars">`+
+      bars(F.slice(0,8).map((o,i)=>({name:o.name,val:o.a,txt:'EGP '+nf0.format(o.a),sub:nf0.format(o.a/myTot*100)+'%'+(bTot?' · '+(bname==='all stores'?'all':'store')+' '+nf0.format(o.b/bTot*100)+'%':''),top:i===0,tip:`${o.name} · EGP ${nf0.format(o.a)} · ${nf0.format(o.q)} pieces`})))+`</div></section>`;
   }
   h+=`<div class="grid2">`;
   const shown=G.slice(0,6);
