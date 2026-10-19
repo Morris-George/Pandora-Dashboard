@@ -115,6 +115,18 @@ module.exports = async function handler(req, res) {
       await users.putUser(rec);
       return send(res, 200, { ok: true });
     }
+    if (b.action === 'setstore') {
+      // The super admin moves a sales person to another store. A linked account keeps its sales person name, so the link moves with it.
+      if (rec.role) return send(res, 400, { ok: false, error: 'That account type has no store.' });
+      const newStore = String(b.store || '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
+      if (newStore.length < 2) return send(res, 400, { ok: false, error: 'Choose the store.' });
+      if (rec.linked) {
+        const owner = await users.claimOwner(newStore, rec.name);
+        if (owner && owner !== rec.username) return send(res, 400, { ok: false, error: rec.name + ' in ' + newStore + ' already has an account (' + owner + ').' });
+        await users.linkUser(rec, newStore, rec.name);
+      } else { rec.store = newStore; await users.putUser(rec); }
+      return send(res, 200, { ok: true, hasData: !!data, found: people.some(p => p.store === newStore && p.name === rec.name) });
+    }
     if (b.action === 'setpassword') {
       // Passwords are stored as one-way hashes, so nobody can look one up. The admin sets a new one (typed, or made here) and gives it to the person.
       let pw = String(b.password || '').trim();
