@@ -36,4 +36,12 @@ async function sessionFacts(req) {
   return { dash, staff, vm, vmName: vm ? who.user.name : '' };
 }
 
-module.exports = { APPS, appsFor, sessionFacts };
+// Area managers are greeted by first name ("Hello Joseph"). Everyone else keeps their usual label.
+function greetName(f) {
+  const acc = f.staff && f.staff.who && f.staff.who.kind === 'env' ? f.staff.who.account : null;
+  if (!acc || acc.role === 'admin') return '';
+  const first = String(acc.user || '').trim().split(/[\s._-]+/)[0] || '';
+  return first ? first.charAt(0).toUpperCase() + first.slice(1).toLowerCase() : '';
+}
+
+module.exports = { APPS, appsFor, sessionFacts, greetName };

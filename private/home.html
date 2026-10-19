@@ -49,7 +49,7 @@ const ICON={dashboards:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
  mysales:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-9M15 7h5v5"/></svg>'};
 const DEF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>';
 function paint(j){
-  document.getElementById('hello').textContent=j.label?'Hello, '+j.label:'Welcome';
+  document.getElementById('hello').textContent=j.greet?'Hello '+j.greet:j.label?'Hello, '+j.label:'Welcome';
   if(j.apps.some(a=>a.id==='uploads')&&!document.querySelector('a.upl')){const u=document.createElement('a');u.className='pandora-fab upl';u.href='/uploads';u.innerHTML=ICON.uploads+'All Uploads';document.body.appendChild(u)}
   const apps=j.apps.filter(a=>a.id!=='uploads');
   document.getElementById('apps').innerHTML=apps.length?apps.map(a=>`<a class="app" href="${esc(a.href)}"><span class="ic">${ICON[a.id]||DEF}</span><span><b>${esc(a.title)}</b><span class="d">${esc(a.desc||'')}</span></span><span class="go" aria-hidden="true">&rsaquo;</span></a>`).join(''):'<div class="empty">There is nothing to open for your account yet. Please contact your manager.</div>';

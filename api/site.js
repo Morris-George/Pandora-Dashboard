@@ -1,7 +1,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { appsFor, sessionFacts } = require('./_apps');
+const { appsFor, sessionFacts, greetName } = require('./_apps');
 
 const PRIVATE_DIR = path.join(process.cwd(), 'private');
 
@@ -111,7 +111,7 @@ module.exports = async function handler(req, res) {
   // Home: the options this person can open
   if (requestedPath === '/' || requestedPath === '/home.html') {
     const label = facts.vm ? facts.vmName : facts.staff ? (facts.staff.role === 'staff' || facts.staff.role === 'store' ? facts.staff.name : facts.staff.label) : 'Pandora Dashboards';
-    const boot = JSON.stringify({ ok: true, label, apps: appsFor(facts) }).replace(/</g, '\\u003c');
+    const boot = JSON.stringify({ ok: true, label, greet: greetName(facts), apps: appsFor(facts) }).replace(/</g, '\\u003c');
     const chrome = withChrome('home', multi);
     return sendFile(res, 'home.html', 'text/html; charset=utf-8', function (buf) {
       let html = buf.toString('utf8');
