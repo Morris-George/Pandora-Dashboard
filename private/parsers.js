@@ -42,6 +42,7 @@ async function staff(file){
 
     return {file:file.name.replace(/\.[^.]+$/,'').slice(0,70),period:fmtPeriod(dmin,dmax),stores,people,groups,items,rows:out};
 }
+// ERPNext "Stock Balance" report: Item, Item Name, Item Group, Warehouse, Opening Qty, In Qty, Out Qty, Balance Qty, Balance Value ...
 async function vm(file){
   const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
   const iso=v=>v instanceof Date?v.toISOString().slice(0,10):v;
