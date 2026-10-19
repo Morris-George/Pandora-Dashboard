@@ -73,7 +73,9 @@ h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;co
       <label class="dlab">From <input type="date" id="dFrom"></label><label class="dlab">To <input type="date" id="dTo"></label>
       <div class="chips"><button class="chip" type="button" data-preset="today">Today</button><button class="chip" type="button" data-preset="month">This month</button><button class="chip" type="button" data-preset="30">Last 30 days</button><button class="chip" type="button" id="refresh" hidden>Refresh from ERP</button></div>
       <span class="dmsg" id="dMsg" role="status"></span></div>
-    <div class="row"><span class="lbl">Location</span><div class="chips" id="locChips"></div></div>
+    <div class="row" id="brandRow"><span class="lbl">Brand</span><div class="chips" id="brandChips"></div></div>
+    <div class="row"><span class="lbl">Store</span><div class="chips" id="locChips"></div></div>
+    <div class="row"><span class="lbl" id="catLbl">Category</span><div class="chips" id="catChips"></div></div>
     <div class="row"><span class="lbl">Group by</span><div class="seg" id="grp" role="group" aria-label="Group by"><button type="button" data-g="cat" aria-pressed="true">Category</button><button type="button" data-g="fam" aria-pressed="false">Collection</button></div>
       <input class="search" id="q" type="search" placeholder="Search an item or SKU" aria-label="Search an item or SKU"></div>
   </section>
@@ -107,7 +109,7 @@ const ISO=/^\d{4}-\d{2}-\d{2}$/;
 
 /* row: [code, name, group, warehouse, opening, in, out, balance, value] */
 const C=0,N=1,G=2,W=3,O=4,I=5,U=6,B=7,V=8;
-const S={rows:[],meta:null,loc:'ALL',group:'cat',q:'',sel:'',from:'',to:'',itemsN:100};
+const S={rows:[],meta:null,loc:'ALL',group:'cat',q:'',sel:'',from:'',to:'',itemsN:100,brand:'Pandora',cat:'ALL'};
 {const u=new URLSearchParams(location.search),t=new Date();
  S.from=ISO.test(u.get('from')||'')?u.get('from'):lIso(new Date(t.getFullYear(),t.getMonth(),1));
  S.to=ISO.test(u.get('to')||'')?u.get('to'):lIso(t)}
@@ -152,9 +154,12 @@ function syncDates(){
   $('foot').textContent=can?('Read from ERP'+(m.fetchedAt?' at '+new Date(m.fetchedAt).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'')+'. In = pieces that came into the location, Out = pieces that left it (sales and transfers).'):'Pieces and values are as in the uploaded file.';
 }
 
-function visibleRows(){
-  const q=S.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  return S.rows.filter(r=>(S.loc==='ALL'||r[W]===S.loc)&&(!q.length||q.every(w=>(r[C]+' '+r[N]).toLowerCase().includes(w))));
+const isPandora=r=>/^\s*pandora\b/i.test(String(r[G]||''));
+/* Pandora is the default brand; if the data has no Pandora groups at all, show everything instead of an empty page */
+function brandNow(){return S.brand==='Pandora'&&S.rows.some(isPandora)?'Pandora':'ALL'}
+function visibleRows(skipCat){
+  const q=S.q.trim().toLowerCase().split(/\s+/).filter(Boolean),bn=brandNow();
+  return S.rows.filter(r=>(bn==='ALL'||isPandora(r))&&(S.loc==='ALL'||r[W]===S.loc)&&(skipCat||S.cat==='ALL'||keyOf(r)===S.cat)&&(!q.length||q.every(w=>(r[C]+' '+r[N]).toLowerCase().includes(w))));
 }
 function agg(rows){
   const m=new Map();
@@ -168,8 +173,15 @@ function render(){
   // location chips come from every row the person is allowed to see
   const locs=[...new Set(S.rows.map(r=>r[W]))].sort((a,b)=>a.localeCompare(b));
   if(S.loc!=='ALL'&&!locs.includes(S.loc))S.loc='ALL';
-  $('locChips').innerHTML=['ALL',...locs].map(l=>`<button class="chip" type="button" data-loc="${esc(l)}" aria-pressed="${l===S.loc}">${l==='ALL'?'All locations':esc(l)}</button>`).join('');
+  $('locChips').innerHTML=['ALL',...locs].map(l=>`<button class="chip" type="button" data-loc="${esc(l)}" aria-pressed="${l===S.loc}">${l==='ALL'?'All stores':esc(l)}</button>`).join('');
   document.querySelectorAll('#grp button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.g===S.group));
+  const hasBoth=S.rows.some(isPandora)&&S.rows.some(r=>!isPandora(r));
+  $('brandRow').hidden=!hasBoth;
+  $('brandChips').innerHTML=[['Pandora','Pandora'],['ALL','All brands']].map(b=>`<button class="chip" type="button" data-brand="${b[0]}" aria-pressed="${b[0]===brandNow()}">${b[1]}</button>`).join('');
+  $('catLbl').textContent=S.group==='fam'?'Collection':'Category';
+  const cats=[...new Set(visibleRows(true).map(keyOf))].sort((a,b)=>a.localeCompare(b));
+  if(S.cat!=='ALL'&&!cats.includes(S.cat))S.cat='ALL';
+  $('catChips').innerHTML=['ALL',...cats].map(c=>`<button class="chip" type="button" data-cat="${esc(c)}" aria-pressed="${c===S.cat}">${c==='ALL'?(S.group==='fam'?'All collections':'All categories'):esc(c)}</button>`).join('');
 
   $('items').hidden=true;
   const rows=visibleRows(),list=agg(rows);
@@ -249,7 +261,9 @@ document.addEventListener('click',e=>{
   const r=e.target.closest('tr.cat'),l=e.target.closest('[data-loc]'),g=e.target.closest('#grp [data-g]'),p=e.target.closest('[data-preset]');
   if(r){S.sel=S.sel===r.dataset.key?'':r.dataset.key;S.itemsN=100;render();if(S.sel)$('detail').scrollIntoView({block:'nearest',behavior:'smooth'})}
   else if(l){S.loc=l.dataset.loc;S.itemsN=100;render()}
-  else if(g){S.group=g.dataset.g;S.sel='';S.itemsN=100;render()}
+  else if(e.target.closest('[data-brand]')){S.brand=e.target.closest('[data-brand]').dataset.brand;S.cat='ALL';S.sel='';S.itemsN=100;render()}
+  else if(e.target.closest('[data-cat]')){S.cat=e.target.closest('[data-cat]').dataset.cat;S.sel='';S.itemsN=100;render()}
+  else if(g){S.group=g.dataset.g;S.sel='';S.cat='ALL';S.itemsN=100;render()}
   else if(e.target.closest('#itMore')){S.itemsN+=200;render()}
   else if(p){const t=new Date();let f=new Date(t);
     if(p.dataset.preset==='month')f=new Date(t.getFullYear(),t.getMonth(),1);else if(p.dataset.preset==='30')f.setDate(f.getDate()-29);
