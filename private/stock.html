@@ -151,7 +151,7 @@ function syncDates(){
   $('refresh').hidden=!(can&&m.isAdmin);
   $('dMsg').textContent=can?'':'The dates are those of the uploaded Excel file.'+(m.note?' '+m.note:'');
   $('subtitle').textContent=can?'Closing balance on '+nice(S.to)+' · movement since '+nice(S.from):'From the Excel file “'+(m.file||'Stock balance')+'” · added '+nice(String(m.uploadedAt||m.asOf||'').slice(0,10));
-  $('foot').textContent=can?('Read from ERP'+(m.fetchedAt?' at '+new Date(m.fetchedAt).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'')+'. In = pieces that came into the location, Out = pieces that left it (sales and transfers).'):'Pieces and values are as in the uploaded file.';
+  $('foot').textContent=can?('Read from ERP'+(m.fetchedAt?' at '+new Date(m.fetchedAt).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'')+'.'):'Pieces and values are as in the uploaded file.';
 }
 
 const isPandora=r=>/^\s*pandora\b/i.test(String(r[G]||''));
@@ -185,13 +185,13 @@ function render(){
 
   $('items').hidden=true;
   const rows=visibleRows(),list=agg(rows);
-  const hasMove=S.rows.some(r=>r[O]||r[I]||r[U]), showVal=m.canSeeValue&&S.rows.some(r=>r[V]);
+  const hasMove=S.rows.some(r=>r[O]||r[I]||r[U]), showVal=false; /* value is not shown on this page */
   const T=list.reduce((t,x)=>({o:t.o+x.o,i:t.i+x.i,u:t.u+x.u,b:t.b+x.b,v:t.v+x.v}),{o:0,i:0,u:0,b:0,v:0});
   const items=new Set(rows.map(r=>r[C])),negN=rows.filter(r=>r[B]<0).length;
 
   const k=[['Pieces in stock',pcs(T.b),'closing balance']];
   if(showVal)k.push(['Stock value',egp(T.v),'at valuation']);
-  if(hasMove){k.push(['Opening',pcs(T.o),'on '+nice(S.from)]);k.push(['In / Out',pcs(T.i)+' / '+pcs(T.u),'during the dates']);}
+  if(hasMove){k.push(['Opening',pcs(T.o),'on '+nice(S.from)]);}
   k.push([S.group==='fam'?'Collections':'Categories',nf0.format(list.length),nf0.format(items.size)+' items']);
   if(negN)k.push(['Negative balances',nf0.format(negN),'lines to check']);
   $('kpis').hidden=false;$('kpis').innerHTML=k.map(x=>`<div class="kpi"><div class="k">${esc(x[0])}</div><div class="v">${esc(x[1])}</div><div class="s">${esc(x[2])}</div></div>`).join('');
@@ -200,7 +200,7 @@ function render(){
   $('catTitle').textContent=S.group==='fam'?'Stock by collection':'Stock by category';
   $('catMeta').textContent=(S.loc==='ALL'?'All locations':S.loc)+' · select a row for the detail';
   const cols=[['l',S.group==='fam'?'Collection':'Category']];
-  if(hasMove)cols.push(['','Opening'],['','In'],['','Out']);
+  if(hasMove)cols.push(['','Opening']);
   cols.push(['','Closing'],['','Share']);
   if(showVal)cols.push(['','Value']);
   cols.push(['','Items'],['','Locations']);
@@ -211,10 +211,10 @@ function render(){
   const max=Math.max(...list.map(x=>Math.abs(x.b)),1);
   const cell=(x,id,v)=>`<td>${v}</td>`;
   $('tbody').innerHTML=list.map(x=>`<tr class="cat" data-key="${esc(x.name)}" aria-selected="${x.name===S.sel}"><td class="l"><b>${esc(x.name)}</b>${x.neg?`<small class="neg">${x.neg} negative</small>`:''}</td>`+
-    (hasMove?`<td>${pcs(x.o)}</td><td>${pcs(x.i)}</td><td>${pcs(x.u)}</td>`:'')+
+    (hasMove?`<td>${pcs(x.o)}</td>`:'')+
     `<td class="cellbar"><i style="width:${Math.max(1,Math.abs(x.b)/max*100)}%"></i><span><b>${pcs(x.b)}</b></span></td><td>${T.b?nf0.format(x.b/T.b*100):0}%</td>`+
     (showVal?`<td>${egp(x.v)}</td>`:'')+`<td>${nf0.format(x.items.size)}</td><td>${nf0.format(x.locs.size)}</td></tr>`).join('')+
-    `<tr class="total"><td class="l">Total</td>`+(hasMove?`<td>${pcs(T.o)}</td><td>${pcs(T.i)}</td><td>${pcs(T.u)}</td>`:'')+`<td>${pcs(T.b)}</td><td>100%</td>`+(showVal?`<td>${egp(T.v)}</td>`:'')+`<td>${nf0.format(items.size)}</td><td>${nf0.format(new Set(rows.map(r=>r[W])).size)}</td></tr>`;
+    `<tr class="total"><td class="l">Total</td>`+(hasMove?`<td>${pcs(T.o)}</td>`:'')+`<td>${pcs(T.b)}</td><td>100%</td>`+(showVal?`<td>${egp(T.v)}</td>`:'')+`<td>${nf0.format(items.size)}</td><td>${nf0.format(new Set(rows.map(r=>r[W])).size)}</td></tr>`;
   detail(list,showVal);
   itemsTable(rows);
 }
