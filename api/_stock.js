@@ -41,8 +41,13 @@ function keep(r) {
 const toRow = a => [str(a[0], 40), str(a[1], 120), str(a[2], 80), cleanWarehouse(a[3]), num(a[4]), num(a[5]), num(a[6]), num(a[7]), num(a[8])];
 
 function fromErp(list) {
-  return list.filter(x => x && !Array.isArray(x) && x.item_code)
-    .map(x => toRow([x.item_code, x.item_name, x.item_group, x.warehouse, x.opening_qty, x.in_qty, x.out_qty, x.bal_qty != null ? x.bal_qty : x.balance_qty, x.bal_val != null ? x.bal_val : x.balance_value]))
+  const pick = (x, ...ks) => { for (const k of ks) if (x[k] != null && x[k] !== '') return x[k]; return null; };
+  return list.filter(x => x && !Array.isArray(x) && pick(x, 'item_code', 'sku', 'item'))
+    .map(x => toRow([
+      pick(x, 'item_code', 'sku', 'item'), pick(x, 'item_name', 'name', 'item'),
+      pick(x, 'item_group', 'full_group', 'category', 'item_category') || '', x.warehouse,
+      pick(x, 'opening_qty') || 0, pick(x, 'in_qty') || 0, pick(x, 'out_qty') || 0,
+      pick(x, 'bal_qty', 'balance_qty', 'balance') || 0, pick(x, 'bal_val', 'balance_value') || 0]))
     .filter(keep);
 }
 
@@ -64,13 +69,11 @@ async function erpStock(from, to, fresh) {
     const c = await store.getJSON(key);
     if (c && c.rows && c.rows.length && Date.now() - Date.parse(c.at) < ttl) return c; // an empty answer is never trusted from the cache
   }
-  const status = await store.getJSON('erp/status.json');
-  const company = process.env.ERP_COMPANY || (status && status.company) || '';
-  if (!company) throw new Error('The ERP company is not known yet. Press Sync from ERP once on the All Uploads page.');
   const { runReport } = require('./erp');
-  const list = await runReport('Stock Balance', { company, from_date: from, to_date: to });
+  // "Branches Stock Balance" is a Custom Report with saved filters; runReport asks ERPNext for our dates instead.
+  const list = await runReport(process.env.ERP_STOCK_REPORT || 'Branches Stock Balance', { from_date: from, to_date: to });
   const rec = { at: new Date().toISOString(), from, to, rows: fromErp(list) };
-  rec.diag = { company, raw: list.length, keys: list[0] ? Object.keys(list[0]).slice(0, 25) : [], kept: rec.rows.length };
+  rec.diag = { company: 'Branches Stock Balance', raw: list.length, keys: list[0] ? Object.keys(list[0]).slice(0, 25) : [], kept: rec.rows.length };
   if (!rec.rows.length) return rec; // nothing to cache: show what ERP said instead
   await store.putJSON(key, rec);
   let idx = ((await store.getJSON(CACHE_INDEX)) || []).filter(k => k !== key);
@@ -123,7 +126,7 @@ module.exports = async function handler(req, res) {
   if (from > to) { const x = from; from = to; to = x; }
   const base = { ok: true, canSeeValue: who.kind !== 'vm', isAdmin, today };
   const snap = await store.getJSON(CURRENT);
-  const erpOn = false; // the stock page uses only the Excel file added on All Uploads (ERP is not read for stock)
+  const erpOn = !!(process.env.ERP_URL && process.env.ERP_API_KEY && process.env.ERP_API_SECRET); // live from ERPNext; the Excel file on All Uploads is the fallback
   let note = '';
 
   if (erpOn) {
