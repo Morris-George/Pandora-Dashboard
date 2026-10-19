@@ -182,6 +182,13 @@ module.exports = async function handler(req, res) {
     });
   }
 
+  // Stock balance: super admin, area managers (their zone only) and the VM (pieces only). Never sales people or store managers.
+  if (requestedPath === '/stock' || requestedPath === '/stock/' || requestedPath === '/stock.html') {
+    const okStock = !!facts.vm || (!!facts.staff && facts.staff.role !== 'staff' && facts.staff.role !== 'store');
+    if (!okStock) return toHome();
+    return sendFile(res, 'stock.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
+  }
+
   // Pandora Dashboards
   if (requestedPath === '/dashboards' || requestedPath === '/dashboards/' || requestedPath === '/index.html') {
     if (!facts.dash) return toHome();
