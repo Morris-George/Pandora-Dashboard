@@ -64,12 +64,13 @@ async function liveReport(from, to) {
   if (!process.env.ERP_URL || !process.env.ERP_API_KEY || !process.env.ERP_API_SECRET) throw new Error('ERP is not connected for this site yet.');
   const erp = require('./erp');
   let raw;
-  try { raw = await erp.runReportRaw(LIVE_REPORT(), { from_date: from, to_date: to }); }
+  const brand = process.env.VM_BRAND || 'Pandora'; // the report wants a brand; the Excel files are named ..._Pandora.xlsx
+  try { raw = await erp.runReportRaw(LIVE_REPORT(), { from_date: from, to_date: to, brand }); }
   catch (e1) { // some reports also want the company: try again with it, and say what both attempts said if that fails too
     const status = await store.getJSON('erp/status.json');
     const company = process.env.ERP_COMPANY || (status && status.company) || '';
     if (!company) throw e1;
-    try { raw = await erp.runReportRaw(LIVE_REPORT(), { from_date: from, to_date: to, company }); }
+    try { raw = await erp.runReportRaw(LIVE_REPORT(), { from_date: from, to_date: to, brand, company }); }
     catch (e2) { throw new Error(String(e1.message) + ' | with company "' + company + '": ' + String(e2.message)); }
   }
   const cols = raw.columns.map(x => typeof x === 'string' ? { label: x.split(':')[0], field: x.split(':')[0] } : { label: String(x.label || x.fieldname || ''), field: String(x.fieldname || x.label || '') });
