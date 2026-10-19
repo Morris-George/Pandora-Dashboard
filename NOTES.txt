@@ -46,11 +46,3 @@ SALES BY COLLECTION (Pandora Dashboards, private/index.html, section above the C
 COLLECTIONS IN STAFF PERFORMANCE: the family of a sale is read from its item group ("Pandora Moments - Charm" -> Moments), so no extra data is needed. /staff has a "Sales by collection" card at the bottom (follows the store chip, the dates and the item groups counted; click a collection to see who sells it most). A sales person's own page has "Your collections" (their share per family against their store). Groups the super admin leaves out (packaging, services, jewellery boxes) stay out.
 
 CHANGE STORE (Staff approvals): the super admin can move a sales person to another store with "Change store" (waiting, active and switched-off lists). The list holds the stores of the published sales file plus the sign-up stores. A linked account keeps its sales person name and its link moves to the new store (one account per sales person and store); a store manager automatically sees the new store. The person's numbers appear once the sales file lists them under that store (the page says so when it does not yet). Server action: setstore in api/accounts.js.
-
-STOCK BALANCE (page /stock, API /api/stock -> api/erp.js?stock=1, helper api/_stock.js)
-- Visible to the super admin, area managers (only their zone's warehouses) and the VM (pieces only, value zeroed on the server). Sales people and store managers never.
-- Dates are changeable (From/To + presets) when ERP is connected: it runs ERPNext's "Stock Balance" report, cached 30 min (24 h for past dates). Super admin has "Refresh from ERP".
-- The company comes from ERP_COMPANY or from the last "Sync from ERP" (erp/status.json). If neither exists, press Sync from ERP once.
-- Excel path: All Uploads > Stock balance (the ERP Stock Balance report .xlsx). It is one fixed snapshot, so dates are locked. Used when ERP is off or fails.
-- Categories are derived on the page from item group + item name (same rules as the dashboards); can also group by Collection. Click a row for locations and top items.
-UPDATE: Stock balance now reads ONLY the Excel file added on All Uploads (Branches_Stock_Balance_All-Niche report). ERP is not used for stock; dates are those of that file.

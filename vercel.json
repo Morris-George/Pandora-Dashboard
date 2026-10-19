@@ -16,10 +16,6 @@
   ],
   "rewrites": [
     {
-      "source": "/api/stock",
-      "destination": "/api/erp?stock=1"
-    },
-    {
       "source": "/api/vmzones",
       "destination": "/api/vm?vmzones=1"
     },
