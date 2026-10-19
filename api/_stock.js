@@ -35,6 +35,7 @@ function cleanWarehouse(w) {
 function keep(r) {
   if (/packaging|services|maintenance/i.test(r[2])) return false;
   if (ex.anyHit(r[0], r[1], r[2], r[3])) return false;
+  if (/l['\u2019`]?aderach|frisch|chocolate/i.test(r[2] + ' ' + r[3])) return false; // Laderach (also spelled L'Aderach) and its chocolate lines
   return !!(r[4] || r[5] || r[6] || r[7] || r[8]);
 }
 const toRow = a => [str(a[0], 40), str(a[1], 120), str(a[2], 80), cleanWarehouse(a[3]), num(a[4]), num(a[5]), num(a[6]), num(a[7]), num(a[8])];
@@ -71,6 +72,7 @@ async function erpStock(from, to, fresh) {
   const rec = { at: new Date().toISOString(), from, to, rows: fromErp(list) };
   rec.diag = { company, raw: list.length, keys: list[0] ? Object.keys(list[0]).slice(0, 25) : [], kept: rec.rows.length };
   if (!rec.rows.length) return rec; // nothing to cache: show what ERP said instead
+  await store.putJSON(key, rec);
   let idx = ((await store.getJSON(CACHE_INDEX)) || []).filter(k => k !== key);
   idx.push(key);
   while (idx.length > MAX_CACHE) await store.del(idx.shift());

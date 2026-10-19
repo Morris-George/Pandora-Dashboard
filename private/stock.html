@@ -116,7 +116,7 @@ function recat(c,name){const n=String(name||'').toLowerCase();if(c==='Necklaces'
   if(/safety/.test(n))return'Charms';if(/bracelet|bangle/.test(n))return'Bracelets';if(/pendant|necklace|collier/.test(n))return'Necklace and Pendant';
   if(/charm|clip|dangle|spacer|medallion|murano/.test(n))return'Charms';if(/earring|stud|hoop|huggie/.test(n))return'Earrings';if(/\bring/.test(n))return'Rings';return'Other'}
 const catOf=r=>recat(catOfGroup(r[G]),r[N]);
-const famOf=g=>String(g||'').split(' - ')[0].replace(/^\s*Pandora\s+/i,'').trim()||'Other';
+const famOf=g=>{const f=String(g||'').split(' - ')[0].replace(/^\s*Pandora\s+/i,'').trim();return f?(f.length>2&&f===f.toUpperCase()?f.charAt(0)+f.slice(1).toLowerCase():f):'Other'};
 const keyOf=r=>S.group==='fam'?famOf(r[G]):catOf(r);
 
 function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
