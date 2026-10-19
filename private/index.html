@@ -88,6 +88,9 @@
 <div id="skuResult" style="margin-top:14px"></div></section>
 <section class="kpis" id="kpis"></section>
 <section class="grid"><article class="panel"><div class="panel-head"><div><h3>Revenue trend</h3><div class="sub">Daily revenue across the selected period</div></div><div class="legend"><span>Revenue</span></div></div><svg class="chart" id="trendChart" viewBox="0 0 700 310" role="img" aria-label="Daily revenue trend"></svg></article><article class="panel"><div class="panel-head"><div><h3>Category mix</h3><div class="sub">Revenue contribution by product category</div></div></div><div class="donut-wrap" id="categoryChart"></div></article></section>
+<section class="panel explorer" id="collections" hidden><div class="panel-head"><div><h3>Sales by collection</h3><div class="sub">Pandora's families, such as Moments, Timeless and Essence, as a whole. Uses the date, branch and category filters above. Pick a collection to see what is inside it.</div></div></div>
+<div class="xk" id="colKpis"></div>
+<div class="exp-grid"><div class="xlist" id="colList"></div><div class="xdetail" id="colDetail"></div></div></section>
 <section class="panel explorer" id="explorer"><div class="panel-head"><div><h3>Category explorer</h3><div class="sub">Pick a category, then a type, to see its sales. Uses the date and branch filters above.</div></div></div>
 <div class="xtop"><div class="xchips" id="xChips"></div><div class="seg" id="xGroup" role="group" aria-label="Group by"><button type="button" data-g="type">By type</button><button type="button" data-g="metal">By metal</button></div></div>
 <input class="xsearch" id="xSearch" type="search" placeholder="Ask about a type, product or SKU, e.g. bangle, dangle, 590745" aria-label="Search types, products and SKUs">
@@ -160,7 +163,7 @@ function render(){if(!data.length){showNotice('No sales data saved yet. The supe
 function initialize(){const dates=data.map(r=>r.date).sort();$('startDate').value=dates[0]||'';$('endDate').value=dates[dates.length-1]||'';setOptions('branchFilter',unique(data.map(r=>r.branch)));setOptions('catFilter',unique(data.map(r=>r.category)));render()}
 ['startDate','endDate','branchFilter','catFilter','basisFilter','targetInput'].forEach(id=>$(id).addEventListener('change',()=>{if($('startDate').value>$('endDate').value){const x=$('startDate').value;$('startDate').value=$('endDate').value;$('endDate').value=x}render()}));
 $('resetBtn').addEventListener('click',()=>{const dates=data.map(r=>r.date).sort();$('startDate').value=dates[0]||'';$('endDate').value=dates[dates.length-1]||'';$('branchFilter').value='All';$('catFilter').value='All';$('basisFilter').value='net';$('targetInput').value=600000;render()});
-function applySaved(rows,label){data=normalizeRows(rows.map(r=>Array.isArray(r)?{date:r[0],invoice:r[1],qty:r[2],net:r[3],gross:r[4],sku:r[5],name:r[6],branch:r[7],category:r[8],payment:r[9]}:r));const dates=data.map(r=>r.date).sort();$('startDate').value=dates[0]||'';$('endDate').value=dates[dates.length-1]||'';setOptions('branchFilter',unique(data.map(r=>r.branch)));setOptions('catFilter',unique(data.map(r=>r.category)));$('branchFilter').value='All';$('catFilter').value='All';$('status').textContent=label;$('recordCaption').textContent=`${num(data.length)} line items`;render()}
+function applySaved(rows,label){data=normalizeRows(rows.map(r=>Array.isArray(r)?{date:r[0],invoice:r[1],qty:r[2],net:r[3],gross:r[4],sku:r[5],name:r[6],branch:r[7],category:r[8],payment:r[9],collection:r[10]||''}:r));const dates=data.map(r=>r.date).sort();$('startDate').value=dates[0]||'';$('endDate').value=dates[dates.length-1]||'';setOptions('branchFilter',unique(data.map(r=>r.branch)));setOptions('catFilter',unique(data.map(r=>r.category)));$('branchFilter').value='All';$('catFilter').value='All';$('status').textContent=label;$('recordCaption').textContent=`${num(data.length)} line items`;render()}
 async function loadSaved(){try{const r=await fetch('/api/uploads?area=dashboards&rows=1',{credentials:'same-origin',cache:'no-store'});if(!r.ok)return false;const j=await r.json();if(!j.ok||!j.rows.length)return false;applySaved(j.rows,j.files.length===1?j.files[0].name:j.files.length+' saved files');return true}catch(_){return false}}
 $('exportBtn')?.addEventListener('click',()=>{const rows=filtered(),basis=$('basisFilter').value;const header=['Invoice','Posting Date','Qty','Net Revenue','Gross Revenue','SKU','Product','Branch','Category','Payment'];const csv=[header,...rows.map(r=>[r.invoice,r.date,r.qty,r.net,r.gross,r.sku,r.name,r.branch,r.category,r.payment])].map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='pandora_filtered_sales.csv';a.click();URL.revokeObjectURL(a.href)});
 
@@ -179,6 +182,7 @@ const recat=(c,name)=>{const n=String(name||'').toLowerCase();if(c==='Necklaces'
   if(/safety/.test(n))return 'Charms';if(/bracelet|bangle/.test(n))return 'Bracelets';if(/pendant|necklace|collier/.test(n))return 'Necklace and Pendant';
   if(/charm|clip|dangle|spacer|medallion|murano/.test(n))return 'Charms';if(/earring|stud|hoop|huggie/.test(n))return 'Earrings';if(/\bring/.test(n))return 'Rings';return 'Other'};
 const ex={cat:'All',grp:'type',sel:null,q:'',all:false};
+window.__pandoraRecat=recat;
 const pick=(rules,name)=>{const n=String(name||'').toLowerCase();for(const [label,re] of rules)if(re.test(n))return label;return 'Other'};
 const typeOf=r=>TYPE_RULES[r.category]?pick(TYPE_RULES[r.category],r.name):(r.name||'Unspecified');
 const keyOf=r=>ex.grp==='metal'?pick(METAL_RULES,r.name):typeOf(r);
@@ -391,6 +395,50 @@ async function run(){
   finally{btn.disabled=false;btn.textContent=label}
 }
 btn.addEventListener('click',run);
+})();
+</script>
+<script>
+// ---- Sales by collection: every sales line belongs to a Pandora family (Moments, Timeless, Essence ...). ERP lines carry it;
+// older Excel lines borrow it from any line with the same SKU. Lines that still have none are shown as "Not classified".
+(function(){
+const NONE='Not classified', sel={name:null};
+let cache={data:null,map:null};
+const skuMap=()=>{if(cache.data===data&&cache.map)return cache.map;const m=new Map();for(const r of data)if(r.collection&&r.sku&&!m.has(r.sku))m.set(r.sku,r.collection);cache={data,map:m};return m};
+const colOf=(r,m)=>String(r.collection||m.get(r.sku)||'').trim()||NONE;
+const catOf=r=>(window.__pandoraRecat?window.__pandoraRecat(r.category,r.name):r.category)||'Unspecified';
+const pct=(a,b)=>b>0?(a/b*100).toFixed(a/b<0.1?1:0)+'%':'—';
+const tally=(rows,f)=>{const m={};rows.forEach(r=>{const k=f(r);const o=m[k]||(m[k]={name:k,value:0,units:0});o.value+=rev(r);o.units+=r.qty});return Object.values(m).sort((a,b)=>b.value-a.value)};
+function renderCollections(){
+  const root=$('collections'); if(!root) return;
+  if(!data.length){root.hidden=true;return} root.hidden=false;
+  const m=skuMap(), rows=filtered(), by=new Map();
+  for(const r of rows){const k=colOf(r,m);let o=by.get(k);if(!o)by.set(k,o={name:k,value:0,units:0,inv:new Set(),rows:[]});const v=rev(r);o.value+=v;o.units+=r.qty;if(v>0)o.inv.add(r.invoice);o.rows.push(r)}
+  const list=[...by.values()].sort((a,b)=>(a.name===NONE)-(b.name===NONE)||b.value-a.value);
+  const total=sum(rows,rev), real=list.filter(x=>x.name!==NONE), none=by.get(NONE);
+  if(!rows.length||!real.length){
+    $('colKpis').innerHTML=''; $('colList').innerHTML='';
+    $('colDetail').innerHTML='<div class="xempty">'+(rows.length?'The sales in this file do not say which collection they belong to yet. Collections come from the ERP sales: press Sync from ERP on the All Uploads page.':'No sales for this selection.')+'</div>';
+    return;
+  }
+  if(!sel.name||!by.has(sel.name)) sel.name=real[0].name;
+  const top=real[0], max=Math.max(1,...list.map(x=>Math.abs(x.value)));
+  $('colKpis').innerHTML=`<div><span>Collections</span><b>${num(real.length)}</b></div><div><span>Biggest collection</span><b title="${esc(top.name)}">${esc(top.name)}</b><small>${pct(top.value,total)} of sales</small></div><div><span>Not classified</span><b>${pct(none?none.value:0,total)}</b><small>${none?money(none.value):'every sale has a collection'}</small></div>`;
+  $('colList').innerHTML=list.map(x=>`<button class="xrow" type="button" data-col="${esc(x.name)}" aria-pressed="${x.name===sel.name}" title="${esc(x.name)}"><span><span class="xname">${esc(x.name)}</span><span class="xmeta">${num(x.units)} units · ${pct(x.value,total)} of sales</span></span><span class="track"><span class="fill" style="display:block;width:${Math.max(2,Math.abs(x.value)/max*100)}%"></span></span><span class="xval">${money(x.value)}</span></button>`).join('');
+  const c=by.get(sel.name), cats=tally(c.rows,catOf), brs=tally(c.rows,r=>r.branch||'Unspecified');
+  const pm={};c.rows.forEach(r=>{const k=(r.sku||'—')+'|'+(r.name||'Unspecified');const o=pm[k]||(pm[k]={sku:r.sku||'—',name:r.name||'Unspecified',value:0,units:0});o.value+=rev(r);o.units+=r.qty});
+  const prods=Object.values(pm).sort((a,b)=>b.value-a.value).slice(0,8);
+  const prodRow=(p,i)=>`<div class="xp"><span title="${esc(p.sku)} · ${esc(p.name)}"><b class="xrank">${i+1}</b>${esc(p.name)}<em><i class="xsku">${esc(p.sku)}</i> · ${num(p.units)} units</em></span><b>${money(p.value)}</b></div>`;
+  $('colDetail').innerHTML=`<h4>${esc(c.name)}</h4>
+   <div class="xk"><div><span>Revenue</span><b>${money(c.value)}</b></div><div><span>Units</span><b>${num(c.units)}</b></div><div><span>Share</span><b>${pct(c.value,total)}</b><small>of all sales</small></div></div>
+   <div class="xk" style="margin-top:-6px"><div><span>Orders</span><b>${num(c.inv.size)}</b></div><div><span>Avg price per unit</span><b>${c.units>0?money(c.value/c.units):'—'}</b></div><div><span>Best branch</span><b title="${esc(brs[0]?brs[0].name:'')}">${esc(brs[0]?brs[0].name:'—')}</b><small>${brs[0]?pct(brs[0].value,c.value)+' of it':''}</small></div></div>
+   <div class="xh">By category</div><div class="bars" id="colCat"></div>
+   <div class="xh">Top products</div><div class="xtop5">${prods.map(prodRow).join('')}</div>
+   <div class="xh">By branch</div><div class="bars" id="colBranch"></div>`;
+  bars('colCat',cats.slice(0,8)); bars('colBranch',brs.slice(0,6));
+}
+document.addEventListener('click',e=>{const b=e.target.closest('#colList [data-col]');if(b){sel.name=b.dataset.col;renderCollections()}});
+const baseRender=render; render=function(){baseRender.apply(this,arguments);renderCollections()};
+if(data.length) renderCollections();
 })();
 </script>
 </body></html>
