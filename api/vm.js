@@ -56,11 +56,11 @@ function describe(file) {
 // ---- live from ERP: the Custom Report for chosen dates, cleaned exactly like an upload (no money ever leaves) ----
 const LIVE_REPORT = () => process.env.VM_REPORT || 'Sales QTY and Volume by category-Jewelry';
 const cairoToday = () => new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
-async function liveReport(from, to) {
+async function liveReport(from, to, fresh) {
   const key = 'vm/live/' + from + '_' + to + '.json';
   const ttl = to < cairoToday() ? 24 * 3600 * 1000 : 30 * 60 * 1000; // a past range does not change
   const c = await store.getJSON(key);
-  if (c && Array.isArray(c.rows) && c.rows.length && Date.now() - Date.parse(c.at) < ttl) return c;
+  if (c && Array.isArray(c.rows) && c.rows.length && Date.now() - Date.parse(c.at) < (fresh ? 60 * 1000 : ttl)) return c; // Sync is honoured unless the same dates were read less than a minute ago
   if (!process.env.ERP_URL || !process.env.ERP_API_KEY || !process.env.ERP_API_SECRET) throw new Error('ERP is not connected for this site yet.');
   const erp = require('./erp');
   let raw;
@@ -192,7 +192,7 @@ module.exports = async function handler(req, res) {
       if (!okDay(from) || !okDay(to) || from > to) return send(res, 400, { ok: false, error: 'Please choose valid dates.' });
       if ((Date.parse(to) - Date.parse(from)) / 86400000 > 400) return send(res, 400, { ok: false, error: 'Please choose a range of 13 months or less.' });
       if (url.searchParams.get('explorer') === 'live') return send(res, 200, await explorerData({ from, to }));
-      try { return send(res, 200, await liveReport(from, to)); }
+      try { return send(res, 200, await liveReport(from, to, url.searchParams.get('fresh') === '1')); }
       catch (e) { return send(res, 502, { ok: false, error: 'ERP could not give this report: ' + String(e && e.message || e).slice(0, 520) }); }
     }
     const xid = url.searchParams.get('explorer');

@@ -183,17 +183,18 @@ function openLive(){
   $('main').innerHTML='';$('explorer').hidden=true;
   const bar=$('liveBar');bar.hidden=false;
   bar.innerHTML=`<section class="card filters"><div class="frow"><span class="lbl">From</span><input type="date" id="lvFrom" style="${DIN}"><span class="lbl">To</span><input type="date" id="lvTo" style="${DIN}"></div>
-   <div class="frow"><span class="lbl">Quick</span><div class="chips"><button class="chip" type="button" data-lv="today">Today</button><button class="chip" type="button" data-lv="7">Last 7 days</button><button class="chip" type="button" data-lv="month">This month</button><button class="chip" type="button" data-lv="30">Last 30 days</button></div></div><div class="meta" id="lvMsg"></div></section>`;
+   <div class="frow"><span class="lbl">Quick</span><div class="chips"><button class="chip" type="button" data-lv="today">Today</button><button class="chip" type="button" data-lv="7">Last 7 days</button><button class="chip" type="button" data-lv="month">This month</button><button class="chip" type="button" data-lv="30">Last 30 days</button></div><button class="btn" type="button" id="lvSync" style="margin-left:auto">Sync</button></div><div class="meta" id="lvMsg"></div></section>`;
   $('lvFrom').value=LV.from;$('lvTo').value=LV.to;
   return loadLive();
 }
-async function loadLive(){
-  const my=++LV.n;$('lvMsg').textContent='Loading from ERP… this can take a few seconds.';
+async function loadLive(fresh){
+  const my=++LV.n;$('lvMsg').textContent=fresh?'Syncing from ERP… this can take up to a minute.':'Loading from ERP… this can take a few seconds.';$('lvSync')&&($('lvSync').disabled=true);
   let j;
-  try{const r=await get('/api/vm?live=1&from='+LV.from+'&to='+LV.to);j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'')}
-  catch(e){if(my===LV.n){$('lvMsg').textContent='';showErr((e&&e.message)||'Could not load this report. Please try again.');R=null;$('main').innerHTML='';$('explorer').hidden=true}return}
+  try{const r=await get('/api/vm?live=1&from='+LV.from+'&to='+LV.to+(fresh?'&fresh=1':''));j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'')}
+  catch(e){if(my===LV.n){$('lvMsg').textContent='';$('lvSync')&&($('lvSync').disabled=false);showErr((e&&e.message)||'Could not load this report. Please try again.');R=null;$('main').innerHTML='';$('explorer').hidden=true}return}
   if(my!==LV.n)return;
-  showErr('');R=j;$('lvMsg').textContent='';
+  showErr('');R=j;$('lvSync')&&($('lvSync').disabled=false);
+  $('lvMsg').textContent=j.at?'Synced at '+new Date(j.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'.':'';
   $('meta').textContent=fmtDay(LV.from)+(LV.from===LV.to?'':' – '+fmtDay(LV.to));
   if(!R.rows.length){$('main').innerHTML='<section class="card"><div class="empty">ERP returned no sales for these dates.</div></section>';$('explorer').hidden=true;return}
   R.kind==='qty-by-category'?drawQty():drawTable();
@@ -206,6 +207,7 @@ function lvPicked(){
 }
 ['change','input'].forEach(ev=>document.addEventListener(ev,e=>{if(e.target.id==='lvFrom'||e.target.id==='lvTo')lvPicked()}));
 document.addEventListener('click',e=>{
+  if(e.target.id==='lvSync'){clearTimeout(LV.t);loadLive(true);return}
   const p=e.target.closest('[data-lv]');if(!p)return;
   const t=new Date();let f=new Date(t);
   if(p.dataset.lv==='month')f=new Date(t.getFullYear(),t.getMonth(),1);else if(p.dataset.lv==='7')f.setDate(f.getDate()-6);else if(p.dataset.lv==='30')f.setDate(f.getDate()-29);

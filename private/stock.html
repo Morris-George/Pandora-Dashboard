@@ -71,7 +71,7 @@ h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;co
   <section class="card controls" id="controls" aria-label="Filters" hidden>
     <div class="row"><span class="lbl">Dates</span>
       <label class="dlab">From <input type="date" id="dFrom"></label><label class="dlab">To <input type="date" id="dTo"></label>
-      <div class="chips"><button class="chip" type="button" data-preset="today">Today</button><button class="chip" type="button" data-preset="month">This month</button><button class="chip" type="button" data-preset="30">Last 30 days</button><button class="chip" type="button" id="refresh" hidden>Refresh from ERP</button></div>
+      <div class="chips"><button class="chip" type="button" data-preset="today">Today</button><button class="chip" type="button" data-preset="month">This month</button><button class="chip" type="button" data-preset="30">Last 30 days</button><button class="chip" type="button" id="refresh" hidden>Sync</button></div>
       <span class="dmsg" id="dMsg" role="status"></span></div>
     <div class="row" id="brandRow"><span class="lbl">Brand</span><div class="chips" id="brandChips"></div></div>
     <div class="row"><span class="lbl">Store</span><div class="chips" id="locChips"></div></div>
@@ -148,7 +148,7 @@ function syncDates(){
   const m=S.meta,can=!!m.canChangeDates;
   $('dFrom').value=S.from;$('dTo').value=S.to;$('dFrom').disabled=$('dTo').disabled=!can;
   document.querySelectorAll('[data-preset]').forEach(b=>b.hidden=!can);
-  $('refresh').hidden=!(can&&m.isAdmin);
+  $('refresh').hidden=!can;
   $('dMsg').textContent=can?'':'The dates are those of the uploaded Excel file.'+(m.note?' '+m.note:'');
   $('subtitle').textContent=can?'Closing balance on '+nice(S.to)+' · movement since '+nice(S.from):'From the Excel file “'+(m.file||'Stock balance')+'” · added '+nice(String(m.uploadedAt||m.asOf||'').slice(0,10));
   $('foot').textContent=can?('Read from ERP'+(m.fetchedAt?' at '+new Date(m.fetchedAt).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'')+'.'):'Pieces and values are as in the uploaded file.';
@@ -269,10 +269,10 @@ document.addEventListener('click',e=>{
     if(p.dataset.preset==='month')f=new Date(t.getFullYear(),t.getMonth(),1);else if(p.dataset.preset==='30')f.setDate(f.getDate()-29);
     setDates(lIso(f),lIso(t))}
 });
-$('refresh').addEventListener('click',async()=>{const b=$('refresh');b.disabled=true;$('dMsg').textContent='Asking ERP… this can take up to a minute.';
+$('refresh').addEventListener('click',async()=>{const b=$('refresh');b.disabled=true;$('dMsg').textContent='Syncing from ERP… this can take up to a minute.';
   try{const r=await fetch('/api/stock?fresh=1&from='+encodeURIComponent(S.from)+'&to='+encodeURIComponent(S.to),{credentials:'same-origin',cache:'no-store'});const j=await r.json().catch(()=>({}));
-    if(!r.ok||!j.ok)showErr(j.error||'Could not refresh.');else{S.meta=j;S.rows=j.rows||[];syncDates();render()}}catch(_){showErr('No connection.')}
-  b.disabled=false;if(!$('dMsg').textContent.startsWith('This is'))$('dMsg').textContent=''});
+    if(!r.ok||!j.ok)showErr(j.error||'Could not refresh.');else{S.meta=j;S.rows=j.rows||[];syncDates();render();$('dMsg').textContent='Synced at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'.'}}catch(_){showErr('No connection.')}
+  b.disabled=false});
 $('q').addEventListener('input',e=>{S.q=e.target.value;S.itemsN=100;render()});
 let dt=null;
 function setDates(f,t){if(!ISO.test(f)||!ISO.test(t))return;if(f>t){const x=f;f=t;t=x}S.from=f;S.to=t;

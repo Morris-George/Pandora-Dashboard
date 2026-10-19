@@ -66,9 +66,10 @@ function scope(rows, who) {
 async function erpStock(from, to, fresh) {
   const key = 'stock/r/' + from + '_' + to + '.json';
   const ttl = to < cairoToday() ? 24 * 3600 * 1000 : 30 * 60 * 1000; // a past date does not change
-  if (!fresh) {
+  {
     const c = await store.getJSON(key);
-    if (c && c.rows && c.rows.length && Date.now() - Date.parse(c.at) < ttl) return c; // an empty answer is never trusted from the cache
+    // a Sync press is honoured unless the same dates were read less than a minute ago; an empty answer is never trusted from the cache
+    if (c && c.rows && c.rows.length && Date.now() - Date.parse(c.at) < (fresh ? 60 * 1000 : ttl)) return c;
   }
   const { runReport } = require('./erp');
   // "Branches Stock Balance" is a Custom Report with saved filters; runReport asks ERPNext for our dates instead.
@@ -143,7 +144,7 @@ module.exports = async function handler(req, res) {
 
   if (erpOn) {
     try {
-      const d = await erpStock(from, to, isAdmin && url.searchParams.get('fresh') === '1');
+      const d = await erpStock(from, to, url.searchParams.get('fresh') === '1');
       return send(res, 200, { ...base, source: 'erp', from, to, fetchedAt: d.at, diag: d.rows.length ? undefined : d.diag, canChangeDates: true, hasExcel: !!snap, rows: scope(d.rows, who) });
     } catch (e) {
       if (!snap) await store.putJSON(STATUS, { ok: false, at: new Date().toISOString(), error: String(e && e.message || e).slice(0, 200) }).catch(() => {});
