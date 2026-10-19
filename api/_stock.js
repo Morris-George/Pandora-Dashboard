@@ -41,7 +41,7 @@ const toRow = a => [str(a[0], 40), str(a[1], 120), str(a[2], 80), cleanWarehouse
 
 function fromErp(list) {
   return list.filter(x => x && !Array.isArray(x) && x.item_code)
-    .map(x => toRow([x.item_code, x.item_name, x.item_group, x.warehouse, x.opening_qty, x.in_qty, x.out_qty, x.bal_qty, x.bal_val]))
+    .map(x => toRow([x.item_code, x.item_name, x.item_group, x.warehouse, x.opening_qty, x.in_qty, x.out_qty, x.bal_qty != null ? x.bal_qty : x.balance_qty, x.bal_val != null ? x.bal_val : x.balance_value]))
     .filter(keep);
 }
 
@@ -61,7 +61,7 @@ async function erpStock(from, to, fresh) {
   const ttl = to < cairoToday() ? 24 * 3600 * 1000 : 30 * 60 * 1000; // a past date does not change
   if (!fresh) {
     const c = await store.getJSON(key);
-    if (c && Date.now() - Date.parse(c.at) < ttl) return c;
+    if (c && c.rows && c.rows.length && Date.now() - Date.parse(c.at) < ttl) return c; // an empty answer is never trusted from the cache
   }
   const status = await store.getJSON('erp/status.json');
   const company = process.env.ERP_COMPANY || (status && status.company) || '';
@@ -69,7 +69,8 @@ async function erpStock(from, to, fresh) {
   const { runReport } = require('./erp');
   const list = await runReport('Stock Balance', { company, from_date: from, to_date: to });
   const rec = { at: new Date().toISOString(), from, to, rows: fromErp(list) };
-  await store.putJSON(key, rec);
+  rec.diag = { company, raw: list.length, keys: list[0] ? Object.keys(list[0]).slice(0, 25) : [], kept: rec.rows.length };
+  if (!rec.rows.length) return rec; // nothing to cache: show what ERP said instead
   let idx = ((await store.getJSON(CACHE_INDEX)) || []).filter(k => k !== key);
   idx.push(key);
   while (idx.length > MAX_CACHE) await store.del(idx.shift());
@@ -126,7 +127,7 @@ module.exports = async function handler(req, res) {
   if (erpOn) {
     try {
       const d = await erpStock(from, to, isAdmin && url.searchParams.get('fresh') === '1');
-      return send(res, 200, { ...base, source: 'erp', from, to, fetchedAt: d.at, canChangeDates: true, hasExcel: !!snap, rows: scope(d.rows, who) });
+      return send(res, 200, { ...base, source: 'erp', from, to, fetchedAt: d.at, diag: d.rows.length ? undefined : d.diag, canChangeDates: true, hasExcel: !!snap, rows: scope(d.rows, who) });
     } catch (e) {
       if (!snap) return send(res, 502, { ok: false, error: 'ERP could not give the stock balance: ' + String(e && e.message || e).slice(0, 240) });
       note = 'ERP could not be reached, so this is the last Excel file that was added.';
