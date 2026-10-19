@@ -80,7 +80,7 @@ module.exports = async function handler(req, res) {
           items: cur ? [{ id: 'current', name: cur.file || 'Query Report', detail: [cur.period, (cur.rows || []).length + ' rows'].filter(Boolean).join(' · '), uploadedAt: cur.uploadedAt || '' }] : [] },
         { id: 'vm', title: 'VM Report', hint: 'Quantity reports for the Visual Merchandiser (.xlsx). Amounts are removed automatically.',
           items: vm.map(r => ({ id: r.id, name: r.title, detail: [r.period, r.rows + ' lines'].filter(Boolean).join(' · '), uploadedAt: r.uploadedAt })) },
-        { id: 'stock', title: 'Stock balance', hint: 'The Stock Balance report (.xlsx). This is the only source of the Stock balance page. One file at a time: a new file replaces the old one.',
+        { id: 'stock', title: 'Stock balance', hint: 'Optional. The Stock balance page reads live from ERP. Add the Branches Stock Balance report (.xlsx) here only as a backup, used if ERP cannot be reached. One file at a time: a new file replaces the old one.',
           items: stock ? [{ id: 'current', name: stock.file || 'Stock balance', detail: (stock.rows || []).length.toLocaleString('en-US') + ' lines · as of ' + (stock.asOf || ''), uploadedAt: stock.uploadedAt || '' }] : [] }
       ]
     });
