@@ -12,22 +12,6 @@
 
 .ok{display:none;color:light-dark(#14633b,#8fe0b4);background:light-dark(#eefaf3,#16301f);border:1px solid light-dark(#bfe6cd,#2c5a3b);border-radius:9px;padding:12px;font-size:14px;line-height:1.5;margin:0 0 16px;text-align:left}
 .small{font-size:12px;color:var(--muted);margin:6px 0 0}.link{color:var(--accent-text);font-weight:700}.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
-</style><style id="desk">
-.side{display:none}
-@media (min-width:900px){
- body{display:grid!important;grid-template-columns:minmax(360px,44%) 1fr;padding:0!important;place-items:stretch!important;background:var(--bg)!important}
- .side{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:18px;padding:64px 56px;color:#2A1018;background:linear-gradient(155deg,#FF93A0 0%,#FFA9B3 55%,#FFC4CB 100%);position:sticky;top:0;height:100vh}
- .side img{width:min(440px,78%);max-height:420px;object-fit:contain;margin:0}
- .side h2{margin:0;font-size:38px;line-height:1.1;letter-spacing:-.03em;font-weight:800}
- .side p{margin:0;font-size:16px;line-height:1.6;opacity:.9;max-width:420px}
- .side ul{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:10px;font-size:15px;font-weight:600}
- .side li::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#2A1018;margin-right:12px;opacity:.85}
- .panel{align-self:center;justify-self:center;width:min(100%,460px)!important;margin:48px 24px;border:0!important;box-shadow:none!important;background:transparent!important;padding:0!important}
- .panel .logo,.panel .rule{display:none}
- .panel .eyebrow{text-align:left}.panel .title{font-size:34px;text-align:left}.panel .sub,.panel .hint,.panel .foot{text-align:left}
- .panel.wide{width:min(100%,700px)!important}.panel.wide .apps{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
-}
-@media (min-width:900px) and (prefers-color-scheme:dark){:root:not([data-theme="light"]) body{background:var(--bg)}}
 </style><style id="fun">
 @keyframes sfloat{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-12px) rotate(2deg)}}
 @keyframes sdrift{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-26px) scale(1.12)}}
@@ -36,22 +20,10 @@
 @keyframes sdraw{to{stroke-dashoffset:0}}
 @keyframes sspark{0%{opacity:0;transform:translate(0,0) scale(.3)}30%{opacity:1}100%{opacity:0;transform:translate(var(--x),var(--y)) scale(1)}}
 @keyframes sshine{from{transform:translateX(-120%)}to{transform:translateX(220%)}}
-.side{position:relative;overflow:hidden}
-.side .blob{position:absolute;border-radius:50%;filter:blur(40px);opacity:.55;pointer-events:none;animation:sdrift 11s ease-in-out infinite}
-.side .b1{width:300px;height:300px;background:#fff;left:-90px;top:-70px}.side .b2{width:260px;height:260px;background:#FF7A8B;right:-80px;bottom:-60px;animation-delay:-4s}
-.side .ring{position:absolute;border:6px solid #2A101822;border-radius:50%;pointer-events:none;animation:sfloat 7s ease-in-out infinite}
-.side .r1{width:70px;height:70px;left:9%;top:14%}.side .r2{width:44px;height:44px;right:12%;top:22%;animation-delay:-2s}.side .r3{width:56px;height:56px;right:18%;bottom:12%;animation-delay:-4s}
-.side>*:not(.blob):not(.ring){position:relative;z-index:1}
-.side img{animation:sfloat 6s ease-in-out infinite}
-.steps{display:grid;gap:12px;margin-top:10px;text-align:left}
-.steps div{display:flex;gap:12px;align-items:center;font-size:15px;font-weight:650;animation:sin .6s ease both}
-.steps div:nth-child(1){animation-delay:.2s}.steps div:nth-child(2){animation-delay:.4s}.steps div:nth-child(3){animation-delay:.6s}
-.steps b{flex:none;width:32px;height:32px;border-radius:50%;background:#2A1018;color:#FFB3BC;display:grid;place-items:center;font-size:14px}
 .panel{animation:sin .55s cubic-bezier(.2,.8,.2,1) both}
 .meter{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin:2px 0 22px}
 .meter i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#FF93A0,#FFC4CB);transition:width .45s cubic-bezier(.2,.8,.2,1)}
 .meter.full i{background:linear-gradient(90deg,#FF93A0,#7BD8A5)}
-.hello{display:inline-block;animation:sfloat 3s ease-in-out infinite;transform-origin:70% 70%}
 .grid2{display:grid;gap:0 16px}
 @media (min-width:640px){.grid2{grid-template-columns:1fr 1fr}.grid2 .full{grid-column:1/-1}}
 form .field{animation:sin .5s ease both}form .field:nth-of-type(1){animation-delay:.1s}form .field:nth-of-type(2){animation-delay:.16s}form .field:nth-of-type(3){animation-delay:.22s}form .field:nth-of-type(4){animation-delay:.28s}form .field:nth-of-type(5){animation-delay:.34s}form .field:nth-of-type(6){animation-delay:.4s}
@@ -70,9 +42,9 @@ form .field{animation:sin .5s ease both}form .field:nth-of-type(1){animation-del
 .done h2{margin:12px 0 6px;font-size:24px;letter-spacing:-.03em}.done p{margin:0;color:var(--muted);line-height:1.55}
 .spark{position:absolute;left:50%;top:46px;width:9px;height:9px;border-radius:50%;background:#FF93A0;opacity:0;animation:sspark 1.1s ease-out .5s both}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.done path{stroke-dashoffset:0}}
-@media (min-width:900px){.panel{width:min(100%,600px)!important}}
+.panel{width:min(100%,600px)!important}.logo{width:min(120px,40%)!important;max-height:70px!important;margin-bottom:18px!important}.panel .title{margin-top:6px}
 </style></head>
-<body><aside class="side"><i class="blob b1"></i><i class="blob b2"></i><i class="ring r1"></i><i class="ring r2"></i><i class="ring r3"></i><img src="/pandora-logo.png" alt="Pandora"><h2>Join the Pandora team</h2><p>One minute and you are in. See your own sales, what sells best for you, and tips to do even better.</p><div class="steps"><div><b>1</b>Fill in your details</div><div><b>2</b>Your manager says yes</div><div><b>3</b>Sign in and shine</div></div></aside><main class="panel"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="rule"></div><div class="eyebrow">Sales people</div><h1 class="title">Create your account <span class="hello">&#10024;</span></h1><p class="sub" id="sub">Fill in your details. Your manager will check them and open your account.</p>
+<body><main class="panel"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="rule"></div><div class="eyebrow">Sales people</div><h1 class="title">Create your account</h1><p class="sub" id="sub">Fill in your details. Your manager will check them and open your account.</p>
 <div class="error" id="error" role="alert"></div><div class="ok" id="okbox" role="status"></div>
 <form id="f"><div class="meter" id="meter" aria-hidden="true"><i></i></div><div class="grid2">
 <div class="field"><label for="name">Your full name</label><input id="name" autocomplete="name" required maxlength="60"><p class="small">The same way it appears in the sales report.</p></div>
