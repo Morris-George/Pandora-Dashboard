@@ -131,11 +131,11 @@ module.exports = async function handler(req, res) {
   const multi = appsFor(facts).length > 1;
   const toLogin = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/login.html'); return res.status(302).end(); };
   const toHome = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/'); return res.status(302).end(); };
-  if (!signedIn && !facts.vm) return toLogin();
+  if (!signedIn && !facts.vm && !facts.sc) return toLogin();
 
   // Home: the options this person can open
   if (requestedPath === '/' || requestedPath === '/home.html') {
-    const label = facts.vm ? facts.vmName : facts.staff ? (facts.staff.role === 'staff' || facts.staff.role === 'store' ? facts.staff.name : facts.staff.label) : 'Pandora Dashboards';
+    const label = facts.vm || facts.sc ? facts.vmName : facts.staff ? (facts.staff.role === 'staff' || facts.staff.role === 'store' ? facts.staff.name : facts.staff.label) : 'Pandora Dashboards';
     const boot = JSON.stringify({ ok: true, label, greet: greetName(facts), apps: appsFor(facts) }).replace(/</g, '\\u003c');
     const chrome = withChrome('home', multi);
     return sendFile(res, 'home.html', 'text/html; charset=utf-8', function (buf) {
@@ -222,15 +222,15 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'stock.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
   }
 
-  // Stock Count: super admin only
+  // Stock Count: super admin and the Stock Count only accounts
   if (requestedPath === '/stockcount' || requestedPath === '/stockcount/' || requestedPath === '/stockcount.html') {
-    if (!(facts.staff && facts.staff.role === 'admin')) return toHome();
+    if (!(facts.staff && facts.staff.role === 'admin') && !facts.sc) return toHome();
     return sendFile(res, 'stockcount.html', 'text/html; charset=utf-8', withChrome('staff', multi));
   }
   // its product pictures, in pieces (one response may not pass 4.5 MB); super admin only, kept by the browser for a day
   const picPart = /^\/stockcount-pics-([1-9])\.js$/.exec(requestedPath);
   if (picPart) {
-    if (!(facts.staff && facts.staff.role === 'admin')) return res.status(404).end();
+    if (!(facts.staff && facts.staff.role === 'admin') && !facts.sc) return res.status(404).end();
     try {
       const body = fs.readFileSync(path.join(PRIVATE_DIR, 'stockcount-pics-' + picPart[1] + '.js'));
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');

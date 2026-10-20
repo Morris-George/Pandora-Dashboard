@@ -3,7 +3,7 @@
 const { PROJECTS, validSession, readCookie, staffAccounts } = require('./_projects');
 const { whoami } = require('./_auth');
 
-// f = { dash: true/false, staff: { role, label, name } | null, vm: true/false }
+// f = { dash: true/false, staff: { role, label, name } | null, vm: true/false, sc: true/false (Stock Count only account) }
 const APPS = [
   { id: 'dashboards', title: 'Pandora Dashboards', desc: 'Sales dashboards for the whole business.', href: '/dashboards', allow: f => f.dash },
   { id: 'staff', title: 'Staff Performance', desc: 'How each store and each sales person is doing.', href: '/staff', allow: f => !!f.staff && f.staff.role !== 'staff' && f.staff.role !== 'store' },
@@ -15,7 +15,7 @@ const APPS = [
   { id: 'vmzones', title: 'VM Zones', desc: 'Which collection is in which zone of each store, and its effect on sales.', href: '/vm/zones', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') },
   { id: 'zonestock', title: 'Zone Stock', desc: 'What is in each zone of the store: counts, goods received, moves, and sales taken off automatically.', href: '/vm/stock', allow: f => !!f.vm || (!!f.staff && (f.staff.role === 'admin' || f.staff.role === 'store')) },
   { id: 'stock', title: 'Stock balance', desc: 'How many pieces are in stock in each category, store by store, for the dates you pick.', href: '/stock', allow: f => !!f.vm || (!!f.staff && f.staff.role !== 'staff' && f.staff.role !== 'store') },
-  { id: 'stockcount', title: 'Stock Count', desc: 'Count a store with scanners or phones and see what matches the ERP stock balance and what differs.', href: '/stockcount', allow: f => !!f.staff && f.staff.role === 'admin' },
+  { id: 'stockcount', title: 'Stock Count', desc: 'Count a store with scanners or phones and see what matches the ERP stock balance and what differs.', href: '/stockcount', allow: f => !!f.sc || (!!f.staff && f.staff.role === 'admin') },
   { id: 'vm', title: 'VM Report', desc: 'The Visual Merchandiser report.', href: '/vm', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') }
 ];
 
@@ -35,8 +35,9 @@ async function sessionFacts(req) {
   const who = await whoami(req);
   const dash = validSession('dashboards', tok, adminUser, secret) || (!!who && who.kind === 'env' && !!who.info.allow);
   const vm = !!who && who.kind === 'vm';
-  const staff = who && !vm ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', who } : null;
-  return { dash, staff, vm, vmName: vm ? who.user.name : '' };
+  const sc = !!who && who.kind === 'sc';
+  const staff = who && !vm && !sc ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', who } : null;
+  return { dash, staff, vm, sc, vmName: vm || sc ? who.user.name : '' };
 }
 
 // Area managers are greeted by first name ("Hello Joseph"). Everyone else keeps their usual label.

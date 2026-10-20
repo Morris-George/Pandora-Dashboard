@@ -80,9 +80,10 @@ module.exports = async function handler(req, res) {
   const isAdmin = !!who && who.kind === 'env' && who.info.role === 'admin';
   // a phone paired from the super admin's screen may use the count too (see api/_pair.js), but never make pairing links
   const paired = !isAdmin && pair.hasPair(req);
-  if (!isAdmin && !paired) {
+  const counter = !!who && who.kind === 'sc'; // a Stock Count only account
+  if (!isAdmin && !paired && !counter) {
     if (!who) return send(res, 401, { error: 'Please sign in again.' });
-    return send(res, 403, { error: 'Only the super admin can use Stock Count.' });
+    return send(res, 403, { error: 'You do not have access to Stock Count.' });
   }
   if (req.method !== 'POST') return send(res, 405, { error: 'POST only' });
   if (!store.configured()) return send(res, 503, { error: 'storage not configured' });

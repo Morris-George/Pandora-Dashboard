@@ -44,6 +44,10 @@ async function whoami(req) {
     if (rec && rec.status === 'active' && rec.role === 'vm') {
       return { kind: 'vm', user: rec, info: { role: 'vm', label: 'Visual Merchandiser', zone: null, allow: null, zones: null } };
     }
+    if (rec && rec.status === 'active' && rec.role === 'stockcount') {
+      // a Stock Count only account: opens the Stock Count page and its data, nothing else
+      return { kind: 'sc', user: rec, info: { role: 'stockcount', label: 'Stock Count', zone: null, allow: null, zones: null } };
+    }
     if (rec && rec.status === 'active' && rec.storeManager && rec.linked && rec.store) {
       // a store manager: still a sales person (own page at /staff/me), and also sees the team of their own store, nothing else
       const rx = '^' + String(rec.store).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$';
