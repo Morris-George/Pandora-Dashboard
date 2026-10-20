@@ -146,6 +146,27 @@ module.exports = async function handler(req, res) {
     const op = url.searchParams.get('op');
     const b = await readBody(req);
     if (!b || typeof b !== 'object') return send(res, 400, { ok: false, error: 'Could not read the data.' });
+    if (op === 'clearimport') {
+      // removes every day that came from an Excel sheet (days with numbers but no typed shifts) in all the stores this person may open;
+      // typed shifts, targets and weekday shares stay
+      if (a.role === 'staff' || a.role === 'store') return send(res, 403, { ok: false, error: 'Only area managers and the super admin can do this.' });
+      let days = 0, months = 0;
+      for (const st of (await overview()).filter(x => mayStore(a, x.name))) {
+        for (const mo of st.months) {
+          const k = 'daily/' + slug(st.name) + '/' + mo + '.json', rec = await store.getJSON(k);
+          if (!rec || !rec.rows) continue;
+          const gone = Object.keys(rec.rows).filter(d => !(rec.shifts && rec.shifts[d]));
+          if (!gone.length) continue;
+          gone.forEach(d => delete rec.rows[d]);
+          const at = new Date().toISOString();
+          rec.updated = { at, by: a.by };
+          rec.log = [{ at, by: a.by, action: 'removed Excel days', days: gone.length }, ...(rec.log || [])].slice(0, 40);
+          await store.putJSON(k, rec);
+          days += gone.length; months++;
+        }
+      }
+      return send(res, 200, { ok: true, days, months });
+    }
     const name = canon(b.store), month = String(b.month || '');
     if (!MONTH.test(month)) return send(res, 400, { ok: false, error: 'The month could not be read.' });
     if (!name || !mayStore(a, name) || (a.role === 'admin' && !CANON.some(c => c.name === name) && !(await overview()).some(s => s.name === name))) {

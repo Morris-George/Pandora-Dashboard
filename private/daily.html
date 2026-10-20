@@ -114,6 +114,7 @@ button.chip{border:0;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
     <div class="cardhead"><h2>Add a whole Excel sheet</h2><span class="meta">Only for numbers you already have in the old Excel sheet (DATE, VISITORS, TRANSACTIONS, QTY, CASH, VISA, MORNING, NIGHT). Days from the sheet replace the same days typed here.</span></div>
     <div class="drop" id="drop">Drop the Excel file here, or <u>choose a file</u><input type="file" id="pick" accept=".xlsx,.xls,.csv" multiple hidden></div>
     <div class="files" id="files"></div>
+    <div class="foot" id="rmXl" hidden><a id="rmXlBtn">Remove all days that came from Excel</a><span class="sub">Only the days added from an Excel sheet. Numbers typed on the site, targets and weekday shares stay.</span></div>
   </section>
 
   <div class="filters" id="filters" hidden>
@@ -287,7 +288,7 @@ async function init(keepStore,keepMonth){
     $('storeSel').value=S.store;
     $('filters').hidden=false;
     $('sub').textContent=S.role==='admin'?'All stores. Type in the numbers of any store, and compare the stores.':S.role==='area'?'The stores of your zone. Type in numbers, set targets and compare the stores.':'Your store. Type in your numbers after the morning shift and again after the night shift.';
-    $('toTarget').hidden=!canTarget();
+    $('toTarget').hidden=!canTarget();$('rmXl').hidden=!canTarget();
     setupEntry();
     await loadMonth();
     await fillEntry();
@@ -420,6 +421,11 @@ $('tSave').onclick=async()=>{
 
 /* ---------- Excel upload (optional, for numbers already in the old sheet) ---------- */
 const pend=[];
+$('rmXlBtn').onclick=async()=>{
+  if(!confirm('Remove every day that came from an Excel sheet? Numbers typed on the site stay.'))return;
+  try{const j=await post('clearimport',{});await init(S.store,S.month);say(j.days?'Removed '+j.days+' Excel days ('+j.months+' store-months).':'There were no Excel days to remove.','bigok')}
+  catch(e){say(e.message)}
+};
 $('toImport').onclick=()=>{const c=$('upCard');c.hidden=!c.hidden;if(!c.hidden)c.scrollIntoView({behavior:'smooth',block:'nearest'})};
 $('drop').onclick=()=>$('pick').click();
 $('pick').onchange=e=>{addFiles(e.target.files);e.target.value=''};
