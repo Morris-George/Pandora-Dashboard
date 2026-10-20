@@ -36,11 +36,11 @@ function chromeScript(kind, multi) {
   'if(kind==="staff"||kind==="dashboards"||kind==="vm"){if(multi){var hm=mk("Home");hm.addEventListener("click",function(){window.__pandoraGo?window.__pandoraGo("/"):(location.href="/")});place(hm);}}' +
   'place(t);' +
   'if(kind!=="login"){' +
-  'var lo=mk("Log out");lo.addEventListener("click",function(){lo.disabled=true;lo.textContent="Logging out\\u2026";' +
+  'var lo=mk("Log out");lo.addEventListener("click",function(){lo.style.minWidth=lo.offsetWidth+"px";lo.disabled=true;lo.style.opacity=".55";lo.style.whiteSpace="nowrap";' +
   'try{localStorage.removeItem("storeStaffSummary.v1");sessionStorage.removeItem("storeStaffSummary.v1")}catch(e){}' +
   'fetch("/api/logout",{method:"POST",credentials:"same-origin"}).then(function(r){' +
   'if(r.ok){location.replace("/login.html");}else{throw new Error("x");}' +
-  '}).catch(function(){lo.disabled=false;lo.textContent="Log out";});});place(lo);' +
+  '}).catch(function(){lo.disabled=false;lo.style.opacity="";});});place(lo);' +
   '}' +
   '})();</script>';
 }
