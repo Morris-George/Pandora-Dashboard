@@ -30,7 +30,7 @@ body.go .app{animation:rise .6s cubic-bezier(.2,.8,.2,1) forwards;animation-dela
 @keyframes rise{to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.stage,.logo{transition:none;animation:none}.stage{padding-top:40px}.logo{width:84px}.greet,.app{opacity:1;transform:none;animation:none!important}}
 </style></head>
-<body><main class="stage"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="greet"><h1 class="title" id="hello">&nbsp;</h1><p class="sub" id="sub">Choose what you want to open.</p></div>
+<body data-nopw><main class="stage"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="greet"><h1 class="title" id="hello">&nbsp;</h1><p class="sub" id="sub">Choose what you want to open.</p></div>
 <div class="apps" id="apps"></div></main>
 <script>
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

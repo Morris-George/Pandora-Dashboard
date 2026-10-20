@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { appsFor, sessionFacts, greetName } = require('./_apps');
 const pair = require('./_pair');
+const MOTION = require('./_motion');
 
 const PRIVATE_DIR = path.join(process.cwd(), 'private');
 
@@ -15,7 +16,7 @@ const THEME_HEAD = '<style id="pandora-theme-css">' +
   ':root[data-theme="dark"] .pandora-fab{background:rgba(33,31,29,.92);color:#f7f2ed}' +
   '@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pandora-fab{background:rgba(33,31,29,.92);color:#f7f2ed}}' +
   '</style><script>(function(){try{var t=localStorage.getItem("pandora-theme");' +
-  'if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>';
+  'if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>' + MOTION;
 
 // kind: 'dashboards' | 'staff' | 'home' | 'login'.  multi: the person can open more than one thing, so a Home button is shown.
 function chromeScript(kind, multi) {
@@ -32,7 +33,7 @@ function chromeScript(kind, multi) {
   'function sync(){var d=cur()==="dark";t.classList.toggle("is-dark",d);t.setAttribute("aria-checked",d);t.setAttribute("aria-label",d?"Switch to light mode":"Switch to dark mode");t.title=d?"Light mode":"Dark mode"}sync();' +
   't.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";' +
   'document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("pandora-theme",n)}catch(e){}sync()});' +
-  'if(kind==="staff"||kind==="dashboards"||kind==="vm"){if(multi){var hm=mk("Home");hm.addEventListener("click",function(){location.href="/"});place(hm);}}' +
+  'if(kind==="staff"||kind==="dashboards"||kind==="vm"){if(multi){var hm=mk("Home");hm.addEventListener("click",function(){window.__pandoraGo?window.__pandoraGo("/"):(location.href="/")});place(hm);}}' +
   'place(t);' +
   'if(kind!=="login"){' +
   'var lo=mk("Log out");lo.addEventListener("click",function(){lo.disabled=true;lo.textContent="Logging out\\u2026";' +
