@@ -92,3 +92,5 @@ DAILY STORE REPORT UPDATE (typed in on the site, twice a day)
 HOME SCREEN (private/home.html): no pink side panel. The small Pandora logo shows alone in the middle, after 1.5 s it glides up and the pages appear one by one in a single rounded list (smaller cards, staggered animation; reduced-motion = no animation). Cards come from api/_apps.js as before.
 
 LOGIN PAGE (private/login.html): animated pink background (drifting blurs that follow the mouse a little, floating charm rings and twinkling sparkles; deep plum version in dark mode), frosted glass card with the logo in a spinning-ring badge, floating-label fields, shine button, card shakes on a wrong password, and on success the card lifts away with a pink wave before the next page opens. Login logic (api/login) is unchanged. Reduced-motion users get no animation.
+
+DASHBOARDS HEADER (private/index.html, style id fun-header): flowing pink gradient, rounded bottom corners, floating charm rings, shine sweep, white pulsing logo badge, bouncy pill buttons (the Home / Log out / theme buttons from api/site.js keep working). Reduced motion = no animation.
