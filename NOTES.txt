@@ -96,3 +96,8 @@ LOGIN PAGE (private/login.html): animated pink background (drifting blurs that f
 DASHBOARDS HEADER (private/index.html, style id fun-header): flowing pink gradient, rounded bottom corners, floating charm rings, shine sweep, white pulsing logo badge, bouncy pill buttons (the Home / Log out / theme buttons from api/site.js keep working). Reduced motion = no animation.
 
 PAGE MOTION (api/_motion.js, injected into every page by api/site.js with the theme code): opening any page = pink curtain with the logo lifts away, then the page's top-level blocks rise in one after another ([data-pw], staggered). Clicking a same-site link or the Home button = the curtain drops back first (window.__pandoraGo). Home and login carry data-nopw on <body> (own intro) and only use the curtain. API links, downloads, new-tab links and same-page links are not intercepted. prefers-reduced-motion switches it all off.
+
+OVERSEER ACCOUNT (role 'overseer', stored account like VM / Stock Count only)
+- Sees and opens everything the super admin does (Dashboards, Staff Performance, All Uploads, Daily Store Report, VM, Stock, Stock Count), but cannot manage accounts: no "Staff approvals" card, /staff/accounts redirects away, /api/accounts answers 403 (so no password changes, approvals or removals).
+- api/_auth.js treats it as the super admin (kind 'env', role 'admin') with info.overseer = true; the only place that checks the flag is accounts + the Staff approvals card/page.
+- Ibrahim Nassif (username ibrahim.nassif) is created once with a random password when the super admin opens Staff approvals; set his password with "Change password" in Special accounts. More overseers: Special accounts -> type "Overseer".

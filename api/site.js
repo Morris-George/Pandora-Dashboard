@@ -162,7 +162,7 @@ module.exports = async function handler(req, res) {
     } else if (isMe) {
       return toHome();
     } else if (requestedPath.startsWith('/staff/accounts')) {
-      if (who.info.role !== 'admin') { res.setHeader('Location', '/staff'); return res.status(302).end(); }
+      if (who.info.role !== 'admin' || who.info.overseer) { res.setHeader('Location', '/staff'); return res.status(302).end(); }
       page = 'accounts.html';
     } else {
       page = requestedPath.startsWith('/staff/person') ? 'person.html' : 'staff.html';

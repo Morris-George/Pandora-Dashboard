@@ -8,7 +8,7 @@ const APPS = [
   { id: 'dashboards', title: 'Pandora Dashboards', desc: 'Sales dashboards for the whole business.', href: '/dashboards', allow: f => f.dash },
   { id: 'staff', title: 'Staff Performance', desc: 'How each store and each sales person is doing.', href: '/staff', allow: f => !!f.staff && f.staff.role !== 'staff' && f.staff.role !== 'store' },
   { id: 'uploads', title: 'All Uploads', desc: 'Add, see and remove every document, grouped by where it is used.', href: '/uploads', allow: f => !!f.staff && f.staff.role === 'admin' },
-  { id: 'approvals', title: 'Staff approvals', desc: 'Approve new sales people, reset passwords and manage accounts.', href: '/staff/accounts', allow: f => !!f.staff && f.staff.role === 'admin' },
+  { id: 'approvals', title: 'Staff approvals', desc: 'Approve new sales people, reset passwords and manage accounts.', href: '/staff/accounts', allow: f => !!f.staff && f.staff.role === 'admin' && !f.staff.overseer },
   { id: 'mysales', title: 'My sales', desc: 'What you sold, what sells best for you, and tips to improve.', href: '/staff', allow: f => !!f.staff && f.staff.role === 'staff' },
   { id: 'storeteam', title: 'My store team', desc: 'How each sales person in your store is doing.', href: '/staff', allow: f => !!f.staff && f.staff.role === 'store' },
   { id: 'mysales2', title: 'My sales', desc: 'What you sold, what sells best for you, and tips to improve.', href: '/staff/me', allow: f => !!f.staff && f.staff.role === 'store' },
@@ -34,10 +34,10 @@ async function sessionFacts(req) {
   const tok = readCookie(req, PROJECTS.dashboards.cookie);
   const adminUser = (staffAccounts().find(a => a.role === 'admin') || {}).user;
   const who = await whoami(req);
-  const dash = validSession('dashboards', tok, adminUser, secret) || (!!who && who.kind === 'env' && !!who.info.allow);
+  const dash = validSession('dashboards', tok, adminUser, secret) || (!!who && who.kind === 'env' && (!!who.info.allow || !!who.info.overseer));
   const vm = !!who && who.kind === 'vm';
   const sc = !!who && who.kind === 'sc';
-  const staff = who && !vm && !sc ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', who } : null;
+  const staff = who && !vm && !sc ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', overseer: !!who.info.overseer, who } : null;
   return { dash, staff, vm, sc, vmName: vm || sc ? who.user.name : '' };
 }
 

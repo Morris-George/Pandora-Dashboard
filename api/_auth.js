@@ -44,6 +44,11 @@ async function whoami(req) {
     if (rec && rec.status === 'active' && rec.role === 'vm') {
       return { kind: 'vm', user: rec, info: { role: 'vm', label: 'Visual Merchandiser', zone: null, allow: null, zones: null } };
     }
+    if (rec && rec.status === 'active' && rec.role === 'overseer') {
+      // an Overseer (for example Ibrahim Nassif): sees and does everything the super admin does, except managing accounts and passwords
+      const account = { role: 'admin', label: 'Overseer', user: rec.username, overseer: true };
+      return { kind: 'env', account, user: rec, info: { ...roleInfo(account), overseer: true } };
+    }
     if (rec && rec.status === 'active' && rec.role === 'stockcount') {
       // a Stock Count only account: opens the Stock Count page and its data, nothing else
       return { kind: 'sc', user: rec, info: { role: 'stockcount', label: 'Stock Count', zone: null, allow: null, zones: null } };
