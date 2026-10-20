@@ -101,3 +101,7 @@ OVERSEER ACCOUNT (role 'overseer', stored account like VM / Stock Count only)
 - Sees and opens everything the super admin does (Dashboards, Staff Performance, All Uploads, Daily Store Report, VM, Stock, Stock Count), but cannot manage accounts: no "Staff approvals" card, /staff/accounts redirects away, /api/accounts answers 403 (so no password changes, approvals or removals).
 - api/_auth.js treats it as the super admin (kind 'env', role 'admin') with info.overseer = true; the only place that checks the flag is accounts + the Staff approvals card/page.
 - Ibrahim Nassif (username ibrahim.nassif) is created once with a random password when the super admin opens Staff approvals; set his password with "Change password" in Special accounts. More overseers: Special accounts -> type "Overseer".
+
+ACTIVE PEOPLE FILTERS (Staff approvals, /staff/accounts)
+- "Active people" lists everyone who can sign in, with buttons: Everyone / Staff / Area managers / Finance / Brand manager (with counts). Staff = sales people and store managers; Area managers = the Vercel manager accounts; Finance and Brand manager = special accounts with that job title (rec.title).
+- Titles are set from a dropdown on each special account (op settitle). Seeded once: Samy = Finance, Ibrahim Nassif = Brand manager.

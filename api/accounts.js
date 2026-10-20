@@ -38,6 +38,15 @@ module.exports = async function handler(req, res) {
     await store.putJSON('users/seeded/overseer-1.json', { at: new Date().toISOString() });
   }
 
+  // One-time setup: job titles shown as filters on the Active people list (Samy = Finance, Ibrahim Nassif = Brand manager)
+  if (req.method === 'GET' && !(await store.getJSON('users/seeded/titles-1.json'))) {
+    for (const [uname, title] of [['samy', 'Finance'], ['ibrahim.nassif', 'Brand manager']]) {
+      const r = await users.getUser(uname);
+      if (r && r.role && !r.title) { r.title = title; await users.putUser(r); }
+    }
+    await store.putJSON('users/seeded/titles-1.json', { at: new Date().toISOString() });
+  }
+
   const data = await store.getJSON('data/current.json');
   const people = data ? data.people.map(p => ({ store: data.stores[p[1]], name: p[0] })) : [];
 
@@ -45,7 +54,7 @@ module.exports = async function handler(req, res) {
     const all = await users.listUsers();
     const taken = new Map(all.filter(u => u.linked && !u.role).map(u => [u.store + '|' + u.name, u.username]));
     const list = all.map(u => ({
-      username: u.username, role: u.role || '', storeManager: !!u.storeManager, phone: u.phone, store: u.store, name: u.name, linked: !!u.linked, status: u.status, createdAt: u.createdAt,
+      username: u.username, role: u.role || '', title: u.title || '', storeManager: !!u.storeManager, phone: u.phone, store: u.store, name: u.name, linked: !!u.linked, status: u.status, createdAt: u.createdAt,
       // suggested match from the sales file: same name (and store when it matches)
       suggest: (() => {
         const same = people.filter(p => norm(p.name) === norm(u.name));
@@ -157,6 +166,14 @@ module.exports = async function handler(req, res) {
     }
     if (b.action === 'dismissreset') { await store.del('resets/' + rec.username + '.json'); return send(res, 200, { ok: true }); }
     if (b.action === 'enable') { rec.status = 'active'; rec.fails = 0; rec.lockUntil = 0; await users.putUser(rec); return send(res, 200, { ok: true }); }
+    if (b.action === 'settitle') {
+      if (!rec.role) return send(res, 400, { ok: false, error: 'Titles are for special accounts.' });
+      const t = String(b.title || '');
+      if (t && t !== 'Finance' && t !== 'Brand manager') return send(res, 400, { ok: false, error: 'Unknown title.' });
+      if (t) rec.title = t; else delete rec.title;
+      await users.putUser(rec);
+      return send(res, 200, { ok: true });
+    }
     if (b.action === 'disable') { rec.status = 'disabled'; await users.putUser(rec); return send(res, 200, { ok: true }); }
     if (b.action === 'remove') { await users.removeUser(rec); return send(res, 200, { ok: true }); }
     return send(res, 400, { ok: false, error: 'Unknown action.' });
