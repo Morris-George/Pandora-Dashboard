@@ -104,4 +104,4 @@ OVERSEER ACCOUNT (role 'overseer', stored account like VM / Stock Count only)
 
 ACTIVE PEOPLE FILTERS (Staff approvals, /staff/accounts)
 - "Active people" lists everyone who can sign in, with buttons: Everyone / Staff / Area managers / Finance / Brand manager (with counts). Staff = sales people and store managers; Area managers = the Vercel manager accounts; Finance and Brand manager = special accounts with that job title (rec.title).
-- Titles are set from a dropdown on each special account (op settitle). Seeded once: Samy = Finance, Ibrahim Nassif = Brand manager.
+- Titles are set from a dropdown on each special account (op settitle). Seeded once: Samy, Hany Raouf and Hossam Makram = Finance, Ibrahim Nassif = Brand manager.

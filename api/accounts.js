@@ -47,6 +47,14 @@ module.exports = async function handler(req, res) {
     await store.putJSON('users/seeded/titles-1.json', { at: new Date().toISOString() });
   }
 
+  if (req.method === 'GET' && !(await store.getJSON('users/seeded/titles-2.json'))) {
+    for (const uname of ['hany.raouf', 'hossam.makram']) {
+      const r = await users.getUser(uname);
+      if (r && r.role && !r.title) { r.title = 'Finance'; await users.putUser(r); }
+    }
+    await store.putJSON('users/seeded/titles-2.json', { at: new Date().toISOString() });
+  }
+
   const data = await store.getJSON('data/current.json');
   const people = data ? data.people.map(p => ({ store: data.stores[p[1]], name: p[0] })) : [];
 
