@@ -11,11 +11,18 @@ html.pw-out::before{animation:pwdrop .5s cubic-bezier(.7,0,.3,1) forwards;transf
 html.pw-out::after{animation:pwlogoin .4s ease .15s forwards}
 @keyframes pwdrop{from{transform:translateY(110%)}to{transform:translateY(0)}}
 @keyframes pwlogoin{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+/* going back reverses the curtain: it slides DOWN and away on arrival, and comes down from the top when leaving to a parent page */
+html.pw-back::before{top:-140px;border-radius:50% 50% 0 0 / 130px 130px 0 0;transform:translateY(130%);animation:pwlower .85s cubic-bezier(.75,0,.2,1) .18s backwards}
+@keyframes pwlower{0%,12%{transform:translateY(0)}100%{transform:translateY(130%)}}
+html.pw-out.pw-leaveback::before{top:0;border-radius:0 0 50% 50% / 0 0 130px 130px;transform:translateY(0);animation:pwfromtop .5s cubic-bezier(.7,0,.3,1) forwards}
+@keyframes pwfromtop{from{transform:translateY(-120%)}to{transform:translateY(0)}}
 [data-pw]{animation:pwrise .75s cubic-bezier(.2,.8,.2,1) calc(.55s + var(--pwi,0) * .07s) backwards}
 @keyframes pwrise{from{opacity:0;transform:translateY(28px) scale(.985)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){html::before,html::after{display:none!important}[data-pw]{animation:none!important}}
 </style><script>(function(){
 var reduce=matchMedia("(prefers-reduced-motion: reduce)").matches,de=document.documentElement;
+(function(){var back=false;try{var n=performance.getEntriesByType("navigation")[0];back=!!n&&n.type==="back_forward";if(sessionStorage.getItem("pw-dir")==="back")back=true;sessionStorage.removeItem("pw-dir")}catch(_){}if(back)de.classList.add("pw-back")})();
+function isBack(url){try{var u=new URL(url,location.href);if(u.origin!==location.origin)return false;var t=u.pathname.replace(/\/$/,""),c=location.pathname.replace(/\/$/,"");return t!==c&&(t===""||c.indexOf(t+"/")===0)}catch(_){return false}}
 function skip(e){return /^(SCRIPT|STYLE|LINK|META|TEMPLATE)$/.test(e.tagName)||e.hidden||/(pandora-fab|pandora-sw|hideclean|tip)/.test(e.className+" "+e.id)||getComputedStyle(e).position==="fixed"}
 function stagger(){
   if(reduce||!document.body||document.body.hasAttribute("data-nopw"))return;
@@ -28,12 +35,14 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
 function go(url,replace){
   if(reduce){replace?location.replace(url):(location.href=url);return}
   if(de.classList.contains("pw-out"))return;
+  var back=isBack(url);
+  if(back){de.classList.add("pw-leaveback");try{sessionStorage.setItem("pw-dir","back")}catch(_){}}
   de.classList.add("pw-out");
   setTimeout(function(){replace?location.replace(url):(location.href=url)},470);
-  setTimeout(function(){de.classList.remove("pw-out")},4000); // safety: if the page did not change (for example a download)
+  setTimeout(function(){de.classList.remove("pw-out","pw-leaveback")},4000); // safety: if the page did not change (for example a download)
 }
 window.__pandoraGo=go;
-addEventListener("pageshow",function(e){if(e.persisted)de.classList.remove("pw-out")});
+addEventListener("pageshow",function(e){if(e.persisted)de.classList.remove("pw-out","pw-leaveback")});
 document.addEventListener("click",function(e){
   if(e.defaultPrevented||e.button||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
   var a=e.target.closest&&e.target.closest("a[href]");if(!a||a.target||a.hasAttribute("download")||a.hasAttribute("data-nopw"))return;
