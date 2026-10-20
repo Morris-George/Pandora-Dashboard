@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const { appsFor, sessionFacts, greetName } = require('./_apps');
+const pair = require('./_pair');
 
 const PRIVATE_DIR = path.join(process.cwd(), 'private');
 
@@ -98,6 +99,30 @@ module.exports = async function handler(req, res) {
 
   if (requestedPath === '/favicon.png' || requestedPath === '/favicon.ico') {
     return sendFile(res, 'favicon.png', 'image/png');
+  }
+
+  // A phone paired from Stock Count: the link carries a signed token. Valid -> keep it in a cookie that opens only
+  // Stock Count, drop it from the address, and open the page ready to scan. Not valid -> the normal sign-in rules below.
+  const isCount = requestedPath === '/stockcount' || requestedPath === '/stockcount/' || requestedPath === '/stockcount.html';
+  if (isCount && url.searchParams.get('pair') && pair.validToken(url.searchParams.get('pair'), process.env.PANDORA_AUTH_SECRET)) {
+    const nm = String(url.searchParams.get('n') || '').replace(/\s+/g, ' ').trim().slice(0, 30);
+    res.setHeader('Set-Cookie', pair.cookieHeader(url.searchParams.get('pair')));
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Location', '/stockcount' + (nm ? '#phone=' + encodeURIComponent(nm) : '#phone='));
+    return res.status(302).end();
+  }
+  if ((isCount || /^\/stockcount-pics-[1-9]\.js$/.test(requestedPath)) && pair.hasPair(req)) {
+    const f0 = await sessionFacts(req);
+    if (!(f0.staff && f0.staff.role === 'admin')) {
+      if (isCount) return sendFile(res, 'stockcount.html', 'text/html; charset=utf-8', withChrome('staff', false));
+      try {
+        const body = fs.readFileSync(path.join(PRIVATE_DIR, requestedPath.slice(1)));
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        res.setHeader('Cache-Control', 'private, max-age=86400');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        return res.status(200).send(body);
+      } catch (_) { return res.status(404).end(); }
+    }
   }
 
   // Everything below needs a login. Which logins this browser holds decides what it can open.

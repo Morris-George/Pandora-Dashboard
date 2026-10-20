@@ -8,6 +8,7 @@
 //   sc/ver.json            {v}  changes on every write; devices poll this one small file and only read more when it changed
 const store = require('./_store');
 const { whoami } = require('./_auth');
+const pair = require('./_pair');
 
 const OVERLAP = 8000; // a collection read goes back this far, so a slow write that lands late is still seen
 
@@ -76,8 +77,13 @@ async function writeDoc(path, data) {
 
 module.exports = async function handler(req, res) {
   const who = await whoami(req);
-  if (!who) return send(res, 401, { error: 'Please sign in again.' });
-  if (!(who.kind === 'env' && who.info.role === 'admin')) return send(res, 403, { error: 'Only the super admin can use Stock Count.' });
+  const isAdmin = !!who && who.kind === 'env' && who.info.role === 'admin';
+  // a phone paired from the super admin's screen may use the count too (see api/_pair.js), but never make pairing links
+  const paired = !isAdmin && pair.hasPair(req);
+  if (!isAdmin && !paired) {
+    if (!who) return send(res, 401, { error: 'Please sign in again.' });
+    return send(res, 403, { error: 'Only the super admin can use Stock Count.' });
+  }
   if (req.method !== 'POST') return send(res, 405, { error: 'POST only' });
   if (!store.configured()) return send(res, 503, { error: 'storage not configured' });
 
@@ -88,6 +94,12 @@ module.exports = async function handler(req, res) {
     switch (b.op) {
       case 'ping':
         return send(res, 200, { ok: true });
+      case 'pair': {
+        if (!isAdmin) return send(res, 403, { error: 'Only the super admin can pair a phone.' });
+        const secret = process.env.PANDORA_AUTH_SECRET;
+        if (!secret || secret.length < 32) return send(res, 503, { error: 'not configured' });
+        return send(res, 200, { token: pair.makeToken(secret) });
+      }
       case 'get': {
         if (!okPath(b.path)) return send(res, 400, { error: 'bad path' });
         const o = await readDoc(b.path);

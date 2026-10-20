@@ -574,7 +574,7 @@ td .t1{max-width:360px}
   <p>Point your phone camera at this code and open the link. The phone joins this same count and scans as <b id="phName"></b>. Every scan shows up here instantly.</p>
   <div class="qrbox" id="phQr"></div>
   <input class="field" id="phLink" type="text" readonly aria-label="Phone link">
-  <p class="fine">Allow the camera when the phone asks. Both devices need internet.</p>
+  <p class="fine">Allow the camera when the phone asks. Both devices need internet. The link opens by itself with no sign-in and stops working after 12 hours, so only share it with your team.</p>
   <div class="acts"><button class="btn" id="phCopy" type="button">Copy link</button><button class="btn primary" id="phClose" type="button">Done</button></div>
 </div></div>
 <div id="cam" hidden>
@@ -1885,7 +1885,13 @@ function camScan(raw){
   $("#camCount").textContent=fmt(cam.count)+" scanned";
 }
 async function openPhoneModal(){
-  const link=location.origin+location.pathname+"#phone="+encodeURIComponent(myName||"");
+  /* the link carries a pairing token, so the phone opens the count straight away with no sign-in (valid 12 hours, opens only this page) */
+  let link=location.origin+location.pathname+"#phone="+encodeURIComponent(myName||"");
+  try{
+    const r=await fetch("/api/stockcount",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({op:"pair"})});
+    const j=r.ok?await r.json():null;
+    if(j&&j.token)link=location.origin+"/stockcount?pair="+encodeURIComponent(j.token)+"&n="+encodeURIComponent(myName||"");
+  }catch(e){}
   $("#phName").textContent=myName||"you";$("#phLink").value=link;
   const box=$("#phQr");box.innerHTML="";
   $("#phoneModal").hidden=false;
