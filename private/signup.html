@@ -28,19 +28,62 @@
  .panel.wide{width:min(100%,700px)!important}.panel.wide .apps{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
 }
 @media (min-width:900px) and (prefers-color-scheme:dark){:root:not([data-theme="light"]) body{background:var(--bg)}}
+</style><style id="fun">
+@keyframes sfloat{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-12px) rotate(2deg)}}
+@keyframes sdrift{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-26px) scale(1.12)}}
+@keyframes sin{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes spop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.15);opacity:1}100%{transform:scale(1)}}
+@keyframes sdraw{to{stroke-dashoffset:0}}
+@keyframes sspark{0%{opacity:0;transform:translate(0,0) scale(.3)}30%{opacity:1}100%{opacity:0;transform:translate(var(--x),var(--y)) scale(1)}}
+@keyframes sshine{from{transform:translateX(-120%)}to{transform:translateX(220%)}}
+.side{position:relative;overflow:hidden}
+.side .blob{position:absolute;border-radius:50%;filter:blur(40px);opacity:.55;pointer-events:none;animation:sdrift 11s ease-in-out infinite}
+.side .b1{width:300px;height:300px;background:#fff;left:-90px;top:-70px}.side .b2{width:260px;height:260px;background:#FF7A8B;right:-80px;bottom:-60px;animation-delay:-4s}
+.side .ring{position:absolute;border:6px solid #2A101822;border-radius:50%;pointer-events:none;animation:sfloat 7s ease-in-out infinite}
+.side .r1{width:70px;height:70px;left:9%;top:14%}.side .r2{width:44px;height:44px;right:12%;top:22%;animation-delay:-2s}.side .r3{width:56px;height:56px;right:18%;bottom:12%;animation-delay:-4s}
+.side>*:not(.blob):not(.ring){position:relative;z-index:1}
+.side img{animation:sfloat 6s ease-in-out infinite}
+.steps{display:grid;gap:12px;margin-top:10px;text-align:left}
+.steps div{display:flex;gap:12px;align-items:center;font-size:15px;font-weight:650;animation:sin .6s ease both}
+.steps div:nth-child(1){animation-delay:.2s}.steps div:nth-child(2){animation-delay:.4s}.steps div:nth-child(3){animation-delay:.6s}
+.steps b{flex:none;width:32px;height:32px;border-radius:50%;background:#2A1018;color:#FFB3BC;display:grid;place-items:center;font-size:14px}
+.panel{animation:sin .55s cubic-bezier(.2,.8,.2,1) both}
+.meter{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin:2px 0 22px}
+.meter i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#FF93A0,#FFC4CB);transition:width .45s cubic-bezier(.2,.8,.2,1)}
+.meter.full i{background:linear-gradient(90deg,#FF93A0,#7BD8A5)}
+.hello{display:inline-block;animation:sfloat 3s ease-in-out infinite;transform-origin:70% 70%}
+.grid2{display:grid;gap:0 16px}
+@media (min-width:640px){.grid2{grid-template-columns:1fr 1fr}.grid2 .full{grid-column:1/-1}}
+form .field{animation:sin .5s ease both}form .field:nth-of-type(1){animation-delay:.1s}form .field:nth-of-type(2){animation-delay:.16s}form .field:nth-of-type(3){animation-delay:.22s}form .field:nth-of-type(4){animation-delay:.28s}form .field:nth-of-type(5){animation-delay:.34s}form .field:nth-of-type(6){animation-delay:.4s}
+.field input,.field select{transition:border-color .2s,box-shadow .2s,transform .2s,background .2s}
+.field:focus-within input,.field:focus-within select{border-color:var(--accent)!important;box-shadow:0 0 0 4px #FF93A02e;transform:translateY(-1px)}
+.field:focus-within label{color:var(--accent-text)}
+.field.ok-f input,.field.ok-f select{border-color:#7BD8A5!important}
+.submit{position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.submit:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 24px #FF93A066}.submit:active{transform:scale(.98)}
+.submit::after{content:"";position:absolute;top:0;bottom:0;width:40%;background:linear-gradient(100deg,transparent,#ffffff88,transparent);transform:translateX(-120%)}
+.submit:hover:not(:disabled)::after{animation:sshine .8s ease}
+.done{display:none;text-align:center;padding:14px 0 6px;position:relative}
+.done svg{width:92px;height:92px;animation:spop .6s cubic-bezier(.2,.8,.2,1) both}
+.done circle{fill:#FFE4E8;stroke:#FF93A0;stroke-width:3}.done path{fill:none;stroke:#2A1018;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:60;animation:sdraw .5s ease .45s forwards}
+:root[data-theme="dark"] .done path{stroke:#FF93A0}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .done path{stroke:#FF93A0}}
+.done h2{margin:12px 0 6px;font-size:24px;letter-spacing:-.03em}.done p{margin:0;color:var(--muted);line-height:1.55}
+.spark{position:absolute;left:50%;top:46px;width:9px;height:9px;border-radius:50%;background:#FF93A0;opacity:0;animation:sspark 1.1s ease-out .5s both}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.done path{stroke-dashoffset:0}}
+@media (min-width:900px){.panel{width:min(100%,600px)!important}}
 </style></head>
-<body><aside class="side"><img src="/pandora-logo.png" alt="Pandora"></aside><main class="panel"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="rule"></div><div class="eyebrow">Sales people</div><h1 class="title">Create your account</h1><p class="sub" id="sub">Fill in your details. Your manager will check them and open your account.</p>
+<body><aside class="side"><i class="blob b1"></i><i class="blob b2"></i><i class="ring r1"></i><i class="ring r2"></i><i class="ring r3"></i><img src="/pandora-logo.png" alt="Pandora"><h2>Join the Pandora team</h2><p>One minute and you are in. See your own sales, what sells best for you, and tips to do even better.</p><div class="steps"><div><b>1</b>Fill in your details</div><div><b>2</b>Your manager says yes</div><div><b>3</b>Sign in and shine</div></div></aside><main class="panel"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="rule"></div><div class="eyebrow">Sales people</div><h1 class="title">Create your account <span class="hello">&#10024;</span></h1><p class="sub" id="sub">Fill in your details. Your manager will check them and open your account.</p>
 <div class="error" id="error" role="alert"></div><div class="ok" id="okbox" role="status"></div>
-<form id="f">
+<form id="f"><div class="meter" id="meter" aria-hidden="true"><i></i></div><div class="grid2">
 <div class="field"><label for="name">Your full name</label><input id="name" autocomplete="name" required maxlength="60"><p class="small">The same way it appears in the sales report.</p></div>
 <div class="field"><label for="store">Your store</label><select id="store" required><option value="" disabled selected>Choose your store</option><optgroup label="Cairo zone"><option>CC Almaza</option><option>City Stars</option><option>CFC</option><option>Point 90</option></optgroup><optgroup label="October &amp; Alexandria zone"><option>Mall of Egypt</option><option>Mall of Arabia</option><option>Alexandria</option></optgroup></select></div>
 <div class="field"><label for="phone">Mobile number</label><input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="01012345678" required></div>
 <div class="field"><label for="user">Choose a username</label><input id="user" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="30"><p class="small">3 to 30 letters or numbers, no spaces.</p></div>
 <div class="field"><label for="pw">Choose a password</label><input id="pw" type="password" autocomplete="new-password" minlength="8" required><p class="small">At least 8 characters.</p></div>
 <div class="field"><label for="pw2">Type the password again</label><input id="pw2" type="password" autocomplete="new-password" minlength="8" required></div>
-<input class="hp" id="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+</div><input class="hp" id="website" tabindex="-1" autocomplete="off" aria-hidden="true">
 <button class="submit" id="go" type="submit">Create account</button></form>
-<p class="foot"><a class="link" href="/login.html">I already have an account</a></p></main>
+<div class="done" id="done"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44"/><path d="M30 52l14 14 27-30"/></svg><i class="spark" style="--x:-80px;--y:-50px"></i><i class="spark" style="--x:80px;--y:-40px;background:#2A1018"></i><i class="spark" style="--x:-60px;--y:50px;background:#FFC4CB"></i><i class="spark" style="--x:70px;--y:60px"></i><h2>You are in the list!</h2><p>Your manager will check your details and open your account. After that, sign in with your username and password.</p></div><p class="foot"><a class="link" href="/login.html">I already have an account</a></p></main>
 <script>
 const $=id=>document.getElementById(id),err=$('error'),okb=$('okbox');
 const fail=m=>{okb.style.display='none';err.textContent=m;err.style.display='block';err.scrollIntoView({block:'center'})};
@@ -50,6 +93,11 @@ $('f').addEventListener('submit',async e=>{e.preventDefault();err.style.display=
  try{const r=await fetch('/api/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('name').value,store:$('store').value,phone:$('phone').value,username:$('user').value,password:$('pw').value,website:$('website').value})});
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok){fail(j.error||'Something went wrong. Please try again.');b.disabled=false;b.textContent='Create account';return}
-  $('f').hidden=true;$('sub').textContent='';okb.textContent='Your account was created. Your manager will check it and open it. After that you can sign in with your username and password.';okb.style.display='block';
+  $('f').hidden=true;$('sub').textContent='';$('done').style.display='block';$('done').scrollIntoView({block:'center'});
  }catch(x){fail('No connection. Please try again.');b.disabled=false;b.textContent='Create account'}});
+
+const ids=['name','store','phone','user','pw','pw2'];
+function prog(){let n=0;ids.forEach(i=>{const el=$(i),v=String(el.value||'').trim();let ok=!!v;if(i==='user')ok=/^[A-Za-z0-9._-]{3,30}$/.test(v);if(i==='pw')ok=v.length>=8;if(i==='pw2')ok=v.length>=8&&v===$('pw').value;if(i==='phone')ok=v.replace(/\D/g,'').length>=10;if(i==='name')ok=v.length>=3;el.closest('.field').classList.toggle('ok-f',ok);if(ok)n++});
+ $('meter').firstElementChild.style.width=(n/ids.length*100)+'%';$('meter').classList.toggle('full',n===ids.length)}
+ids.forEach(i=>{$(i).addEventListener('input',prog);$(i).addEventListener('change',prog)});prog();
 </script></body></html>
