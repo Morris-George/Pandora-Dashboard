@@ -15,6 +15,7 @@ const APPS = [
   { id: 'vmzones', title: 'VM Zones', desc: 'Which collection is in which zone of each store, and its effect on sales.', href: '/vm/zones', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') },
   { id: 'zonestock', title: 'Zone Stock', desc: 'What is in each zone of the store: counts, goods received, moves, and sales taken off automatically.', href: '/vm/stock', allow: f => !!f.vm || (!!f.staff && (f.staff.role === 'admin' || f.staff.role === 'store')) },
   { id: 'stock', title: 'Stock balance', desc: 'How many pieces are in stock in each category, store by store, for the dates you pick.', href: '/stock', allow: f => !!f.vm || (!!f.staff && f.staff.role !== 'staff' && f.staff.role !== 'store') },
+  { id: 'stockcount', title: 'Stock Count', desc: 'Count a store with scanners or phones and see what matches the ERP stock balance and what differs.', href: '/stockcount', allow: f => !!f.staff && f.staff.role === 'admin' },
   { id: 'vm', title: 'VM Report', desc: 'The Visual Merchandiser report.', href: '/vm', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') }
 ];
 

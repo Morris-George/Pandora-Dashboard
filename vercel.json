@@ -24,6 +24,10 @@
       "destination": "/api/vm?zonestock=1"
     },
     {
+      "source": "/api/stockcount",
+      "destination": "/api/vm?stockcount=1"
+    },
+    {
       "source": "/api/vmzones",
       "destination": "/api/vm?vmzones=1"
     },

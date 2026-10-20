@@ -66,3 +66,10 @@ ZONE STOCK (/vm/stock, api/_zonestock.js via /api/zonestock -> /api/vm?zonestock
   the rest shows as "sold, not in any zone". Returns go to back stock. A day's counts/moves apply before that day's sales.
 - Count differences = expected vs found at each count after the first. Pieces only, never money.
 - Access: super admin + VM (all stores; VM cannot count or receive), store managers (role 'store') their own store only.
+
+STOCK COUNT (/stockcount, private/stockcount.html, API /api/stockcount -> /api/vm?stockcount=1, helper api/_stockcount.js) - SUPER ADMIN ONLY
+- Moved in from the standalone "pandora-stock-count" site. Load the ERP stock balance (.xlsx), scan barcodes (scanner or phone camera), see ERP vs Actual, recount the differences, export to Excel. Several devices share one count.
+- Access: the page is served only to the super admin (api/site.js) and /api/stockcount checks the same login on every call (area managers, VM, store managers and sales people get 403). The old access code is gone; a signed-out browser is sent to /login.html.
+- Shared count storage: the private store, not Redis. Documents are kept as sc/d/<path>.<time>.json (older versions removed after each write); sc/ver.json changes on every write and devices poll only that file every 4 s, reading more only when it changed. Counts from the old Redis site are not carried over.
+- Product pictures (private/stockcount-pics-1..4.js, window.__PICS) are separate files because one Vercel response may not pass 4.5 MB; served to the super admin only.
+- Blob operations: each save is a few writes/lists and every open device reads sc/ver.json every 4 s, so a long count with many devices uses a lot of Blob operations. If Vercel reports the Blob quota reached, move this helper to Upstash Redis (the old api/db.js of the stock count site did exactly that).

@@ -197,6 +197,24 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'stock.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
   }
 
+  // Stock Count: super admin only
+  if (requestedPath === '/stockcount' || requestedPath === '/stockcount/' || requestedPath === '/stockcount.html') {
+    if (!(facts.staff && facts.staff.role === 'admin')) return toHome();
+    return sendFile(res, 'stockcount.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+  }
+  // its product pictures, in pieces (one response may not pass 4.5 MB); super admin only, kept by the browser for a day
+  const picPart = /^\/stockcount-pics-([1-9])\.js$/.exec(requestedPath);
+  if (picPart) {
+    if (!(facts.staff && facts.staff.role === 'admin')) return res.status(404).end();
+    try {
+      const body = fs.readFileSync(path.join(PRIVATE_DIR, 'stockcount-pics-' + picPart[1] + '.js'));
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Cache-Control', 'private, max-age=86400');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      return res.status(200).send(body);
+    } catch (_) { return res.status(404).end(); }
+  }
+
   // Pandora Dashboards
   if (requestedPath === '/dashboards' || requestedPath === '/dashboards/' || requestedPath === '/index.html') {
     if (!facts.dash) return toHome();
