@@ -60,23 +60,64 @@ tbody tr:hover{background:var(--hover)}tr.click{cursor:pointer}
 .file .info{min-width:0;flex:1 1 260px}.file .info b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.file .info span{font-size:12.5px;color:var(--ink2)}
 .file.bad{border-color:var(--accent)}.file .warn{color:var(--accent-text);font-weight:600;font-size:12.5px}
 .last{font-size:12.5px;color:var(--ink2)}
+.erow{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;margin-bottom:12px}
+.erow label,.efields label,.tfields label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);font-weight:700;display:flex;flex-direction:column;gap:6px}
+input[type=number],input[type=date]{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 12px;font:inherit;font-size:16px;font-weight:600;width:100%;min-width:0;letter-spacing:0;text-transform:none}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}.seg button{border:0;background:var(--surface);color:var(--ink);padding:11px 18px;font:inherit;font-weight:700;cursor:pointer}.seg button[aria-pressed=true]{background:var(--accent);color:#2A1018}
+.efields{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))}
+.tfields{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,110px),1fr))}
+.estatus{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:12.5px;color:var(--ink2)}
+.prev{margin:12px 0;font-size:13.5px}
+.foot{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:12.5px}.foot a{color:var(--accent-text);font-weight:700;cursor:pointer;text-decoration:underline}
+button.chip{border:0;font:inherit;font-size:12px;font-weight:700;cursor:pointer}button.chip:hover{filter:brightness(.95)}
+.bigok{background:color-mix(in srgb,var(--good) 16%,transparent);border-radius:10px;padding:10px 14px;font-weight:600}
 @media (max-width:560px){h1{font-size:21px}.kpi .v{font-size:21px}.kpi.hero{grid-column:auto!important}}
 </style></head>
 <body>
 <div class="wrap">
   <header class="top">
-    <div><a class="crumb" href="/">&larr; Home</a><h1>Daily Store Report</h1><div class="sub" id="sub">Add the daily sheet and see how the store is doing against its target.</div></div>
-    <div class="actions"><button class="btn main" id="addBtn" type="button">+ Add daily sheet</button></div>
+    <div><a class="crumb" href="/">&larr; Home</a><h1>Daily Store Report</h1><div class="sub" id="sub">Type in your numbers after each shift and see how the store is doing against its target.</div></div>
   </header>
 
+  <section class="card" id="entry">
+    <div class="cardhead"><h2>Enter your numbers</h2><span class="meta">Fill it twice a day: after the morning shift and after the night shift. Each time, type only that shift’s numbers.</span></div>
+    <div class="erow">
+      <label id="eStoreLbl">Store <select id="eStore"></select></label>
+      <label>Date <input type="date" id="eDate"></label>
+      <div class="seg" id="eShift" role="group" aria-label="Shift"><button type="button" data-s="m" aria-pressed="true">Morning shift</button><button type="button" data-s="n" aria-pressed="false">Night shift</button></div>
+    </div>
+    <div class="estatus" id="eStatus"></div>
+    <div class="efields" style="margin-top:12px">
+      <label>Visitors <input type="number" id="eV" inputmode="numeric" min="0" step="1" placeholder="0"></label>
+      <label>Transactions <input type="number" id="eT" inputmode="numeric" min="0" step="1" placeholder="0"></label>
+      <label>Pieces sold (Qty) <input type="number" id="eQ" inputmode="numeric" min="0" step="1" placeholder="0"></label>
+      <label>Cash (EGP) <input type="number" id="eC" inputmode="decimal" min="0" step="any" placeholder="0"></label>
+      <label>Visa (EGP) <input type="number" id="eX" inputmode="decimal" min="0" step="any" placeholder="0"></label>
+    </div>
+    <div class="note prev" id="ePrev">Sales, conversion, pieces per transaction and average transaction appear here as you type.</div>
+    <div class="actions"><button class="btn main" id="eDone" type="button">Done</button><button class="btn" id="eClear" type="button" hidden>Clear this shift</button></div>
+    <div id="eMsg" style="margin-top:10px"></div>
+    <div class="foot"><a id="toTarget" hidden>Set the month target</a><a id="toImport">Add a whole Excel sheet instead</a></div>
+  </section>
+
+  <section class="card" id="tgtCard" hidden>
+    <div class="cardhead"><h2>Month target</h2><span class="meta" id="tMeta"></span></div>
+    <div class="erow"><label id="tStoreLbl">Store <select id="tStore"></select></label><label>Month target (EGP) <input type="number" id="tTarget" inputmode="numeric" min="0" step="1000"></label></div>
+    <div class="sub" style="margin:4px 0 10px">How the target is shared between the weekdays (a bigger number = a bigger share of the month target on that day):</div>
+    <div class="tfields" id="tW"></div>
+    <div class="actions" style="margin-top:12px"><button class="btn main" id="tSave" type="button">Save target</button><button class="btn" id="tClose" type="button">Close</button></div>
+    <div id="tMsg" style="margin-top:10px"></div>
+  </section>
+
   <section class="card" id="upCard" hidden>
-    <div class="cardhead"><h2>Add the daily sheet</h2><span class="meta">Use the same Excel sheet as always (the one with DATE, VISITORS, TRANSACTIONS, QTY, CASH, VISA, MORNING, NIGHT). Add it again every day: new days are added, old days are kept.</span></div>
+    <div class="cardhead"><h2>Add a whole Excel sheet</h2><span class="meta">Only for numbers you already have in the old Excel sheet (DATE, VISITORS, TRANSACTIONS, QTY, CASH, VISA, MORNING, NIGHT). Days from the sheet replace the same days typed here.</span></div>
     <div class="drop" id="drop">Drop the Excel file here, or <u>choose a file</u><input type="file" id="pick" accept=".xlsx,.xls,.csv" multiple hidden></div>
     <div class="files" id="files"></div>
   </section>
 
   <div class="filters" id="filters" hidden>
-    <label id="storeLbl">Store <select id="storeSel"></select></label>
+    <label id="storeLbl">Show <select id="storeSel"></select></label>
     <label>Month <select id="monthSel"></select></label>
     <span class="last" id="lastUp"></span>
   </div>
@@ -164,79 +205,92 @@ function parseSheet(buf,fileName){
 }
 
 /* ---------- numbers for one store-month ---------- */
+// rec.rows[date] = [visitors, transactions, pieces, cash, visa, morning sales, night sales] (always worked out by the server)
+// rec.shifts[date] = {m:{...}, n:{...}} when typed on the site. A day with one shift only is "in progress" (part = 'm' or 'n').
 function calcOne(rec){
   const mo=rec.month,dim=dimOf(mo),eq=1/dim;
   const days=[];
   for(let i=1;i<=dim;i++){
-    const d=mo+'-'+String(i).padStart(2,'0'),a=rec.rows[d];
+    const d=mo+'-'+String(i).padStart(2,'0'),a=rec.rows[d],sh=rec.shifts&&rec.shifts[d];
     const w=rec.weights&&rec.weights[i]!=null?rec.weights[i]:eq;
-    const o={d,dom:i,wd:wdOf(d),w,target:(rec.target||0)*w,has:!!a};
+    const o={d,dom:i,wd:wdOf(d),w,target:(rec.target||0)*w,has:!!a,part:sh&&!(sh.m&&sh.n)?(sh.m?'m':'n'):null,hasM:!!(sh&&sh.m),hasN:!!(sh&&sh.n),legacy:!!a&&!sh};
     if(a){o.v=a[0];o.t=a[1];o.q=a[2];o.cash=a[3];o.visa=a[4];o.mor=a[5];o.nig=a[6];o.sales=a[3]+a[4]}
     days.push(o);
   }
-  return {rec,store:rec.store,month:mo,dim,days,target:rec.target||0,weightsGiven:!!rec.weights};
+  return {rec,store:rec.store,month:mo,dim,days,target:rec.target||0,weightsGiven:!!rec.weights,carried:!!rec.carried};
 }
 function combine(list){
   const first=list[0],days=first.days.map((d,i)=>{
-    const o={d:d.d,dom:d.dom,wd:d.wd,w:0,target:0,has:false,v:0,t:0,q:0,cash:0,visa:0,mor:0,nig:0,sales:0};
-    list.forEach(c=>{const x=c.days[i];o.target+=x.target;if(x.has){o.has=true;['v','t','q','cash','visa','mor','nig','sales'].forEach(k=>{o[k]+=x[k]})}});
+    const o={d:d.d,dom:d.dom,wd:d.wd,w:0,target:0,has:false,part:null,v:0,t:0,q:0,cash:0,visa:0,mor:0,nig:0,sales:0};
+    list.forEach(c=>{const x=c.days[i];o.target+=x.target;if(x.has){o.has=true;if(x.part)o.part='x';['v','t','q','cash','visa','mor','nig','sales'].forEach(k=>{o[k]+=x[k]})}});
     return o;
   });
   return {store:'All stores',month:first.month,dim:first.dim,days,target:list.reduce((s,c)=>s+c.target,0),parts:list};
 }
 function summarize(c){
-  const days=c.days,got=days.filter(d=>d.has);
-  const s={c,got};
-  s.last=got.length?got[got.length-1]:null;
+  const days=c.days,got=days.filter(d=>d.has),done=got.filter(d=>!d.part);
+  const s={c,got,done};
+  s.last=done.length?done[done.length-1]:null;       // last finished day (both shifts in)
   s.lastIdx=s.last?s.last.dom:0;
-  const sum=k=>got.reduce((a,d)=>a+(d[k]||0),0);
-  s.sales=sum('sales');s.visitors=sum('v');s.trx=sum('t');s.qty=sum('q');s.cash=sum('cash');s.visa=sum('visa');s.mor=sum('mor');s.nig=sum('nig');
-  s.tgtToDate=days.filter(d=>d.dom<=s.lastIdx).reduce((a,d)=>a+d.target,0);
-  s.ach=s.tgtToDate?s.sales/s.tgtToDate:NaN;
+  const sum=(arr,k)=>arr.reduce((a,d)=>a+(d[k]||0),0);
+  s.sales=sum(got,'sales');s.salesDone=sum(done,'sales');s.visitors=sum(got,'v');s.trx=sum(got,'t');s.qty=sum(got,'q');s.cash=sum(got,'cash');s.visa=sum(got,'visa');s.mor=sum(got,'mor');s.nig=sum(got,'nig');
+  s.firstIdx=got.length?got[0].dom:1;                // a store that starts typing mid-month is compared from its first day
+  s.tgtToDate=days.filter(d=>d.dom>=s.firstIdx&&d.dom<=s.lastIdx).reduce((a,d)=>a+d.target,0);
+  s.ach=s.tgtToDate?s.salesDone/s.tgtToDate:NaN;          // judged on finished days only
   s.ofMonth=c.target?s.sales/c.target:NaN;
   s.conv=s.visitors?s.trx/s.visitors:NaN;
   s.upt=s.trx?s.qty/s.trx:NaN;
   s.apt=s.trx?s.sales/s.trx:NaN;
-  // projection: today's pace, shaped by the month's seasonality (a Monday counts more than a Friday)
-  const wDone=days.filter(d=>d.dom<=s.lastIdx).reduce((a,d)=>a+d.target,0),wAll=c.target;
+  // month end if the pace continues, shaped by each day's share of the target
   if(c.parts){s.proj=c.parts.reduce((a,p)=>{const q=summarize(p);return a+(isFinite(q.proj)?q.proj:q.sales)},0)}
-  else s.proj=wDone>0&&got.length?s.sales/wDone*wAll:NaN;
+  else s.proj=s.tgtToDate>0&&done.length?s.salesDone/s.tgtToDate*c.target:NaN;
   s.remainDays=c.dim-s.lastIdx;
   s.short=Math.max(0,c.target-s.sales);
   s.perDay=s.remainDays>0?s.short/s.remainDays:NaN;
-  // cumulative lines
   let cs=0,ct=0;days.forEach(d=>{ct+=d.target;d.cumT=ct;if(d.has){cs+=d.sales;d.cumS=cs}else d.cumS=d.dom<=s.lastIdx?cs:null});
-  got.forEach(d=>{d.upt=d.t?d.q/d.t:NaN;d.apt=d.t?d.sales/d.t:NaN;d.conv=d.v?d.t/d.v:NaN;d.ach=d.target?d.sales/d.target:NaN});
-  // missing days: no numbers between the first reported day and yesterday
+  got.forEach(d=>{d.upt=d.t?d.q/d.t:NaN;d.apt=d.t?d.sales/d.t:NaN;d.conv=d.v?d.t/d.v:NaN;d.ach=d.part||!d.target?NaN:d.sales/d.target});
   const today=cairoToday(),firstD=got.length?got[0].dom:0;
-  s.missing=days.filter(d=>!d.has&&d.dom>=firstD&&d.d<today).filter(d=>d.dom<s.lastIdx||d.d<today).map(d=>d.d);
+  s.today=days.find(d=>d.d===today)||null;
+  s.missing=days.filter(d=>d.dom>=firstD&&d.d<today&&(!d.has||d.part)).map(d=>({d:d.d,part:d.part}));
   return s;
+}
+function shiftStats(recs){
+  const z=()=>({v:0,t:0,q:0,c:0,x:0,n:0}),o={m:z(),n:z()};
+  recs.forEach(r=>{for(const d in (r.shifts||{}))for(const k of ['m','n']){const e=r.shifts[d][k];if(e){const a=o[k];a.v+=e.v;a.t+=e.t;a.q+=e.q;a.c+=e.c;a.x+=e.x;a.n++}}});
+  return o;
 }
 
 /* ---------- state + loading ---------- */
 const S={role:'',stores:[],canDelete:false,store:'',month:'',records:[]};
+const E={store:'',date:'',shift:'m',warned:false};
+const canTarget=()=>S.role==='admin'||S.role==='area';
 async function api(path,opt){const r=await fetch(path,{credentials:'same-origin',cache:'no-store',...opt});if(r.status===401){location.replace('/login.html');throw new Error('signed out')}const j=await r.json().catch(()=>({}));if(!r.ok||j.ok===false)throw new Error(j.error||'Something went wrong.');return j}
 function say(t,cls){$('msg').innerHTML=t?'<div class="'+(cls||'err')+'">'+esc(t)+'</div>':''}
+const post=(op,body)=>api('/api/daily?op='+op,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 async function init(keepStore,keepMonth){
   try{
     const j=await api('/api/daily');
     S.role=j.role;S.stores=j.stores;S.canDelete=j.canDelete;
-    const months=[...new Set(S.stores.flatMap(s=>s.months))].sort();
+    // every month starts fresh: the page opens on the current month, earlier months stay here as history
+    const months=[...new Set(S.stores.flatMap(s=>s.months))];
     const cur=cairoToday().slice(0,7);
     if(!months.includes(cur))months.push(cur);
+    if(keepMonth&&!months.includes(keepMonth))months.push(keepMonth);
     months.sort().reverse();
-    $('monthSel').innerHTML=months.map(m=>'<option value="'+m+'">'+monthName(m)+'</option>').join('');
-    const withData=[...new Set(S.stores.flatMap(s=>s.months))].sort().reverse();
-    S.month=keepMonth&&months.includes(keepMonth)?keepMonth:(withData[0]||cur);
+    $('monthSel').innerHTML=months.map(m=>'<option value="'+m+'">'+monthName(m)+(m===cur?' (this month)':'')+'</option>').join('');
+    S.month=keepMonth&&months.includes(keepMonth)?keepMonth:(months.includes(S.month)?S.month:cur);
     $('monthSel').value=S.month;
     const multi=S.stores.length>1;
     $('storeLbl').hidden=!multi;
     $('storeSel').innerHTML=(multi?'<option value="'+ALL+'">All stores</option>':'')+S.stores.map(s=>'<option>'+esc(s.name)+'</option>').join('');
-    S.store=keepStore&&(keepStore===ALL||S.stores.some(s=>s.name===keepStore))?keepStore:(multi?ALL:S.stores[0].name);
+    S.store=keepStore&&(keepStore===ALL||S.stores.some(s=>s.name===keepStore))?keepStore:(S.store&&(S.store===ALL&&multi||S.stores.some(s=>s.name===S.store))?S.store:(multi?ALL:S.stores[0].name));
     $('storeSel').value=S.store;
     $('filters').hidden=false;
-    $('sub').textContent=S.role==='admin'?'All stores. Add each store’s daily sheet and compare them.':S.role==='area'?'The stores of your zone. Add the daily sheets and compare the stores.':'Your store. Add the daily sheet every day to see how you are doing against the target.';
+    $('sub').textContent=S.role==='admin'?'All stores. Type in the numbers of any store, and compare the stores.':S.role==='area'?'The stores of your zone. Type in numbers, set targets and compare the stores.':'Your store. Type in your numbers after the morning shift and again after the night shift.';
+    $('toTarget').hidden=!canTarget();
+    setupEntry();
     await loadMonth();
+    await fillEntry();
   }catch(e){say(e.message)}
 }
 async function loadMonth(){
@@ -247,10 +301,126 @@ async function loadMonth(){
 }
 $('monthSel').onchange=e=>{S.month=e.target.value;loadMonth().catch(x=>say(x.message))};
 $('storeSel').onchange=e=>{S.store=e.target.value;render()};
+// a month other than the one on screen (needed when typing a date from another month)
+async function getRec(store,mo){
+  if(mo===S.month)return S.records.find(r=>r.store===store)||null;
+  const j=await api('/api/daily?month='+mo);
+  return j.records.find(r=>r.store===store)||null;
+}
 
-/* ---------- upload ---------- */
+/* ---------- typing in a shift ---------- */
+const SHIFT={m:'Morning',n:'Night'};
+function setupEntry(){
+  const multi=S.stores.length>1;
+  $('eStoreLbl').hidden=!multi;
+  $('eStore').innerHTML=(multi?'<option value="">Choose store…</option>':'')+S.stores.map(s=>'<option>'+esc(s.name)+'</option>').join('');
+  if(!S.stores.some(s=>s.name===E.store))E.store=multi?(S.store!==ALL?S.store:''):S.stores[0].name;
+  $('eStore').value=E.store;
+  const t=cairoToday();
+  if(!E.date){E.date=t;E.shift=new Date(Date.now()+3*3600e3).getUTCHours()<16?'m':'n'}
+  $('eDate').value=E.date;$('eDate').max=t;
+  paintShift();
+}
+function paintShift(){document.querySelectorAll('#eShift button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===E.shift))}
+const F={v:'eV',t:'eT',q:'eQ',c:'eC',x:'eX'};
+const clock=iso=>new Date(iso).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+let curShiftData=null;
+async function fillEntry(){
+  $('eMsg').innerHTML='';E.warned=false;$('eDone').textContent='Done';
+  Object.values(F).forEach(id=>$(id).value='');
+  curShiftData=null;$('eClear').hidden=true;
+  if(!E.store){$('eStatus').textContent='Choose the store first.';updatePrev();return}
+  if(!E.date){updatePrev();return}
+  let rec=null;
+  try{rec=await getRec(E.store,E.date.slice(0,7))}catch(e){$('eMsg').innerHTML='<div class="err">'+esc(e.message)+'</div>'}
+  const sh=rec&&rec.shifts&&rec.shifts[E.date],legacy=rec&&rec.rows&&rec.rows[E.date]&&!sh;
+  const chip=k=>sh&&sh[k]?'<span class="chip ok">'+SHIFT[k]+' ✓ '+esc(sh[k].by||'')+', '+clock(sh[k].at)+'</span>':'<span class="chip na">'+SHIFT[k]+': not entered yet</span>';
+  $('eStatus').innerHTML=legacy?'<span class="chip na">This day came from an Excel sheet. Typing a shift here replaces it.</span>':chip('m')+chip('n');
+  const cur=sh&&sh[E.shift];
+  if(cur){curShiftData=cur;for(const k in F)$(F[k]).value=cur[k];$('eClear').hidden=false;$('eDone').textContent='Save changes'}
+  updatePrev();
+}
+function readFields(){const o={};for(const k in F){const raw=$(F[k]).value.trim();o[k]=raw===''?0:Number(raw);}return o}
+function updatePrev(){
+  const o=readFields(),sales=o.c+o.x;
+  if(!(o.v||o.t||o.q||sales)){$('ePrev').textContent='Sales, conversion, pieces per transaction and average transaction appear here as you type.';return}
+  $('ePrev').innerHTML='<b>'+SHIFT[E.shift]+' shift:</b> sales <b>'+egp(sales)+'</b>'+(o.v?' · conversion <b>'+pct(o.t/o.v,1)+'</b>':'')+(o.t?' · pieces per transaction <b>'+nf(o.q/o.t,2)+'</b> · average transaction <b>'+egp(sales/o.t)+'</b>':'');
+}
+Object.values(F).forEach(id=>$(id).addEventListener('input',()=>{E.warned=false;$('eDone').textContent=curShiftData?'Save changes':'Done';updatePrev()}));
+$('eStore').onchange=e=>{E.store=e.target.value;fillEntry()};
+$('eDate').onchange=e=>{if(!e.target.value)return;E.date=e.target.value;fillEntry()};
+document.querySelectorAll('#eShift button').forEach(b=>b.onclick=()=>{E.shift=b.dataset.s;paintShift();fillEntry()});
+$('eDone').onclick=async()=>{
+  const m=$('eMsg');m.innerHTML='';
+  if(!E.store){m.innerHTML='<div class="err">Please choose the store.</div>';return}
+  if(!E.date){m.innerHTML='<div class="err">Please choose the date.</div>';return}
+  const o=readFields();
+  if(Object.values(o).some(x=>!isFinite(x)||x<0)){m.innerHTML='<div class="err">Please use numbers only (no minus sign).</div>';return}
+  if(!(o.v||o.t||o.q||o.c||o.x)){m.innerHTML='<div class="err">Everything is empty. Type the shift’s numbers first.</div>';return}
+  if(o.v>0&&o.t>o.v&&!E.warned){E.warned=true;$('eDone').textContent='Save anyway';m.innerHTML='<div class="note">Transactions ('+nf(o.t)+') are more than visitors ('+nf(o.v)+'). Please check, or press Save anyway.</div>';return}
+  $('eDone').disabled=true;$('eDone').textContent='Saving…';
+  try{
+    await post('shift',{store:E.store,month:E.date.slice(0,7),date:E.date,shift:E.shift,data:o});
+    $('eDone').disabled=false;
+    S.store=E.store;
+    await init(E.store,E.date.slice(0,7));
+    say('Saved: '+SHIFT[E.shift]+' shift of '+dayLabel(E.date)+' for '+E.store+'. Your dashboard is updated below.','bigok');
+    $('filters').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){$('eDone').disabled=false;$('eDone').textContent='Done';m.innerHTML='<div class="err">'+esc(e.message)+'</div>'}
+};
+$('eClear').onclick=async()=>{
+  if(!confirm('Clear the '+SHIFT[E.shift].toLowerCase()+' shift of '+dayLabel(E.date)+' for '+E.store+'?'))return;
+  try{await post('shift',{store:E.store,month:E.date.slice(0,7),date:E.date,shift:E.shift,data:null});await init(E.store,E.date.slice(0,7));say('The '+SHIFT[E.shift].toLowerCase()+' shift was cleared.','bigok')}
+  catch(e){$('eMsg').innerHTML='<div class="err">'+esc(e.message)+'</div>'}
+};
+// open a day/shift from the table to change it
+async function editShift(d,k){
+  E.store=S.store!==ALL?S.store:E.store;E.date=d;E.shift=k;
+  $('eStore').value=E.store;$('eDate').value=d;paintShift();
+  await fillEntry();
+  $('entry').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ---------- month target (area managers and super admin) ---------- */
+const WDORDER=[1,2,3,4,5,6,0];
+$('toTarget').onclick=()=>{const c=$('tgtCard');c.hidden=!c.hidden;if(!c.hidden){const st=E.store||(S.store!==ALL?S.store:'');if(st&&S.stores.some(x=>x.name===st)){$('tStore').dataset.built='';}openTarget(st)}};
+$('tClose').onclick=()=>{$('tgtCard').hidden=true};
+$('tStore').onchange=()=>openTarget();
+async function openTarget(pref){
+  const multi=S.stores.length>1;
+  $('tStoreLbl').hidden=!multi;
+  if(!$('tStore').options.length||$('tStore').dataset.built!==String(S.stores.length)){$('tStore').innerHTML=S.stores.map(s=>'<option>'+esc(s.name)+'</option>').join('');$('tStore').dataset.built=String(S.stores.length)}
+  if(pref&&S.stores.some(s=>s.name===pref))$('tStore').value=pref;
+  let st=$('tStore').value;
+  if(!st||!S.stores.some(s=>s.name===st)){st=E.store||(S.store!==ALL?S.store:S.stores[0].name);$('tStore').value=st}
+  $('tMeta').textContent='For '+monthName(S.month);$('tMsg').innerHTML='';
+  let rec=await getRec(st,S.month),from='';
+  if(!rec||(!rec.target&&!rec.weights)){
+    const [y,m]=S.month.split('-').map(Number),pm=m===1?(y-1)+'-12':y+'-'+String(m-1).padStart(2,'0');
+    const pr=await getRec(st,pm).catch(()=>null)||null;
+    if(pr){rec=pr;from='Copied from '+monthName(pm)+'. Change it if this month is different.'}
+  }
+  $('tTarget').value=rec&&rec.target?rec.target:'';
+  const sh=Array(7).fill(null);
+  if(rec&&rec.weights){const [y,m]=rec.month.split('-').map(Number),sum=Array(7).fill(0),cnt=Array(7).fill(0);for(const k in rec.weights){const wd=new Date(Date.UTC(y,m-1,+k)).getUTCDay();sum[wd]+=rec.weights[k];cnt[wd]++}for(let i=0;i<7;i++)if(cnt[i])sh[i]=Math.round(sum[i]/cnt[i]*1e4)/100}
+  $('tW').innerHTML=WDORDER.map(w=>'<label>'+WD[w]+'<input type="number" step="any" min="0" data-wd="'+w+'" value="'+(sh[w]!=null?sh[w]:3)+'"></label>').join('');
+  if(from)$('tMsg').innerHTML='<div class="note">'+esc(from)+'</div>';
+}
+$('tSave').onclick=async()=>{
+  const st=$('tStore').value,target=Number($('tTarget').value),wd={};
+  document.querySelectorAll('#tW input').forEach(i=>wd[i.dataset.wd]=Number(i.value));
+  if(!st||!(target>0)){$('tMsg').innerHTML='<div class="err">Please type the month target.</div>';return}
+  if(Object.values(wd).some(x=>!isFinite(x)||x<0)||!Object.values(wd).some(x=>x>0)){$('tMsg').innerHTML='<div class="err">The weekday shares must be numbers, and not all zero.</div>';return}
+  const dim=dimOf(S.month),w={};let tot=0;
+  for(let d=1;d<=dim;d++){w[d]=wd[wdOf(S.month+'-'+String(d).padStart(2,'0'))];tot+=w[d]}
+  for(let d=1;d<=dim;d++)w[d]=Math.round(w[d]/tot*1e5)/1e5;
+  try{await post('target',{store:st,month:S.month,target,weights:w});$('tgtCard').hidden=true;await init(st,S.month);say('The month target for '+st+' was saved.','bigok')}
+  catch(e){$('tMsg').innerHTML='<div class="err">'+esc(e.message)+'</div>'}
+};
+
+/* ---------- Excel upload (optional, for numbers already in the old sheet) ---------- */
 const pend=[];
-$('addBtn').onclick=()=>{const c=$('upCard');c.hidden=!c.hidden;if(!c.hidden)c.scrollIntoView({behavior:'smooth',block:'nearest'})};
+$('toImport').onclick=()=>{const c=$('upCard');c.hidden=!c.hidden;if(!c.hidden)c.scrollIntoView({behavior:'smooth',block:'nearest'})};
 $('drop').onclick=()=>$('pick').click();
 $('pick').onchange=e=>{addFiles(e.target.files);e.target.value=''};
 ['dragover','dragenter'].forEach(t=>$('drop').addEventListener(t,e=>{e.preventDefault();$('drop').classList.add('over')}));
@@ -291,7 +461,7 @@ $('files').addEventListener('click',async e=>{
   p.state='saving';p.error='';drawFiles();
   try{
     const s=p.sheet;
-    await api('/api/daily?op=save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({store:p.store,month:s.month,target:s.target,weights:s.weights,file:s.file,rows:s.rows.filter(r=>r.t>0||r.c+r.x>0||r.v>0)})});
+    await post('save',{store:p.store,month:s.month,target:s.target,weights:s.weights,file:s.file,rows:s.rows.filter(r=>r.t>0||r.c+r.x>0||r.v>0)});
     p.state='done';drawFiles();
     await init(p.store,s.month);
   }catch(err){p.state='ready';p.error=err.message;drawFiles()}
@@ -335,41 +505,44 @@ const niceMax=v=>{if(!(v>0))return 1;const p=Math.pow(10,Math.floor(Math.log10(v
 
 /* ---------- the page ---------- */
 let CUR=null,REDRAW=[];
+function emptyCard(store){
+  const mgr=canTarget()?' <a href="#" data-act="target" style="color:var(--accent-text);font-weight:700">Set the month target</a>.':'';
+  return '<div class="card empty"><b>No numbers yet for '+(store?esc(store)+' in ':'')+monthName(S.month)+'.</b><br>Every month starts fresh. Type the first shift in the box at the top and press <b>Done</b>.'+mgr+'</div>';
+}
+document.addEventListener('click',e=>{
+  const a=e.target.closest('[data-act="target"]');if(a){e.preventDefault();$('tgtCard').hidden=false;openTarget(S.store!==ALL?S.store:E.store);$('tgtCard').scrollIntoView({behavior:'smooth',block:'start'});return}
+  const ed=e.target.closest('[data-edit]');if(ed){const [d,k]=ed.dataset.edit.split('|');editShift(d,k)}
+});
 function render(){
   REDRAW=[];TIPS={};chartBox.hidden=true;
-  const have=S.records;
   const out=$('out');
-  const hasAny=S.stores.some(s=>s.months.length);
-  if(!have.length){
+  const calcs=S.records.map(calcOne).filter(c=>Object.keys(c.rec.rows||{}).length);
+  let one=null;
+  if(S.store!==ALL)one=calcs.find(c=>c.store===S.store)||null;
+  if(S.store===ALL&&calcs.length===1)one=calcs[0];
+  if((S.store!==ALL&&!one)||(S.store===ALL&&!calcs.length)){
     $('lastUp').textContent='';
-    out.innerHTML='<div class="card empty"><b>No sheet for '+monthName(S.month)+' yet.</b><br>Press <b>+ Add daily sheet</b> and choose today’s Excel file.</div>';
+    const rec=S.store!==ALL?S.records.find(r=>r.store===S.store):null;
+    out.innerHTML=emptyCard(S.store!==ALL?S.store:'')+(rec&&rec.target?'<div class="note">Month target already set: <b>'+egp(rec.target)+'</b>'+(rec.carried?' (copied from last month)':'')+'.</div>':'');
     return;
   }
-  const calcs=have.map(calcOne);
-  let one=null;
-  if(S.store!==ALL){const r=calcs.find(c=>c.store===S.store);one=r||null}
-  if(S.store!==ALL&&!one){
-    out.innerHTML='<div class="card empty"><b>'+esc(S.store)+' has no sheet for '+monthName(S.month)+' yet.</b><br>Press <b>+ Add daily sheet</b> and choose today’s Excel file.</div>';
-    $('lastUp').textContent='';return;
-  }
-  if(S.store===ALL&&calcs.length===1)one=calcs[0];
   const c=one||combine(calcs);
   const s=summarize(c);CUR={c,s,calcs};
-  const upd=one?one.rec.updated:calcs.map(x=>x.rec.updated).sort((a,b)=>b.at.localeCompare(a.at))[0];
-  $('lastUp').textContent=upd?'Last updated '+new Date(upd.at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' by '+upd.by:'';
+  const upd=one?one.rec.updated:calcs.map(x=>x.rec.updated).filter(Boolean).sort((a,b)=>b.at.localeCompare(a.at))[0];
+  $('lastUp').textContent=upd?'Last updated '+clock(upd.at)+' by '+upd.by:'';
   let h='';
-  h+=kpis(s,c);
-  h+=insights(s,c,calcs,!one);
+  h+=kpis(s,c,!!one);
+  h+=insights(s,c,!one);
   if(!one)h+=storesTable(calcs);
-  h+='<div class="grid g2"><section class="card"><div class="cardhead"><h2>Sales each day vs the daily target</h2><span class="meta">Hover a day for details</span></div><div class="legend"><span><i style="background:var(--accent)"></i>Met the target</span><span><i style="background:var(--accent);opacity:.45"></i>Below the target</span><span><i class="ln"></i>Daily target</span></div><div class="chart" id="cSales"></div></section>'
+  h+='<div class="grid g2"><section class="card"><div class="cardhead"><h2>Sales each day vs the daily target</h2><span class="meta">Hover a day for details</span></div><div class="legend"><span><i style="background:var(--accent)"></i>Met the target</span><span><i style="background:var(--accent);opacity:.45"></i>Below the target</span><span><i style="background:var(--accent);opacity:.2"></i>Day not finished</span><span><i class="ln"></i>Daily target</span></div><div class="chart" id="cSales"></div></section>'
     +'<section class="card"><div class="cardhead"><h2>Are we on the way to the month target?</h2><span class="meta">Running total</span></div><div class="legend"><span><i class="ln" style="border-color:var(--accent);border-top-width:3px"></i>Sales so far</span><span><i class="dash" style="border-color:var(--accent)"></i>If the pace continues</span><span><i class="ln"></i>Where we should be</span></div><div class="chart" id="cPace"></div></section></div>';
   h+='<div class="grid g2"><section class="card"><div class="cardhead"><h2>Visitors and buyers</h2><span class="meta">People who came in vs people who bought</span></div><div class="legend"><span><i style="background:var(--c2)"></i>Visitors</span><span><i style="background:var(--accent)"></i>Transactions</span></div><div class="chart" id="cPeople"></div></section>'
     +'<section class="card"><div class="cardhead"><h2>Conversion rate</h2><span class="meta">Out of every 100 visitors, how many bought</span></div><div class="legend"><span><i class="ln" style="border-color:var(--accent);border-top-width:3px"></i>Conversion</span><span><i class="dash"></i>Average '+pct(s.conv)+'</span></div><div class="chart" id="cConv"></div></section></div>';
-  h+='<div class="grid g3"><section class="card"><div class="cardhead"><h2>Pieces per transaction</h2><span class="meta">UPT, average '+nf(s.upt,2)+'</span></div><div class="chart" id="cUpt"></div></section>'
-    +'<section class="card"><div class="cardhead"><h2>Average transaction</h2><span class="meta">APT, average '+egp(s.apt)+'</span></div><div class="chart" id="cApt"></div></section>'
-    +'<section class="card"><div class="cardhead"><h2>Best weekdays</h2><span class="meta">Average sales per weekday</span></div><div class="legend"><span><i style="background:var(--accent)"></i>Sales</span><span><i class="ln"></i>Target</span></div><div class="chart" id="cWd"></div></section></div>';
+  h+='<div class="grid g3"><section class="card"><div class="cardhead"><h2>Pieces per transaction</h2><span class="meta">UPT, average '+(isFinite(s.upt)?nf(s.upt,2):'–')+'</span></div><div class="chart" id="cUpt"></div></section>'
+    +'<section class="card"><div class="cardhead"><h2>Average transaction</h2><span class="meta">APT, average '+(isFinite(s.apt)?egp(s.apt):'–')+'</span></div><div class="chart" id="cApt"></div></section>'
+    +'<section class="card"><div class="cardhead"><h2>Best weekdays</h2><span class="meta">Average sales per finished day</span></div><div class="legend"><span><i style="background:var(--accent)"></i>Sales</span><span><i class="ln"></i>Target</span></div><div class="chart" id="cWd"></div></section></div>';
   h+='<div class="grid g2"><section class="card"><div class="cardhead"><h2>How customers paid</h2><span class="meta">Cash and Visa</span></div>'+stack(s.cash,s.visa,'Cash','Visa')+'</section>'
-    +'<section class="card"><div class="cardhead"><h2>Morning and night shift</h2><span class="meta">Which shift sells more</span></div>'+stack(s.mor,s.nig,'Morning','Night')+'</section></div>';
+    +'<section class="card"><div class="cardhead"><h2>Morning and night shift</h2><span class="meta">Which shift sells more</span></div>'+stack(s.mor,s.nig,'Morning','Night')+shiftTable(calcs.map(x=>x.rec))+'</section></div>';
   h+=dayTable(s,c,!!one);
   out.innerHTML=h;
   drawCharts();
@@ -381,15 +554,26 @@ function stack(a,b,la,lb){
   return '<div class="stack" role="img" aria-label="'+la+' '+pct(pa)+', '+lb+' '+pct(pb)+'"><div class="a" style="flex:'+pa+'">'+(pa>.1?pct(pa):'')+'</div><div class="b" style="flex:'+pb+'">'+(pb>.1?pct(pb):'')+'</div></div>'
    +'<div class="legrow"><span><i style="background:var(--accent)"></i>'+la+' '+egp(a)+' ('+pct(pa)+')</span><span><i style="background:var(--c2)"></i>'+lb+' '+egp(b)+' ('+pct(pb)+')</span></div>';
 }
-function kpis(s,c){
+function shiftTable(recs){
+  const st=shiftStats(recs),row=(k,l)=>{const a=st[k];if(!a.n)return '';const sales=a.c+a.x;return '<tr><td>'+l+'</td><td>'+egp(sales)+'</td><td>'+pct(a.v?a.t/a.v:NaN,1)+'</td><td>'+(a.t?nf(a.q/a.t,2):'–')+'</td><td>'+(a.t?egp(sales/a.t):'–')+'</td></tr>'};
+  const rows=row('m','Morning')+row('n','Night');
+  if(!rows)return '';
+  return '<div class="tablewrap" style="margin-top:14px;max-height:none"><table><thead><tr><th>Shift</th><th>Sales</th><th>Conversion</th><th>UPT</th><th>APT</th></tr></thead><tbody>'+rows+'</tbody></table></div><div class="sub" style="margin-top:6px">From the shifts typed on the site.</div>';
+}
+function kpis(s,c,isOne){
   const k=(l,v,sub,cls)=>'<div class="kpi '+(cls||'')+'"><div class="l">'+l+'</div><div class="v fit">'+v+'</div><div class="s">'+(sub||'')+'</div></div>';
   const barPct=Math.min(1,s.ofMonth||0)*100,pace=c.target?Math.min(1,s.tgtToDate/c.target)*100:0;
   let h='<div class="kpis">';
-  h+='<div class="kpi hero" style="grid-column:span 2;min-width:min(100%,300px)"><div class="l">Sales so far · '+monthName(c.month)+'</div><div class="v fit">'+egp(s.sales)+'</div><div class="s">'+(c.target?pct(s.ofMonth)+' of the month target of '+egp(c.target):'No month target in the sheet')+'</div>'
-    +(c.target?'<div class="bar" title="The line shows where we should be today"><i style="width:'+barPct+'%"></i><b style="left:'+pace+'%"></b></div>':'')+'</div>';
-  h+=k('Against target so far',pct(s.ach),s.last?'Target up to '+dayLabel(s.last.d)+': '+egp(s.tgtToDate):'');
+  h+='<div class="kpi hero" style="grid-column:span 2;min-width:min(100%,300px)"><div class="l">Sales so far · '+monthName(c.month)+'</div><div class="v fit">'+egp(s.sales)+'</div><div class="s">'+(c.target?pct(s.ofMonth)+' of the month target of '+egp(c.target):'No month target yet')+'</div>'
+    +(c.target?'<div class="bar" title="The line shows where we should be"><i style="width:'+barPct+'%"></i><b style="left:'+pace+'%"></b></div>':'')+'</div>';
+  const t=s.today;
+  if(t){
+    const sh=isOne?(t.hasM?'Morning ✓':'Morning –')+' · '+(t.hasN?'Night ✓':'Night –'):'';
+    h+=k('Today · '+dayLabel(t.d),t.has?egp(t.sales):'Nothing yet',(t.target?'Target '+egp(t.target)+(t.has&&!t.part?' · '+pct(t.sales/t.target)+' of it':''):'')+(sh?'<br>'+sh:''),'');
+  }
+  h+=k('Against target so far',isFinite(s.ach)?pct(s.ach):'–',s.last?'Finished days up to '+dayLabel(s.last.d)+': target '+egp(s.tgtToDate):'Waiting for the first finished day');
   h+=k('Month end if the pace continues',isFinite(s.proj)?egp(s.proj):'–',isFinite(s.proj)&&c.target?pct(s.proj/c.target)+' of the target':'');
-  h+=k(s.remainDays>0?'Needed each remaining day':'Month finished',s.remainDays>0&&c.target?(s.short>0?egp(s.perDay):'Target reached'):(s.short>0?egp(s.short)+' short':'Target reached'),s.remainDays>0?s.remainDays+' days left':'');
+  h+=k(s.remainDays>0?'Needed each remaining day':'Month finished',c.target?(s.short>0?(s.remainDays>0?egp(s.perDay):egp(s.short)+' short'):'Target reached'):'–',s.remainDays>0?s.remainDays+' days left':'');
   h+=k('Visitors',nf(s.visitors),nf(s.visitors/Math.max(1,s.got.length),1)+' per day');
   h+=k('Transactions',nf(s.trx),nf(s.trx/Math.max(1,s.got.length),1)+' per day');
   h+=k('Conversion',pct(s.conv,1),'visitors who bought');
@@ -397,89 +581,93 @@ function kpis(s,c){
   h+=k('Average transaction',isFinite(s.apt)?egp(s.apt):'–','APT');
   return h+'</div>';
 }
-function insights(s,c,calcs,isAll){
-  const L=[],got=s.got;
+function insights(s,c,isAll){
+  const L=[],got=s.got,done=s.done;
   if(!got.length)return '';
-  L.push('Up to <b>'+dayLabel(s.last.d)+'</b> the store sold <b>'+egp(s.sales)+'</b>, which is <b>'+pct(s.ach)+'</b> of the target for those days'+(s.ach>=1?'. Well done.':'.'));
-  if(c.target&&isFinite(s.proj)){
-    if(s.proj>=c.target)L.push('If the pace continues, the month ends at about <b>'+egp(s.proj)+'</b>, so the month target of '+egp(c.target)+' will be reached.');
-    else L.push('If the pace continues, the month ends at about <b>'+egp(s.proj)+'</b> ('+pct(s.proj/c.target)+' of the target). '+(s.remainDays>0?'To still reach it we need about <b>'+egp(s.perDay)+'</b> every day for the next '+s.remainDays+' days.':''));
-  }
-  const best=[...got].sort((a,b)=>b.sales-a.sales)[0],worst=[...got].sort((a,b)=>a.sales-b.sales)[0];
-  if(got.length>1)L.push('Best day: <b>'+dayLabel(best.d)+'</b> ('+WDF[best.wd]+') with '+egp(best.sales)+' ('+pct(best.ach)+' of its target). Slowest day: <b>'+dayLabel(worst.d)+'</b> with '+egp(worst.sales)+'.');
-  const met=got.filter(d=>d.ach>=1).length;L.push('The daily target was met on <b>'+met+' of '+got.length+'</b> days.');
-  if(isFinite(s.conv)){const cd=got.filter(d=>isFinite(d.conv)&&d.v>=5).sort((a,b)=>a.conv-b.conv)[0];L.push('About <b>'+nf(s.conv*100)+' out of every 100</b> visitors bought something.'+(cd?' The lowest was '+dayLabel(cd.d)+' ('+pct(cd.conv)+'): more people came in than bought.':''))}
+  if(!c.target)L.push('<b>No month target is set yet</b>, so the numbers below cannot be compared with a target.'+(canTarget()?' Use <a href="#" data-act="target" style="color:var(--accent-text);font-weight:700">Set the month target</a>.':' Please ask your area manager to set it.'));
+  else if(c.carried&&!c.parts)L.push('The month target and the weekday shares were <b>copied from last month</b>.'+(canTarget()?' You can change them with Set the month target.':' Your area manager can change them.'));
+  if(done.length){
+    if(s.firstIdx>1)L.push('The numbers start on <b>'+dayLabel(c.month+'-'+String(s.firstIdx).padStart(2,'0'))+'</b>, so the comparison with the target counts from that day.');
+    L.push('Up to <b>'+dayLabel(s.last.d)+'</b> (finished days) the store sold <b>'+egp(s.salesDone)+'</b>'+(c.target?', which is <b>'+pct(s.ach)+'</b> of the target for those days'+(s.ach>=1?'. Well done.':'.'):'.'));
+    if(c.target&&isFinite(s.proj)){
+      if(s.proj>=c.target)L.push('If the pace continues, the month ends at about <b>'+egp(s.proj)+'</b>, so the month target of '+egp(c.target)+' will be reached.');
+      else L.push('If the pace continues, the month ends at about <b>'+egp(s.proj)+'</b> ('+pct(s.proj/c.target)+' of the target). '+(s.remainDays>0?'To still reach it we need about <b>'+egp(s.perDay)+'</b> every day for the next '+s.remainDays+' days.':''));
+    }
+    if(done.length>1){const best=[...done].sort((a,b)=>b.sales-a.sales)[0],worst=[...done].sort((a,b)=>a.sales-b.sales)[0];
+      L.push('Best day: <b>'+dayLabel(best.d)+'</b> ('+WDF[best.wd]+') with '+egp(best.sales)+(c.target?' ('+pct(best.ach)+' of its target)':'')+'. Slowest day: <b>'+dayLabel(worst.d)+'</b> with '+egp(worst.sales)+'.')}
+    if(c.target)L.push('The daily target was met on <b>'+done.filter(d=>d.ach>=1).length+' of '+done.length+'</b> finished days.');
+  }else L.push('So far you have entered <b>'+egp(s.sales)+'</b>. The comparison with the target starts when the first day has both shifts.');
+  if(isFinite(s.conv)){const cd=got.filter(d=>isFinite(d.conv)&&d.v>=5).sort((a,b)=>a.conv-b.conv)[0];L.push('About <b>'+nf(s.conv*100)+' out of every 100</b> visitors bought something.'+(cd&&got.length>1?' The lowest was '+dayLabel(cd.d)+' ('+pct(cd.conv)+'): more people came in than bought.':''))}
   if(isFinite(s.upt))L.push('Each customer buys <b>'+nf(s.upt,2)+' pieces</b> on average, spending about <b>'+egp(s.apt)+'</b>. Suggesting one more piece to every customer is the quickest way to grow both.');
   if(s.mor+s.nig>0)L.push('The <b>'+(s.nig>=s.mor?'night':'morning')+' shift</b> brings '+pct(Math.max(s.mor,s.nig)/(s.mor+s.nig))+' of the sales.');
-  if(s.missing.length)L.push('<b>Numbers missing for:</b> '+s.missing.slice(0,8).map(dayLabel).join(', ')+(s.missing.length>8?'…':'')+'. Please add them so the report is complete.');
-  if(!c.parts&&!c.weightsGiven)L.push('The sheet had no “Month Seasonality” page, so the monthly target is shared equally between the days.');
+  if(s.missing.length)L.push('<b>Still to enter:</b> '+s.missing.slice(0,8).map(m=>dayLabel(m.d)+(m.part?' ('+(m.part==='m'?'night':m.part==='n'?'morning':'one shift')+' missing)':'')).join(', ')+(s.missing.length>8?'…':'')+'.');
   return '<section class="card"><div class="cardhead"><h2>What the numbers say</h2></div><ul class="insights">'+L.map(x=>'<li>'+x+'</li>').join('')+'</ul></section>';
 }
 function storesTable(calcs){
-  const rows=calcs.map(c=>({c,s:summarize(c)})).sort((a,b)=>(b.s.ach||0)-(a.s.ach||0));
-  const tot=CUR.s;
+  const rows=calcs.map(c=>({c,s:summarize(c)})).sort((a,b)=>((b.s.ach||0)-(a.s.ach||0)));
   return '<section class="card"><div class="cardhead"><h2>Store by store</h2><span class="meta">Best against target first. Click a store to open it.</span></div><div class="tablewrap"><table><thead><tr><th>Store</th><th>Sales so far</th><th>Target so far</th><th>Against target</th><th>Month end (pace)</th><th>Conversion</th><th>UPT</th><th>APT</th><th>Numbers up to</th></tr></thead><tbody>'
-    +rows.map(({c,s})=>'<tr class="click" data-store="'+esc(c.store)+'"><td><b>'+esc(c.store)+'</b></td><td>'+egp(s.sales)+'</td><td>'+egp(s.tgtToDate)+'</td><td><span class="mini"><i style="width:'+Math.min(100,(s.ach||0)*75)+'%"></i><b></b></span>'+pct(s.ach)+'</td><td>'+(isFinite(s.proj)?egp(s.proj):'–')+'</td><td>'+pct(s.conv,1)+'</td><td>'+(isFinite(s.upt)?nf(s.upt,2):'–')+'</td><td>'+(isFinite(s.apt)?egp(s.apt):'–')+'</td><td>'+(s.last?dayLabel(s.last.d):'–')+(s.missing.length?' <span class="chip no">'+s.missing.length+' missing</span>':'')+'</td></tr>').join('')
-    +'</tbody></table></div><div class="sub" style="margin-top:8px">The thin line in each bar marks 100% of the target.</div></section>';
+    +rows.map(({c,s})=>'<tr class="click" data-store="'+esc(c.store)+'"><td><b>'+esc(c.store)+'</b></td><td>'+egp(s.sales)+'</td><td>'+egp(s.tgtToDate)+'</td><td>'+(isFinite(s.ach)?'<span class="mini"><i style="width:'+Math.min(100,(s.ach||0)*75)+'%"></i><b></b></span>'+pct(s.ach):'–')+'</td><td>'+(isFinite(s.proj)?egp(s.proj):'–')+'</td><td>'+pct(s.conv,1)+'</td><td>'+(isFinite(s.upt)?nf(s.upt,2):'–')+'</td><td>'+(isFinite(s.apt)?egp(s.apt):'–')+'</td><td>'+(s.last?dayLabel(s.last.d):'–')+(s.missing.length?' <span class="chip no">'+s.missing.length+' to enter</span>':'')+'</td></tr>').join('')
+    +'</tbody></table></div><div class="sub" style="margin-top:8px">The thin line in each bar marks 100% of the target. Stores that have not typed in a month yet are not listed.</div></section>';
 }
-document.addEventListener('click',e=>{const r=e.target.closest('tr[data-store]');if(r){S.store=r.dataset.store;$('storeSel').value=S.store;render();scrollTo({top:0,behavior:'smooth'})}});
+document.addEventListener('click',e=>{const r=e.target.closest('tr[data-store]');if(r){S.store=r.dataset.store;$('storeSel').value=S.store;render();scrollTo({top:$('filters').offsetTop-10,behavior:'smooth'})}});
 function dayTable(s,c,one){
-  const rows=c.days.filter(d=>d.has);
-  return '<section class="card"><div class="cardhead"><h2>All days</h2><span class="meta">The same numbers as the charts, in a table'+(one&&S.canDelete?' · <a href="#" id="delMonth" style="color:var(--accent-text)">Remove this month</a>':'')+'</span></div><div class="tablewrap"><table><thead><tr><th>Date</th><th>Visitors</th><th>Transactions</th><th>Qty</th><th>UPT</th><th>APT</th><th>Conv.</th><th>Cash</th><th>Visa</th><th>Morning</th><th>Night</th><th>Sales</th><th>Target</th><th>%</th></tr></thead><tbody>'
-    +rows.map(d=>'<tr><td>'+dayLabel(d.d)+' · '+WD[d.wd]+'</td><td>'+nf(d.v)+'</td><td>'+nf(d.t)+'</td><td>'+nf(d.q)+'</td><td>'+(isFinite(d.upt)?nf(d.upt,2):'–')+'</td><td>'+(isFinite(d.apt)?nf(d.apt):'–')+'</td><td>'+pct(d.conv)+'</td><td>'+nf(d.cash)+'</td><td>'+nf(d.visa)+'</td><td>'+nf(d.mor)+'</td><td>'+nf(d.nig)+'</td><td><b>'+nf(d.sales)+'</b></td><td>'+nf(d.target)+'</td><td><span class="chip '+(d.ach>=1?'ok':'no')+'">'+(d.ach>=1?'Met ':'')+pct(d.ach)+'</span></td></tr>').join('')
-    +'</tbody><tfoot><tr><td><b>Total</b></td><td><b>'+nf(s.visitors)+'</b></td><td><b>'+nf(s.trx)+'</b></td><td><b>'+nf(s.qty)+'</b></td><td><b>'+(isFinite(s.upt)?nf(s.upt,2):'–')+'</b></td><td><b>'+(isFinite(s.apt)?nf(s.apt):'–')+'</b></td><td><b>'+pct(s.conv)+'</b></td><td><b>'+nf(s.cash)+'</b></td><td><b>'+nf(s.visa)+'</b></td><td><b>'+nf(s.mor)+'</b></td><td><b>'+nf(s.nig)+'</b></td><td><b>'+nf(s.sales)+'</b></td><td><b>'+nf(s.tgtToDate)+'</b></td><td><b>'+pct(s.ach)+'</b></td></tr></tfoot></table></div><div class="sub" style="margin-top:8px">Amounts are in EGP. UPT = pieces per transaction. APT = average spent per transaction. Conv. = transactions ÷ visitors.</div></section>';
+  const today=cairoToday(),firstD=s.got.length?s.got[0].dom:0;
+  const rows=c.days.filter(d=>d.has||(one&&d.dom>=firstD&&d.d<=today));
+  const shifts=d=>{
+    if(!one)return d.part?'<span class="chip na">In progress</span>':'';
+    if(d.legacy)return '<span class="chip na">From Excel</span>';
+    const b=(k,l,on)=>'<button type="button" class="chip '+(on?'ok':'na')+'" data-edit="'+d.d+'|'+k+'">'+(on?l+' ✓':'+ '+l)+'</button>';
+    return b('m','Morning',d.hasM)+' '+b('n','Night',d.hasN);
+  };
+  return '<section class="card"><div class="cardhead"><h2>All days</h2><span class="meta">'+(one?'Press a shift to change it or to add a missing one':'The same numbers as the charts, in a table')+(one&&S.canDelete?' · <a href="#" id="delMonth" style="color:var(--accent-text)">Remove this month</a>':'')+'</span></div><div class="tablewrap"><table><thead><tr><th>Date</th><th>Shifts</th><th>Visitors</th><th>Transactions</th><th>Qty</th><th>UPT</th><th>APT</th><th>Conv.</th><th>Cash</th><th>Visa</th><th>Morning</th><th>Night</th><th>Sales</th><th>Target</th><th>%</th></tr></thead><tbody>'
+    +rows.map(d=>d.has?'<tr><td>'+dayLabel(d.d)+' · '+WD[d.wd]+'</td><td>'+shifts(d)+'</td><td>'+nf(d.v)+'</td><td>'+nf(d.t)+'</td><td>'+nf(d.q)+'</td><td>'+(isFinite(d.upt)?nf(d.upt,2):'–')+'</td><td>'+(isFinite(d.apt)?nf(d.apt):'–')+'</td><td>'+pct(d.conv)+'</td><td>'+nf(d.cash)+'</td><td>'+nf(d.visa)+'</td><td>'+nf(d.mor)+'</td><td>'+nf(d.nig)+'</td><td><b>'+nf(d.sales)+'</b></td><td>'+nf(d.target)+'</td><td>'+(d.part?'<span class="chip na">In progress</span>':'<span class="chip '+(d.ach>=1?'ok':'no')+'">'+(d.ach>=1?'Met ':'')+pct(d.ach)+'</span>')+'</td></tr>'
+      :'<tr><td>'+dayLabel(d.d)+' · '+WD[d.wd]+'</td><td>'+shifts(d)+'</td><td colspan="11" style="text-align:left;color:var(--ink2)">Nothing entered</td><td>'+nf(d.target)+'</td><td></td></tr>').join('')
+    +'</tbody><tfoot><tr><td><b>Total</b></td><td></td><td><b>'+nf(s.visitors)+'</b></td><td><b>'+nf(s.trx)+'</b></td><td><b>'+nf(s.qty)+'</b></td><td><b>'+(isFinite(s.upt)?nf(s.upt,2):'–')+'</b></td><td><b>'+(isFinite(s.apt)?nf(s.apt):'–')+'</b></td><td><b>'+pct(s.conv)+'</b></td><td><b>'+nf(s.cash)+'</b></td><td><b>'+nf(s.visa)+'</b></td><td><b>'+nf(s.mor)+'</b></td><td><b>'+nf(s.nig)+'</b></td><td><b>'+nf(s.sales)+'</b></td><td><b>'+nf(s.tgtToDate)+'</b></td><td><b>'+(isFinite(s.ach)?pct(s.ach):'–')+'</b></td></tr></tfoot></table></div><div class="sub" style="margin-top:8px">Amounts are in EGP. UPT = pieces per transaction. APT = average spent per transaction. Conv. = transactions ÷ visitors. Target and % count finished days only (both shifts in).</div></section>';
 }
 document.addEventListener('click',async e=>{
   if(e.target.id!=='delMonth')return;e.preventDefault();
   if(!confirm('Remove all saved numbers of '+S.store+' for '+monthName(S.month)+'?'))return;
-  try{await api('/api/daily?op=delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({store:S.store,month:S.month})});await init(S.store,S.month)}catch(x){say(x.message)}
+  try{await post('delete',{store:S.store,month:S.month});await init(S.store,S.month)}catch(x){say(x.message)}
 });
 
 function drawCharts(){
   const {c,s}=CUR,days=c.days,n=days.length,lab=days.map(d=>String(d.dom));
-  const rot=false;
   const draw=()=>{
     TIPS={};
-    // 1. sales vs daily target
     const sales=days.map(d=>d.has?d.sales:null),tg=days.map(d=>d.target);
-    const m1=niceMax(Math.max(...sales.map(v=>v||0),...tg));
+    const m1=niceMax(Math.max(...sales.map(v=>v||0),...tg,1));
     plot($('cSales'),{n,labels:lab,ymax:m1,yfmt:short,aria:'Daily sales against the daily target',
-      layers:x=>x.bars(sales,'var(--accent)',{opa:i=>days[i].has&&days[i].sales<days[i].target?.45:1})+x.steps(tg,'var(--ink)'),
-      tip:i=>{const d=days[i];return '<b>'+dayLabel(d.d)+' · '+WD[d.wd]+'</b>'+(d.has?trow('Sales',egp(d.sales))+trow('Target',egp(d.target))+trow('Against target',pct(d.ach))+trow('Visitors',nf(d.v))+trow('Transactions',nf(d.t)):trow('Target',egp(d.target))+trow('Numbers','not added yet'))}});
-    // 2. pace
+      layers:x=>x.bars(sales,'var(--accent)',{opa:i=>days[i].part?.2:(days[i].has&&days[i].sales<days[i].target?.45:1)})+(c.target?x.steps(tg,'var(--ink)'):''),
+      tip:i=>{const d=days[i];return '<b>'+dayLabel(d.d)+' · '+WD[d.wd]+'</b>'+(d.has?trow('Sales',egp(d.sales))+(c.target?trow('Target',egp(d.target)):'')+(d.part?trow('Entered',d.part==='m'?'Morning only':d.part==='n'?'Night only':'Some stores only'):trow('Against target',pct(d.ach)))+trow('Visitors',nf(d.v))+trow('Transactions',nf(d.t)):(c.target?trow('Target',egp(d.target)):'')+trow('Numbers','not entered yet'))}});
     const cumS=days.map(d=>d.cumS),cumT=days.map(d=>d.cumT);
-    const projLine=days.map(d=>d.dom===s.lastIdx?d.cumS:(d.dom>s.lastIdx&&isFinite(s.proj)&&s.lastIdx>0?(s.last.cumS+(s.proj-s.last.cumS)*(d.dom-s.lastIdx)/(n-s.lastIdx)):null));
-    const m2=niceMax(Math.max(...cumT,isFinite(s.proj)?s.proj:0,c.target||0));
+    const projLine=days.map(d=>d.dom===s.lastIdx&&s.last?d.cumS:(d.dom>s.lastIdx&&isFinite(s.proj)&&s.lastIdx>0?(s.last.cumS+(s.proj-s.last.cumS)*(d.dom-s.lastIdx)/(n-s.lastIdx)):null));
+    const m2=niceMax(Math.max(...cumT,isFinite(s.proj)?s.proj:0,c.target||0,s.sales,1));
     plot($('cPace'),{n,labels:lab,ymax:m2,yfmt:short,aria:'Running total of sales against the running target',
-      layers:x=>x.line(cumT,'var(--ink)')+(s.remainDays>0?x.line(projLine,'var(--accent)',{dash:'5 5'}):'')+x.line(cumS,'var(--accent)',{})+(c.target?x.hline(c.target,'var(--ink2)','2 4'):''),
-      tip:i=>{const d=days[i];return '<b>'+dayLabel(d.d)+'</b>'+trow('Should be',egp(d.cumT))+(d.cumS!=null?trow('Sales so far',egp(d.cumS))+trow('Difference',(d.cumS-d.cumT>=0?'+':'−')+egp(Math.abs(d.cumS-d.cumT)).replace('EGP ','')):'')}});
-    // 3. people
+      layers:x=>(c.target?x.line(cumT,'var(--ink)'):'')+(s.remainDays>0&&s.last?x.line(projLine,'var(--accent)',{dash:'5 5'}):'')+x.line(cumS,'var(--accent)',{})+(c.target?x.hline(c.target,'var(--ink2)','2 4'):''),
+      tip:i=>{const d=days[i];return '<b>'+dayLabel(d.d)+'</b>'+(c.target?trow('Should be',egp(d.cumT)):'')+(d.cumS!=null?trow('Sales so far',egp(d.cumS))+(c.target?trow('Difference',(d.cumS-d.cumT>=0?'+':'−')+egp(Math.abs(d.cumS-d.cumT)).replace('EGP ','')):''):'')}});
     const vis=days.map(d=>d.has?d.v:null),trx=days.map(d=>d.has?d.t:null);
     plot($('cPeople'),{n,labels:lab,ymax:niceMax(Math.max(...vis.map(v=>v||0),1)),yfmt:v=>nf(v),aria:'Visitors and transactions each day',
       layers:x=>x.bars(vis,'var(--c2)',{frac:.78,off:-.25})+x.bars(trx,'var(--accent)',{frac:.78,off:.25}),
       tip:i=>{const d=days[i];return d.has?'<b>'+dayLabel(d.d)+' · '+WD[d.wd]+'</b>'+trow('Visitors',nf(d.v))+trow('Transactions',nf(d.t))+trow('Conversion',pct(d.conv)):''}});
-    // 4. conversion
     const cv=days.map(d=>d.has&&isFinite(d.conv)?d.conv:null);
     plot($('cConv'),{n,labels:lab,ymax:niceMax(Math.max(...cv.map(v=>v||0),.1)),yfmt:v=>nf(v*100)+'%',aria:'Conversion rate each day',
       layers:x=>(isFinite(s.conv)?x.hline(s.conv,'var(--ink)'):'')+x.line(cv,'var(--accent)',{dots:true}),
       tip:i=>{const d=days[i];return d.has?'<b>'+dayLabel(d.d)+'</b>'+trow('Conversion',pct(d.conv,1))+trow('Visitors',nf(d.v))+trow('Transactions',nf(d.t)):''}});
-    // 5. UPT, 6. APT
     const up=days.map(d=>d.has&&isFinite(d.upt)?d.upt:null),ap=days.map(d=>d.has&&isFinite(d.apt)?d.apt:null);
     plot($('cUpt'),{n,labels:lab,h:210,ymax:niceMax(Math.max(...up.map(v=>v||0),1)),yfmt:v=>nf(v,1),aria:'Pieces per transaction each day',
-      layers:x=>(isFinite(s.upt)?x.hline(s.upt,'var(--ink)'):'')+x.line(up,'var(--accent)',{dots:n<=31}),
+      layers:x=>(isFinite(s.upt)?x.hline(s.upt,'var(--ink)'):'')+x.line(up,'var(--accent)',{dots:true}),
       tip:i=>{const d=days[i];return d.has?'<b>'+dayLabel(d.d)+'</b>'+trow('UPT',nf(d.upt,2))+trow('Pieces',nf(d.q))+trow('Transactions',nf(d.t)):''}});
     plot($('cApt'),{n,labels:lab,h:210,ymax:niceMax(Math.max(...ap.map(v=>v||0),1)),yfmt:short,aria:'Average transaction each day',
       layers:x=>(isFinite(s.apt)?x.hline(s.apt,'var(--ink)'):'')+x.line(ap,'var(--c2)',{dots:true}),
       tip:i=>{const d=days[i];return d.has?'<b>'+dayLabel(d.d)+'</b>'+trow('Average transaction',egp(d.apt))+trow('Sales',egp(d.sales)):''}});
-    // 7. weekday
-    const order=[1,2,3,4,5,6,0],wa=order.map(w=>{const g=s.got.filter(d=>d.wd===w);return g.length?{s:g.reduce((a,d)=>a+d.sales,0)/g.length,t:g.reduce((a,d)=>a+d.target,0)/g.length,n:g.length}:null});
+    const order=[1,2,3,4,5,6,0],wa=order.map(w=>{const g=s.done.filter(d=>d.wd===w);return g.length?{s:g.reduce((a,d)=>a+d.sales,0)/g.length,t:g.reduce((a,d)=>a+d.target,0)/g.length,n:g.length}:null});
     plot($('cWd'),{n:7,h:210,labels:order.map(w=>WD[w]),ymax:niceMax(Math.max(...wa.map(a=>a?Math.max(a.s,a.t):0),1)),yfmt:short,aria:'Average sales for each weekday',
-      layers:x=>x.bars(wa.map(a=>a&&a.s),'var(--accent)',{frac:.5})+x.steps(wa.map(a=>a&&a.t),'var(--ink)'),
-      tip:i=>{const a=wa[i];return a?'<b>'+WDF[order[i]]+'</b>'+trow('Average sales',egp(a.s))+trow('Average target',egp(a.t))+trow('Days counted',a.n):''}});
+      layers:x=>x.bars(wa.map(a=>a&&a.s),'var(--accent)',{frac:.5})+(c.target?x.steps(wa.map(a=>a&&a.t),'var(--ink)'):''),
+      tip:i=>{const a=wa[i];return a?'<b>'+WDF[order[i]]+'</b>'+trow('Average sales',egp(a.s))+(c.target?trow('Average target',egp(a.t)):'')+trow('Days counted',a.n):''}});
   };
   draw();REDRAW.push(draw);
 }
-let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(CUR){REDRAW.forEach(f=>f());fitAll()}},150)});
+let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(CUR&&$('cSales')){REDRAW.forEach(f=>f());fitAll()}},150)});
 function fitAll(){document.querySelectorAll('.fit').forEach(el=>{el.style.fontSize='';let fs=parseFloat(getComputedStyle(el).fontSize);while(el.scrollWidth>el.clientWidth+1&&fs>11){fs-=1;el.style.fontSize=fs+'px'}})}
 
 init();
