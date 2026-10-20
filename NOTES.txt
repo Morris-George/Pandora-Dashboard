@@ -88,3 +88,5 @@ DAILY STORE REPORT UPDATE (typed in on the site, twice a day)
 - The Excel upload is still there (small link at the bottom of the entry box) for numbers already in the old sheet; imported days replace typed shifts of the same day and show "From Excel".
 - Remove Excel data: the Excel box has 'Remove all days that came from Excel' (area managers and super admin; op=clearimport) which deletes every day that has numbers but no typed shifts, in the stores they may open. Typed shifts, targets and weekday shares stay.
 - Sales people and store managers see no store dropdowns: their store is a fixed label on the entry box; the server refuses any other store (shifts, reads, delete).
+
+HOME SCREEN (private/home.html): no pink side panel. The small Pandora logo shows alone in the middle, after 1.5 s it glides up and the pages appear one by one in a single rounded list (smaller cards, staggered animation; reduced-motion = no animation). Cards come from api/_apps.js as before.
