@@ -44,6 +44,7 @@ async function sessionFacts(req) {
 // Area managers are greeted by first name ("Hello Joseph"). Everyone else keeps their usual label.
 function greetName(f) {
   const acc = f.staff && f.staff.who && f.staff.who.kind === 'env' ? f.staff.who.account : null;
+  if (acc && acc.overseer) { const n = String((f.staff.who.user || {}).name || '').trim().split(/\s+/)[0]; return n ? 'Mr. ' + n : ''; } // Overseers are greeted "Hello Mr. Ibrahim"
   if (!acc || acc.role === 'admin') return '';
   const first = String(acc.user || '').trim().split(/[\s._-]+/)[0] || '';
   return first ? first.charAt(0).toUpperCase() + first.slice(1).toLowerCase() : '';
