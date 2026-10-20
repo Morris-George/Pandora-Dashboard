@@ -4,39 +4,118 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><title>Pandora — Sign in</title>
 <style>
-:root{color-scheme:light dark;--bg:light-dark(#f5f3f1,#151413);--surface:light-dark(#fff,#211f1d);--surface2:light-dark(#faf8f6,#292623);--text:light-dark(#282522,#f7f2ed);--muted:light-dark(#817a74,#b7aea6);--line:light-dark(#e9e2dc,#3a3530);--accent:#FF93A0;--accent2:#FF93A0;--accent-text:light-dark(#2A1F24,#FF93A0)}
-*{box-sizing:border-box}body{word-spacing:.09em;margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at top,var(--surface) 0%,var(--bg) 68%);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
-.panel{width:min(100%,420px);padding:38px 34px 30px;background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:0 20px 70px #4b17300d;text-align:center}.logo{display:block;width:min(230px,78%);max-height:120px;object-fit:contain;margin:0 auto 26px}.eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent-text);font-weight:750}.title{font-size:26px;letter-spacing:-.04em;margin:10px 0 8px}.sub{font-size:14px;line-height:1.55;color:var(--muted);margin:0 0 28px}form{text-align:left}.field{margin:0 0 17px}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:8px}.field input{width:100%;height:48px;border:1px solid var(--line);border-radius:10px;padding:0 13px;font-size:15px;color:var(--text);background:var(--surface2);outline:none}.field input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px #FF93A044}.password-wrap{position:relative}.password-wrap input{padding-right:68px}.toggle{position:absolute;right:10px;top:0;height:48px;border:0;background:none;color:var(--accent-text);font-weight:700;cursor:pointer}.submit{width:100%;height:49px;margin-top:7px;border:0;border-radius:10px;background:var(--accent);color:#2A1018;font-size:14px;font-weight:750;cursor:pointer}.submit:hover{filter:brightness(.96)}.submit:disabled{opacity:.65;cursor:wait}.error{display:none;color:light-dark(#2A1018,#FF93A0);background:light-dark(#FFE4E8,#3a1f24);border:1px solid #FF93A0;border-radius:9px;padding:11px 12px;font-size:13px;line-height:1.4;margin:0 0 16px}.foot{font-size:11px;color:var(--muted);margin:23px 0 0}.rule{width:42px;height:3px;border-radius:5px;background:linear-gradient(90deg,var(--accent),var(--accent2));margin:0 auto 20px}
-.choose{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 22px}.pick{border:1px solid var(--line);background:var(--surface2);color:var(--text);border-radius:12px;padding:14px 10px;font:inherit;font-size:13px;font-weight:750;cursor:pointer;line-height:1.3}.pick small{display:block;font-weight:500;color:var(--muted);font-size:11px;margin-top:3px}.pick:hover{border-color:var(--accent2)}.pick[aria-pressed="true"]{border-color:var(--accent);background:light-dark(#FFE4E8,#33202a);box-shadow:0 0 0 2px #FF93A055}.pick:focus-visible,.submit:focus-visible,.toggle:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}.hint{font-size:13px;color:var(--muted);margin:0 0 6px;text-align:center}@media(max-width:380px){.choose{grid-template-columns:1fr}}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo{filter:brightness(0) invert(1)}}:root[data-theme="dark"] .logo{filter:brightness(0) invert(1)}
-</style><style id="desk">
-.side{display:none}
-@media (min-width:900px){
- body{display:grid!important;grid-template-columns:minmax(360px,44%) 1fr;padding:0!important;place-items:stretch!important;background:var(--bg)!important}
- .side{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:18px;padding:64px 56px;color:#2A1018;background:linear-gradient(155deg,#FF93A0 0%,#FFA9B3 55%,#FFC4CB 100%);position:sticky;top:0;height:100vh}
- .side img{width:min(440px,78%);max-height:420px;object-fit:contain;margin:0}
- .side h2{margin:0;font-size:38px;line-height:1.1;letter-spacing:-.03em;font-weight:800}
- .side p{margin:0;font-size:16px;line-height:1.6;opacity:.9;max-width:420px}
- .side ul{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:10px;font-size:15px;font-weight:600}
- .side li::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#2A1018;margin-right:12px;opacity:.85}
- .panel{align-self:center;justify-self:center;width:min(100%,460px)!important;margin:48px 24px;border:0!important;box-shadow:none!important;background:transparent!important;padding:0!important}
- .panel .logo,.panel .rule{display:none}
- .panel .eyebrow{text-align:left}.panel .title{font-size:34px;text-align:left}.panel .sub,.panel .hint,.panel .foot{text-align:left}
- .panel.wide{width:min(100%,700px)!important}.panel.wide .apps{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
-}
-@media (min-width:900px) and (prefers-color-scheme:dark){:root:not([data-theme="light"]) body{background:var(--bg)}}
+:root{color-scheme:light dark;--ink:#2A1F24;--ink2:#6B5A61;--glass:rgba(255,255,255,.74);--glass-line:rgba(255,255,255,.85);--field:rgba(255,255,255,.9);--field-line:#EBD5D9;--accent:#FF93A0;--accent-text:#B03A4F;--bgbase:#FFB3BC;--shadow:0 30px 80px rgba(176,58,79,.25)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#F6EBEE;--ink2:#C2AEB5;--glass:rgba(38,26,31,.7);--glass-line:rgba(255,147,160,.22);--field:rgba(23,16,19,.7);--field-line:#4a343b;--accent-text:#FF93A0;--bgbase:#170f13;--shadow:0 30px 80px rgba(0,0,0,.55)}}
+:root[data-theme="dark"]{--ink:#F6EBEE;--ink2:#C2AEB5;--glass:rgba(38,26,31,.7);--glass-line:rgba(255,147,160,.22);--field:rgba(23,16,19,.7);--field-line:#4a343b;--accent-text:#FF93A0;--bgbase:#170f13;--shadow:0 30px 80px rgba(0,0,0,.55)}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bgbase);overflow:hidden;word-spacing:.09em}
+/* ---- moving background ---- */
+.bg{position:fixed;inset:0;overflow:hidden;background:linear-gradient(135deg,#FF93A0 0%,#FFB5BE 50%,#FFDADF 100%)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bg{background:radial-gradient(ellipse at 20% 10%,#3a1823 0%,#170f13 60%)}}
+:root[data-theme="dark"] .bg{background:radial-gradient(ellipse at 20% 10%,#3a1823 0%,#170f13 60%)}
+.par{position:absolute;inset:-40px;transform:translate3d(calc(var(--px,0)*26px),calc(var(--py,0)*26px),0);transition:transform .5s ease-out}
+.blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.85;will-change:transform}
+.b1{width:46vmax;height:46vmax;left:-12vmax;top:-14vmax;background:#FFE3E6;animation:drift1 22s ease-in-out infinite alternate}
+.b2{width:42vmax;height:42vmax;right:-12vmax;bottom:-16vmax;background:#FF7C8F;animation:drift2 26s ease-in-out infinite alternate}
+.b3{width:30vmax;height:30vmax;left:38%;top:30%;background:#FFC1C9;animation:drift3 30s ease-in-out infinite alternate}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .b1{background:#5b2238;opacity:.7}:root:not([data-theme="light"]) .b2{background:#FF93A0;opacity:.28}:root:not([data-theme="light"]) .b3{background:#8a3350;opacity:.5}}
+:root[data-theme="dark"] .b1{background:#5b2238;opacity:.7}:root[data-theme="dark"] .b2{background:#FF93A0;opacity:.28}:root[data-theme="dark"] .b3{background:#8a3350;opacity:.5}
+@keyframes drift1{to{transform:translate3d(12vmax,10vmax,0) scale(1.15)}}
+@keyframes drift2{to{transform:translate3d(-14vmax,-8vmax,0) scale(1.1)}}
+@keyframes drift3{to{transform:translate3d(-10vmax,8vmax,0) scale(1.3)}}
+/* floating charms: little rings and sparkles */
+.ring{position:absolute;bottom:-12vh;left:var(--x);width:var(--s);height:var(--s);border-radius:50%;border:calc(var(--s)*.17) solid rgba(255,255,255,.6);box-shadow:0 0 24px rgba(255,255,255,.35);animation:rise var(--d) linear var(--t) infinite;opacity:0}
+.ring::before{content:"";position:absolute;left:50%;top:calc(var(--s)*-.52);width:calc(var(--s)*.3);height:calc(var(--s)*.3);margin-left:calc(var(--s)*-.15);border-radius:50%;background:rgba(255,255,255,.7)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ring{border-color:rgba(255,147,160,.42);box-shadow:0 0 24px rgba(255,147,160,.25)}:root:not([data-theme="light"]) .ring::before{background:rgba(255,147,160,.55)}}
+:root[data-theme="dark"] .ring{border-color:rgba(255,147,160,.42);box-shadow:0 0 24px rgba(255,147,160,.25)}:root[data-theme="dark"] .ring::before{background:rgba(255,147,160,.55)}
+@keyframes rise{0%{transform:translate3d(0,0,0) rotate(0);opacity:0}10%{opacity:1}85%{opacity:.9}100%{transform:translate3d(var(--dx),-118vh,0) rotate(var(--r));opacity:0}}
+.spark{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);background:#fff;clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);animation:twinkle var(--d) ease-in-out var(--t) infinite;opacity:0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .spark{background:#FF93A0}}:root[data-theme="dark"] .spark{background:#FF93A0}
+@keyframes twinkle{0%,100%{opacity:0;transform:scale(.3) rotate(0)}50%{opacity:.95;transform:scale(1) rotate(90deg)}}
+/* ---- card ---- */
+.wrap{position:relative;z-index:2;min-height:100%;display:grid;place-items:center;padding:78px 20px 32px;transition:opacity .45s,transform .55s cubic-bezier(.5,0,.2,1)}
+.card{position:relative;width:min(100%,430px);padding:64px 34px 28px;border-radius:32px;background:var(--glass);border:1px solid var(--glass-line);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);box-shadow:var(--shadow);animation:cardin .9s cubic-bezier(.2,.8,.2,1) .15s both}
+@keyframes cardin{from{opacity:0;transform:translateY(40px) scale(.96)}to{opacity:1;transform:none}}
+.card.shake{animation:shake .5s}
+@keyframes shake{20%{transform:translateX(-12px)}40%{transform:translateX(10px)}60%{transform:translateX(-7px)}80%{transform:translateX(4px)}}
+.badge{position:absolute;left:50%;top:-48px;width:96px;height:96px;margin-left:-48px;border-radius:50%;display:grid;place-items:center;background:#fff;box-shadow:0 10px 34px rgba(176,58,79,.3);animation:badgein .8s cubic-bezier(.2,.9,.3,1.3) .5s both}
+.badge::before{content:"";position:absolute;inset:-5px;border-radius:50%;background:conic-gradient(from 0deg,#FF93A0,#fff,#FF93A0 40%,#FFD0D6,#FF93A0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));animation:spin 6s linear infinite}
+.badge img{width:50px;height:auto;display:block;animation:bob 4.5s ease-in-out infinite}
+@keyframes badgein{from{opacity:0;transform:translateY(-30px) scale(.4)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes bob{50%{transform:translateY(-3px) rotate(-3deg)}}
+.in{opacity:0;transform:translateY(14px);animation:fadeup .6s cubic-bezier(.2,.8,.2,1) calc(.7s + var(--n) * .09s) forwards}
+@keyframes fadeup{to{opacity:1;transform:none}}
+.title{margin:0 0 6px;text-align:center;font-size:30px;letter-spacing:-.04em;font-weight:800}.title span{background:linear-gradient(90deg,var(--ink) 0%,var(--accent-text) 50%,var(--ink) 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shimmer 7s ease-in-out infinite}
+@keyframes shimmer{50%{background-position:100% 0}}
+.sub{text-align:center;font-size:14px;color:var(--ink2);margin:0 0 24px}
+.error{display:none;color:#2A1018;background:#FFD3D9;border:1px solid #FF93A0;border-radius:14px;padding:11px 14px;font-size:13px;line-height:1.4;margin:0 0 16px}
+/* floating-label fields */
+.field{position:relative;margin:0 0 16px}
+.field input{width:100%;height:56px;padding:22px 16px 6px;border:1.5px solid var(--field-line);border-radius:18px;background:var(--field);color:var(--ink);font:inherit;font-size:15.5px;font-weight:600;outline:none;transition:border-color .2s,box-shadow .25s,transform .2s}
+.field label{position:absolute;left:17px;top:18px;font-size:15px;font-weight:600;color:var(--ink2);pointer-events:none;transform-origin:left top;transition:transform .2s,color .2s}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 5px rgba(255,147,160,.28);transform:translateY(-1px)}
+.field input:focus+label,.field input:not(:placeholder-shown)+label{transform:translateY(-11px) scale(.74);color:var(--accent-text)}
+.password-wrap input{padding-right:76px}
+.toggle{position:absolute;right:8px;top:9px;height:38px;padding:0 14px;border:0;border-radius:12px;background:rgba(255,147,160,.18);color:var(--accent-text);font:inherit;font-size:12.5px;font-weight:800;cursor:pointer;transition:background .2s}.toggle:hover{background:rgba(255,147,160,.34)}
+.forgot{text-align:right;margin:-6px 4px 16px;font-size:12.5px}.forgot a,.hint a{color:var(--accent-text);font-weight:700;text-decoration:none}.forgot a:hover,.hint a:hover{text-decoration:underline}
+.submit{position:relative;overflow:hidden;width:100%;height:54px;border:0;border-radius:999px;background:linear-gradient(100deg,#FF93A0,#FF7F92 55%,#FF93A0);background-size:200% 100%;color:#2A1018;font:inherit;font-size:15px;font-weight:800;letter-spacing:.01em;cursor:pointer;box-shadow:0 12px 28px rgba(255,127,146,.45);transition:transform .2s,box-shadow .2s,background-position .6s}
+.submit::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.65),transparent);transform:skewX(-20deg)}
+.submit:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(255,127,146,.55);background-position:100% 0}.submit:hover::after{animation:shine .8s}
+.submit:active{transform:translateY(0) scale(.985)}
+.submit:disabled{cursor:wait;opacity:.9}
+.submit:disabled::before{content:"";display:inline-block;width:15px;height:15px;margin-right:10px;border-radius:50%;border:2.5px solid rgba(42,16,24,.3);border-top-color:#2A1018;vertical-align:-2px;animation:spin .7s linear infinite}
+@keyframes shine{to{left:130%}}
+.hint{text-align:center;font-size:13px;margin:20px 0 0}.foot{text-align:center;font-size:11px;color:var(--ink2);margin:18px 0 0;letter-spacing:.08em}
+:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
+/* signing in: the card lifts away and a pink wave opens the next page */
+#sweep{position:fixed;z-index:5;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:#FF93A0;transform:scale(0);pointer-events:none}
+body.leaving .wrap{opacity:0;transform:translateY(-30px) scale(.97)}
+body.leaving #sweep{transform:scale(130);transition:transform .7s cubic-bezier(.6,.05,.3,1)}
+@media (max-width:480px){.card{padding:62px 22px 24px;border-radius:28px}.title{font-size:26px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.in,.card,.badge{opacity:1;transform:none}.ring,.spark{display:none}}
 </style></head>
-<body><aside class="side"><img src="/pandora-logo.png" alt="Pandora"></aside><main class="panel"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="rule"></div><h1 class="title">Welcome back</h1><p class="sub" id="sub">Sign in to continue.</p>
-<form id="loginForm"><div class="error" id="error" role="alert"></div><div class="field"><label for="username">Username</label><input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus></div><div class="field"><label for="password">Password</label><div class="password-wrap"><input id="password" name="password" type="password" autocomplete="current-password" required><button class="toggle" id="toggle" type="button">Show</button></div></div><p class="small" style="margin:-6px 0 14px;text-align:right"><a href="/forgot.html" style="color:var(--accent-text);font-weight:700;font-size:12.5px">Forgot your password?</a></p><button class="submit" id="submit" type="submit">Sign in</button></form>
-<p class="hint" id="signupHint" style="margin-top:18px"><a href="/signup.html" style="color:var(--accent-text);font-weight:700">Sales person? Create your account</a></p><p class="foot">Restricted access · Pandora</p></main>
+<body>
+<div class="bg" id="bg" aria-hidden="true"><div class="par"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i><div id="fx"></div></div></div>
+<div id="sweep"></div>
+<main class="wrap"><section class="card" id="card">
+  <div class="badge"><img src="/pandora-logo.png" alt="Pandora"></div>
+  <h1 class="title in" style="--n:0"><span>Welcome back</span></h1><p class="sub in" id="sub" style="--n:1">Sign in to continue.</p>
+  <form id="loginForm"><div class="error" id="error" role="alert"></div>
+    <div class="field in" style="--n:2"><input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder=" " required autofocus><label for="username">Username</label></div>
+    <div class="field password-wrap in" style="--n:3"><input id="password" name="password" type="password" autocomplete="current-password" placeholder=" " required><label for="password">Password</label><button class="toggle" id="toggle" type="button">Show</button></div>
+    <p class="forgot in" style="--n:4"><a href="/forgot.html">Forgot your password?</a></p>
+    <button class="submit in" id="submit" type="submit" style="--n:5">Sign in</button>
+  </form>
+  <p class="hint in" id="signupHint" style="--n:6"><a href="/signup.html">Sales person? Create your account</a></p><p class="foot in" style="--n:7">RESTRICTED ACCESS · PANDORA</p>
+</section></main>
 <script>
-const form=document.getElementById('loginForm'),err=document.getElementById('error'),btn=document.getElementById('submit'),pass=document.getElementById('password');
+// floating charms (rings) and sparkles
+(function(){const fx=document.getElementById('fx'),r=(a,b)=>a+Math.random()*(b-a);let h='';
+ for(let i=0;i<14;i++)h+='<i class="ring" style="--x:'+r(2,96).toFixed(1)+'%;--s:'+r(16,46).toFixed(0)+'px;--d:'+r(16,30).toFixed(1)+'s;--t:-'+r(0,28).toFixed(1)+'s;--dx:'+r(-90,90).toFixed(0)+'px;--r:'+r(-220,220).toFixed(0)+'deg"></i>';
+ for(let i=0;i<16;i++)h+='<i class="spark" style="--x:'+r(2,97).toFixed(1)+'%;--y:'+r(3,95).toFixed(1)+'%;--s:'+r(8,18).toFixed(0)+'px;--d:'+r(3,7).toFixed(1)+'s;--t:-'+r(0,7).toFixed(1)+'s"></i>';
+ fx.innerHTML=h;
+ const bg=document.getElementById('bg');
+ addEventListener('pointermove',e=>{bg.style.setProperty('--px',(e.clientX/innerWidth-.5).toFixed(3));bg.style.setProperty('--py',(e.clientY/innerHeight-.5).toFixed(3))},{passive:true});
+})();
+const form=document.getElementById('loginForm'),err=document.getElementById('error'),btn=document.getElementById('submit'),pass=document.getElementById('password'),card=document.getElementById('card');
 document.getElementById('toggle').addEventListener('click',()=>{const reveal=pass.type==='password';pass.type=reveal?'text':'password';document.getElementById('toggle').textContent=reveal?'Hide':'Show';});
+function fail(msg){err.textContent=msg;err.style.display='block';btn.disabled=false;btn.textContent='Sign in';card.classList.remove('shake');void card.offsetWidth;card.classList.add('shake')}
+function leave(next){
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){location.replace(next);return}
+  const b=btn.getBoundingClientRect(),s=document.getElementById('sweep');
+  s.style.left=(b.left+b.width/2)+'px';s.style.top=(b.top+b.height/2)+'px';
+  document.body.classList.add('leaving');
+  setTimeout(()=>location.replace(next),620);
+}
 form.addEventListener('submit',async e=>{e.preventDefault();err.style.display='none';btn.disabled=true;btn.textContent='Checking…';
  try{const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('username').value,password:pass.value})});
   const data=await r.json().catch(()=>({}));
   if((r.status===500||r.status===403||r.status===429)&&data.error)throw new Error(data.error);
   if(!r.ok||!data.ok)throw new Error('Incorrect username or password. Please try again.');
-  location.replace(data.next||'/');
- }catch(ex){err.textContent=ex.message||'Sign-in failed. Please try again.';err.style.display='block';btn.disabled=false;btn.textContent='Sign in'}});
+  btn.textContent='Welcome';
+  leave(data.next||'/');
+ }catch(ex){fail(ex.message||'Sign-in failed. Please try again.')}});
 </script></body></html>

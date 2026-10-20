@@ -90,3 +90,5 @@ DAILY STORE REPORT UPDATE (typed in on the site, twice a day)
 - Sales people and store managers see no store dropdowns: their store is a fixed label on the entry box; the server refuses any other store (shifts, reads, delete).
 
 HOME SCREEN (private/home.html): no pink side panel. The small Pandora logo shows alone in the middle, after 1.5 s it glides up and the pages appear one by one in a single rounded list (smaller cards, staggered animation; reduced-motion = no animation). Cards come from api/_apps.js as before.
+
+LOGIN PAGE (private/login.html): animated pink background (drifting blurs that follow the mouse a little, floating charm rings and twinkling sparkles; deep plum version in dark mode), frosted glass card with the logo in a spinning-ring badge, floating-label fields, shine button, card shakes on a wrong password, and on success the card lifts away with a pink wave before the next page opens. Login logic (api/login) is unchanged. Reduced-motion users get no animation.
