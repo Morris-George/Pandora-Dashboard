@@ -84,6 +84,7 @@ button.chip{border:0;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
     <div class="cardhead"><h2>Enter your numbers</h2><span class="meta">Fill it twice a day: after the morning shift and after the night shift. Each time, type only that shift’s numbers.</span></div>
     <div class="erow">
       <label id="eStoreLbl">Store <select id="eStore"></select></label>
+      <div id="eStoreFixed" hidden style="font-weight:700;padding:10px 0">Store: <span class="chip ok" style="font-size:14px"></span></div>
       <label>Date <input type="date" id="eDate"></label>
       <div class="seg" id="eShift" role="group" aria-label="Shift"><button type="button" data-s="m" aria-pressed="true">Morning shift</button><button type="button" data-s="n" aria-pressed="false">Night shift</button></div>
     </div>
@@ -314,6 +315,7 @@ const SHIFT={m:'Morning',n:'Night'};
 function setupEntry(){
   const multi=S.stores.length>1;
   $('eStoreLbl').hidden=!multi;
+  $('eStoreFixed').hidden=multi;if(!multi)$('eStoreFixed').querySelector('span').textContent=S.stores[0].name;
   $('eStore').innerHTML=(multi?'<option value="">Choose store…</option>':'')+S.stores.map(s=>'<option>'+esc(s.name)+'</option>').join('');
   if(!S.stores.some(s=>s.name===E.store))E.store=multi?(S.store!==ALL?S.store:''):S.stores[0].name;
   $('eStore').value=E.store;
