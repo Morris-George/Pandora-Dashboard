@@ -186,6 +186,12 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'parsers.js', 'application/javascript; charset=utf-8');
   }
 
+  // Daily Store Report: everyone with a Staff Performance login (sales people and store managers: their own store; area managers: their zone; super admin: all)
+  if (requestedPath === '/daily' || requestedPath === '/daily/' || requestedPath === '/daily.html') {
+    if (!facts.staff) return toHome();
+    return sendFile(res, 'daily.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+  }
+
   // VM Zones: the VM account and the super admin place collections in store zones and see the effect on sales
   if (requestedPath === '/vm/zones' || requestedPath === '/vm/zones/' || requestedPath === '/vmzones.html') {
     const admin = !!facts.staff && facts.staff.role === 'admin';

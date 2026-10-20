@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head><link rel="icon" type="image/png" href="/favicon.png?v=2">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Daily Store Report</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#FBF6F7;--surface:#FFFFFF;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--grid:#F0E6E8;--accent:#FF93A0;--accent-text:#2A1F24;--fill-soft:#FFE4E8;--hover:#FFF1F3;--good:#1F7A4D;--c2:#5B7DB1;--soft:#E2D6DA;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--grid:#2E2227;--accent:#FF93A0;--accent-text:#FF93A0;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--c2:#8FB0E0;--soft:#4A3A41;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--grid:#2E2227;--accent:#FF93A0;--accent-text:#FF93A0;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--c2:#8FB0E0;--soft:#4A3A41;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{word-spacing:.09em;margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding:20px max(16px,env(safe-area-inset-right,0px)) 56px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between}
+h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(--ink2);font-size:12.5px}
+.crumb{color:var(--ink2);font-size:12.5px;font-weight:600;text-decoration:none}.crumb:hover{color:var(--accent-text)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}.btn:hover{background:var(--hover)}.btn:disabled{opacity:.5;cursor:wait}
+.btn.main{background:var(--accent);border-color:var(--accent);color:#2A1018;font-weight:750}.btn.main:hover{filter:brightness(.96)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;min-width:0}
+.cardhead{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.cardhead h2{margin:0;font-size:17px;font-weight:800;letter-spacing:-.02em}.cardhead .meta{color:var(--ink2);font-size:12.5px}
+.err{background:#FF93A0;color:#2A1018;border-radius:10px;padding:10px 14px;font-weight:600}
+.note{background:var(--fill-soft);border-radius:10px;padding:10px 14px;font-size:13px}
+.empty{color:var(--ink2);padding:26px;text-align:center}
+.filters{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.filters label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);font-weight:700;display:flex;align-items:center;gap:8px}
+select{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 10px;font:inherit;font-weight:600;text-transform:none;letter-spacing:0;max-width:100%}
+.grid{display:grid;gap:16px}.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))}.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr))}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-width:0}
+.kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);font-weight:700}
+.kpi .v{font-size:25px;font-weight:800;letter-spacing:-.02em;margin-top:4px;white-space:nowrap;overflow:hidden}
+.kpi .s{font-size:12px;color:var(--ink2);margin-top:2px}
+.kpi.hero{border-color:var(--accent);background:linear-gradient(180deg,var(--fill-soft),var(--surface) 70%)}
+.bar{height:9px;border-radius:99px;background:var(--soft);overflow:hidden;margin-top:10px;position:relative}.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.bar b{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
+.chart{position:relative;width:100%}.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font-family:var(--font);fill:var(--ink2);font-size:11px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--ink2);margin:0 0 8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{display:inline-block;width:12px;height:12px;border-radius:3px}.legend i.ln{height:0;border-top:2px solid var(--ink);border-radius:0;width:16px}.legend i.dash{height:0;border-top:2px dashed var(--ink);border-radius:0;width:16px}
+.tip{position:absolute;z-index:5;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;box-shadow:0 6px 24px #0002;min-width:150px;max-width:260px}
+.tip b{display:block;margin-bottom:3px}.tip div{display:flex;justify-content:space-between;gap:14px}.tip div span:first-child{color:var(--ink2)}
+.insights{margin:0;padding:0;list-style:none;display:grid;gap:8px}.insights li{padding:10px 12px;border-radius:10px;background:var(--hover);font-size:13.5px}.insights li b{font-weight:800}
+.stack{display:flex;height:26px;border-radius:8px;overflow:hidden;gap:2px;margin:6px 0 4px}.stack div{display:grid;place-items:center;font-size:12px;font-weight:700;color:#2A1018;min-width:0;overflow:hidden;white-space:nowrap}
+.stack .a{background:var(--accent)}.stack .b{background:var(--c2);color:#fff}
+:root[data-theme="dark"] .stack .b{color:#10161f}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .stack .b{color:#10161f}}
+.legrow{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink2)}.legrow span{display:inline-flex;gap:6px;align-items:center}.legrow i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.tablewrap{overflow:auto;max-height:520px;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}th:first-child,td:first-child{text-align:left}
+th{position:sticky;top:0;background:var(--surface);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);z-index:1}
+tbody tr:hover{background:var(--hover)}tr.click{cursor:pointer}
+.chip{display:inline-block;border-radius:99px;padding:2px 9px;font-size:12px;font-weight:700}.chip.ok{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}.chip.no{background:var(--fill-soft);color:var(--accent-text)}.chip.na{background:var(--soft);color:var(--ink2)}
+.mini{display:inline-block;width:90px;height:8px;border-radius:99px;background:var(--soft);overflow:hidden;vertical-align:middle;margin-right:8px;position:relative}.mini i{display:block;height:100%;background:var(--accent)}.mini b{position:absolute;top:0;bottom:0;left:75%;width:2px;background:var(--ink)}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--ink2);cursor:pointer}.drop.over,.drop:hover{border-color:var(--accent);background:var(--hover)}
+.files{display:grid;gap:10px;margin-top:12px}.file{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.file .info{min-width:0;flex:1 1 260px}.file .info b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.file .info span{font-size:12.5px;color:var(--ink2)}
+.file.bad{border-color:var(--accent)}.file .warn{color:var(--accent-text);font-weight:600;font-size:12.5px}
+.last{font-size:12.5px;color:var(--ink2)}
+@media (max-width:560px){h1{font-size:21px}.kpi .v{font-size:21px}.kpi.hero{grid-column:auto!important}}
+</style></head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div><a class="crumb" href="/">&larr; Home</a><h1>Daily Store Report</h1><div class="sub" id="sub">Add the daily sheet and see how the store is doing against its target.</div></div>
+    <div class="actions"><button class="btn main" id="addBtn" type="button">+ Add daily sheet</button></div>
+  </header>
+
+  <section class="card" id="upCard" hidden>
+    <div class="cardhead"><h2>Add the daily sheet</h2><span class="meta">Use the same Excel sheet as always (the one with DATE, VISITORS, TRANSACTIONS, QTY, CASH, VISA, MORNING, NIGHT). Add it again every day: new days are added, old days are kept.</span></div>
+    <div class="drop" id="drop">Drop the Excel file here, or <u>choose a file</u><input type="file" id="pick" accept=".xlsx,.xls,.csv" multiple hidden></div>
+    <div class="files" id="files"></div>
+  </section>
+
+  <div class="filters" id="filters" hidden>
+    <label id="storeLbl">Store <select id="storeSel"></select></label>
+    <label>Month <select id="monthSel"></select></label>
+    <span class="last" id="lastUp"></span>
+  </div>
+
+  <div id="msg"></div>
+  <div id="out"></div>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const WDF=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const CANON=[['CC Almaza',/almaza/i],['City Stars',/city\s*stars/i],['CFC',/\bcfc\b|festival/i],['Point 90',/point\s*90/i],['Mall of Egypt',/mall\s*of\s*egypt/i],['Mall of Arabia',/arabia/i],['Alexandria',/alex/i]];
+const ALL='__all__';
+
+/* ---------- number formats: EGP always in front ---------- */
+const nf=(n,d=0)=>Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const egp=n=>'EGP '+nf(Math.round(n));
+const short=n=>{const a=Math.abs(n);return a>=1e6?(n/1e6).toFixed(a>=1e7?0:1).replace(/\.0$/,'')+'M':a>=1e3?Math.round(n/1e3)+'k':String(Math.round(n))};
+const pct=(n,d=0)=>isFinite(n)?nf(n*100,d)+'%':'–';
+const dayLabel=d=>{const [y,m,dd]=d.split('-');return +dd+' '+MS[+m-1]};
+const wdOf=d=>{const [y,m,dd]=d.split('-').map(Number);return new Date(Date.UTC(y,m-1,dd)).getUTCDay()};
+const dimOf=mo=>{const [y,m]=mo.split('-').map(Number);return new Date(Date.UTC(y,m,0)).getUTCDate()};
+const monthName=mo=>MON[+mo.slice(5)-1]+' '+mo.slice(0,4);
+const cairoToday=()=>new Date(Date.now()+3*3600e3).toISOString().slice(0,10);
+
+/* ---------- reading the Excel sheet (in the browser) ---------- */
+function num(v){if(typeof v==='number')return isFinite(v)?v:0;const s=String(v==null?'':v).replace(/[,\sA-Za-z$]/g,'').replace(/%$/,'');const n=Number(s);return isFinite(n)?n:0}
+function iso(y,m,d){return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0')}
+function parseDate(v){
+  if(v==null||v==='')return '';
+  if(typeof v==='number'){if(v<30000||v>80000)return '';const t=new Date(Date.UTC(1899,11,30)+Math.floor(v)*86400000);return iso(t.getUTCFullYear(),t.getUTCMonth()+1,t.getUTCDate())}
+  if(v instanceof Date){const t=new Date(v.getTime()+12*3600e3);return iso(t.getFullYear(),t.getMonth()+1,t.getDate())}
+  const s=String(v).trim();let m;
+  if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)))return iso(+m[1],+m[2],+m[3]);
+  if((m=s.match(/^(\d{1,2})[-\/ ]([A-Za-z]{3})[a-z]*[-\/ ,]*(\d{4})/))){const i=MS.findIndex(x=>x.toLowerCase()===m[2].toLowerCase());return i<0?'':iso(+m[3],i+1,+m[1])}
+  if((m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/)))return iso(+m[3],+m[2],+m[1]); // day first, as in Egypt
+  return '';
+}
+const norm=s=>String(s==null?'':s).toUpperCase().replace(/[^A-Z%]/g,'');
+function parseSheet(buf,fileName){
+  const wb=XLSX.read(buf,{type:'array'});
+  let found=null,weights=null;
+  for(const name of wb.SheetNames){
+    const aoa=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:null});
+    const hi=aoa.findIndex(r=>{const n=r.map(norm);return n.includes('DATE')&&(n.includes('VISA')||n.includes('SALES')||n.includes('TRANSACTIONS')||n.includes('TRX'))});
+    if(hi>=0&&!found)found={name,aoa,hi};
+    if(/season/i.test(name)){
+      const h=aoa.findIndex(r=>r.map(norm).includes('%'));
+      if(h>=0){const c=aoa[h].map(norm).indexOf('%');const w={};let k=0;for(let i=h+1;i<aoa.length&&k<31;i++){const x=aoa[i][c];if(typeof x==='number'){k++;w[k]=x}else if(k>0&&(x==null||x===''))break}if(k)weights=w}
+    }
+  }
+  if(!found)throw new Error('This does not look like the daily sheet. I could not find the DATE, VISITORS and VISA columns.');
+  const {aoa,hi}=found,head=aoa[hi].map(norm);
+  const col=(...names)=>{for(const n of names){const i=head.indexOf(n);if(i>=0)return i}return -1};
+  const ix={d:col('DATE'),v:col('VISITORS','VISITOR','FOOTFALL'),t:col('TRANSACTIONS','TRX','TRANSACTION'),q:col('QTY','QUANTITY','PIECES'),c:col('CASH'),x:col('VISA','CARD'),m:col('MORNING'),n:col('NIGHT')};
+  if(ix.x<0&&ix.c<0)throw new Error('I could not find the CASH and VISA columns.');
+  // the month target sits near the top: a cell that says TARGET with a number next to it
+  let target=0;
+  for(let i=0;i<Math.min(aoa.length,hi+1)&&!target;i++){const r=aoa[i];for(let j=0;j<r.length;j++){if(typeof r[j]==='string'&&/target/i.test(r[j])){for(let k=j+1;k<r.length;k++){const n=num(r[k]);if(n>0){target=n;break}}if(target)break}}}
+  const rows=[],seen=new Set();
+  for(let i=hi+1;i<aoa.length;i++){
+    const r=aoa[i],d=parseDate(r[ix.d]);
+    if(!d)continue;
+    if(seen.has(d))break; // the totals row at the bottom repeats the last date: stop there
+    seen.add(d);
+    const g=k=>ix[k]>=0?num(r[ix[k]]):0;
+    rows.push({d,v:g('v'),t:g('t'),q:g('q'),c:g('c'),x:g('x'),m:g('m'),n:g('n')});
+  }
+  if(!rows.length)throw new Error('No dates were found under the DATE column.');
+  const cnt={};rows.forEach(r=>{const k=r.d.slice(0,7);cnt[k]=(cnt[k]||0)+1});
+  const month=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];
+  const mine=rows.filter(r=>r.d.slice(0,7)===month);
+  const filled=mine.filter(r=>r.t>0||r.c+r.x>0||r.v>0);
+  let warn='';
+  const bad=filled.filter(r=>r.m+r.n>0&&Math.abs((r.c+r.x)-(r.m+r.n))>Math.max(50,(r.c+r.x)*0.01));
+  if(bad.length)warn='Cash + Visa and Morning + Night do not match on '+bad.slice(0,4).map(r=>dayLabel(r.d)).join(', ')+(bad.length>4?'…':'')+'. Please check these days.';
+  if(!target)warn=(warn?warn+' ':'')+'No month target was found in the sheet.';
+  return {file:fileName,month,target,weights,rows:mine,filled:filled.length,first:filled[0]&&filled[0].d,last:filled.length&&filled[filled.length-1].d,warn};
+}
+
+/* ---------- numbers for one store-month ---------- */
+function calcOne(rec){
+  const mo=rec.month,dim=dimOf(mo),eq=1/dim;
+  const days=[];
+  for(let i=1;i<=dim;i++){
+    const d=mo+'-'+String(i).padStart(2,'0'),a=rec.rows[d];
+    const w=rec.weights&&rec.weights[i]!=null?rec.weights[i]:eq;
+    const o={d,dom:i,wd:wdOf(d),w,target:(rec.target||0)*w,has:!!a};
+    if(a){o.v=a[0];o.t=a[1];o.q=a[2];o.cash=a[3];o.visa=a[4];o.mor=a[5];o.nig=a[6];o.sales=a[3]+a[4]}
+    days.push(o);
+  }
+  return {rec,store:rec.store,month:mo,dim,days,target:rec.target||0,weightsGiven:!!rec.weights};
+}
+function combine(list){
+  const first=list[0],days=first.days.map((d,i)=>{
+    const o={d:d.d,dom:d.dom,wd:d.wd,w:0,target:0,has:false,v:0,t:0,q:0,cash:0,visa:0,mor:0,nig:0,sales:0};
+    list.forEach(c=>{const x=c.days[i];o.target+=x.target;if(x.has){o.has=true;['v','t','q','cash','visa','mor','nig','sales'].forEach(k=>{o[k]+=x[k]})}});
+    return o;
+  });
+  return {store:'All stores',month:first.month,dim:first.dim,days,target:list.reduce((s,c)=>s+c.target,0),parts:list};
+}
+function summarize(c){
+  const days=c.days,got=days.filter(d=>d.has);
+  const s={c,got};
+  s.last=got.length?got[got.length-1]:null;
+  s.lastIdx=s.last?s.last.dom:0;
+  const sum=k=>got.reduce((a,d)=>a+(d[k]||0),0);
+  s.sales=sum('sales');s.visitors=sum('v');s.trx=sum('t');s.qty=sum('q');s.cash=sum('cash');s.visa=sum('visa');s.mor=sum('mor');s.nig=sum('nig');
+  s.tgtToDate=days.filter(d=>d.dom<=s.lastIdx).reduce((a,d)=>a+d.target,0);
+  s.ach=s.tgtToDate?s.sales/s.tgtToDate:NaN;
+  s.ofMonth=c.target?s.sales/c.target:NaN;
+  s.conv=s.visitors?s.trx/s.visitors:NaN;
+  s.upt=s.trx?s.qty/s.trx:NaN;
+  s.apt=s.trx?s.sales/s.trx:NaN;
+  // projection: today's pace, shaped by the month's seasonality (a Monday counts more than a Friday)
+  const wDone=days.filter(d=>d.dom<=s.lastIdx).reduce((a,d)=>a+d.target,0),wAll=c.target;
+  if(c.parts){s.proj=c.parts.reduce((a,p)=>{const q=summarize(p);return a+(isFinite(q.proj)?q.proj:q.sales)},0)}
+  else s.proj=wDone>0&&got.length?s.sales/wDone*wAll:NaN;
+  s.remainDays=c.dim-s.lastIdx;
+  s.short=Math.max(0,c.target-s.sales);
+  s.perDay=s.remainDays>0?s.short/s.remainDays:NaN;
+  // cumulative lines
+  let cs=0,ct=0;days.forEach(d=>{ct+=d.target;d.cumT=ct;if(d.has){cs+=d.sales;d.cumS=cs}else d.cumS=d.dom<=s.lastIdx?cs:null});
+  got.forEach(d=>{d.upt=d.t?d.q/d.t:NaN;d.apt=d.t?d.sales/d.t:NaN;d.conv=d.v?d.t/d.v:NaN;d.ach=d.target?d.sales/d.target:NaN});
+  // missing days: no numbers between the first reported day and yesterday
+  const today=cairoToday(),firstD=got.length?got[0].dom:0;
+  s.missing=days.filter(d=>!d.has&&d.dom>=firstD&&d.d<today).filter(d=>d.dom<s.lastIdx||d.d<today).map(d=>d.d);
+  return s;
+}
+
+/* ---------- state + loading ---------- */
+const S={role:'',stores:[],canDelete:false,store:'',month:'',records:[]};
+async function api(path,opt){const r=await fetch(path,{credentials:'same-origin',cache:'no-store',...opt});if(r.status===401){location.replace('/login.html');throw new Error('signed out')}const j=await r.json().catch(()=>({}));if(!r.ok||j.ok===false)throw new Error(j.error||'Something went wrong.');return j}
+function say(t,cls){$('msg').innerHTML=t?'<div class="'+(cls||'err')+'">'+esc(t)+'</div>':''}
+async function init(keepStore,keepMonth){
+  try{
+    const j=await api('/api/daily');
+    S.role=j.role;S.stores=j.stores;S.canDelete=j.canDelete;
+    const months=[...new Set(S.stores.flatMap(s=>s.months))].sort();
+    const cur=cairoToday().slice(0,7);
+    if(!months.includes(cur))months.push(cur);
+    months.sort().reverse();
+    $('monthSel').innerHTML=months.map(m=>'<option value="'+m+'">'+monthName(m)+'</option>').join('');
+    const withData=[...new Set(S.stores.flatMap(s=>s.months))].sort().reverse();
+    S.month=keepMonth&&months.includes(keepMonth)?keepMonth:(withData[0]||cur);
+    $('monthSel').value=S.month;
+    const multi=S.stores.length>1;
+    $('storeLbl').hidden=!multi;
+    $('storeSel').innerHTML=(multi?'<option value="'+ALL+'">All stores</option>':'')+S.stores.map(s=>'<option>'+esc(s.name)+'</option>').join('');
+    S.store=keepStore&&(keepStore===ALL||S.stores.some(s=>s.name===keepStore))?keepStore:(multi?ALL:S.stores[0].name);
+    $('storeSel').value=S.store;
+    $('filters').hidden=false;
+    $('sub').textContent=S.role==='admin'?'All stores. Add each store’s daily sheet and compare them.':S.role==='area'?'The stores of your zone. Add the daily sheets and compare the stores.':'Your store. Add the daily sheet every day to see how you are doing against the target.';
+    await loadMonth();
+  }catch(e){say(e.message)}
+}
+async function loadMonth(){
+  say('');
+  const j=await api('/api/daily?month='+S.month);
+  S.records=j.records;
+  render();
+}
+$('monthSel').onchange=e=>{S.month=e.target.value;loadMonth().catch(x=>say(x.message))};
+$('storeSel').onchange=e=>{S.store=e.target.value;render()};
+
+/* ---------- upload ---------- */
+const pend=[];
+$('addBtn').onclick=()=>{const c=$('upCard');c.hidden=!c.hidden;if(!c.hidden)c.scrollIntoView({behavior:'smooth',block:'nearest'})};
+$('drop').onclick=()=>$('pick').click();
+$('pick').onchange=e=>{addFiles(e.target.files);e.target.value=''};
+['dragover','dragenter'].forEach(t=>$('drop').addEventListener(t,e=>{e.preventDefault();$('drop').classList.add('over')}));
+['dragleave','drop'].forEach(t=>$('drop').addEventListener(t,e=>{e.preventDefault();$('drop').classList.remove('over')}));
+$('drop').addEventListener('drop',e=>addFiles(e.dataTransfer.files));
+const guess=name=>{const t=String(name).replace(/[_.\-]+/g,' ');const g=CANON.find(c=>c[1].test(t));return g?g[0]:''};
+async function addFiles(fl){
+  for(const f of fl){
+    const p={id:Math.random().toString(36).slice(2),name:f.name,state:'read'};
+    pend.push(p);drawFiles();
+    try{
+      p.sheet=parseSheet(await f.arrayBuffer(),f.name);
+      const allowed=S.stores.map(s=>s.name),g=guess(f.name);
+      p.store=allowed.length===1?allowed[0]:(allowed.includes(g)?g:'');
+      p.state='ready';
+    }catch(e){p.state='bad';p.error=e.message}
+    drawFiles();
+  }
+}
+function drawFiles(){
+  $('files').innerHTML=pend.map(p=>{
+    if(p.state==='read')return '<div class="file"><div class="info"><b>'+esc(p.name)+'</b><span>Reading…</span></div></div>';
+    if(p.state==='bad')return '<div class="file bad"><div class="info"><b>'+esc(p.name)+'</b><span class="warn">'+esc(p.error)+'</span></div><button class="btn" data-x="'+p.id+'">Remove</button></div>';
+    const s=p.sheet,opts=S.stores.map(x=>'<option'+(x.name===p.store?' selected':'')+'>'+esc(x.name)+'</option>').join('');
+    if(p.state==='done')return '<div class="file"><div class="info"><b>'+esc(p.name)+' <span class="chip ok">Saved</span></b><span>'+esc(p.store)+' · '+monthName(s.month)+' · '+s.filled+' days</span></div><button class="btn" data-x="'+p.id+'">Close</button></div>';
+    return '<div class="file'+(p.error?' bad':'')+'"><div class="info"><b>'+esc(p.name)+'</b><span>'+monthName(s.month)+' · target '+(s.target?egp(s.target):'not found')+' · '+s.filled+' days with sales'+(s.first?' ('+dayLabel(s.first)+' to '+dayLabel(s.last)+')':'')+'</span>'
+      +(s.warn?'<br><span class="warn">'+esc(s.warn)+'</span>':'')+(p.error?'<br><span class="warn">'+esc(p.error)+'</span>':'')+'</div>'
+      +(S.stores.length>1?'<select data-s="'+p.id+'"><option value="">Choose store…</option>'+opts+'</select>':'<b>'+esc(p.store)+'</b>')
+      +'<button class="btn main" data-save="'+p.id+'"'+(s.filled?'':' disabled')+'>'+(p.state==='saving'?'Saving…':'Save')+'</button><button class="btn" data-x="'+p.id+'">Remove</button></div>';
+  }).join('');
+}
+$('files').addEventListener('change',e=>{const id=e.target.dataset.s;if(!id)return;const p=pend.find(x=>x.id===id);p.store=e.target.value;p.error=''});
+$('files').addEventListener('click',async e=>{
+  const x=e.target.closest('[data-x]');if(x){const i=pend.findIndex(p=>p.id===x.dataset.x);if(i>=0)pend.splice(i,1);drawFiles();return}
+  const sv=e.target.closest('[data-save]');if(!sv)return;
+  const p=pend.find(q=>q.id===sv.dataset.save);if(!p||p.state==='saving')return;
+  if(!p.store){p.error='Please choose the store for this sheet.';drawFiles();return}
+  p.state='saving';p.error='';drawFiles();
+  try{
+    const s=p.sheet;
+    await api('/api/daily?op=save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({store:p.store,month:s.month,target:s.target,weights:s.weights,file:s.file,rows:s.rows.filter(r=>r.t>0||r.c+r.x>0||r.v>0)})});
+    p.state='done';drawFiles();
+    await init(p.store,s.month);
+  }catch(err){p.state='ready';p.error=err.message;drawFiles()}
+});
+
+/* ---------- charts (drawn in the page, no library) ---------- */
+let TIPS={};
+function plot(el,o){
+  const w=Math.max(280,el.clientWidth||600),h=o.h||250,P={l:o.yfmt?46:10,r:10,t:10,b:o.rot?40:26};
+  const n=o.n,pw=w-P.l-P.r,ph=h-P.t-P.b,step=pw/n,ymax=o.ymax;
+  const x=i=>P.l+step*(i+.5),y=v=>P.t+ph*(1-v/ymax);
+  const ctx={w,h,P,step,x,y,ph,pw,
+    bars:(vals,cls,op={})=>vals.map((v,i)=>{if(v==null||!isFinite(v)||v<=0)return '';const bw=Math.max(2,Math.min(26,step*(op.frac||.62)));const bx=x(i)-bw/2+(op.off||0)*bw;const top=y(Math.min(v,ymax));const r=Math.min(4,bw/2);return '<path d="M'+bx+' '+(P.t+ph)+'V'+(top+r)+'a'+r+' '+r+' 0 0 1 '+r+' -'+r+'h'+(bw-2*r)+'a'+r+' '+r+' 0 0 1 '+r+' '+r+'V'+(P.t+ph)+'z" fill="'+cls+'"'+(op.opa&&op.opa(i)!=null?' fill-opacity="'+op.opa(i)+'"':'')+'/>'}).join(''),
+    line:(vals,color,op={})=>{let d='',pen=false;vals.forEach((v,i)=>{if(v==null||!isFinite(v)){pen=false;return}d+=(pen?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1);pen=true});
+      let s='<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"'+(op.dash?' stroke-dasharray="'+op.dash+'"':'')+'/>';
+      if(op.dots)vals.forEach((v,i)=>{if(v!=null&&isFinite(v))s+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="3.2" fill="'+color+'" stroke="var(--surface)" stroke-width="2"/>'});return s},
+    steps:(vals,color)=>vals.map((v,i)=>v==null||!isFinite(v)?'':'<line x1="'+(x(i)-step*.42)+'" x2="'+(x(i)+step*.42)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="'+color+'" stroke-width="2.4" stroke-linecap="round"/>').join(''),
+    hline:(v,color,dash)=>'<line x1="'+P.l+'" x2="'+(w-P.r)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="'+color+'" stroke-width="1.5" stroke-dasharray="'+(dash||'5 4')+'"/>'
+  };
+  let g='';
+  for(let k=0;k<=4;k++){const v=ymax*k/4,yy=y(v);g+='<line x1="'+P.l+'" x2="'+(w-P.r)+'" y1="'+yy+'" y2="'+yy+'" stroke="var(--grid)"/>';if(o.yfmt)g+='<text x="'+(P.l-6)+'" y="'+(yy+4)+'" text-anchor="end">'+o.yfmt(v)+'</text>'}
+  const every=Math.max(1,Math.ceil((o.rot?18:26)/step));
+  let xl='';o.labels.forEach((t,i)=>{if(i%every===0||i===n-1&&every===1)xl+='<text x="'+x(i)+'" y="'+(h-(o.rot?8:8))+'" text-anchor="middle">'+t+'</text>'});
+  let hit='';for(let i=0;i<n;i++)hit+='<rect x="'+(P.l+step*i)+'" y="'+P.t+'" width="'+step+'" height="'+ph+'" fill="transparent" data-i="'+i+'"/>';
+  el.innerHTML='<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(o.aria||'chart')+'">'+g+o.layers(ctx)+xl+hit+'</svg>';
+  TIPS[el.id]=o.tip;
+}
+const chartBox=document.getElementById('tip');
+document.addEventListener('pointermove',e=>{
+  const r=e.target.closest&&e.target.closest('rect[data-i]');
+  if(!r){chartBox.hidden=true;return}
+  const host=r.closest('.chart'),fn=TIPS[host.id];if(!fn){chartBox.hidden=true;return}
+  const html=fn(+r.dataset.i);if(!html){chartBox.hidden=true;return}
+  chartBox.innerHTML=html;chartBox.hidden=false;
+  const hb=host.getBoundingClientRect(),pr=document.body.getBoundingClientRect();
+  let lx=e.clientX-hb.left+14;if(lx+chartBox.offsetWidth>hb.width)lx=e.clientX-hb.left-chartBox.offsetWidth-14;
+  host.appendChild(chartBox);chartBox.style.left=Math.max(0,lx)+'px';chartBox.style.top=Math.max(0,e.clientY-hb.top-30)+'px';
+});
+const trow=(a,b)=>'<div><span>'+a+'</span><span>'+b+'</span></div>';
+const niceMax=v=>{if(!(v>0))return 1;const p=Math.pow(10,Math.floor(Math.log10(v))),f=v/p;return ([1,1.2,1.6,2,2.4,3,4,6,8,10].find(x=>f<=x+1e-9)||10)*p};
+
+/* ---------- the page ---------- */
+let CUR=null,REDRAW=[];
+function render(){
+  REDRAW=[];TIPS={};chartBox.hidden=true;
+  const have=S.records;
+  const out=$('out');
+  const hasAny=S.stores.some(s=>s.months.length);
+  if(!have.length){
+    $('lastUp').textContent='';
+    out.innerHTML='<div class="card empty"><b>No sheet for '+monthName(S.month)+' yet.</b><br>Press <b>+ Add daily sheet</b> and choose today’s Excel file.</div>';
+    return;
+  }
+  const calcs=have.map(calcOne);
+  let one=null;
+  if(S.store!==ALL){const r=calcs.find(c=>c.store===S.store);one=r||null}
+  if(S.store!==ALL&&!one){
+    out.innerHTML='<div class="card empty"><b>'+esc(S.store)+' has no sheet for '+monthName(S.month)+' yet.</b><br>Press <b>+ Add daily sheet</b> and choose today’s Excel file.</div>';
+    $('lastUp').textContent='';return;
+  }
+  if(S.store===ALL&&calcs.length===1)one=calcs[0];
+  const c=one||combine(calcs);
+  const s=summarize(c);CUR={c,s,calcs};
+  const upd=one?one.rec.updated:calcs.map(x=>x.rec.updated).sort((a,b)=>b.at.localeCompare(a.at))[0];
+  $('lastUp').textContent=upd?'Last updated '+new Date(upd.at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' by '+upd.by:'';
+  let h='';
+  h+=kpis(s,c);
+  h+=insights(s,c,calcs,!one);
+  if(!one)h+=storesTable(calcs);
+  h+='<div class="grid g2"><section class="card"><div class="cardhead"><h2>Sales each day vs the daily target</h2><span class="meta">Hover a day for details</span></div><div class="legend"><span><i style="background:var(--accent)"></i>Met the target</span><span><i style="background:var(--accent);opacity:.45"></i>Below the target</span><span><i class="ln"></i>Daily target</span></div><div class="chart" id="cSales"></div></section>'
+    +'<section class="card"><div class="cardhead"><h2>Are we on the way to the month target?</h2><span class="meta">Running total</span></div><div class="legend"><span><i class="ln" style="border-color:var(--accent);border-top-width:3px"></i>Sales so far</span><span><i class="dash" style="border-color:var(--accent)"></i>If the pace continues</span><span><i class="ln"></i>Where we should be</span></div><div class="chart" id="cPace"></div></section></div>';
+  h+='<div class="grid g2"><section class="card"><div class="cardhead"><h2>Visitors and buyers</h2><span class="meta">People who came in vs people who bought</span></div><div class="legend"><span><i style="background:var(--c2)"></i>Visitors</span><span><i style="background:var(--accent)"></i>Transactions</span></div><div class="chart" id="cPeople"></div></section>'
+    +'<section class="card"><div class="cardhead"><h2>Conversion rate</h2><span class="meta">Out of every 100 visitors, how many bought</span></div><div class="legend"><span><i class="ln" style="border-color:var(--accent);border-top-width:3px"></i>Conversion</span><span><i class="dash"></i>Average '+pct(s.conv)+'</span></div><div class="chart" id="cConv"></div></section></div>';
+  h+='<div class="grid g3"><section class="card"><div class="cardhead"><h2>Pieces per transaction</h2><span class="meta">UPT, average '+nf(s.upt,2)+'</span></div><div class="chart" id="cUpt"></div></section>'
+    +'<section class="card"><div class="cardhead"><h2>Average transaction</h2><span class="meta">APT, average '+egp(s.apt)+'</span></div><div class="chart" id="cApt"></div></section>'
+    +'<section class="card"><div class="cardhead"><h2>Best weekdays</h2><span class="meta">Average sales per weekday</span></div><div class="legend"><span><i style="background:var(--accent)"></i>Sales</span><span><i class="ln"></i>Target</span></div><div class="chart" id="cWd"></div></section></div>';
+  h+='<div class="grid g2"><section class="card"><div class="cardhead"><h2>How customers paid</h2><span class="meta">Cash and Visa</span></div>'+stack(s.cash,s.visa,'Cash','Visa')+'</section>'
+    +'<section class="card"><div class="cardhead"><h2>Morning and night shift</h2><span class="meta">Which shift sells more</span></div>'+stack(s.mor,s.nig,'Morning','Night')+'</section></div>';
+  h+=dayTable(s,c,!!one);
+  out.innerHTML=h;
+  drawCharts();
+  fitAll();
+}
+function stack(a,b,la,lb){
+  const t=a+b;if(!t)return '<div class="empty">No numbers yet.</div>';
+  const pa=a/t,pb=b/t;
+  return '<div class="stack" role="img" aria-label="'+la+' '+pct(pa)+', '+lb+' '+pct(pb)+'"><div class="a" style="flex:'+pa+'">'+(pa>.1?pct(pa):'')+'</div><div class="b" style="flex:'+pb+'">'+(pb>.1?pct(pb):'')+'</div></div>'
+   +'<div class="legrow"><span><i style="background:var(--accent)"></i>'+la+' '+egp(a)+' ('+pct(pa)+')</span><span><i style="background:var(--c2)"></i>'+lb+' '+egp(b)+' ('+pct(pb)+')</span></div>';
+}
+function kpis(s,c){
+  const k=(l,v,sub,cls)=>'<div class="kpi '+(cls||'')+'"><div class="l">'+l+'</div><div class="v fit">'+v+'</div><div class="s">'+(sub||'')+'</div></div>';
+  const barPct=Math.min(1,s.ofMonth||0)*100,pace=c.target?Math.min(1,s.tgtToDate/c.target)*100:0;
+  let h='<div class="kpis">';
+  h+='<div class="kpi hero" style="grid-column:span 2;min-width:min(100%,300px)"><div class="l">Sales so far · '+monthName(c.month)+'</div><div class="v fit">'+egp(s.sales)+'</div><div class="s">'+(c.target?pct(s.ofMonth)+' of the month target of '+egp(c.target):'No month target in the sheet')+'</div>'
+    +(c.target?'<div class="bar" title="The line shows where we should be today"><i style="width:'+barPct+'%"></i><b style="left:'+pace+'%"></b></div>':'')+'</div>';
+  h+=k('Against target so far',pct(s.ach),s.last?'Target up to '+dayLabel(s.last.d)+': '+egp(s.tgtToDate):'');
+  h+=k('Month end if the pace continues',isFinite(s.proj)?egp(s.proj):'–',isFinite(s.proj)&&c.target?pct(s.proj/c.target)+' of the target':'');
+  h+=k(s.remainDays>0?'Needed each remaining day':'Month finished',s.remainDays>0&&c.target?(s.short>0?egp(s.perDay):'Target reached'):(s.short>0?egp(s.short)+' short':'Target reached'),s.remainDays>0?s.remainDays+' days left':'');
+  h+=k('Visitors',nf(s.visitors),nf(s.visitors/Math.max(1,s.got.length),1)+' per day');
+  h+=k('Transactions',nf(s.trx),nf(s.trx/Math.max(1,s.got.length),1)+' per day');
+  h+=k('Conversion',pct(s.conv,1),'visitors who bought');
+  h+=k('Pieces per transaction',isFinite(s.upt)?nf(s.upt,2):'–','UPT');
+  h+=k('Average transaction',isFinite(s.apt)?egp(s.apt):'–','APT');
+  return h+'</div>';
+}
+function insights(s,c,calcs,isAll){
+  const L=[],got=s.got;
+  if(!got.length)return '';
+  L.push('Up to <b>'+dayLabel(s.last.d)+'</b> the store sold <b>'+egp(s.sales)+'</b>, which is <b>'+pct(s.ach)+'</b> of the target for those days'+(s.ach>=1?'. Well done.':'.'));
+  if(c.target&&isFinite(s.proj)){
+    if(s.proj>=c.target)L.push('If the pace continues, the month ends at about <b>'+egp(s.proj)+'</b>, so the month target of '+egp(c.target)+' will be reached.');
+    else L.push('If the pace continues, the month ends at about <b>'+egp(s.proj)+'</b> ('+pct(s.proj/c.target)+' of the target). '+(s.remainDays>0?'To still reach it we need about <b>'+egp(s.perDay)+'</b> every day for the next '+s.remainDays+' days.':''));
+  }
+  const best=[...got].sort((a,b)=>b.sales-a.sales)[0],worst=[...got].sort((a,b)=>a.sales-b.sales)[0];
+  if(got.length>1)L.push('Best day: <b>'+dayLabel(best.d)+'</b> ('+WDF[best.wd]+') with '+egp(best.sales)+' ('+pct(best.ach)+' of its target). Slowest day: <b>'+dayLabel(worst.d)+'</b> with '+egp(worst.sales)+'.');
+  const met=got.filter(d=>d.ach>=1).length;L.push('The daily target was met on <b>'+met+' of '+got.length+'</b> days.');
+  if(isFinite(s.conv)){const cd=got.filter(d=>isFinite(d.conv)&&d.v>=5).sort((a,b)=>a.conv-b.conv)[0];L.push('About <b>'+nf(s.conv*100)+' out of every 100</b> visitors bought something.'+(cd?' The lowest was '+dayLabel(cd.d)+' ('+pct(cd.conv)+'): more people came in than bought.':''))}
+  if(isFinite(s.upt))L.push('Each customer buys <b>'+nf(s.upt,2)+' pieces</b> on average, spending about <b>'+egp(s.apt)+'</b>. Suggesting one more piece to every customer is the quickest way to grow both.');
+  if(s.mor+s.nig>0)L.push('The <b>'+(s.nig>=s.mor?'night':'morning')+' shift</b> brings '+pct(Math.max(s.mor,s.nig)/(s.mor+s.nig))+' of the sales.');
+  if(s.missing.length)L.push('<b>Numbers missing for:</b> '+s.missing.slice(0,8).map(dayLabel).join(', ')+(s.missing.length>8?'…':'')+'. Please add them so the report is complete.');
+  if(!c.parts&&!c.weightsGiven)L.push('The sheet had no “Month Seasonality” page, so the monthly target is shared equally between the days.');
+  return '<section class="card"><div class="cardhead"><h2>What the numbers say</h2></div><ul class="insights">'+L.map(x=>'<li>'+x+'</li>').join('')+'</ul></section>';
+}
+function storesTable(calcs){
+  const rows=calcs.map(c=>({c,s:summarize(c)})).sort((a,b)=>(b.s.ach||0)-(a.s.ach||0));
+  const tot=CUR.s;
+  return '<section class="card"><div class="cardhead"><h2>Store by store</h2><span class="meta">Best against target first. Click a store to open it.</span></div><div class="tablewrap"><table><thead><tr><th>Store</th><th>Sales so far</th><th>Target so far</th><th>Against target</th><th>Month end (pace)</th><th>Conversion</th><th>UPT</th><th>APT</th><th>Numbers up to</th></tr></thead><tbody>'
+    +rows.map(({c,s})=>'<tr class="click" data-store="'+esc(c.store)+'"><td><b>'+esc(c.store)+'</b></td><td>'+egp(s.sales)+'</td><td>'+egp(s.tgtToDate)+'</td><td><span class="mini"><i style="width:'+Math.min(100,(s.ach||0)*75)+'%"></i><b></b></span>'+pct(s.ach)+'</td><td>'+(isFinite(s.proj)?egp(s.proj):'–')+'</td><td>'+pct(s.conv,1)+'</td><td>'+(isFinite(s.upt)?nf(s.upt,2):'–')+'</td><td>'+(isFinite(s.apt)?egp(s.apt):'–')+'</td><td>'+(s.last?dayLabel(s.last.d):'–')+(s.missing.length?' <span class="chip no">'+s.missing.length+' missing</span>':'')+'</td></tr>').join('')
+    +'</tbody></table></div><div class="sub" style="margin-top:8px">The thin line in each bar marks 100% of the target.</div></section>';
+}
+document.addEventListener('click',e=>{const r=e.target.closest('tr[data-store]');if(r){S.store=r.dataset.store;$('storeSel').value=S.store;render();scrollTo({top:0,behavior:'smooth'})}});
+function dayTable(s,c,one){
+  const rows=c.days.filter(d=>d.has);
+  return '<section class="card"><div class="cardhead"><h2>All days</h2><span class="meta">The same numbers as the charts, in a table'+(one&&S.canDelete?' · <a href="#" id="delMonth" style="color:var(--accent-text)">Remove this month</a>':'')+'</span></div><div class="tablewrap"><table><thead><tr><th>Date</th><th>Visitors</th><th>Transactions</th><th>Qty</th><th>UPT</th><th>APT</th><th>Conv.</th><th>Cash</th><th>Visa</th><th>Morning</th><th>Night</th><th>Sales</th><th>Target</th><th>%</th></tr></thead><tbody>'
+    +rows.map(d=>'<tr><td>'+dayLabel(d.d)+' · '+WD[d.wd]+'</td><td>'+nf(d.v)+'</td><td>'+nf(d.t)+'</td><td>'+nf(d.q)+'</td><td>'+(isFinite(d.upt)?nf(d.upt,2):'–')+'</td><td>'+(isFinite(d.apt)?nf(d.apt):'–')+'</td><td>'+pct(d.conv)+'</td><td>'+nf(d.cash)+'</td><td>'+nf(d.visa)+'</td><td>'+nf(d.mor)+'</td><td>'+nf(d.nig)+'</td><td><b>'+nf(d.sales)+'</b></td><td>'+nf(d.target)+'</td><td><span class="chip '+(d.ach>=1?'ok':'no')+'">'+(d.ach>=1?'Met ':'')+pct(d.ach)+'</span></td></tr>').join('')
+    +'</tbody><tfoot><tr><td><b>Total</b></td><td><b>'+nf(s.visitors)+'</b></td><td><b>'+nf(s.trx)+'</b></td><td><b>'+nf(s.qty)+'</b></td><td><b>'+(isFinite(s.upt)?nf(s.upt,2):'–')+'</b></td><td><b>'+(isFinite(s.apt)?nf(s.apt):'–')+'</b></td><td><b>'+pct(s.conv)+'</b></td><td><b>'+nf(s.cash)+'</b></td><td><b>'+nf(s.visa)+'</b></td><td><b>'+nf(s.mor)+'</b></td><td><b>'+nf(s.nig)+'</b></td><td><b>'+nf(s.sales)+'</b></td><td><b>'+nf(s.tgtToDate)+'</b></td><td><b>'+pct(s.ach)+'</b></td></tr></tfoot></table></div><div class="sub" style="margin-top:8px">Amounts are in EGP. UPT = pieces per transaction. APT = average spent per transaction. Conv. = transactions ÷ visitors.</div></section>';
+}
+document.addEventListener('click',async e=>{
+  if(e.target.id!=='delMonth')return;e.preventDefault();
+  if(!confirm('Remove all saved numbers of '+S.store+' for '+monthName(S.month)+'?'))return;
+  try{await api('/api/daily?op=delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({store:S.store,month:S.month})});await init(S.store,S.month)}catch(x){say(x.message)}
+});
+
+function drawCharts(){
+  const {c,s}=CUR,days=c.days,n=days.length,lab=days.map(d=>String(d.dom));
+  const rot=false;
+  const draw=()=>{
+    TIPS={};
+    // 1. sales vs daily target
+    const sales=days.map(d=>d.has?d.sales:null),tg=days.map(d=>d.target);
+    const m1=niceMax(Math.max(...sales.map(v=>v||0),...tg));
+    plot($('cSales'),{n,labels:lab,ymax:m1,yfmt:short,aria:'Daily sales against the daily target',
+      layers:x=>x.bars(sales,'var(--accent)',{opa:i=>days[i].has&&days[i].sales<days[i].target?.45:1})+x.steps(tg,'var(--ink)'),
+      tip:i=>{const d=days[i];return '<b>'+dayLabel(d.d)+' · '+WD[d.wd]+'</b>'+(d.has?trow('Sales',egp(d.sales))+trow('Target',egp(d.target))+trow('Against target',pct(d.ach))+trow('Visitors',nf(d.v))+trow('Transactions',nf(d.t)):trow('Target',egp(d.target))+trow('Numbers','not added yet'))}});
+    // 2. pace
+    const cumS=days.map(d=>d.cumS),cumT=days.map(d=>d.cumT);
+    const projLine=days.map(d=>d.dom===s.lastIdx?d.cumS:(d.dom>s.lastIdx&&isFinite(s.proj)&&s.lastIdx>0?(s.last.cumS+(s.proj-s.last.cumS)*(d.dom-s.lastIdx)/(n-s.lastIdx)):null));
+    const m2=niceMax(Math.max(...cumT,isFinite(s.proj)?s.proj:0,c.target||0));
+    plot($('cPace'),{n,labels:lab,ymax:m2,yfmt:short,aria:'Running total of sales against the running target',
+      layers:x=>x.line(cumT,'var(--ink)')+(s.remainDays>0?x.line(projLine,'var(--accent)',{dash:'5 5'}):'')+x.line(cumS,'var(--accent)',{})+(c.target?x.hline(c.target,'var(--ink2)','2 4'):''),
+      tip:i=>{const d=days[i];return '<b>'+dayLabel(d.d)+'</b>'+trow('Should be',egp(d.cumT))+(d.cumS!=null?trow('Sales so far',egp(d.cumS))+trow('Difference',(d.cumS-d.cumT>=0?'+':'−')+egp(Math.abs(d.cumS-d.cumT)).replace('EGP ','')):'')}});
+    // 3. people
+    const vis=days.map(d=>d.has?d.v:null),trx=days.map(d=>d.has?d.t:null);
+    plot($('cPeople'),{n,labels:lab,ymax:niceMax(Math.max(...vis.map(v=>v||0),1)),yfmt:v=>nf(v),aria:'Visitors and transactions each day',
+      layers:x=>x.bars(vis,'var(--c2)',{frac:.78,off:-.25})+x.bars(trx,'var(--accent)',{frac:.78,off:.25}),
+      tip:i=>{const d=days[i];return d.has?'<b>'+dayLabel(d.d)+' · '+WD[d.wd]+'</b>'+trow('Visitors',nf(d.v))+trow('Transactions',nf(d.t))+trow('Conversion',pct(d.conv)):''}});
+    // 4. conversion
+    const cv=days.map(d=>d.has&&isFinite(d.conv)?d.conv:null);
+    plot($('cConv'),{n,labels:lab,ymax:niceMax(Math.max(...cv.map(v=>v||0),.1)),yfmt:v=>nf(v*100)+'%',aria:'Conversion rate each day',
+      layers:x=>(isFinite(s.conv)?x.hline(s.conv,'var(--ink)'):'')+x.line(cv,'var(--accent)',{dots:true}),
+      tip:i=>{const d=days[i];return d.has?'<b>'+dayLabel(d.d)+'</b>'+trow('Conversion',pct(d.conv,1))+trow('Visitors',nf(d.v))+trow('Transactions',nf(d.t)):''}});
+    // 5. UPT, 6. APT
+    const up=days.map(d=>d.has&&isFinite(d.upt)?d.upt:null),ap=days.map(d=>d.has&&isFinite(d.apt)?d.apt:null);
+    plot($('cUpt'),{n,labels:lab,h:210,ymax:niceMax(Math.max(...up.map(v=>v||0),1)),yfmt:v=>nf(v,1),aria:'Pieces per transaction each day',
+      layers:x=>(isFinite(s.upt)?x.hline(s.upt,'var(--ink)'):'')+x.line(up,'var(--accent)',{dots:n<=31}),
+      tip:i=>{const d=days[i];return d.has?'<b>'+dayLabel(d.d)+'</b>'+trow('UPT',nf(d.upt,2))+trow('Pieces',nf(d.q))+trow('Transactions',nf(d.t)):''}});
+    plot($('cApt'),{n,labels:lab,h:210,ymax:niceMax(Math.max(...ap.map(v=>v||0),1)),yfmt:short,aria:'Average transaction each day',
+      layers:x=>(isFinite(s.apt)?x.hline(s.apt,'var(--ink)'):'')+x.line(ap,'var(--c2)',{dots:true}),
+      tip:i=>{const d=days[i];return d.has?'<b>'+dayLabel(d.d)+'</b>'+trow('Average transaction',egp(d.apt))+trow('Sales',egp(d.sales)):''}});
+    // 7. weekday
+    const order=[1,2,3,4,5,6,0],wa=order.map(w=>{const g=s.got.filter(d=>d.wd===w);return g.length?{s:g.reduce((a,d)=>a+d.sales,0)/g.length,t:g.reduce((a,d)=>a+d.target,0)/g.length,n:g.length}:null});
+    plot($('cWd'),{n:7,h:210,labels:order.map(w=>WD[w]),ymax:niceMax(Math.max(...wa.map(a=>a?Math.max(a.s,a.t):0),1)),yfmt:short,aria:'Average sales for each weekday',
+      layers:x=>x.bars(wa.map(a=>a&&a.s),'var(--accent)',{frac:.5})+x.steps(wa.map(a=>a&&a.t),'var(--ink)'),
+      tip:i=>{const a=wa[i];return a?'<b>'+WDF[order[i]]+'</b>'+trow('Average sales',egp(a.s))+trow('Average target',egp(a.t))+trow('Days counted',a.n):''}});
+  };
+  draw();REDRAW.push(draw);
+}
+let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(CUR){REDRAW.forEach(f=>f());fitAll()}},150)});
+function fitAll(){document.querySelectorAll('.fit').forEach(el=>{el.style.fontSize='';let fs=parseFloat(getComputedStyle(el).fontSize);while(el.scrollWidth>el.clientWidth+1&&fs>11){fs-=1;el.style.fontSize=fs+'px'}})}
+
+init();
+</script>
+</body></html>
