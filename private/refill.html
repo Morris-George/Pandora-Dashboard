@@ -105,9 +105,9 @@ try{const c=JSON.parse(localStorage.getItem('rf.webpics2')||'null');if(c&&Date.n
 const small=u=>u?(u.startsWith('//')?'https:'+u:u)+(u.includes('?')?'&':'?')+'width=200':'';
 const webPic=dv=>{const k=String(dv||'').toUpperCase();return WEB.map&&(WEB.map[k]||'')};
 const pic=dv=>{const v=PICS[String(dv||'').toUpperCase()]||PICS[String(dv||'')];if(v)return `<span class="img"><img src="data:image/jpeg;base64,${v}" alt="" loading="lazy"></span>`;
-  const w=webPic(dv);return w?`<span class="img"><img src="${esc(small(w))}" alt="" loading="lazy" referrerpolicy="no-referrer"></span>`:`<span class="img" data-dv="${esc(String(dv||'').toUpperCase())}">no<br>image</span>`};
+  return `<span class="img" data-dv="${esc(String(dv||'').toUpperCase())}">no<br>image</span>`};
 async function loadWeb(){
-  if(WEB.map||WEB.state!=='idle')return;WEB.state='loading';const map={};
+  if(WEB.map)return;if(WEB.state==='loading')return WEB.wait;WEB.state='loading';let done;WEB.wait=new Promise(r=>done=r);const map={};
   try{for(let page=1;page<=40;page++){const r=await fetch(SITE+'/products.json?limit=250&page='+page);if(!r.ok)break;const list=(await r.json()).products||[];
       for(const pr of list){const first=pr.images&&pr.images[0]?pr.images[0].src:'';
         // the design code also ends the product link (…-382234c00), even when the sizes have no SKU on the site
@@ -116,20 +116,31 @@ async function loadWeb(){
       if(list.length<250)break}
     WEB.map=map;try{localStorage.setItem('rf.webpics2',JSON.stringify({at:Date.now(),map}))}catch(_){}
   }catch(_){}
-  WEB.state='done';fillPics();
+  WEB.state='done';done();
 }
-// a picture still missing after the product list: our server searches pandoraeg.com for those designs (once each)
-const ASKED=new Set();
-async function fillPics(){
-  const boxes=[...document.querySelectorAll('.img[data-dv]')];if(!boxes.length)return;
-  if(!WEB.map){loadWeb();return}
-  const put=()=>boxes.forEach(b=>{const u=webPic(b.dataset.dv);if(u&&b.isConnected){b.removeAttribute('data-dv');b.innerHTML=`<img src="${esc(small(u))}" alt="" loading="lazy" referrerpolicy="no-referrer">`}});
-  put();
-  const ask=[...new Set(boxes.filter(b=>b.dataset.dv&&!ASKED.has(b.dataset.dv)).map(b=>b.dataset.dv))].slice(0,40);
+// pictures not in the pack: the item picture in ERP first, then pandoraeg.com (its product list, then a search through our server)
+const ERPNO=new Set(),ASKED=new Set();
+const setImg=(b,u)=>{if(b.isConnected){b.removeAttribute('data-dv');b.innerHTML=`<img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer">`}};
+function fillPics(){
+  const boxes=[...document.querySelectorAll('.img[data-dv]')];
+  const site=[];
+  for(const b of boxes){const dv=b.dataset.dv;
+    if(ERPNO.has(dv)){site.push(b);continue}
+    if(b.dataset.erp)continue;b.dataset.erp='1';
+    const im=new Image();
+    im.onload=()=>setImg(b,im.src);
+    im.onerror=()=>{ERPNO.add(dv);fromSite([b])};
+    im.src='/api/refill?img='+encodeURIComponent(dv);
+  }
+  if(site.length)fromSite(site);
+}
+async function fromSite(boxes){
+  if(!WEB.map){await loadWeb();if(!WEB.map)return}
+  const left=boxes.filter(b=>{const u=webPic(b.dataset.dv);if(u){setImg(b,small(u));return false}return b.isConnected});
+  const ask=[...new Set(left.map(b=>b.dataset.dv).filter(d=>!ASKED.has(d)))].slice(0,40);
   if(!ask.length)return;ask.forEach(d=>ASKED.add(d));
-  try{const j=await api('/api/refill?pics='+encodeURIComponent(ask.join(',')));Object.assign(WEB.map,j.map);try{localStorage.setItem('rf.webpics2',JSON.stringify({at:Date.now(),map:WEB.map}))}catch(_){}put()}catch(_){}
-  // not on the site: the picture saved on the item in ERP
-  boxes.forEach(b=>{if(!b.isConnected||!b.dataset.dv)return;const dv=b.dataset.dv,im=new Image();im.alt='';im.loading='lazy';im.onload=()=>{if(b.isConnected){b.removeAttribute('data-dv');b.innerHTML='';b.appendChild(im)}};im.src='/api/refill?img='+encodeURIComponent(dv)});
+  try{const j=await api('/api/refill?pics='+encodeURIComponent(ask.join(',')));Object.assign(WEB.map,j.map);try{localStorage.setItem('rf.webpics2',JSON.stringify({at:Date.now(),map:WEB.map}))}catch(_){}
+    left.forEach(b=>{const u=webPic(b.dataset.dv);if(u)setImg(b,small(u))})}catch(_){}
 }
 let SUBS=[];let H=null,O=null,items=[],CATS=[],S={page:0},LVL='view';
 const FILES={avail:['Available to Order','SKU# and quantity (0 = not available). EntireItems file.'],master:['Master Data','The MD sheet: SKU, DV, name, category, launch, EG (USD), RRP.'],pipe:['Pipeline','Purchases in Pipeline: SKU and quantity.'],slow:['Slow Moving','SKU# list.']};
