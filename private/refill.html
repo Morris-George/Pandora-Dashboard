@@ -59,12 +59,14 @@ tbody tr:hover td,table tr:hover>td{background:color-mix(in srgb,var(--accent) 7
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink2);margin-top:6px}.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
 .gauge{position:relative;height:18px;background:var(--soft);border-radius:99px;overflow:visible;margin-top:8px}.gauge i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--good),color-mix(in srgb,var(--good) 70%,var(--accent)))}.over .gauge i{background:linear-gradient(90deg,var(--warn),var(--bad))}
 .gauge em{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink2);font-style:normal}.gauge em span{position:absolute;top:22px;transform:translateX(-50%);font-size:10.5px;color:var(--ink2);white-space:nowrap}
+.brand{display:flex;align-items:center;gap:12px;margin-top:4px}.brand .logo{width:72px;height:auto;max-height:44px;object-fit:contain}.brand h1{padding-left:12px;border-left:1px solid var(--line)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo{filter:brightness(0) invert(1)}}:root[data-theme="dark"] .logo{filter:brightness(0) invert(1)}
 .log div{border-top:1px solid var(--line);padding:4px 0;font-size:12.5px}
 </style>
 </head>
 <body><div class="wrap">
 <header class="row" style="justify-content:space-between;align-items:flex-end">
-  <div><a class="crumb" href="/">&larr; Home</a><h1>Refill Order</h1><div class="sub">Suggested order to Pandora from the available to order list, stock, pipeline and sell out. SKUs of the same DV stay together.</div></div>
+  <div><a class="crumb" href="/">&larr; Home</a><div class="brand"><img class="logo" src="/pandora-logo.png" alt="Pandora"><h1>Refill Order</h1></div><div class="sub">Suggested order to Pandora from the available to order list, stock, pipeline and sell out. SKUs of the same DV stay together.</div></div>
   <div class="row"><select id="ord" aria-label="Order"></select><button class="btn" id="newo" hidden>New order</button>
     <span class="status" id="status"></span><button class="btn" id="stBtn" hidden></button><button class="btn" id="reopen" hidden>Reopen</button><button class="btn" id="xlsx">Export Excel</button><label class="btn" id="fbUp" hidden>Upload team sheet<input type="file" id="fbFile" accept=".xlsx,.xls" hidden></label></div>
 </header>
