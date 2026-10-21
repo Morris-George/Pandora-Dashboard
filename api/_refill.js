@@ -63,7 +63,6 @@ const groupOf = x => String(pick(x, 'item_group', 'full_group', 'category', 'ite
 function keepRow(x) {
   const brand = String(x.brand || ''), grp = groupOf(x), name = String(pick(x, 'item_name', 'description') || '');
   if (brand && !/pandora/i.test(brand)) return false;
-  if (!brand && grp && !/pandora/i.test(grp)) return false;
   return !notJewel(grp, name);
 }
 const pick = (x, ...ks) => { for (const k of ks) if (x[k] != null && x[k] !== '') return x[k]; return null; };
@@ -77,13 +76,18 @@ async function syncPart(b) {
     let list;
     try { list = await runReport('Branches Stock Balance', { company: company(), from_date: d, to_date: d, item_group: 'Pandora', valuation_field_type: 'Currency' }); }
     catch (_) { list = await runReport('Branches Stock Balance', { from_date: d, to_date: d }); }
-    const soh = {}; erp.grp = erp.grp || {};
+    // the SKU is in "sku"; "item_code" is ERP's own code (kept to read the Stock Ledger, which only has item_code)
+    const soh = {}, code2sku = {}; erp.grp = erp.grp || {};
+    let kept = 0;
     for (const x of list) {
-      const s = skuOf(pick(x, 'item_code', 'sku', 'item')); if (!s) continue;
+      const s = skuOf(pick(x, 'sku', 'sku-item', 'item_code', 'item')); if (!s) continue;
+      if (x.item_code) code2sku[skuOf(x.item_code)] = s;
       if (groupOf(x)) erp.grp[s] = groupOf(x).slice(0, 80);
       if (!keepRow(x)) continue;
-      soh[s] = (soh[s] || 0) + num(pick(x, 'bal_qty', 'balance_qty', 'balance'));
+      soh[s] = (soh[s] || 0) + num(pick(x, 'bal_qty', 'balance_qty', 'balance')); kept++;
     }
+    erp.code2sku = code2sku;
+    erp.diag = Object.assign(erp.diag || {}, { soh: { raw: list.length, kept, keys: list[0] ? Object.keys(list[0]).slice(0, 30) : [] } });
     erp.soh = soh; erp.at.soh = new Date().toISOString(); erp.sohDate = d;
     await store.putJSON(ERP, erp);
     return { skus: Object.keys(soh).length, pcs: Math.round(Object.values(soh).reduce((a, q) => a + q, 0)) };
@@ -101,18 +105,22 @@ async function syncPart(b) {
       out[s] = (out[s] || 0) + num(pick(x, 'stock_qty', 'qty'));
     }
     erp.sold[b.month] = out;
+    erp.diag = Object.assign(erp.diag || {}, { sales: { month: b.month, raw: list.length, skus: Object.keys(out).length } });
   } else if (b.what === 'buy') {
     // Stock Ledger, purchases only (Purchase Receipt, or a Purchase Invoice that moved stock)
     let list;
     try { list = await runReport('Stock Ledger', { company: company(), from_date: from, to_date: to, item_group: 'Pandora', valuation_field_type: 'Currency' }); }
     catch (_) { list = await runReport('Stock Ledger', { company: company(), from_date: from, to_date: to, valuation_field_type: 'Currency' }); }
+    const c2s = erp.code2sku || {}, types = {};
     for (const x of list) {
-      if (!/^Purchase (Receipt|Invoice)$/.test(String(x.voucher_type || ''))) continue;
+      const vt = String(x.voucher_type || ''); types[vt] = (types[vt] || 0) + 1;
+      if (!/^Purchase (Receipt|Invoice)$/.test(vt)) continue;
       if (!keepRow(x)) continue;
-      const s = skuOf(pick(x, 'item_code', 'sku')), q = num(pick(x, 'in_qty', 'actual_qty', 'qty'));
+      const code = skuOf(pick(x, 'item_code', 'item')), s = skuOf(x.sku) || c2s[code] || code, q = num(pick(x, 'in_qty', 'actual_qty', 'qty'));
       if (s && q > 0) out[s] = (out[s] || 0) + q;
     }
     erp.buy[b.month] = out;
+    erp.diag = Object.assign(erp.diag || {}, { buy: { month: b.month, raw: list.length, skus: Object.keys(out).length, types, keys: list[0] ? Object.keys(list[0]).slice(0, 30) : [] } });
   } else throw new Error('Unknown sync.');
   erp.at[b.what + ':' + b.month] = new Date().toISOString();
   await store.putJSON(ERP, erp);
@@ -194,7 +202,7 @@ module.exports = async function handler(req, res) {
     const erp = (await store.getJSON(ERP)) || { at: {}, sold: {}, buy: {} };
     return send(res, 200, {
       ok: true, level: lvl, me: by, today: cairoToday(), files: await fileList(),
-      erp: { at: erp.at || {}, sold: Object.keys(erp.sold || {}).sort(), buy: Object.keys(erp.buy || {}).sort(), sohDate: erp.sohDate || '' },
+      erp: { diag: lvl === 'manage' ? erp.diag || null : null, at: erp.at || {}, sold: Object.keys(erp.sold || {}).sort(), buy: Object.keys(erp.buy || {}).sort(), sohDate: erp.sohDate || '' },
       erpOn: !!(process.env.ERP_URL && process.env.ERP_API_KEY && process.env.ERP_API_SECRET),
       orders: ((await store.getJSON(ORDERS)) || []).slice().reverse()
     });
