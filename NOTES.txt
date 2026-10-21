@@ -115,5 +115,6 @@ REFILL ORDER (/refill, api/_refill.js via /api/refill -> /api/erp?refill=1)
   purchases only (Purchase Receipt / Purchase Invoice) per month. Saved in rf/erp.json.
 - Proposed = monthly sales x (lead + cover) - SOH - pipeline. Sell Out period = the last N full months. New = launched within N months
   (sales spread over the months on sale). Slow moving, stopped categories, not available -> 0. SKUs grouped by DV. Budget + "cut to fit".
+- The team can Export Excel, fill Team Feedback / Comment, and "Upload team sheet" (blank or = Proposed means no change).
 - Orders in rf/orders/; Draft -> Submitted (input) -> Approved (manage, locked, keeps the lines). Pictures: /stockcount-pics-N.js by DV.
 - Access per person on Staff approvals (rf/access.json): none / view / input / manage. Super admin is always manage.

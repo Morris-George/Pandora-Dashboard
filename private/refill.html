@@ -46,7 +46,7 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
 <header class="row" style="justify-content:space-between;align-items:flex-end">
   <div><a class="crumb" href="/">&larr; Home</a><h1>Refill Order</h1><div class="sub">Suggested order to Pandora from the Available to Order list, stock, pipeline and sell out. SKUs of the same DV stay together.</div></div>
   <div class="row"><select id="ord" aria-label="Order"></select><button class="btn" id="newo" hidden>New order</button>
-    <span class="status" id="status"></span><button class="btn" id="stBtn" hidden></button><button class="btn" id="reopen" hidden>Reopen</button><button class="btn" id="xlsx">Export Excel</button></div>
+    <span class="status" id="status"></span><button class="btn" id="stBtn" hidden></button><button class="btn" id="reopen" hidden>Reopen</button><button class="btn" id="xlsx">Export Excel</button><label class="btn" id="fbUp" hidden>Upload team sheet<input type="file" id="fbFile" accept=".xlsx,.xls" hidden></label></div>
 </header>
 <div class="err" id="err" hidden></div>
 
@@ -212,6 +212,7 @@ function calc(){
 }
 const totals=l=>{let q=0,f=0;for(const i of l){q+=i.fin;f+=i.fin*i.fob}return {q,f}};
 function drawStatus(){
+  $('fbUp').hidden=!O||locked()||!can('input');
   $('status').textContent=O?O.status:'';
   const st=$('stBtn');st.hidden=!O||O.status==='Approved'||(O.status==='Draft'?!can('input'):!can('manage'));st.textContent=O&&O.status==='Draft'?'Submit':'Approve';
   $('reopen').hidden=!O||O.status==='Draft'||!can('manage');
@@ -285,6 +286,21 @@ $('xlsx').onclick=()=>{if(!O||!items.length)return;
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l);return {Category:c,'Order QTY':x.q,'Total FOB $':Math.round(x.f),'Sell Out':l.reduce((a,i)=>a+i.sell,0),'Stopped':S.stop.has(c)?'Y':''}})),'Summary');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Item:'Order',Value:O.name},{Item:'Status',Value:O.status},{Item:'Sell Out period',Value:S.period},{Item:'Lead time (months)',Value:+$('lt').value},{Item:'Cover after arrival (months)',Value:+$('cv').value},{Item:'Budget $',Value:+$('bg').value},{Item:'Stopped categories',Value:[...S.stop].join(', ')}]),'Settings');
   XLSX.writeFile(wb,`Order Sheet ${O.name}.xlsx`)};
+/* the team downloads the Excel, fills Team Feedback and Comment, and uploads it back */
+$('fbFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f||!O)return;showErr('');
+  try{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});const ws=wb.Sheets.Items||wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{defval:''});if(!rows.length||!('SKU#' in rows[0]))throw new Error('Use the Excel exported from this page (sheet Items, column SKU#).');
+    const by=new Map(items.map(i=>[i.sku,i])),lines=[];let skip=0,same=0;
+    for(const r of rows){const i=by.get(U(r['SKU#']));if(!i){skip++;continue}
+      const raw=String(r['Team Feedback']??'').trim(),note=String(r['Comment']??'').trim().slice(0,200);
+      // an empty cell, or the same number as Proposed, means "no change"
+      let fb=raw===''?null:Math.max(0,Math.round(Number(raw)));if(fb!==null&&!isFinite(fb)){skip++;continue}if(fb===i.prop)fb=null;
+      if(fb===i.fb&&note===i.note){same++;continue}
+      i.fb=fb;i.note=note;lines.push([i.sku,fb,note])}
+    for(let k=0;k<lines.length;k+=2000)await api('/api/refill?op=fb',{id:O.id,lines:lines.slice(k,k+2000)});
+    calc();$('saved').textContent=`${fmt(lines.length)} lines updated from ${f.name}`+(skip?`, ${fmt(skip)} skipped (not in this order or not a number)`:'')+'.';
+    if(lines.length)O=(await api('/api/refill?order='+O.id)).order,draw();
+  }catch(er){showErr(f.name+': '+er.message)}};
 boot();
 </script>
 </body></html>
