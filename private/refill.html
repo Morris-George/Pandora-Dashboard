@@ -66,6 +66,8 @@ tbody tr:hover td,table tr:hover>td{background:color-mix(in srgb,var(--accent) 7
 .ml{display:flex;flex-direction:column;margin-top:6px}.mlr{display:grid;grid-template-columns:150px 80px 70px 80px minmax(120px,1fr) minmax(220px,1.4fr);gap:10px;align-items:center;padding:8px 6px;border-top:1px solid var(--line);font-size:13px;cursor:pointer;border-radius:8px}.mlr:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .dv{position:relative;height:12px;background:var(--soft);border-radius:99px}.dv::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;background:var(--ink2)}.dv i{position:absolute;top:0;bottom:0;border-radius:99px}
 @media(max-width:800px){.mlr{grid-template-columns:1fr 1fr 1fr;}.mlr .dv,.mlr .say{grid-column:1/-1}}
+.szs{display:flex;flex-wrap:wrap;gap:6px}.sz{border:1px solid var(--line);border-radius:8px;padding:4px 7px;width:92px;font-size:11px;color:var(--ink2)}.sz b{color:var(--ink);font-size:12.5px}.sz.short{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent)}.sz.long{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 8%,transparent)}
+.sb{height:5px;background:var(--soft);border-radius:99px;margin:2px 0;overflow:hidden}.sb i{display:block;height:100%}
 .log div{border-top:1px solid var(--line);padding:4px 0;font-size:12.5px}
 </style>
 </head>
@@ -121,7 +123,7 @@ tbody tr:hover td,table tr:hover>td{background:color-mix(in srgb,var(--accent) 7
 </div>
 <div style="display:flex;flex-direction:column;gap:14px">
   <div class="card"><h2>Transfers Between Stores Before Ordering</h2><div class="note">Question: can we fill empty stores by moving stock instead of buying?</div><div class="tw" id="iMove" style="max-height:420px"></div></div>
-  <div class="card"><h2>Size Curve</h2><div class="note">Question: do the sizes we stock match the sizes that sell? Red size = will run out first.</div><div class="tw" id="iSize" style="max-height:420px"></div></div>
+  <div class="card"><h2>Size Curve</h2><div class="note">Question: do the sizes we stock match the sizes that sell?</div><div class="tw" id="iSize" style="max-height:420px"></div></div>
 </div>
 </div>
 <div id="ordTab">
@@ -589,7 +591,15 @@ function drawInsights(){
   const dvs=new Map();items.forEach(i=>{if(sizeOf(i.sku)!=='-'){if(!dvs.has(i.dv))dvs.set(i.dv,[]);dvs.get(i.dv).push(i)}});
   const sc=[...dvs.values()].filter(g=>g.length>1&&g.some(i=>i.fin>0)).map(g=>{const ts=g.reduce((a,i)=>a+i.sell,0),tk=g.reduce((a,i)=>a+i.soh+i.pipe+i.fin,0);if(!ts||!tk)return null;
     const rows=g.map(i=>({s:sizeOf(i.sku),sale:i.sell/ts*100,stk:(i.soh+i.pipe+i.fin)/tk*100}));return {g,rows,dev:Math.max(...rows.map(x=>Math.abs(x.stk-x.sale)))}}).filter(Boolean).sort((a,b)=>b.dev-a.dev);
-  $('iSize').innerHTML=sc.length?`<div class="note">${sc.filter(x=>x.dev>=10).length} of ${sc.length} ordered DVs are off by 10+ points.</div><table><tr><th class="l">DV</th><th class="l">Size: sales % → stock after order %</th><th>Max off</th></tr>${sc.slice(0,80).map(x=>`<tr><td class="l cl" data-d="${esc(x.g[0].sku)}">${esc(x.g[0].dv)}</td><td class="l">${x.rows.map(r=>`<span class="${Math.abs(r.stk-r.sale)>=10?(r.stk<r.sale?'bad':'good'):''}">${esc(r.s)}: ${Math.round(r.sale)}→${Math.round(r.stk)}</span>`).join(' · ')}</td><td>${Math.round(x.dev)}</td></tr>`).join('')}</table><div class="note">Red: less stock than its sales share (runs out first). Green: more.</div>`:'<div class="note">No ordered DV with several sizes and sales.</div>';
+  // per size: share of sales vs share of stock after the order, and how many pieces would bring stock in line with sales
+  const SZ=sc.map(x=>{const tot=x.g.reduce((a,i)=>a+i.soh+i.pipe+i.fin,0);const sz=x.g.map((i,n)=>({i,s:x.rows[n].s,sale:x.rows[n].sale,stk:x.rows[n].stk,fix:Math.max(-i.fin,Math.round(tot*x.rows[n].sale/100-(i.soh+i.pipe+i.fin)))})).filter(z=>z.sale||z.stk);return {...x,sz}});
+  const chip=z=>{const short=z.stk<z.sale-10,long=z.stk>z.sale+10;return `<div class="sz${short?' short':long?' long':''}" title="Size ${esc(z.s)}: ${Math.round(z.sale)}% of sales, ${Math.round(z.stk)}% of stock after the order"><b>${esc(z.s)}</b><div class="sb"><i style="width:${z.sale}%;background:var(--accent)"></i></div><div class="sb"><i style="width:${z.stk}%;background:#8FB8DE"></i></div><span>${Math.round(z.sale)}% · ${Math.round(z.stk)}%</span></div>`};
+  const fixTxt=x=>{const f=x.sz.filter(z=>Math.abs(z.fix)>=1&&Math.abs(z.stk-z.sale)>=10).sort((a,b)=>b.fix-a.fix);return f.length?f.map(z=>`<b class="${z.fix>0?'good':'bad'}">${z.fix>0?'+':'−'}${Math.abs(z.fix)}</b> size ${esc(z.s)}`).join(', '):'<span class="note">sizes in line</span>'};
+  $('iSize').innerHTML=SZ.length?`<div class="qk" style="padding-left:0"><b>${SZ.filter(x=>x.dev>=10).length}</b> of ${SZ.length} ordered DVs have sizes that do not match their sales. The last column says how many pieces to add or cut per size.</div>
+    <div class="legend"><span style="--c:var(--accent)">share of sales</span><span style="--c:#8FB8DE">share of stock after the order</span><span style="--c:var(--bad)">red size = will run out first</span><span style="--c:var(--warn)">amber size = too much</span></div>
+    <table style="margin-top:6px"><tr><th></th><th class="l">DV</th><th class="l">Sizes</th><th class="l">Suggested change to the order</th></tr>${SZ.slice(0,120).map(x=>`<tr data-d="${esc(x.g[0].sku)}"><td>${pic(x.g[0].dv)}</td><td class="l cl"><b>${esc(x.g[0].dv)}</b><div class="note" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.g[0].name)}</div></td><td class="l"><div class="szs">${x.sz.map(chip).join('')}</div></td><td class="l">${fixTxt(x)}</td></tr>`).join('')}</table>
+    <div class="note">Suggested change = pieces to add (+) or cut (−) per size so stock after the order follows the sales split. A cut is never more than the pieces ordered. Click a row for the DV details.</div>`:'<div class="note">No ordered DV with several sizes and sales.</div>';
+  $('iSize').querySelectorAll('tr[data-d]').forEach(tr=>tr.onclick=e=>{if(!e.target.closest('.img'))details(tr.dataset.d)});
   const Q=[],ln=(t,k)=>Q.push(`<div class="qk"${k?` data-drill="${k}"`:''}>${t}${k?' <span class="note">›</span>':''}</div>`);
   const t0=totals(items);
   if(S.prev){const lq=S.prev.lines.reduce((a,l)=>a+(l[2]||0),0),d=t0.q-lq;ln(`This order is <b>${fmt(t0.q)} pcs</b>, ${d>=0?'<b class="good">'+fmt(d)+' more</b>':'<b class="bad">'+fmt(-d)+' fewer</b>'} than the last order (${esc(S.prev.name)}).`)}
