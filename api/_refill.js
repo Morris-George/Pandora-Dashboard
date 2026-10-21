@@ -157,6 +157,7 @@ async function fileList() {
 const NOT_JEWEL_CAT = /accessor|packag|bag|box|pouch|consumable|marketing|display|service/i;
 const NOT_JEWEL_NAME = /\b(gift|paper|shopping|carrier|tote)\s*bags?\b|\bbags?\b.*\b(small|medium|large|xl)\b|\bjewel(le)?ry\s*box|\bgift\s*box|\bpouch|\bpackaging|\bwrapping|\bribbon\b|\bcleaning\s*(kit|cloth)/i;
 const notJewel = (cat, name) => NOT_JEWEL_CAT.test(cat || '') || NOT_JEWEL_NAME.test(name || '');
+const a2r = a => { a[0] = Math.round(a[0]); a[1] = Math.round(a[1]); };
 async function joined() {
   const [av, md, pp, sl, erp] = await Promise.all(['avail', 'master', 'pipe', 'slow'].map(k => store.getJSON('rf/files/' + k + '.json')).concat([store.getJSON(ERP)]));
   if (!av) return { items: [], months: [] };
@@ -184,7 +185,21 @@ async function joined() {
     off.set(s, (off.get(s) || 0) + q);
   }
   const notListed = [...off.entries()].filter(([s]) => /^[12357]\d{4,5}/.test(s) && (M.has(s) || !/BAG|BOX|POUCH/i.test(s))).sort((a, b) => b[1] - a[1]).slice(0, 150).map(([s, q]) => [s, (M.get(s) || [])[2] || '', q, Math.round(e.soh[s] || 0)]);
-  return { items, months, notListed, sohDate: e.sohDate || '', boughtMonths: Object.keys(e.buy || {}).sort() };
+  // every Pandora SKU (not only Available to Order) added up by category, for the sales vs stock comparison:
+  // {category: [soh, pipeline, [sold per month]]}. Category from the master, else from the ERP item group.
+  const ercat = g => { const l = String(g || '').toLowerCase(); if (l.includes('earring')) return 'Earrings'; if (l.includes(' ring') || /^rings?/.test(l)) return 'Rings'; if (l.includes('bracelet')) return 'Bracelets'; if (l.includes('necklace') || l.includes('pendant')) return 'Necklaces & Pendants'; if (['charm', 'clip', 'dangle', 'medallion', 'spacer'].some(x => l.includes(x))) return 'Charms'; return ''; };
+  const all = new Set([...Object.keys(e.soh || {}), ...P.keys()]); months.forEach(k => Object.keys(e.sold[k] || {}).forEach(x => all.add(x)));
+  const allCats = {};
+  for (const s of all) {
+    if (!/^[12357]\d{4,5}/.test(s) || outGroup(s) || (G[s] && notJewel(G[s], ''))) continue;
+    const m = M.get(s); if (m && notJewel(m[3], m[2])) continue;
+    let c = m && m[3] ? m[3] : ercat(G[s]); if (c === 'Charm') c = 'Charms'; if (!c) continue;
+    const a = allCats[c] || (allCats[c] = [0, 0, months.map(() => 0)]);
+    a[0] += Math.max(0, e.soh[s] || 0); a[1] += P.get(s) || 0;
+    months.forEach((k, i) => { a[2][i] += Math.round((e.sold[k] || {})[s] || 0); });
+  }
+  for (const c in allCats) a2r(allCats[c]);
+  return { items, months, notListed, allCats, sohDate: e.sohDate || '', boughtMonths: Object.keys(e.buy || {}).sort() };
 }
 
 module.exports = async function handler(req, res) {

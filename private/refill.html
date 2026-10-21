@@ -73,7 +73,7 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
 <div class="kpis" id="kpis"></div>
 <div class="card" id="budget"></div>
 <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Summary by category</h2><label class="note"><input type="checkbox" id="showTot"> Show totals</label></div><div class="tw" id="sum" style="margin-top:6px"></div></div>
-<div class="card"><h2>Sales vs stock vs order mix</h2><div class="note">Share of each category in pieces. Compare the order mix with the sales mix: a category with more stock than sales share is overstocked.</div><div class="tw" id="mix"></div></div>
+<div class="card"><h2>Sales vs stock vs order mix</h2><div class="note">Sales, stock and pipeline count every Pandora SKU of the category, not only the ones on the Available to Order list. Share of each category in pieces. Compare the order mix with the sales mix: a category with more stock than sales share is overstocked.</div><div class="tw" id="mix"></div></div>
 <div class="card"><h2>Items</h2>
   <div class="row">
     <input type="search" id="q" placeholder="Search SKU, DV or name" style="width:220px">
@@ -192,7 +192,7 @@ async function openOrder(id){
     if(!j.items.length){$('main').hidden=true;showErr('Upload the Available to Order file first.');drawStatus();return}
     const months=j.months,today=j.today;
     // the Sell Out period: the last full months before this month
-    S.months=months;S.today=today;S.notListed=j.notListed||[];
+    S.months=months;S.today=today;S.notListed=j.notListed||[];S.allCats=j.allCats||{};
     items=j.items.map(r=>({sku:r[0],av:!!r[1],dv:r[2]||r[0].split('-')[0],name:r[3],cat:r[4]==='Charm'?'Charms':(r[4]||'No category'),sub:r[5],launch:r[6],fob:r[7],rrp:r[8],status:r[9],inMaster:!!r[10],soh:Math.max(0,r[11]),neg:r[11]<0?r[11]:0,pipe:r[12],slow:!!r[13],soldBy:r[14],boughtBy:r[15],fb:O.fb[r[0]]??null,note:O.notes[r[0]]||''}));
     CATS=[...new Set(items.map(i=>i.cat))].sort();
     $('fc').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
@@ -220,7 +220,7 @@ function calc(){
   const pm=Math.max(1,+$('pm').value||6),lt=+$('lt').value||0,cv=+$('cv').value||0,mq=Math.max(1,+$('mq').value||1),nm=+$('nm').value||0;
   // the period: the last pm full months before this month (this month is still running)
   const cur=S.today.slice(0,7),idx=S.months.map((m,i)=>[m,i]).filter(([m])=>m<cur).slice(-pm).map(x=>x[1]);
-  S.period=idx.length?S.months[idx[0]]+' → '+S.months[idx[idx.length-1]]:'no months synced';S.pmUsed=idx.length||pm;
+  S.idx=idx;S.period=idx.length?S.months[idx[0]]+' → '+S.months[idx[idx.length-1]]:'no months synced';S.pmUsed=idx.length||pm;
   $('formula').innerHTML=`Sell Out period: <b>${esc(S.period)}</b> (${idx.length} months). Monthly sales = Sell Out ÷ months · Target = monthly × (${lt} lead + ${cv} cover) · <b>Proposed = Target − SOH − Pipeline</b> (0 if below ${mq}). Cover = (SOH + Pipeline + order) ÷ monthly sales. <b>New</b> = launched in the last ${nm} months: its sales are spread over the months it has been on sale; with no sales yet, or launched this month, it waits for a manual decision.`;
   for(const i of items){
     i.sell=idx.reduce((a,k)=>a+(i.soldBy[k]||0),0);i.bought=idx.reduce((a,k)=>a+(i.boughtBy[k]||0),0);
@@ -272,10 +272,13 @@ function draw(){
 }
 // sales, stock, pipeline and order: each category's share, side by side
 function drawMix(t){
-  const sum=(l,k)=>l.reduce((a,i)=>a+(i[k]||0),0),all={sell:sum(items,'sell'),soh:sum(items,'soh'),pipe:sum(items,'pipe'),q:t.q,f:t.f};
+  // sales, stock and pipeline: every Pandora SKU of the category (not only Available to Order); the order: this order
+  const sum=(l,k)=>l.reduce((a,i)=>a+(i[k]||0),0),AC=S.allCats||{},cats=[...new Set([...CATS,...Object.keys(AC)])].sort();
+  const sold=c=>{const a=AC[c];return a?S.idx.reduce((x,k)=>x+(a[2][k]||0),0):0};
+  const all={sell:cats.reduce((a,c)=>a+sold(c),0),soh:cats.reduce((a,c)=>a+((AC[c]||[])[0]||0),0),pipe:cats.reduce((a,c)=>a+((AC[c]||[])[1]||0),0),q:t.q,f:t.f};
   const pc=(a,b)=>b?a/b*100:0,p1=n=>Math.round(n)+'%';
   const cell=(v,ref)=>{const d=v-ref;return `<td>${p1(v)}${Math.abs(d)>=3?` <span class="${d>0?'bad':'good'}" style="font-size:11px">${d>0?'+':''}${Math.round(d)}</span>`:''}</td>`};
-  const rows=CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l);return {c,sell:sum(l,'sell'),soh:sum(l,'soh'),pipe:sum(l,'pipe'),q:x.q,f:x.f}});
+  const rows=cats.map(c=>{const x=totals(items.filter(i=>i.cat===c)),a=AC[c]||[0,0];return {c,sell:sold(c),soh:a[0],pipe:a[1],q:x.q,f:x.f}}).filter(r=>r.sell||r.soh||r.pipe||r.q);
   const COL=['var(--accent)','#8FB8DE','#B9A3D9','#F2C46D','#7FC8A9','#E8A87C','#A3C4BC','#D7A9E3'];
   const bar=k=>`<div class="mixbar">${rows.map((r,n)=>`<i title="${esc(r.c)} ${p1(pc(r[k],all[k]))}" style="width:${pc(r[k],all[k])}%;background:${COL[n%COL.length]}"></i>`).join('')}</div>`;
   $('mix').innerHTML=`<table><tr><th class="l">Category</th><th>Sell Out pcs</th><th>Sales mix</th><th>SOH pcs</th><th>Stock mix</th><th>Pipeline mix</th><th>Order pcs</th><th>Order mix</th><th>Order FOB mix</th></tr>`+
