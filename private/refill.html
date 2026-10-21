@@ -87,6 +87,11 @@ tbody tr:hover td,table tr:hover>td{background:color-mix(in srgb,var(--accent) 7
 .topbar .top-actions .secondary:hover{background:#fff;transform:translateY(-3px)}.topbar .top-actions .secondary:active{transform:scale(.95)}
 .topbar .top-actions>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}.topbar .top-actions>:nth-child(2){animation-delay:.1s}.topbar .top-actions>:nth-child(3){animation-delay:.2s}
 :root[data-theme="dark"] .topbar .logo,.topbar .logo{filter:brightness(0)!important}
+/* the same button motion as the dashboard header: springy lift on hover, press on click, pop in on load */
+.btn,.tab,.chip{transition:transform .25s cubic-bezier(.3,1.7,.5,1),box-shadow .2s,background .2s,border-color .2s}
+.btn:not(:disabled):hover,.tab:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(176,58,79,.18)}.btn:not(:disabled):active,.tab:active,.chip:active{transform:scale(.95)}.chip:hover{transform:translateY(-1px)}
+header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:nth-child(2){animation-delay:.05s}header .row>:nth-child(3){animation-delay:.1s}header .row>:nth-child(4){animation-delay:.15s}header .row>:nth-child(5){animation-delay:.2s}header .row>:nth-child(6){animation-delay:.25s}header .row>:nth-child(7){animation-delay:.3s}header .row>:nth-child(8){animation-delay:.35s}header .row>:nth-child(9){animation-delay:.4s}
+@media (prefers-reduced-motion:reduce){.btn,.tab,.chip,header .row>*{animation:none!important;transition:none!important}}
 @media (prefers-reduced-motion:reduce){.topbar,.topbar *,.topbar::before,.topbar::after,.topbar .brand::before{animation:none!important}}
 .brand .bt{padding-left:14px;border-left:1px solid var(--line)}
 .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.top-actions{display:flex;align-items:center;gap:8px;margin-left:auto}.top-actions .secondary{font:inherit;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 14px;cursor:pointer}.top-actions .secondary:hover{border-color:var(--accent)}
