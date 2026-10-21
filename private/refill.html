@@ -33,13 +33,20 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:5px 7px
 th.l,td.l{text-align:left}td.name{max-width:250px;overflow:hidden;text-overflow:ellipsis;text-align:left}
 td input{width:64px;padding:3px 6px}td input.nt{width:120px}
 .dvh td{background:var(--soft);border-top:2px solid var(--line)}tr.size td:nth-child(2){padding-left:18px}
-.tag{font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px}.t-slow{background:var(--soft);color:var(--bad)}.t-stop,.t-na{background:var(--bad);color:#fff}.t-man{background:#F2C46D;color:#2A1018}.t-pri{background:var(--good);color:#fff}.t-new{background:#8FB8DE;color:#10202A}.t-nm{background:#B9A3D9;color:#1E1530}
+.tag{font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px}.t-slow{background:var(--soft);color:var(--bad)}.t-stop,.t-na{background:var(--bad);color:#fff}.t-man{background:#F2C46D;color:#2A1018}.t-pri{background:var(--good);color:#fff}.t-new{background:#8FB8DE;color:#10202A}.t-nm{background:#B9A3D9;color:#1E1530}.t-abc{background:var(--soft);color:var(--ink)}
 .img{width:36px;height:36px;border-radius:6px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink2);overflow:hidden;vertical-align:middle}.img img{width:100%;height:100%;object-fit:cover;cursor:zoom-in}.hide{display:none!important}#zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out}#zoom img{max-width:90vw;max-height:90vh;border-radius:10px;background:#fff}
 .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:14px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
 .good{color:var(--good)}.bad{color:var(--bad)}
 .status{font-weight:800;border-radius:99px;padding:3px 12px;background:var(--soft)}
 .mixbar{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--soft);min-width:120px}.mixbar i{display:block;height:100%}
 .pager{display:flex;gap:6px;align-items:center;margin-top:8px}
+.tab.on{background:var(--accent);border-color:var(--accent);color:#2A1018}
+.spark{vertical-align:middle}td.cl{cursor:pointer;text-decoration:underline dotted}
+td select{padding:3px 4px;font-size:12px;max-width:130px}
+.heat td{text-align:center;min-width:54px}.heat td.l{text-align:left}
+.hb{display:flex;height:16px;border-radius:4px;overflow:hidden;background:var(--soft)}.hb i{display:block;height:100%}
+#det{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px}
+#det[hidden]{display:none}#det .box{background:var(--surface);border-radius:14px;padding:16px;max-width:760px;width:100%;max-height:90vh;overflow:auto}
 .log div{border-top:1px solid var(--line);padding:4px 0;font-size:12.5px}
 </style>
 </head>
@@ -67,10 +74,37 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
     <label class="f">New = launched within (months)<input type="number" id="nm" min="0" max="36"></label>
     <label class="f">Budget FOB ($)<input type="text" id="bg" inputmode="decimal" style="text-align:right"></label>
   </div>
+  <div class="row" style="margin-top:10px">
+    <label class="f">Recent 3 months weight (%)<input type="number" id="tw" min="0" max="100" step="5"></label>
+    <label class="note" style="align-self:flex-end"><input type="checkbox" id="season"> Seasonality</label>
+    <label class="note" style="align-self:flex-end"><input type="checkbox" id="abc"> Cover by ABC class</label>
+    <label class="f">Cover A (months)<input type="number" id="ca" min="0" max="24" step="0.5"></label>
+    <label class="f">Cover B (months)<input type="number" id="cb" min="0" max="24" step="0.5"></label>
+    <label class="f">Cover C (months)<input type="number" id="cc" min="0" max="24" step="0.5"></label>
+  </div>
   <div class="note" style="margin:10px 0 4px">Stop ordering a category (click to switch off / on):</div><div class="chips" id="cats"></div>
   <div class="note" style="margin:10px 0 4px">Stop ordering an item group (from ERP, for example Pandora Moments - Charm): <button type="button" class="btn" id="subsT" onclick="const h=document.getElementById('subs').classList.toggle('hide');this.textContent=h?'Show groups':'Hide groups'">Show groups</button></div><div class="chips hide" id="subs"></div>
   <div class="note" id="formula" style="margin-top:8px"></div>
 </div>
+<div class="row tabs" style="margin:14px 0 4px"><button class="btn tab on" data-tab="order">Order</button><button class="btn tab" data-tab="ins">Insights</button></div>
+<div id="ins" hidden>
+<div class="card"><h2>Compare with the last order</h2><div id="iPrev"></div></div>
+<div class="card"><h2>Team changes vs generated, by category</h2><div class="note">Generated = the page's Proposed quantity. Same = the team kept it. The rest are the team's changes.</div><div class="tw" id="iTeam"></div></div>
+<div class="grid2">
+  <div class="card"><h2>Budget by category</h2><div class="note">Order FOB per category: the part kept as generated and the part the team added.</div><div id="iBud"></div></div>
+  <div class="card"><h2>ABC classes</h2><div class="note">By sales value (Sell Out × RP): A = top 80%, B = next 15%, C = the rest.</div><div class="tw" id="iAbc"></div></div>
+</div>
+<div class="card"><h2>Cover heat map</h2><div class="note">Months of stock after this order, category × collection. Red: under the lead time. Amber: over 8 months.</div><div class="tw" id="iHeat"></div></div>
+<div class="grid2">
+  <div class="card"><h2>Lost sales</h2><div class="note">Selling items with no stock today: monthly sales × lead time, until the shipment arrives.</div><div class="tw" id="iLost" style="max-height:420px"></div></div>
+  <div class="card"><h2>New vs carry-over</h2><div class="note">New items' monthly sales against the carry-over average of the same category.</div><div class="tw" id="iNew" style="max-height:420px"></div></div>
+</div>
+<div class="grid2">
+  <div class="card"><h2>Move between stores before ordering</h2><div class="note">Ordered SKUs with 3+ pieces in one place and none in others. Stores here = places with stock of any SKU.</div><div class="tw" id="iMove" style="max-height:420px"></div></div>
+  <div class="card"><h2>Size curve</h2><div class="note">Per DV: share of each size in sales vs in stock after the order. Off by 10 points or more is flagged.</div><div class="tw" id="iSize" style="max-height:420px"></div></div>
+</div>
+</div>
+<div id="ordTab">
 <div class="kpis" id="kpis"></div>
 <div class="card" id="budget"></div>
 <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Summary by category</h2><label class="note"><input type="checkbox" id="showTot"> Show totals</label></div><div class="tw" id="sum" style="margin-top:6px"></div></div>
@@ -91,6 +125,8 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
   <div class="card"><h2>History</h2><div class="log tw" id="log" style="max-height:320px"></div></div>
 </div>
 </div>
+</div>
+<div id="det" hidden></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="/stockcount-pics-1.js" async></script><script src="/stockcount-pics-2.js" async></script><script src="/stockcount-pics-3.js" async></script><script src="/stockcount-pics-4.js" async></script>
@@ -223,7 +259,7 @@ const monthsBack=(today,n)=>{const [y,m]=today.split('-').map(Number);const o=[]
 $('sync').onclick=async()=>{
   const b=$('sync');b.disabled=true;showErr('');const errs=[];
   await saveNow(); // the months typed here are saved before the page reloads
-  const n=Math.max(1,Math.min(24,+$('erpM').value||6)),ms=monthsBack(H.today,n); // the last n full months and this month
+  const n0=Math.max(1,Math.min(24,+$('erpM').value||6)),n=$('season').checked?Math.min(36,12+n0):n0,ms=monthsBack(H.today,n); // seasonality: last year's months too // the last n full months and this month
   const steps=[['soh'],...ms.map(m=>['sales',m]),...ms.map(m=>['buy',m])];
   for(let i=0;i<steps.length;i++){const [what,month]=steps[i];$('syncMsg').textContent=`Syncing ${i+1}/${steps.length}: ${what==='soh'?'stock on hand':what==='sales'?'sell out '+month:'purchases '+month}…`;
     try{await api('/api/refill?op=sync',{what,month})}catch(e){errs.push((month||'stock')+' '+what+': '+e.message)}}
@@ -240,21 +276,21 @@ async function openOrder(id){
     const months=j.months,today=j.today;
     // the Sell Out period: the last full months before this month
     S.months=months;S.today=today;S.notListed=j.notListed||[];S.allCats=j.allCats||{};S.allSkipped=j.allSkipped||{};S.allNeg=j.allNeg||{pcs:0,skus:0};S.allSohRaw=j.allSohRaw||0;
-    items=j.items.map(r=>({sku:r[0],av:!!r[1],dv:r[2]||r[0].split('-')[0],name:r[3],cat:r[4]==='Charm'?'Charms':(r[4]||'No category'),sub:r[5],launch:r[6],fob:r[7],rrp:r[8],status:r[9],inMaster:!!r[10],soh:Math.max(0,r[11]),neg:r[11]<0?r[11]:0,pipe:r[12],slow:!!r[13],soldBy:r[14],boughtBy:r[15],grp:r[16]||'',fb:O.fb[r[0]]??null,note:O.notes[r[0]]||''}));
+    items=j.items.map(r=>({sku:r[0],av:!!r[1],dv:r[2]||r[0].split('-')[0],name:r[3],cat:r[4]==='Charm'?'Charms':(r[4]||'No category'),sub:r[5],launch:r[6],fob:r[7],rrp:r[8],status:r[9],inMaster:!!r[10],soh:Math.max(0,r[11]),neg:r[11]<0?r[11]:0,pipe:r[12],slow:!!r[13],soldBy:r[14],boughtBy:r[15],grp:r[16]||'',wh:r[17]||[],fb:O.fb[r[0]]??null,note:O.notes[r[0]]||'',reason:(O.reasons||{})[r[0]]||''}));S.prev=j.prev||null;
     CATS=[...new Set(items.map(i=>i.cat))].sort();SUBS=[...new Set(items.map(i=>i.grp).filter(Boolean))].sort();
     $('subs').innerHTML=SUBS.map(c=>`<span class="chip" data-sub="${esc(c)}">${esc(c)}</span>`).join('')||'<span class="note">No item groups yet. Press Sync from ERP.</span>';
     $('fc').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
     $('cats').innerHTML=CATS.map(c=>`<span class="chip" data-c="${esc(c)}">${esc(c)}</span>`).join('');
-    const s=O.settings;$('pm').value=s.pm;$('erpM').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=fmtMoney(s.budget);
+    const s=O.settings;$('pm').value=s.pm;$('erpM').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=fmtMoney(s.budget);$('tw').value=s.tw??60;$('season').checked=!!s.season;$('abc').checked=!!s.abc;$('ca').value=s.ca??4;$('cb').value=s.cb??3;$('cc').value=s.cc??2;
     S.stop=new Set(O.stop||[]);S.stopSub=new Set(O.stopSub||[]);S.page=0;$('main').hidden=false;$('ord').value=O.id;
     if(!months.length)showErr('No sell out from ERP yet. Press Sync from ERP.');
     calc();
   }catch(e){showErr('Could not open the order: '+e.message)}
 }
 let saveT=0;
-async function saveNow(){clearTimeout(saveT);if(!O||!can('manage')||locked())return;try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:bgVal()},stop:[...S.stop],stopSub:[...S.stopSub]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}}
+async function saveNow(){clearTimeout(saveT);if(!O||!can('manage')||locked())return;try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:bgVal(),tw:+$('tw').value,season:$('season').checked,abc:$('abc').checked,ca:+$('ca').value,cb:+$('cb').value,cc:+$('cc').value},stop:[...S.stop],stopSub:[...S.stopSub]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}}
 function saveSettings(){if(!can('manage')||locked())return;clearTimeout(saveT);saveT=setTimeout(saveNow,700)}
-['pm','lt','cv','mq','nm','bg'].forEach(id=>$(id).oninput=()=>{if(id==='pm')$('erpM').value=$('pm').value;calc();saveSettings();applyTips()});
+['pm','lt','cv','mq','nm','bg','tw','season','abc','ca','cb','cc'].forEach(id=>$(id).oninput=()=>{if(id==='pm')$('erpM').value=$('pm').value;calc();saveSettings();applyTips()});
 $('erpM').oninput=()=>{const v=$('erpM').value;if(O&&!$('pm').disabled){$('pm').value=v;calc();saveSettings();applyTips()}};
 $('subs').onclick=e=>{const c=e.target.dataset.sub;if(!c||!can('manage')||locked())return;S.stopSub.has(c)?S.stopSub.delete(c):S.stopSub.add(c);calc();saveSettings()};
 $('cats').onclick=e=>{const c=e.target.dataset.c;if(!c||!can('manage')||locked())return;S.stop.has(c)?S.stop.delete(c):S.stop.add(c);calc();saveSettings()};
@@ -267,15 +303,31 @@ const monthsSince=d=>d?(new Date(S.today)-new Date(d))/(864e5*30.44):999;
 
 function calc(){
   const pm=Math.max(1,+$('pm').value||6),lt=+$('lt').value||0,cv=+$('cv').value||0,mq=Math.max(1,+$('mq').value||1),nm=+$('nm').value||0;
+  const tw=Math.max(0,Math.min(100,+$('tw').value||0))/100,useSeason=$('season').checked,useAbc=$('abc').checked,cov={A:+$('ca').value||0,B:+$('cb').value||0,C:+$('cc').value||0};
+  S.seasonMissing=false;
   // the period: the last pm full months before this month (this month is still running)
   const cur=S.today.slice(0,7),idx=S.months.map((m,i)=>[m,i]).filter(([m])=>m<cur).slice(-pm).map(x=>x[1]);
   S.idx=idx;S.period=idx.length?S.months[idx[0]]+' → '+S.months[idx[idx.length-1]]:'no months synced';S.pmUsed=idx.length||pm;
-  $('formula').innerHTML=`Sell Out period: <b>${esc(S.period)}</b> (${idx.length} months). Monthly sales = Sell Out ÷ months · Target = monthly × (${lt} lead + ${cv} cover) · <b>Proposed = Target − SOH − Pipeline</b> (0 if below ${mq}). Cover = (SOH + Pipeline + order) ÷ monthly sales. <b>New</b> = launched in the last ${nm} months: its sales are spread over the months it has been on sale; with no sales yet, or launched this month, it waits for a manual decision.`;
   for(const i of items){
     i.sell=idx.reduce((a,k)=>a+(i.soldBy[k]||0),0);i.bought=idx.reduce((a,k)=>a+(i.boughtBy[k]||0),0);
     i.age=monthsSince(i.launch);i.isNew=i.inMaster&&i.age<=nm;
-    const span=i.isNew?Math.min(S.pmUsed,Math.max(1,i.age)):S.pmUsed;i.mon=i.sell>0?i.sell/span:0;i.flag='';
-    let p=Math.ceil(i.mon*(lt+cv)-i.soh-i.pipe);if(p<mq)p=0;
+    const span=i.isNew?Math.min(S.pmUsed,Math.max(1,i.age)):S.pmUsed;i.avg=i.sell>0?i.sell/span:0;i.mon=i.avg;
+    // trend: the last 3 months weigh tw, the older months the rest (carry-over items with 4+ months only)
+    if(tw&&!i.isNew&&idx.length>=4){const rec=idx.slice(-3),old=idx.slice(0,-3),a=k=>k.reduce((x,m)=>x+(i.soldBy[m]||0),0)/k.length;i.mon=tw*a(rec)+(1-tw)*a(old)}
+  }
+  // seasonality per category: last year's sales in the months this order covers ÷ last year's sales in the period
+  S.season={};
+  if(useSeason){const mi=m=>S.months.indexOf(m),shift=(m,k)=>{const [y,mm]=m.split('-').map(Number);return new Date(Date.UTC(y,mm-1+k,1)).toISOString().slice(0,7)};
+    const base=idx.map(k=>mi(shift(S.months[k],-12))),tgt=[];for(let k=0;k<Math.ceil(lt+cv);k++)tgt.push(mi(shift(cur,k-12)));
+    if(base.every(k=>k>=0)&&tgt.length&&tgt.every(k=>k>=0))for(const c of CATS){const l=items.filter(i=>i.cat===c),sm=ks=>l.reduce((a,i)=>a+ks.reduce((x,k)=>x+(i.soldBy[k]||0),0),0)/ks.length;const b=sm(base);S.season[c]=b>0?Math.max(.5,Math.min(2,sm(tgt)/b)):1}
+    else S.seasonMissing=true}
+  // ABC by sales value
+  const byVal=items.filter(i=>i.sell>0).sort((a,b)=>b.sell*(b.rrp||b.fob)-a.sell*(a.rrp||a.fob)),totV=byVal.reduce((a,i)=>a+i.sell*(i.rrp||i.fob),0);let run=0;
+  items.forEach(i=>i.abc='');for(const i of byVal){run+=i.sell*(i.rrp||i.fob);i.abc=run<=totV*.8||run===i.sell*(i.rrp||i.fob)?'A':run<=totV*.95?'B':'C'}
+  for(const i of items){
+    if(useSeason&&S.season[i.cat])i.mon*=S.season[i.cat];
+    const c=useAbc&&i.abc?cov[i.abc]:cv;i.flag='';
+    let p=Math.ceil(i.mon*(lt+c)-i.soh-i.pipe);if(p<mq)p=0;
     if(!i.av){p=0;i.flag='na'}
     else if(i.slow){p=0;i.flag='slow'}
     else if(S.stop.has(i.cat)||S.stopSub.has(i.grp)){i.flag='stop';i.would=p;p=0}
@@ -285,6 +337,7 @@ function calc(){
     i.st=i.sell+i.soh?i.sell/(i.sell+i.soh):0;
     if(!i.flag&&i.sell>0&&i.soh<=0&&i.pipe===0)i.flag='pri';
   }
+  $('formula').innerHTML=`Sell Out period: <b>${esc(S.period)}</b> (${idx.length} months). Monthly sales = Sell Out ÷ months${tw?` (recent 3 months weigh ${Math.round(tw*100)}%)`:''}${useSeason?(S.seasonMissing?' · <span class="bad">Seasonality needs last year: press Sync from ERP</span>':' · seasonality on'):''}${useAbc?` · cover A ${cov.A} / B ${cov.B} / C ${cov.C} months`:''} · Target = monthly × (${lt} lead + ${cv} cover) · <b>Proposed = Target − SOH − Pipeline</b> (0 if below ${mq}). Cover = (SOH + Pipeline + order) ÷ monthly sales. <b>New</b> = launched in the last ${nm} months: its sales are spread over the months it has been on sale; with no sales yet, or launched this month, it waits for a manual decision.`;
   draw();
 }
 const totals=l=>{let q=0,f=0;for(const i of l){q+=i.fin;f+=i.fin*i.fob}return {q,f}};
@@ -298,7 +351,7 @@ function draw(){
   drawStatus();
   document.querySelectorAll('#cats .chip').forEach(c=>c.classList.toggle('off',S.stop.has(c.dataset.c)));
   document.querySelectorAll('#subs .chip').forEach(c=>c.classList.toggle('off',S.stopSub.has(c.dataset.sub)));
-  ['pm','lt','cv','mq','nm','bg'].forEach(id=>$(id).disabled=locked()||!can('manage'));
+  ['pm','lt','cv','mq','nm','bg','tw','season','abc','ca','cb','cc'].forEach(id=>$(id).disabled=locked()||!can('manage'));
   const t=totals(items),bg=bgVal()||0,ord=items.filter(i=>i.fin>0);
   const stopped=items.filter(i=>i.flag==='stop').reduce((a,i)=>a+(i.would||0),0);
   $('kpis').innerHTML=[['SKUs to order',fmt(ord.length)],['Pieces',fmt(t.q)],['Total FOB',usd(t.f)],['Need a manual decision',fmt(items.filter(i=>i.flag==='man').length)],['Held back by stopped categories',fmt(stopped)+' pcs']]
@@ -319,6 +372,7 @@ function draw(){
   $('nl').innerHTML=S.notListed.length?`<table><tr><th class="l">SKU</th><th class="l">Item</th><th>Sold</th><th>SOH</th></tr>${S.notListed.map(r=>`<tr><td class="l">${esc(r[0])}</td><td class="name">${esc(r[1])}</td><td>${fmt(r[2])}</td><td>${fmt(r[3])}</td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
   $('log').innerHTML=(O.log||[]).slice().reverse().slice(0,200).map(l=>`<div><b>${esc(l.what)}</b> · ${esc(l.by)} · <span class="note">${new Date(l.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('');
   drawTable();
+  if(!$('ins').hidden)drawInsights();
 }
 // sales, stock, pipeline and order: each category's share, side by side
 function drawMix(t){
@@ -370,14 +424,16 @@ function drawTable(){
   const l=filtered(),gs=grouped(l),P=40,pages=Math.max(1,Math.ceil(gs.length/P));S.page=Math.min(S.page,pages-1);
   $('cnt').textContent=fmt(l.length)+' SKUs in '+fmt(gs.length)+' DVs';
   const ro=locked()||!can('input'),lt=+$('lt').value||0;
-  const row=(i,one)=>`<tr class="${one?'':'size'}"><td>${one?pic(i.dv):''}</td><td class="l">${esc(i.sku)}</td><td class="name" title="${esc(i.name)}">${esc(i.name)||'<span class="note">not in the master</span>'}</td><td class="l">${esc(i.cat)}</td><td>${fmt(i.soh)}${i.neg?` <span class="bad" style="font-size:11px" title="ERP shows ${i.neg} (negative stock: a sale posted before the receipt or transfer). Counted as 0. Fix it in ERP.">(${i.neg})</span>`:''}</td><td>${fmt(i.pipe)}</td><td>${fmt(i.sell)}</td><td>${fmt(i.bought)}</td><td>${m1(i.mon)}</td><td>${Math.round(i.st*100)}%</td>
+  const row=(i,one)=>`<tr class="${one?'':'size'}"><td>${one?pic(i.dv):''}</td><td class="l cl" data-d="${esc(i.sku)}" title="Details">${esc(i.sku)}</td><td class="name" title="${esc(i.name)}">${esc(i.name)||'<span class="note">not in the master</span>'}</td><td class="l">${esc(i.cat)}</td><td>${fmt(i.soh)}${i.neg?` <span class="bad" style="font-size:11px" title="ERP shows ${i.neg} (negative stock: a sale posted before the receipt or transfer). Counted as 0. Fix it in ERP.">(${i.neg})</span>`:''}</td><td>${fmt(i.pipe)}</td><td>${fmt(i.sell)}</td><td>${spark(i.soldBy)}</td><td>${fmt(i.bought)}</td><td>${m1(i.mon)}</td><td>${Math.round(i.st*100)}%</td>
     <td class="${i.coverNow<lt?'bad':''}">${m1(i.coverNow)}</td><td>${i.prop||''}${i.flag==='stop'&&i.would?`<span class="note"> (${i.would})</span>`:''}</td>
-    <td><input type="number" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}></td><td><input class="nt" data-n="${esc(i.sku)}" value="${esc(i.note)}" placeholder="comment" ${ro?'disabled':''}></td>
-    <td>${m1(i.coverAfter)}</td><td>${i.fob}</td><td>${fmt(i.fin*i.fob)}</td><td class="l">${i.isNew?'<span class="tag t-new">new</span> ':''}${i.inMaster?'':'<span class="tag t-nm">no master</span> '}${TAG[i.flag]||''}</td></tr>`;
-  $('tbl').innerHTML=`<tr><th></th><th class="l">SKU</th><th class="l">Item</th><th class="l">Category</th><th>SOH</th><th>Pipeline</th><th>Sell Out</th><th>Bought</th><th>Sold/mo</th><th>Sell-through</th><th>Cover now</th><th>Proposed</th><th>Team</th><th class="l">Comment</th><th>Cover after</th><th>FOB</th><th>Total FOB</th><th class="l"></th></tr>`+
+    <td><input type="number" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}></td><td><input class="nt" data-n="${esc(i.sku)}" value="${esc(i.note)}" placeholder="comment" ${ro?'disabled':''}></td><td><select data-r="${esc(i.sku)}" ${ro?'disabled':''}>${REASONS.map(x=>`<option${x===i.reason?' selected':''}>${esc(x)}</option>`).join('')}${i.reason&&!REASONS.includes(i.reason)?`<option selected>${esc(i.reason)}</option>`:''}</select></td>
+    <td>${m1(i.coverAfter)}</td><td>${i.fob}</td><td>${fmt(i.fin*i.fob)}</td><td class="l">${i.abc?`<span class="tag t-abc">${i.abc}</span> `:''}${i.isNew?'<span class="tag t-new">new</span> ':''}${i.inMaster?'':'<span class="tag t-nm">no master</span> '}${TAG[i.flag]||''}</td></tr>`;
+  $('tbl').innerHTML=`<tr><th></th><th class="l">SKU</th><th class="l">Item</th><th class="l">Category</th><th>SOH</th><th>Pipeline</th><th>Sell Out</th><th>Trend</th><th>Bought</th><th>Sold/mo</th><th>Sell-through</th><th>Cover now</th><th>Proposed</th><th>Team</th><th class="l">Comment</th><th class="l">Reason</th><th>Cover after</th><th>FOB</th><th>Total FOB</th><th class="l"></th></tr>`+
     gs.slice(S.page*P,S.page*P+P).map(g=>{const one=g.length===1,sum=k=>g.reduce((a,i)=>a+i[k],0);
-      return (one?'':`<tr class="dvh"><td>${pic(g[0].dv)}</td><td class="l"><b>${esc(g[0].dv)}</b></td><td class="name"><b>${esc(g[0].name)}</b> · ${g.length} sizes</td><td class="l">${esc(g[0].cat)}</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('sell'))}</td><td>${fmt(sum('bought'))}</td><td>${m1(sum('mon'))}</td><td></td><td>${m1(g.cover)}</td><td>${fmt(sum('prop'))}</td><td><b>${fmt(sum('fin'))}</b></td><td></td><td></td><td></td><td>${fmt(g.reduce((a,i)=>a+i.fin*i.fob,0))}</td><td></td></tr>`)+g.map(i=>row(i,one)).join('')}).join('');
+      return (one?'':`<tr class="dvh"><td>${pic(g[0].dv)}</td><td class="l"><b>${esc(g[0].dv)}</b></td><td class="name"><b>${esc(g[0].name)}</b> · ${g.length} sizes</td><td class="l">${esc(g[0].cat)}</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('sell'))}</td><td>${spark(g[0].soldBy.map((_,k)=>g.reduce((a,i)=>a+(i.soldBy[k]||0),0)))}</td><td>${fmt(sum('bought'))}</td><td>${m1(sum('mon'))}</td><td></td><td>${m1(g.cover)}</td><td>${fmt(sum('prop'))}</td><td><b>${fmt(sum('fin'))}</b></td><td></td><td></td><td></td><td></td><td>${fmt(g.reduce((a,i)=>a+i.fin*i.fob,0))}</td><td></td></tr>`)+g.map(i=>row(i,one)).join('')}).join('');
   $('tbl').querySelectorAll('input[data-s]').forEach(inp=>inp.onchange=()=>{const i=items.find(x=>x.sku===inp.dataset.s);const v=inp.value.trim();i.fb=v===''?null:Math.max(0,parseInt(v)||0);calc();saveFb([[i.sku,i.fb]])});
+  $('tbl').querySelectorAll('select[data-r]').forEach(sel=>sel.onchange=()=>{const i=items.find(x=>x.sku===sel.dataset.r);i.reason=sel.value;saveFb([[i.sku,i.fb,i.note,i.reason]])});
+  $('tbl').querySelectorAll('td[data-d]').forEach(td=>td.onclick=()=>details(td.dataset.d));
   $('tbl').querySelectorAll('input[data-n]').forEach(inp=>inp.onchange=()=>{const i=items.find(x=>x.sku===inp.dataset.n);i.note=inp.value.trim();saveFb([[i.sku,i.fb,i.note]])});
   $('pager').innerHTML=pages>1?`<button class="btn sm" id="pv" ${S.page?'':'disabled'}>‹</button><span class="note">Page ${S.page+1} of ${pages}</span><button class="btn sm" id="nx" ${S.page<pages-1?'':'disabled'}>›</button>`:'';
   if($('pv')){$('pv').onclick=()=>{S.page--;drawTable()};$('nx').onclick=()=>{S.page++;drawTable()}}
@@ -390,7 +446,7 @@ $('stBtn').onclick=()=>{const to=O.status==='Draft'?'Submitted':'Approved';if(co
 $('reopen').onclick=()=>{if(confirm('Reopen this order so it can be changed?'))setStatus('Draft')};
 $('xlsx').onclick=()=>{if(!O||!items.length)return;
   const rows=items.slice().sort((a,b)=>a.dv.localeCompare(b.dv)||a.sku.localeCompare(b.sku,undefined,{numeric:true})).map(i=>({'SKU#':i.sku,'Proposed QTY':i.prop,'Team Feedback':i.fin,'Diff':i.fin-i.prop,'FOB':i.fob,'Total FOB $':Math.round(i.fin*i.fob*100)/100,'DV':i.dv,'RP':i.rrp,'Description':i.name,'Category':i.cat,'Real Campaign Launch':i.launch,'Sub Category':i.sub,'Item Group':i.grp,'Pandora Status':i.status,
-    'Shipments in Pipeline':i.pipe,'Purchases (period)':i.bought,'Sell Out':i.sell,'Monthly sales':Math.round(i.mon*100)/100,'SOH':i.soh,'ERP negative stock':i.neg||'','Sell-through %':Math.round(i.st*100),'Cover now (months)':Math.round(i.coverNow*10)/10,'Cover after (months)':Math.round(i.coverAfter*10)/10,'Slow Moving FLG':i.slow?'Y':'N','Collection':i.isNew?'New':'Old','Comment':i.note,
+    'Shipments in Pipeline':i.pipe,'Purchases (period)':i.bought,'Sell Out':i.sell,'Monthly sales':Math.round(i.mon*100)/100,'SOH':i.soh,'ERP negative stock':i.neg||'','Sell-through %':Math.round(i.st*100),'Cover now (months)':Math.round(i.coverNow*10)/10,'Cover after (months)':Math.round(i.coverAfter*10)/10,'Slow Moving FLG':i.slow?'Y':'N','Collection':i.isNew?'New':'Old','Comment':i.note,'Reason':i.reason,'ABC':i.abc,
     'Note':{na:'Not available to order',slow:'Slow moving',stop:'Category stopped',man:'New item: decide by hand',pri:'Selling, out of stock'}[i.flag]||''}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Items');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l);return {Category:c,'Order QTY':x.q,'Total FOB $':Math.round(x.f),'Sell Out':l.reduce((a,i)=>a+i.sell,0),'Stopped':S.stop.has(c)?'Y':''}})),'Summary');
@@ -403,15 +459,97 @@ $('fbFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f
     const rows=XLSX.utils.sheet_to_json(ws,{defval:''});if(!rows.length||!('SKU#' in rows[0]))throw new Error('Use the Excel exported from this page (sheet Items, column SKU#).');
     const by=new Map(items.map(i=>[i.sku,i])),lines=[];let skip=0,same=0;
     for(const r of rows){const i=by.get(U(r['SKU#']));if(!i){skip++;continue}
-      const raw=String(r['Team Feedback']??'').trim(),note=String(r['Comment']??'').trim().slice(0,200);
+      const raw=String(r['Team Feedback']??'').trim(),note=String(r['Comment']??'').trim().slice(0,200),reason=String(r['Reason']??'').trim().slice(0,40);
       // an empty cell, or the same number as Proposed, means "no change"
       let fb=raw===''?null:Math.max(0,Math.round(Number(raw)));if(fb!==null&&!isFinite(fb)){skip++;continue}if(fb===i.prop)fb=null;
-      if(fb===i.fb&&note===i.note){same++;continue}
-      i.fb=fb;i.note=note;lines.push([i.sku,fb,note])}
+      if(fb===i.fb&&note===i.note&&reason===i.reason){same++;continue}
+      i.fb=fb;i.note=note;i.reason=reason;lines.push([i.sku,fb,note,reason])}
     for(let k=0;k<lines.length;k+=2000)await api('/api/refill?op=fb',{id:O.id,lines:lines.slice(k,k+2000)});
     calc();$('saved').textContent=`${fmt(lines.length)} lines updated from ${f.name}`+(skip?`, ${fmt(skip)} skipped (not in this order or not a number)`:'')+'.';
     if(lines.length)O=(await api('/api/refill?order='+O.id)).order,draw();
   }catch(er){showErr(f.name+': '+er.message)}};
+/* ---------- sparklines, Insights tab and the item details panel ---------- */
+const REASONS=['','Trend up','Trend down','Promotion / event','Season','New launch','Store request','Size gap','Overstock','Budget','Quality issue','Other'];
+const spark=(v,w=64,h=18)=>{const a=(v||[]).slice(-12);if(!a.length||!a.some(x=>x))return '<span class="note">-</span>';const mx=Math.max(...a,1),st=a.length>1?w/(a.length-1):0;
+  const p=a.map((x,k)=>`${(k*st).toFixed(1)},${(h-1-(Math.max(0,x)/mx)*(h-2)).toFixed(1)}`).join(' ');
+  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polyline points="${p}" fill="none" stroke="var(--accent)" stroke-width="1.5"/></svg>`};
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));const ins=b.dataset.tab==='ins';$('ins').hidden=!ins;$('ordTab').hidden=ins;if(ins)drawInsights()});
+const sizeOf=sku=>{const m=String(sku).split('-');return m.length>1?m.slice(1).join('-'):'-'};
+const coll=g=>{const t=String(g||'').split(' - ')[0].trim();return t||'No item group'};
+function drawInsights(){
+  const lt=+$('lt').value||0,pcs=n=>fmt(n)+' pcs';
+  // 1. the last order: what it had, what arrived since, how this order differs by category
+  const P=S.prev;
+  if(!P)$('iPrev').innerHTML='<div class="note">No earlier order to compare with.</div>';
+  else{const pm=new Map(P.lines.map(l=>[l[0],l[2]])),by=new Map(items.map(i=>[i.sku,i]));
+    const since=String(P.at||'').slice(0,7),mk=S.months.map((m,k)=>[m,k]).filter(([m])=>m>=since).map(x=>x[1]);
+    let lastQ=0,lastF=0,arr=0;for(const [k,q] of pm){lastQ+=q;const i=by.get(k);if(i){lastF+=q*i.fob;arr+=mk.reduce((a,x)=>a+(i.boughtBy[x]||0),0)}}
+    const t=totals(items),cats=new Map(),add=(c,k,v)=>{const o=cats.get(c)||{last:0,now:0};o[k]+=v;cats.set(c,o)};
+    for(const [k,q] of pm){const i=by.get(k);add(i?i.cat:'Not in this order','last',q)}for(const i of items)if(i.fin)add(i.cat,'now',i.fin);
+    const both=items.filter(i=>i.fin>0&&pm.get(i.sku)>0).length,onlyNow=items.filter(i=>i.fin>0&&!pm.get(i.sku)).length,onlyLast=[...pm].filter(([k,q])=>q>0&&!((by.get(k)||{}).fin>0)).length;
+    $('iPrev').innerHTML=`<div class="kpis" style="margin-bottom:8px">${[['Last order: '+esc(P.name),pcs(lastQ)],['This order',pcs(t.q)],['Change',(t.q-lastQ>=0?'+':'')+fmt(t.q-lastQ)+' pcs'],['Received since then',pcs(arr)],['SKUs in both / new / dropped',`${fmt(both)} / ${fmt(onlyNow)} / ${fmt(onlyLast)}`]].map(k=>`<div class="kpi"><small>${k[0]}</small><b>${k[1]}</b></div>`).join('')}</div>
+      <div class="note">${esc(P.status)}${P.status==='Approved'?' (approved quantities)':' (not approved: team quantities only)'}${P.at?' · '+new Date(P.at).toLocaleDateString():''}${lastF?' · last order FOB '+usd(lastF):''} · Received = ERP purchases since that month.</div>
+      <table><tr><th class="l">Category</th><th>Last order</th><th>This order</th><th>Change</th><th>Change %</th></tr>${[...cats].sort((a,b)=>b[1].now-a[1].now).map(([c,o])=>{const d=o.now-o.last;return `<tr><td class="l">${esc(c)}</td><td>${fmt(o.last)}</td><td>${fmt(o.now)}</td><td class="${d<0?'bad':d>0?'good':''}">${d>0?'+':''}${fmt(d)}</td><td>${o.last?Math.round(d/o.last*100)+'%':'-'}</td></tr>`}).join('')}</table>`}
+  // 2. team vs generated by category: what stayed as generated and the team's changes
+  const T=new Map(),z=()=>({gen:0,same:0,sameS:0,up:0,upS:0,dn:0,dnS:0,add:0,addS:0,rm:0,rmS:0,fin:0});
+  for(const i of items){if(!i.prop&&!i.fin)continue;const o=T.get(i.cat)||z();T.set(i.cat,o);o.gen+=i.prop;o.fin+=i.fin;
+    if(i.fb==null||i.fin===i.prop){o.same+=i.fin;o.sameS++}
+    else if(!i.prop){o.add+=i.fin;o.addS++}else if(!i.fin){o.rm+=i.prop;o.rmS++}
+    else if(i.fin>i.prop){o.same+=i.prop;o.up+=i.fin-i.prop;o.upS++}else{o.same+=i.fin;o.dn+=i.prop-i.fin;o.dnS++}}
+  const tt=z();for(const o of T.values())for(const k in tt)tt[k]+=o[k];
+  const trow=(c,o,b)=>`<tr${b?' style="font-weight:800"':''}><td class="l">${esc(c)}</td><td>${fmt(o.gen)}</td><td>${fmt(o.same)}<br><span class="note" style="font-size:11px">${o.sameS} SKUs</span></td><td class="good">+${fmt(o.up)}<br><span class="note" style="font-size:11px">${o.upS} SKUs</span></td><td class="bad">−${fmt(o.dn)}<br><span class="note" style="font-size:11px">${o.dnS} SKUs</span></td><td class="good">+${fmt(o.add)}<br><span class="note" style="font-size:11px">${o.addS} SKUs</span></td><td class="bad">−${fmt(o.rm)}<br><span class="note" style="font-size:11px">${o.rmS} SKUs</span></td><td><b>${fmt(o.fin)}</b></td><td>${o.gen?Math.round(o.same/o.gen*100)+'%':'-'}</td></tr>`;
+  const rs={};items.filter(i=>i.reason).forEach(i=>{const o=rs[i.reason]||(rs[i.reason]={n:0,d:0});o.n++;o.d+=i.fin-i.prop});const re=Object.entries(rs);
+  $('iTeam').innerHTML=`<table><tr><th class="l">Category</th><th>Generated pcs</th><th>Same as generated</th><th>Raised</th><th>Lowered</th><th>Added</th><th>Removed</th><th>Final pcs</th><th>Kept %</th></tr>${[...T].sort((a,b)=>b[1].fin-a[1].fin).map(([c,o])=>trow(c,o)).join('')}${trow('Total',tt,1)}</table>
+    <div class="note">Same = pieces as generated (for a raised SKU its generated part, for a lowered SKU what is left). Raised / lowered = only the difference. Added: generated 0, the team ordered. Removed: generated, the team set 0.</div>
+    ${re.length?`<table style="margin-top:8px"><tr><th class="l">Reason</th><th>SKUs</th><th>Change vs generated</th></tr>${re.sort((a,b)=>b[1].n-a[1].n).map(([k,o])=>`<tr><td class="l">${esc(k)}</td><td>${o.n}</td><td>${o.d>0?'+':''}${fmt(o.d)}</td></tr>`).join('')}</table>`:''}`;
+  // 3. budget by category: kept as generated vs the team's extra
+  const bg=bgVal()||0,B=CATS.map(c=>{const l=items.filter(i=>i.cat===c);return {c,f:l.reduce((a,i)=>a+i.fin*i.fob,0),g:l.reduce((a,i)=>a+Math.min(i.fin,i.prop)*i.fob,0)}}).filter(x=>x.f).sort((a,b)=>b.f-a.f);
+  const mx=Math.max(1,...B.map(x=>x.f));
+  $('iBud').innerHTML=B.length?`<table>${B.map(x=>`<tr><td class="l" style="width:120px">${esc(x.c)}</td><td style="width:55%"><div class="hb" style="width:${x.f/mx*100}%"><i title="As generated ${usd(x.g)}" style="width:${x.g/x.f*100}%;background:var(--accent)"></i><i title="Team added ${usd(x.f-x.g)}" style="width:${(x.f-x.g)/x.f*100}%;background:#8FB8DE"></i></div></td><td>${usd(x.f)}</td><td>${bg?Math.round(x.f/bg*100)+'%':''}</td></tr>`).join('')}</table>
+    <div class="note"><span style="color:var(--accent)">■</span> as generated &nbsp; <span style="color:#8FB8DE">■</span> team added · % = share of the budget ${usd(bg)}</div>`:'<div class="note">Nothing ordered yet.</div>';
+  // 4. ABC classes
+  const A={A:[],B:[],C:[],'':[]};items.forEach(i=>A[i.abc||''].push(i));const val=i=>i.sell*(i.rrp||i.fob),sv=items.reduce((a,i)=>a+val(i),0)||1;
+  $('iAbc').innerHTML=`<table><tr><th class="l">Class</th><th>SKUs</th><th>Sales value</th><th>SOH</th><th>Order pcs</th><th>FOB</th><th>Cover after</th></tr>${['A','B','C',''].map(k=>{const l=A[k],x=totals(l),mon=l.reduce((a,i)=>a+i.mon,0);return `<tr><td class="l">${k||'No sales'}</td><td>${fmt(l.length)}</td><td>${Math.round(l.reduce((a,i)=>a+val(i),0)/sv*100)}%</td><td>${fmt(l.reduce((a,i)=>a+i.soh,0))}</td><td>${fmt(x.q)}</td><td>${usd(x.f)}</td><td>${mon?m1((l.reduce((a,i)=>a+i.soh+i.pipe,0)+x.q)/mon):'-'}</td></tr>`}).join('')}</table>
+    <div class="note">${$('abc').checked?`Cover in use: A ${esc($('ca').value)} · B ${esc($('cb').value)} · C ${esc($('cc').value)} months.`:'Cover by ABC class is off (Settings): every class uses the same cover.'}</div>`;
+  // 5. cover heat map: category × collection (the part of the ERP item group before " - ")
+  const cols=[...new Set(items.map(i=>coll(i.grp)))].sort(),hc=v=>v<lt?'background:var(--bad);color:#fff':v>8?'background:#F2C46D;color:#2A1018':'background:color-mix(in srgb,var(--good) 35%,transparent)';
+  $('iHeat').innerHTML=`<table class="heat"><tr><th class="l">Category</th>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>${CATS.map(c=>`<tr><td class="l">${esc(c)}</td>${cols.map(g=>{const l=items.filter(i=>i.cat===c&&coll(i.grp)===g);if(!l.length)return '<td></td>';const mon=l.reduce((a,i)=>a+i.mon,0),st=l.reduce((a,i)=>a+i.soh+i.pipe+i.fin,0),v=mon?st/mon:0;return `<td style="${mon?hc(v):''}" title="${esc(c)} · ${esc(g)}: ${fmt(st)} pcs after the order, ${m1(mon)} sold/mo">${mon?m1(v):st?'no sales':''}</td>`}).join('')}</tr>`).join('')}</table>`;
+  // 6. lost sales: out of stock today, monthly sales × lead time
+  const lost=items.filter(i=>i.soh<=0&&i.mon>0).map(i=>({i,p:i.mon*lt,e:i.mon*lt*(i.rrp||0)})).sort((a,b)=>b.e-a.e||b.p-a.p);
+  $('iLost').innerHTML=lost.length?`<div class="note"><b>${fmt(lost.length)}</b> SKUs out of stock · about <b>${pcs(lost.reduce((a,x)=>a+x.p,0))}</b> · <b>EGP ${fmt(lost.reduce((a,x)=>a+x.e,0))}</b> at RP until the shipment arrives (${lt} months).</div><table><tr><th class="l">SKU</th><th class="l">Item</th><th>Sold/mo</th><th>Pipeline</th><th>Lost pcs</th><th>Lost EGP</th><th>Order</th></tr>${lost.slice(0,60).map(({i,p,e})=>`<tr><td class="l cl" data-d="${esc(i.sku)}">${esc(i.sku)}</td><td class="name">${esc(i.name)}</td><td>${m1(i.mon)}</td><td>${fmt(i.pipe)}</td><td>${fmt(p)}</td><td>${fmt(e)}</td><td>${fmt(i.fin)}</td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
+  // 7. new vs carry-over
+  const oldAvg={};CATS.forEach(c=>{const l=items.filter(i=>i.cat===c&&!i.isNew&&i.mon>0);oldAvg[c]=l.length?l.reduce((a,i)=>a+i.mon,0)/l.length:0});
+  const nw=items.filter(i=>i.isNew&&i.mon>0).map(i=>({i,r:oldAvg[i.cat]?i.mon/oldAvg[i.cat]:0})).sort((a,b)=>b.r-a.r);
+  $('iNew').innerHTML=nw.length?`<table><tr><th class="l">SKU</th><th class="l">Item</th><th>Months on sale</th><th>Sold/mo</th><th>Carry-over avg</th><th>Index</th><th>Order</th></tr>${nw.slice(0,80).map(({i,r})=>`<tr><td class="l cl" data-d="${esc(i.sku)}">${esc(i.sku)}</td><td class="name">${esc(i.name)}</td><td>${m1(Math.max(0,i.age))}</td><td>${m1(i.mon)}</td><td>${m1(oldAvg[i.cat])}</td><td class="${r>=1.5?'good':r<.5?'bad':''}"><b>${r?Math.round(r*100):'-'}</b></td><td>${fmt(i.fin)}</td></tr>`).join('')}</table><div class="note">Index 100 = sells like an average carry-over item of its category. Green: 150+. Red: under 50.</div>`:'<div class="note">No new items with sales.</div>';
+  // 8. move between stores before ordering
+  const stores=[...new Set(items.flatMap(i=>i.wh.map(w=>w[0])))].sort();
+  const mv=items.filter(i=>i.fin>0&&i.wh.length).map(i=>{const has=new Map(i.wh),from=i.wh.filter(w=>w[1]>=3).sort((a,b)=>b[1]-a[1]),to=stores.filter(s=>!(has.get(s)>0));return {i,from,to,can:Math.min(from.reduce((a,w)=>a+w[1]-1,0),to.length)}}).filter(x=>x.from.length&&x.can>0).sort((a,b)=>b.can-a.can);
+  $('iMove').innerHTML=mv.length?`<div class="note">${fmt(mv.length)} ordered SKUs could be balanced first · up to ${pcs(mv.reduce((a,x)=>a+x.can,0))} (1 per empty place, keeping 1 behind).</div><table><tr><th class="l">SKU</th><th>Order</th><th class="l">From (pcs)</th><th>Empty places</th><th>Can move</th></tr>${mv.slice(0,80).map(x=>`<tr><td class="l cl" data-d="${esc(x.i.sku)}">${esc(x.i.sku)}</td><td>${fmt(x.i.fin)}</td><td class="l">${x.from.slice(0,3).map(w=>esc(w[0])+' '+w[1]).join(', ')}</td><td title="${esc(x.to.join(', '))}">${x.to.length}</td><td><b>${x.can}</b></td></tr>`).join('')}</table>`:'<div class="note">'+(stores.length?'Nothing to move.':'No stock per store yet. Press Sync from ERP.')+'</div>';
+  // 9. size curve: sales share by size vs stock after the order
+  const dvs=new Map();items.forEach(i=>{if(sizeOf(i.sku)!=='-'){if(!dvs.has(i.dv))dvs.set(i.dv,[]);dvs.get(i.dv).push(i)}});
+  const sc=[...dvs.values()].filter(g=>g.length>1&&g.some(i=>i.fin>0)).map(g=>{const ts=g.reduce((a,i)=>a+i.sell,0),tk=g.reduce((a,i)=>a+i.soh+i.pipe+i.fin,0);if(!ts||!tk)return null;
+    const rows=g.map(i=>({s:sizeOf(i.sku),sale:i.sell/ts*100,stk:(i.soh+i.pipe+i.fin)/tk*100}));return {g,rows,dev:Math.max(...rows.map(x=>Math.abs(x.stk-x.sale)))}}).filter(Boolean).sort((a,b)=>b.dev-a.dev);
+  $('iSize').innerHTML=sc.length?`<div class="note">${sc.filter(x=>x.dev>=10).length} of ${sc.length} ordered DVs are off by 10+ points.</div><table><tr><th class="l">DV</th><th class="l">Size: sales % → stock after order %</th><th>Max off</th></tr>${sc.slice(0,80).map(x=>`<tr><td class="l cl" data-d="${esc(x.g[0].sku)}">${esc(x.g[0].dv)}</td><td class="l">${x.rows.map(r=>`<span class="${Math.abs(r.stk-r.sale)>=10?(r.stk<r.sale?'bad':'good'):''}">${esc(r.s)}: ${Math.round(r.sale)}→${Math.round(r.stk)}</span>`).join(' · ')}</td><td>${Math.round(x.dev)}</td></tr>`).join('')}</table><div class="note">Red: less stock than its sales share (runs out first). Green: more.</div>`:'<div class="note">No ordered DV with several sizes and sales.</div>';
+  $('ins').querySelectorAll('td[data-d]').forEach(td=>td.onclick=()=>details(td.dataset.d));
+}
+// the item details panel: sales trend, stock forecast, stock per store, size curve
+function details(sku){
+  const i=items.find(x=>x.sku===sku);if(!i)return;const lt=+$('lt').value||0,cv=+$('cv').value||0,H2=120,W=320;
+  const ms=S.months.slice(-12),off=S.months.length-ms.length,sv=ms.map((_,k)=>i.soldBy[off+k]||0),mx=Math.max(1,...sv),bw=W/Math.max(1,ms.length);
+  const bars=`<svg width="100%" viewBox="0 0 ${W} ${H2+16}">${sv.map((v,k)=>`<rect x="${k*bw+2}" y="${H2-Math.max(0,v)/mx*H2}" width="${bw-4}" height="${Math.max(0,v)/mx*H2}" fill="var(--accent)"><title>${ms[k]}: ${v}</title></rect><text x="${k*bw+bw/2}" y="${H2+12}" font-size="8" text-anchor="middle" fill="currentColor">${ms[k].slice(2)}</text>`).join('')}</svg>`;
+  // stock forecast: SOH + pipeline now, falls by the monthly sales, the order lands after the lead time
+  const N=Math.ceil(lt+cv)+2,L=Math.round(lt),pts=[];let st=i.soh+i.pipe;for(let k=0;k<=N;k++){if(k===L)st+=i.fin;pts.push(st);st=Math.max(0,st-i.mon)}
+  const fx=Math.max(1,...pts),sx=W/N,line=pts.map((v,k)=>`${(k*sx).toFixed(1)},${(H2-v/fx*H2).toFixed(1)}`).join(' ');
+  const fc=`<svg width="100%" viewBox="0 0 ${W} ${H2+16}"><polyline points="${line}" fill="none" stroke="var(--good)" stroke-width="2"/><line x1="${L*sx}" x2="${L*sx}" y1="0" y2="${H2}" stroke="var(--ink2)" stroke-dasharray="3 3"/><text x="${L*sx+3}" y="10" font-size="9" fill="currentColor">arrival</text>${pts.map((v,k)=>`<text x="${Math.min(W-4,Math.max(4,k*sx))}" y="${H2+12}" font-size="8" text-anchor="middle" fill="currentColor">${k}</text>`).join('')}</svg>`;
+  const sib=items.filter(x=>x.dv===i.dv),ts=sib.reduce((a,x)=>a+x.sell,0);
+  $('det').innerHTML=`<div class="box"><div class="row" style="justify-content:space-between"><div class="row">${pic(i.dv)}<div><b>${esc(i.sku)}</b> <span class="note">${esc(i.cat)}${i.grp?' · '+esc(i.grp):''}${i.abc?' · class '+i.abc:''}</span><div>${esc(i.name)}</div></div></div><button class="btn sm" id="detX">Close</button></div>
+    <div class="kpis" style="margin:10px 0">${[['SOH',fmt(i.soh)],['Pipeline',fmt(i.pipe)],['Sold/mo',m1(i.mon)],['Proposed',fmt(i.prop)],['Order',fmt(i.fin)]].map(k=>`<div class="kpi"><small>${k[0]}</small><b>${k[1]}</b></div>`).join('')}</div>
+    <div class="grid2"><div><h2>Sales per month</h2>${bars}</div><div><h2>Stock forecast (months from now)</h2>${fc}</div></div>
+    <div class="grid2"><div><h2>Stock per store</h2>${i.wh.length?`<table>${i.wh.slice().sort((a,b)=>b[1]-a[1]).map(w=>`<tr><td class="l">${esc(w[0])}</td><td>${fmt(w[1])}</td></tr>`).join('')}</table>`:'<div class="note">No stock in any store.</div>'}</div>
+    <div><h2>Size curve (${esc(i.dv)})</h2>${sib.length>1?`<table><tr><th class="l">SKU</th><th>Sales %</th><th>Stock after order</th><th>Order</th></tr>${sib.map(x=>`<tr${x===i?' style="font-weight:800"':''}><td class="l">${esc(x.sku)}</td><td>${ts?Math.round(x.sell/ts*100)+'%':'-'}</td><td>${fmt(x.soh+x.pipe+x.fin)}</td><td>${fmt(x.fin)}</td></tr>`).join('')}</table>`:'<div class="note">One size only.</div>'}</div></div>
+    ${i.note||i.reason?`<div class="note" style="margin-top:8px">${i.reason?'<b>'+esc(i.reason)+'</b> · ':''}${esc(i.note)}</div>`:''}</div>`;
+  $('det').hidden=false;fillPics();$('detX').onclick=()=>$('det').hidden=true;$('det').onclick=e=>{if(e.target.id==='det')$('det').hidden=true};
+}
 /* descriptions shown when the mouse rests on a setting, a heading or a figure */
 const TIPS={
   'Sell Out period (months)':'How many full months of sales the order is based on. 6 = the sales of the last 6 full months (this month is left out because it is not finished).',
