@@ -4,6 +4,7 @@ const path = require('path');
 const { appsFor, sessionFacts, greetName } = require('./_apps');
 const pair = require('./_pair');
 const MOTION = require('./_motion');
+const HEADER = require('./_header');
 
 const PRIVATE_DIR = path.join(process.cwd(), 'private');
 
@@ -52,7 +53,7 @@ function withChrome(kind, multi) {
     if (h !== -1) html = html.slice(0, h) + THEME_HEAD + html.slice(h);
     const i = html.lastIndexOf('</body>');
     const at = i === -1 ? html.length : i;
-    html = html.slice(0, at) + chromeScript(kind, multi) + html.slice(at);
+    html = html.slice(0, at) + chromeScript(kind, multi) + HEADER + html.slice(at);
     return Buffer.from(html, 'utf8');
   };
 }
