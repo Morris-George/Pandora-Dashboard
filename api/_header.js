@@ -21,7 +21,8 @@ header.top.pz-hdr::after{content:"";position:absolute;z-index:-1;top:0;bottom:0;
 .pz-hdr h1{color:#2A1018!important}.pz-hdr h1::after{content:"✦";display:inline-block;margin-left:9px;color:#fff;font-size:.78em;animation:pztwirl 3.4s ease-in-out infinite}
 .pz-hdr .sub,.pz-hdr .crumb{color:rgba(42,16,24,.72)!important}
 .pz-eyebrow{display:block;font-size:9.5px;font-weight:800;letter-spacing:.18em;color:rgba(42,16,24,.7);margin-bottom:2px}
-.pz-hdr .actions{position:relative}
+.pz-hdr .actions{position:relative}.pz-corner{display:flex;align-items:center;gap:8px;margin-left:auto}
+.pz-hdr>.pz-brand{order:0;flex:1 1 auto}.pz-hdr>.pz-corner{order:1}.pz-hdr>:not(.pz-brand):not(.pz-corner){order:2;flex:1 1 100%;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}.pz-hdr .actions>a.btn{text-decoration:none}
 .pz-hdr .btn,.pz-hdr .actions>button:not(.pandora-sw),.pz-hdr .actions>a{border-radius:999px!important;padding:9px 17px;font-weight:750;color:#2A1018!important;background:rgba(255,255,255,.4)!important;border:1px solid rgba(255,255,255,.75)!important;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:none}
 .pz-hdr .btn:hover,.pz-hdr .actions>button:not(.pandora-sw):hover,.pz-hdr .actions>a:hover{background:#fff!important;transform:translateY(-3px)}
 .pz-hdr .actions>*{animation:pzpop .55s cubic-bezier(.3,1.5,.5,1) both}.pz-hdr .actions>:nth-child(2){animation-delay:.1s}.pz-hdr .actions>:nth-child(3){animation-delay:.2s}.pz-hdr .actions>:nth-child(4){animation-delay:.3s}
@@ -39,7 +40,13 @@ header.top.pz-hdr::after{content:"";position:absolute;z-index:-1;top:0;bottom:0;
   var img=document.createElement('img');img.src='/pandora-logo.png';img.alt='Pandora';img.className='pz-mark';badge.appendChild(img);
   h.insertBefore(brand,info);brand.appendChild(badge);brand.appendChild(info);info.classList.add('pz-bt');
   var h1=info.querySelector('h1');if(h1){var ey=document.createElement('span');ey.className='pz-eyebrow';ey.textContent='RETAIL INTELLIGENCE';h1.parentNode.insertBefore(ey,h1)}
-  // the page's own "Home" link is not needed when the shared Home button is there
-  var a=h.querySelector('.actions'),home=false;if(a)for(var k=0;k<a.children.length;k++)if(a.children[k].textContent.trim()==='Home')home=true;
-  var cr=info.querySelector('a.crumb[href="/"]');if(cr&&home)cr.style.display='none';
+  // Home, theme and Log out together in the right corner, like Refill Order. A header with no button bar gets one,
+  // and the floating buttons move into it. The page's own "Home" link becomes the Home pill when there is none.
+  var a=h.querySelector('.actions');if(!a){a=document.createElement('div');a.className='actions';h.appendChild(a)}
+  a.classList.add('pz-corner');
+  var fl=document.querySelectorAll('body>.pandora-fab,body>.pandora-sw.fixed');
+  for(var f=0;f<fl.length;f++){var el=fl[f];el.classList.remove('pandora-fab','fixed');if(el.tagName==='BUTTON'&&!el.classList.contains('pandora-sw'))el.classList.add('btn');a.appendChild(el)}
+  var home=false;for(var k=0;k<a.children.length;k++)if(a.children[k].textContent.trim()==='Home')home=true;
+  var cr=info.querySelector('a.crumb[href="/"]');
+  if(cr){if(home)cr.style.display='none';else{cr.textContent='Home';cr.className='btn';a.insertBefore(cr,a.firstChild)}}
 })();</script>`;
