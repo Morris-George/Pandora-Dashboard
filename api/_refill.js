@@ -236,7 +236,7 @@ module.exports = async function handler(req, res) {
   if (o.status === 'Approved' && !(op === 'status' && b.status === 'Draft')) return send(res, 400, { ok: false, error: 'This order is approved. Reopen it first.' });
   if (op === 'settings') {
     const s = b.settings || {}, cl = (v, lo, hi, d) => { const n = Number(v); return isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
-    o.settings = { pm: cl(s.pm, 1, 24, 6), lt: cl(s.lt, 0, 12, 2), cv: cl(s.cv, 0, 24, 3), mq: Math.round(cl(s.mq, 1, 1000, 1)), nm: cl(s.nm, 0, 36, 9), budget: Math.round(cl(s.budget, 0, 1e8, 0)) };
+    o.settings = { pm: cl(s.pm, 1, 24, 6), lt: cl(s.lt, 0, 12, 2), cv: cl(s.cv, 0, 24, 3), mq: Math.round(cl(s.mq, 1, 1000, 1)), nm: cl(s.nm, 0, 36, 9), budget: Math.round(cl(s.budget, 0, 1e8, 0) * 100) / 100 };
     o.stop = Array.isArray(b.stop) ? b.stop.map(c => str(c, 40)).filter(Boolean).slice(0, 30) : o.stop;
     log('Settings changed');
   } else if (op === 'fb') {

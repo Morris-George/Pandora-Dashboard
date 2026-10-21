@@ -64,7 +64,7 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
     <label class="f">Cover after arrival (months)<input type="number" id="cv" min="0" max="24" step="0.5"></label>
     <label class="f">Min. qty per SKU<input type="number" id="mq" min="1"></label>
     <label class="f">New = launched within (months)<input type="number" id="nm" min="0" max="36"></label>
-    <label class="f">Budget FOB ($)<input type="number" id="bg" min="0" step="1000"></label>
+    <label class="f">Budget FOB ($)<input type="text" id="bg" inputmode="decimal" style="text-align:right"></label>
   </div>
   <div class="note" style="margin:10px 0 4px">Stop ordering a category (click to switch off / on):</div><div class="chips" id="cats"></div>
   <div class="note" id="formula" style="margin-top:8px"></div>
@@ -97,7 +97,7 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt=n=>Math.round(n||0).toLocaleString('en-US'),usd=n=>'$'+fmt(n),m1=n=>n>=99?'99+':(Math.round(n*10)/10).toFixed(1);
+const fmt=n=>Math.round(n||0).toLocaleString('en-US'),usd=n=>'$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),m1=n=>n>=99?'99+':(Math.round(n*10)/10).toFixed(1);
 const PICS=(window.__PICS=window.__PICS||{});
 const pic=dv=>{const v=PICS[String(dv||'').toUpperCase()]||PICS[String(dv||'')];return v?`<span class="img"><img src="data:image/jpeg;base64,${v}" alt="" loading="lazy"></span>`:'<span class="img">no<br>image</span>'};
 let H=null,O=null,items=[],CATS=[],S={page:0},LVL='view';
@@ -177,17 +177,21 @@ async function openOrder(id){
     CATS=[...new Set(items.map(i=>i.cat))].sort();
     $('fc').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
     $('cats').innerHTML=CATS.map(c=>`<span class="chip" data-c="${esc(c)}">${esc(c)}</span>`).join('');
-    const s=O.settings;$('pm').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=s.budget;
+    const s=O.settings;$('pm').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=fmtMoney(s.budget);
     S.stop=new Set(O.stop||[]);S.page=0;$('main').hidden=false;$('ord').value=O.id;
     if(!months.length)showErr('No sell out from ERP yet. Press Sync from ERP.');
     calc();
   }catch(e){showErr('Could not open the order: '+e.message)}
 }
 let saveT=0;
-function saveSettings(){if(!can('manage')||locked())return;clearTimeout(saveT);saveT=setTimeout(async()=>{try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:+$('bg').value},stop:[...S.stop]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}},700)}
+function saveSettings(){if(!can('manage')||locked())return;clearTimeout(saveT);saveT=setTimeout(async()=>{try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:bgVal()},stop:[...S.stop]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}},700)}
 ['pm','lt','cv','mq','nm','bg'].forEach(id=>$(id).oninput=()=>{calc();saveSettings();applyTips()});
 $('cats').onclick=e=>{const c=e.target.dataset.c;if(!c||!can('manage')||locked())return;S.stop.has(c)?S.stop.delete(c):S.stop.add(c);calc();saveSettings()};
 ['q','fc','ff'].forEach(id=>$(id).oninput=()=>{S.page=0;drawTable()});
+const fmtMoney=n=>(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const bgVal=()=>{const n=parseFloat(String($('bg').value).replace(/[^0-9.]/g,''));return isFinite(n)?n:0};
+$('bg').addEventListener('blur',()=>{$('bg').value=fmtMoney(bgVal())});
+$('bg').addEventListener('focus',()=>{const n=bgVal();$('bg').value=n?String(n):''});
 const monthsSince=d=>d?(new Date(S.today)-new Date(d))/(864e5*30.44):999;
 
 function calc(){
@@ -223,7 +227,7 @@ function draw(){
   drawStatus();
   document.querySelectorAll('#cats .chip').forEach(c=>c.classList.toggle('off',S.stop.has(c.dataset.c)));
   ['pm','lt','cv','mq','nm','bg'].forEach(id=>$(id).disabled=locked()||!can('manage'));
-  const t=totals(items),bg=+$('bg').value||0,ord=items.filter(i=>i.fin>0);
+  const t=totals(items),bg=bgVal()||0,ord=items.filter(i=>i.fin>0);
   const stopped=items.filter(i=>i.flag==='stop').reduce((a,i)=>a+(i.would||0),0);
   $('kpis').innerHTML=[['SKUs to order',fmt(ord.length)],['Pieces',fmt(t.q)],['Total FOB',usd(t.f)],['Need a manual decision',fmt(items.filter(i=>i.flag==='man').length)],['Held back by stopped categories',fmt(stopped)+' pcs']]
     .map(k=>`<div class="kpi"><small>${k[0]}</small><b>${k[1]}</b></div>`).join('');
@@ -260,7 +264,7 @@ function drawMix(t){
 }
 async function saveFb(lines){try{await api('/api/refill?op=fb',{id:O.id,lines});$('saved').textContent='Saved.';setTimeout(()=>$('saved').textContent='',1500)}catch(e){showErr(e.message)}}
 async function fit(){
-  const bg=+$('bg').value||0;let sum=0;const ch=[];
+  const bg=bgVal()||0;let sum=0;const ch=[];
   const order=items.filter(i=>i.fin>0).sort((a,b)=>a.coverNow-b.coverNow);
   for(const i of order){const cost=i.fin*i.fob;if(sum+cost<=bg){sum+=cost;continue}const k=Math.max(0,Math.floor((bg-sum)/(i.fob||1)));if(k!==i.fin){i.fb=k;ch.push([i.sku,k])}sum+=k*i.fob}
   calc();if(ch.length)await saveFb(ch);
@@ -302,7 +306,7 @@ $('xlsx').onclick=()=>{if(!O||!items.length)return;
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Items');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l);return {Category:c,'Order QTY':x.q,'Total FOB $':Math.round(x.f),'Sell Out':l.reduce((a,i)=>a+i.sell,0),'Stopped':S.stop.has(c)?'Y':''}})),'Summary');
   // the Settings sheet is only for people who manage the order
-  if(can('manage'))XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Item:'Order',Value:O.name},{Item:'Status',Value:O.status},{Item:'Sell Out period',Value:S.period},{Item:'Lead time (months)',Value:+$('lt').value},{Item:'Cover after arrival (months)',Value:+$('cv').value},{Item:'Budget $',Value:+$('bg').value},{Item:'Stopped categories',Value:[...S.stop].join(', ')}]),'Settings');
+  if(can('manage'))XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Item:'Order',Value:O.name},{Item:'Status',Value:O.status},{Item:'Sell Out period',Value:S.period},{Item:'Lead time (months)',Value:+$('lt').value},{Item:'Cover after arrival (months)',Value:+$('cv').value},{Item:'Budget $',Value:bgVal()},{Item:'Stopped categories',Value:[...S.stop].join(', ')}]),'Settings');
   XLSX.writeFile(wb,`Order Sheet ${O.name}.xlsx`)};
 /* the team downloads the Excel, fills Team Feedback and Comment, and uploads it back */
 $('fbFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f||!O)return;showErr('');
