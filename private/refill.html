@@ -43,7 +43,7 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
 .tab.on{background:var(--accent);border-color:var(--accent);color:#2A1018}
 .spark{vertical-align:middle}td.cl{cursor:pointer;text-decoration:underline dotted}
 td select{padding:3px 4px;font-size:12px;max-width:130px}
-.heat td{text-align:center;min-width:54px}.heat td.l{text-align:left}
+.heat td{text-align:center;min-width:54px}.heat td.l{text-align:left}.heat tr:hover>td:not([style]){background:transparent}
 .hb{display:flex;height:16px;border-radius:4px;overflow:hidden;background:var(--soft)}.hb i{display:block;height:100%}
 #det{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px}
 #det[hidden]{display:none}#det .box{background:var(--surface);border-radius:14px;padding:16px;max-width:760px;width:100%;max-height:90vh;overflow:auto}
@@ -107,11 +107,11 @@ tbody tr:hover td,table tr:hover>td{background:color-mix(in srgb,var(--accent) 7
 <div class="card"><h2>Quick Read</h2><div class="note">What this order looks like and what to check before submitting. Click a line to see the SKUs.</div><div id="iKey"></div></div>
 <div class="card"><h2>Compare with the Last Order</h2><div class="note">Question: are we ordering more or less than last time, and in which categories?</div><div id="iPrev"></div></div>
 <div class="card"><h2>Team Changes vs. Generated, by Category</h2><div class="note">Question: how much of the order is the page's suggestion and how much did the team change? Click a number to see those SKUs.</div><div class="tw" id="iTeam"></div></div>
-<div class="grid2">
+<div style="display:flex;flex-direction:column;gap:14px">
   <div class="card"><h2>Budget by Category</h2><div class="note">Question: where does the money go? Pink = the page's suggestion, blue = extra added by the team.</div><div id="iBud"></div></div>
-  <div class="card"><h2>ABC Classes</h2><div class="note">Question: are we spending on the items that bring the money? A = the few SKUs making 80% of sales value, C = the tail.</div><div class="tw" id="iAbc"></div></div>
+  <div class="card"><h2>ABC Classes</h2><div class="note">Question: is the order money going to the items that bring the sales?</div><div class="tw" id="iAbc"></div></div>
 </div>
-<div class="card"><h2>Cover Heat Map</h2><div class="note">Question: after this order, where will we run short or hold too much? Each box = months of stock. Red = runs out before the shipment, amber = too much, green = fine.</div><div class="tw" id="iHeat"></div></div>
+<div class="card"><h2>Cover Heat Map</h2><div class="note">Question: after this order, where will we run short or hold too much?</div><div class="tw" id="iHeat"></div></div>
 <div class="grid2">
   <div class="card"><h2>Lost Sales</h2><div class="note">Question: what sales are we losing now? Items that sell but have no stock today, and what we lose until the shipment arrives.</div><div class="tw" id="iLost" style="max-height:420px"></div></div>
   <div class="card"><h2>New vs. Carry-Over</h2><div class="note">Question: which new items are hits or misses? 100 = sells like an average old item of its category.</div><div class="tw" id="iNew" style="max-height:420px"></div></div>
@@ -530,11 +530,23 @@ function drawInsights(){
     <div class="note"><span style="color:var(--accent)">■</span> as generated &nbsp; <span style="color:#8FB8DE">■</span> team added · % = share of the budget ${usd(bg)}</div>`:'<div class="note">Nothing ordered yet.</div>';
   // 4. ABC classes
   const A={A:[],B:[],C:[],'':[]};items.forEach(i=>A[i.abc||''].push(i));const val=i=>i.sell*(i.rrp||i.fob),sv=items.reduce((a,i)=>a+val(i),0)||1;
-  $('iAbc').innerHTML=`<table><tr><th class="l">Class</th><th>SKUs</th><th>Sales value</th><th>SOH</th><th>Order pcs</th><th>FOB</th><th>Cover after</th></tr>${['A','B','C',''].map(k=>{const l=A[k],x=totals(l),mon=l.reduce((a,i)=>a+i.mon,0);return `<tr data-drill="abc:${k}"><td class="l">${k||'No sales'}</td><td>${fmt(l.length)}</td><td>${Math.round(l.reduce((a,i)=>a+val(i),0)/sv*100)}%</td><td>${fmt(l.reduce((a,i)=>a+i.soh,0))}</td><td>${fmt(x.q)}</td><td>${usd(x.f)}</td><td>${mon?m1((l.reduce((a,i)=>a+i.soh+i.pipe,0)+x.q)/mon):'-'}</td></tr>`}).join('')}</table>
-    <div class="note">${$('abc').checked?`Cover in use: A ${esc($('ca').value)} · B ${esc($('cb').value)} · C ${esc($('cc').value)} months.`:'Cover by ABC class is off (Settings): every class uses the same cover.'}</div>`;
+  const ab=['A','B','C',''].map(k=>{const l=A[k],x=totals(l),mon=l.reduce((a,i)=>a+Math.max(0,i.mon),0);return {k,l,x,sv:l.reduce((a,i)=>a+val(i),0)/sv*100,soh:l.reduce((a,i)=>a+i.soh,0),cov:mon>0?(l.reduce((a,i)=>a+i.soh+i.pipe,0)+x.q)/mon:null}}),tf=totals(items).f||1;
+  const NAME={A:'A · best sellers',B:'B · middle',C:'C · slow tail','':'No sales in the period'};
+  const a0=ab[0],c0=ab[2],nos=ab[3];
+  $('iAbc').innerHTML=`<div class="qk" style="padding-left:0">Class A brings <b>${Math.round(a0.sv)}%</b> of sales and gets <b>${Math.round(a0.x.f/tf*100)}%</b> of the order money. Class C brings <b>${Math.round(c0.sv)}%</b> of sales and gets <b>${Math.round(c0.x.f/tf*100)}%</b>. ${a0.x.f/tf*100>=a0.sv-10?'<span class="good">Good: the money follows the sales.</span>':'<span class="bad">A gets less money than its sales share: check A items are ordered enough.</span>'}${nos.soh?` <b>${fmt(nos.soh)}</b> pcs sit in stock with no sales at all.`:''}</div>
+    <table><tr><th class="l">Class</th><th>SKUs</th><th>Share of sales</th><th>Share of order $</th><th>Stock now</th><th>Order pcs</th><th>Order FOB</th><th>Months of stock after order</th></tr>${ab.map(r=>`<tr data-drill="abc:${r.k}"><td class="l"><b>${NAME[r.k]}</b></td><td>${fmt(r.l.length)}</td><td>${Math.round(r.sv)}%</td><td>${Math.round(r.x.f/tf*100)}%</td><td>${fmt(r.soh)}</td><td>${fmt(r.x.q)}</td><td>${usd(r.x.f)}</td><td>${r.cov==null?'<span class="note">no sales</span>':pill(r.cov,+$('lt').value||0)}</td></tr>`).join('')}</table>
+    <div class="note">How SKUs are ranked: Sell Out × retail price, highest first. The top SKUs that add up to 80% of sales value are A, the next 15% B, the last 5% C. Ideally A has the most order money and the shortest cover, C the least. Click a row for its SKUs. ${$('abc').checked?`Cover in use: A ${esc($('ca').value)} · B ${esc($('cb').value)} · C ${esc($('cc').value)} months.`:'Tip: tick "Cover by ABC class" in Settings to order more cover for A and less for C.'}</div>`;
   // 5. cover heat map: category × collection (the part of the ERP item group before " - ")
-  const cols=[...new Set(items.map(i=>coll(i.grp)))].sort(),hc=v=>v<lt?'background:var(--bad);color:#fff':v>8?'background:#F2C46D;color:#2A1018':'background:color-mix(in srgb,var(--good) 35%,transparent)';
-  $('iHeat').innerHTML=`<table class="heat"><tr><th class="l">Category</th>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>${CATS.map(c=>`<tr><td class="l" data-drill="cat:${esc(c)}">${esc(c)}</td>${cols.map(g=>{const l=items.filter(i=>i.cat===c&&coll(i.grp)===g);if(!l.length)return '<td></td>';const mon=l.reduce((a,i)=>a+i.mon,0),st=l.reduce((a,i)=>a+i.soh+i.pipe+i.fin,0),v=mon?st/mon:0;return `<td data-drill="heat:${esc(c)}|${esc(g)}" style="${mon?hc(v):''}" title="${esc(c)} · ${esc(g)}: ${fmt(st)} pcs after the order, ${m1(mon)} sold/mo">${mon?m1(v):st?'no sales':''}</td>`}).join('')}</tr>`).join('')}</table>`;
+  // judged against the target: lead time + cover. Red = runs out before the shipment, green = up to 1.5× the target, amber = more
+  const tgt=lt+(+$('cv').value||0),hiT=Math.max(tgt*1.5,lt+1),cols=[...new Set(items.filter(i=>i.grp).map(i=>coll(i.grp)))].sort((a,b)=>a.localeCompare(b));
+  const hc=v=>v<lt?'background:var(--bad);color:#fff':v>hiT?'background:#F2C46D;color:#2A1018':'background:color-mix(in srgb,var(--good) 35%,transparent)';
+  const box=(l)=>{const mon=l.reduce((a,i)=>a+Math.max(0,i.mon),0),st=l.reduce((a,i)=>a+i.soh+i.pipe+i.fin,0);return {mon,st,v:mon?st/mon:null}};
+  const tc=w=>w.replace(/\w\S*/g,t=>t.length>2&&t===t.toUpperCase()?t[0]+t.slice(1).toLowerCase():t);
+  const allB=box(items),cells=CATS.flatMap(c=>cols.map(g=>box(items.filter(i=>i.cat===c&&coll(i.grp)===g)))).filter(b=>b.v!=null),nR=cells.filter(b=>b.v<lt).length,nA=cells.filter(b=>b.v>hiT).length;
+  $('iHeat').innerHTML=`<div class="qk" style="padding-left:0">Overall, stock after this order lasts <b>${allB.v==null?'-':m1(allB.v)} months</b>; the target is <b>${m1(tgt)}</b> (lead time ${lt} + cover ${+$('cv').value||0}). ${nR?`<b class="bad">${nR} boxes run out before the shipment.</b> `:''}${nA?`<b>${nA} boxes hold more than ${m1(hiT)} months</b>: candidates to stop or cut.`:'<span class="good">No box is overstocked.</span>'}</div>
+    <div class="legend"><span style="--c:var(--bad)">under ${lt} months: runs out</span><span style="--c:color-mix(in srgb,var(--good) 35%,transparent)">${lt} to ${m1(hiT)} months: fine</span><span style="--c:#F2C46D">over ${m1(hiT)} months: too much</span></div>
+    <table class="heat" style="margin-top:6px"><tr><th class="l">Category</th>${cols.map(c=>`<th>${esc(tc(c))}</th>`).join('')}<th>All</th></tr>${CATS.map(c=>{const all=box(items.filter(i=>i.cat===c));return `<tr><td class="l" data-drill="cat:${esc(c)}">${esc(c)}</td>${cols.map(g=>{const l=items.filter(i=>i.cat===c&&coll(i.grp)===g);if(!l.length)return '<td></td>';const b=box(l);return `<td data-drill="heat:${esc(c)}|${esc(g)}" style="${b.v!=null?hc(b.v):''}" title="${esc(c)} · ${esc(g)}: ${fmt(b.st)} pcs after the order, ${m1(b.mon)} sold per month">${b.v!=null?m1(b.v):b.st?'<span class="note">no sales</span>':''}</td>`}).join('')}<td style="${all.v!=null?hc(all.v):''};font-weight:800">${all.v!=null?m1(all.v):''}</td></tr>`}).join('')}</table>
+    <div class="note">Each box = (stock + pipeline + this order) ÷ monthly sales, for that category and collection. Columns are the ERP item group collections. Click a box for its SKUs.</div>`;
   // 6. lost sales: out of stock today, monthly sales × lead time
   const lost=items.filter(i=>i.soh<=0&&i.mon>0).map(i=>({i,p:i.mon*lt,e:i.mon*lt*(i.rrp||0)})).sort((a,b)=>b.e-a.e||b.p-a.p);
   $('iLost').innerHTML=lost.length?`<div class="note"><b>${fmt(lost.length)}</b> SKUs out of stock · about <b>${pcs(lost.reduce((a,x)=>a+x.p,0))}</b> · <b>EGP ${fmt(lost.reduce((a,x)=>a+x.e,0))}</b> at RP until the shipment arrives (${lt} months).</div><table><tr><th class="l">SKU</th><th class="l">Item</th><th>Sold/mo</th><th>Pipeline</th><th>Lost pcs</th><th>Lost EGP</th><th>Order</th></tr>${lost.slice(0,60).map(({i,p,e})=>`<tr><td class="l cl" data-d="${esc(i.sku)}">${esc(i.sku)}</td><td class="name">${esc(i.name)}</td><td>${m1(i.mon)}</td><td>${fmt(i.pipe)}</td><td>${fmt(p)}</td><td>${fmt(e)}</td><td>${fmt(i.fin)}</td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
@@ -569,7 +581,7 @@ function drawInsights(){
   if(lost.length)ln(`<b>${fmt(lost.length)}</b> selling SKUs are out of stock (about EGP ${fmt(lost.reduce((a,x)=>a+x.e,0))} lost until the shipment). ${noOrd?'<b class="bad">'+noOrd+' of them are not in this order</b>: check them.':'All of them are in this order.'}`,noOrd?'lost:no':'lost:all');
   const hv=items.filter(i=>i.fin>0).map(heatV),lowN=hv.filter(m=>m.low).length,highN=hv.filter(m=>m.high).length;
   if(lowN)ln(`<b>${fmt(lowN)}</b> ordered SKUs sit in red heat-map boxes: they still run out before the shipment arrives.`,'heat2:low');
-  if(highN)ln(`<b>${fmt(highN)}</b> ordered SKUs sit in amber boxes: more than 8 months of stock after this order. Consider cutting.`,'heat2:high');
+  if(highN)ln(`<b>${fmt(highN)}</b> ordered SKUs sit in amber heat-map boxes: well over the target cover after this order. Consider cutting.`,'heat2:high');
   const off=sc.filter(x=>x.dev>=10).length;if(off)ln(`<b>${off}</b> ordered DVs have a size mix that does not match sales. See Size Curve.`);
   if(mv.length)ln(`<b>${mv.length}</b> ordered SKUs can fill empty stores by transfer first. See Transfers Between Stores.`);
   const hits=nw.filter(x=>x.r>=1.5).length;if(hits)ln(`<b>${hits}</b> new items sell 1.5× or more than an average old item. Make sure they are ordered.`);
@@ -577,7 +589,7 @@ function drawInsights(){
   $('ins').querySelectorAll('td[data-d]').forEach(td=>td.onclick=()=>details(td.dataset.d));
 }
 // the drill-down: click a category, class, cell or KPI to see the SKUs behind the figure
-function heatV(i){const lt=+$('lt').value||0,k=i.cat+'|'+coll(i.grp);S.hv=S.hv||{};if(!S.hv[k]){const l=items.filter(x=>x.cat===i.cat&&coll(x.grp)===coll(i.grp)),mon=l.reduce((a,x)=>a+x.mon,0),st=l.reduce((a,x)=>a+x.soh+x.pipe+x.fin,0),v=mon?st/mon:0;S.hv[k]={low:mon>0&&v<lt,high:mon>0&&v>8}}return S.hv[k]}
+function heatV(i){const lt=+$('lt').value||0,k=i.cat+'|'+coll(i.grp);S.hv=S.hv||{};if(!S.hv[k]){const l=items.filter(x=>x.cat===i.cat&&coll(x.grp)===coll(i.grp)),mon=l.reduce((a,x)=>a+x.mon,0),st=l.reduce((a,x)=>a+x.soh+x.pipe+x.fin,0),v=mon?st/mon:0;S.hv[k]={low:mon>0&&v<lt,high:mon>0&&v>Math.max((lt+(+$('cv').value||0))*1.5,lt+1)}}return S.hv[k]}
 function drillOf(key){
   const [kind,v='']=[key.slice(0,key.indexOf(':')),key.slice(key.indexOf(':')+1)],[a,b]=v.split('|'),isCat=c=>i=>c==='Total'||i.cat===c;
   const T={same:i=>(i.prop||i.fin)&&(i.fb==null||i.fin===i.prop),up:i=>i.fb!=null&&i.prop>0&&i.fin>i.prop,dn:i=>i.fb!=null&&i.fin>0&&i.fin<i.prop,add:i=>i.fb!=null&&!i.prop&&i.fin>0,rm:i=>i.fb!=null&&i.prop>0&&!i.fin,chg:i=>i.fb!=null&&i.fin!==i.prop};
@@ -588,7 +600,7 @@ function drillOf(key){
   if(kind==='abc')return [v?'Class '+v:'No sales',i=>(i.abc||'')===v];
   if(kind==='heat')return [a+' · '+b,i=>i.cat===a&&coll(i.grp)===b];
   if(kind==='lost')return [v==='no'?'Out of stock, selling, not in this order':'Out of stock and selling',i=>i.soh<=0&&i.mon>0&&(v!=='no'||!i.fin)];
-  if(kind==='heat2')return [v==='low'?'Will run out before the shipment (red boxes)':'Too much stock after this order (amber boxes)',i=>{if(!(i.fin>0))return false;const m=heatV(i);return v==='low'?m.low:m.high}];
+  if(kind==='heat2')return [v==='low'?'Will run out before the shipment (red boxes)':'Well over the target cover after this order (amber boxes)',i=>{if(!(i.fin>0))return false;const m=heatV(i);return v==='low'?m.low:m.high}];
   if(kind==='kpi')return [{order:'SKUs to order',man:'Need a manual decision',stop:'Held back by stopped categories'}[v],{order:i=>i.fin>0,man:i=>i.flag==='man',stop:i=>i.flag==='stop'}[v]];
   return null;
 }
