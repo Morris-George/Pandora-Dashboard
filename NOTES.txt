@@ -107,3 +107,13 @@ ACTIVE PEOPLE FILTERS (Staff approvals, /staff/accounts)
 - Titles are set from a dropdown on each special account (op settitle). Seeded once: Samy, Hany Raouf and Hossam Makram = Finance, Ibrahim Nassif = Brand manager.
 
 CREATE ACCOUNT PAGE (private/signup.html, style id fun): pink side with drifting blurs, floating rings and logo, "Join the Pandora team" and 3 steps; form in two columns on laptops with a progress bar that fills as fields become valid (green border per valid field), soft focus glow, shine on the button, and an animated check with sparkles after sending. Motion is gentle and switched off for reduced-motion.
+
+REFILL ORDER (/refill, api/_refill.js via /api/refill -> /api/erp?refill=1)
+- Uploads (read in the browser with SheetJS, saved in rf/files/): Available to Order (SKU + qty, 0 = not available; decides what can be
+  ordered), Master Data (.xlsx; SheetJS cannot read that .xlsb, Save As .xlsx first), Pipeline, Slow Moving.
+- ERP sync (manage): Branches Stock Balance (all stores and warehouses), Sales Report by Item & SKU per month (pieces), Stock Ledger
+  purchases only (Purchase Receipt / Purchase Invoice) per month. Saved in rf/erp.json.
+- Proposed = monthly sales x (lead + cover) - SOH - pipeline. Sell Out period = the last N full months. New = launched within N months
+  (sales spread over the months on sale). Slow moving, stopped categories, not available -> 0. SKUs grouped by DV. Budget + "cut to fit".
+- Orders in rf/orders/; Draft -> Submitted (input) -> Approved (manage, locked, keeps the lines). Pictures: /stockcount-pics-N.js by DV.
+- Access per person on Staff approvals (rf/access.json): none / view / input / manage. Super admin is always manage.

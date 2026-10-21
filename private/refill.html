@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head><link rel="icon" type="image/png" href="/favicon.png?v=2">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Refill Order</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--bg:#FBF6F7;--surface:#FFFFFF;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--accent:#FF93A0;--soft:#FFE4E8;--good:#1F7A4D;--warn:#B7791F;--bad:#C2414F;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--soft:#3A2229;--good:#5CC48E;--warn:#E0A84A;--bad:#FF8A96;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--soft:#3A2229;--good:#5CC48E;--warn:#E0A84A;--bad:#FF8A96;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding:20px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}h2{margin:0 0 8px;font-size:15px;font-weight:800}.sub,.note{color:var(--ink2);font-size:12.5px}
+.crumb{color:var(--ink2);font-size:12.5px;font-weight:600;text-decoration:none}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn,select,input{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.btn{cursor:pointer;font-weight:600}.btn.go{background:var(--accent);border-color:var(--accent);color:#2A1018}.btn:disabled{opacity:.5;cursor:not-allowed}.btn.sm{padding:3px 9px;font-size:12.5px}
+label.f{display:flex;flex-direction:column;font-size:11.5px;color:var(--ink2);font-weight:600;gap:3px}label.f input{width:120px}
+.err{background:var(--accent);color:#2A1018;border-radius:10px;padding:10px 14px;font-weight:600}
+.files{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.fl{border:1px solid var(--line);border-radius:12px;padding:10px}.fl b{display:block}.fl .note{min-height:34px}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}@media(max-width:800px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px}.kpi small{display:block;color:var(--ink2);font-size:11.5px;font-weight:600}.kpi b{font-size:20px}
+.bar{height:14px;background:var(--soft);border-radius:99px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--good)}.over .bar i{background:var(--bad)}
+.alert{border-radius:10px;padding:8px 12px;font-weight:600;margin-top:8px;background:var(--bad);color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);border-radius:99px;padding:4px 10px;cursor:pointer;font-size:12.5px;user-select:none}.chip.off{background:var(--bad);border-color:var(--bad);color:#fff;text-decoration:line-through}
+.tw{overflow:auto;max-height:680px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:5px 7px;border-top:1px solid var(--line);text-align:right;white-space:nowrap}th{position:sticky;top:0;background:var(--surface);color:var(--ink2);font-size:11.5px;z-index:1}
+th.l,td.l{text-align:left}td.name{max-width:250px;overflow:hidden;text-overflow:ellipsis;text-align:left}
+td input{width:64px;padding:3px 6px}td input.nt{width:120px}
+.dvh td{background:var(--soft);border-top:2px solid var(--line)}tr.size td:nth-child(2){padding-left:18px}
+.tag{font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px}.t-slow{background:var(--soft);color:var(--bad)}.t-stop,.t-na{background:var(--bad);color:#fff}.t-man{background:#F2C46D;color:#2A1018}.t-pri{background:var(--good);color:#fff}.t-new{background:#8FB8DE;color:#10202A}.t-nm{background:#B9A3D9;color:#1E1530}
+.img{width:36px;height:36px;border-radius:6px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink2);overflow:hidden;vertical-align:middle}.img img{width:100%;height:100%;object-fit:cover}
+.grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:14px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.good{color:var(--good)}.bad{color:var(--bad)}
+.status{font-weight:800;border-radius:99px;padding:3px 12px;background:var(--soft)}
+.pager{display:flex;gap:6px;align-items:center;margin-top:8px}
+.log div{border-top:1px solid var(--line);padding:4px 0;font-size:12.5px}
+</style>
+</head>
+<body><div class="wrap">
+<header class="row" style="justify-content:space-between;align-items:flex-end">
+  <div><a class="crumb" href="/">&larr; Home</a><h1>Refill Order</h1><div class="sub">Suggested order to Pandora from the Available to Order list, stock, pipeline and sell out. SKUs of the same DV stay together.</div></div>
+  <div class="row"><select id="ord" aria-label="Order"></select><button class="btn" id="newo" hidden>New order</button>
+    <span class="status" id="status"></span><button class="btn" id="stBtn" hidden></button><button class="btn" id="reopen" hidden>Reopen</button><button class="btn" id="xlsx">Export Excel</button></div>
+</header>
+<div class="err" id="err" hidden></div>
+
+<div class="card" id="filesCard"><h2>Files and ERP</h2><div class="note" style="margin-bottom:8px">Upload the newest files before each order. Available to Order decides which SKUs can be ordered; everything else is only information.</div>
+  <div class="files" id="files"></div>
+  <div class="row" style="margin-top:10px"><button class="btn go" id="sync" hidden>Sync from ERP</button><span class="note" id="syncMsg"></span></div>
+</div>
+
+<div id="main" hidden>
+<div class="card"><h2>Settings</h2>
+  <div class="row">
+    <label class="f">Sell Out period (months)<input type="number" id="pm" min="1" max="24"></label>
+    <label class="f">Lead time (months)<input type="number" id="lt" min="0" max="12" step="0.5"></label>
+    <label class="f">Cover after arrival (months)<input type="number" id="cv" min="0" max="24" step="0.5"></label>
+    <label class="f">Min. qty per SKU<input type="number" id="mq" min="1"></label>
+    <label class="f">New = launched within (months)<input type="number" id="nm" min="0" max="36"></label>
+    <label class="f">Budget FOB ($)<input type="number" id="bg" min="0" step="1000"></label>
+  </div>
+  <div class="note" style="margin:10px 0 4px">Stop ordering a category (click to switch off / on):</div><div class="chips" id="cats"></div>
+  <div class="note" id="formula" style="margin-top:8px"></div>
+</div>
+<div class="kpis" id="kpis"></div>
+<div class="card" id="budget"></div>
+<div class="grid2">
+  <div class="card"><h2>Summary by category</h2><div class="tw" id="sum"></div></div>
+  <div class="card"><h2>Selling, out of stock, nothing coming</h2><div class="note">Sold in the period, no stock, no pipeline. They come first.</div><div class="tw" id="pri" style="max-height:320px"></div></div>
+</div>
+<div class="card"><h2>Items</h2>
+  <div class="row">
+    <input type="search" id="q" placeholder="Search SKU, DV or name" style="width:220px">
+    <select id="fc"><option value="">All categories</option></select>
+    <select id="ff"><option value="order">With an order</option><option value="">All</option><option value="new">New collection</option><option value="old">Old collection</option><option value="man">Needs a manual decision</option><option value="slow">Slow moving</option><option value="stop">Stopped category</option><option value="na">Not available (qty 0)</option><option value="nm">Not in the master</option><option value="fb">Team changed it</option></select>
+    <span class="note" id="cnt"></span><span class="note" id="saved"></span>
+  </div>
+  <div class="tw" style="margin-top:8px"><table id="tbl"></table></div>
+  <div class="pager" id="pager"></div>
+</div>
+<div class="grid2">
+  <div class="card"><h2>Selling, but not on the Available to Order list</h2><div class="note">For information only: they cannot be ordered this time.</div><div class="tw" id="nl" style="max-height:320px"></div></div>
+  <div class="card"><h2>History</h2><div class="log tw" id="log" style="max-height:320px"></div></div>
+</div>
+</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="/stockcount-pics-1.js" async></script><script src="/stockcount-pics-2.js" async></script><script src="/stockcount-pics-3.js" async></script><script src="/stockcount-pics-4.js" async></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Math.round(n||0).toLocaleString('en-US'),usd=n=>'$'+fmt(n),m1=n=>n>=99?'99+':(Math.round(n*10)/10).toFixed(1);
+const PICS=(window.__PICS=window.__PICS||{});
+const pic=dv=>{const v=PICS[String(dv||'').toUpperCase()]||PICS[String(dv||'')];return v?`<span class="img"><img src="data:image/jpeg;base64,${v}" alt="" loading="lazy"></span>`:'<span class="img">no<br>image</span>'};
+let H=null,O=null,items=[],CATS=[],S={page:0},LVL='view';
+const FILES={avail:['Available to Order','SKU# and quantity (0 = not available). EntireItems file.'],master:['Master Data','The MD sheet: SKU, DV, name, category, launch, EG (USD), RRP.'],pipe:['Pipeline','Purchases in Pipeline: SKU and quantity.'],slow:['Slow Moving','SKU# list.']};
+function showErr(t){$('err').hidden=!t;$('err').textContent=t||''}
+async function api(url,body){const r=await fetch(url,body?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{credentials:'same-origin',cache:'no-store'});if(r.status===401){location.replace('/login.html');throw new Error('sign in')}const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('error '+r.status));return j}
+const can=n=>['none','view','input','manage'].indexOf(LVL)>=['none','view','input','manage'].indexOf(n);
+const locked=()=>!O||O.status==='Approved';
+
+/* ---------- home: files, ERP, orders ---------- */
+async function boot(){
+  try{H=await api('/api/refill');LVL=H.level;
+    $('newo').hidden=!can('manage');$('sync').hidden=!can('manage')||!H.erpOn;
+    drawFiles();
+    const sel=$('ord');sel.innerHTML=H.orders.length?H.orders.map(o=>`<option value="${o.id}">${esc(o.name)} · ${esc(o.status)}</option>`).join(''):'<option value="">No orders yet</option>';
+    sel.onchange=()=>openOrder(sel.value);
+    if(H.orders.length)openOrder(H.orders[0].id);else{$('main').hidden=true;$('status').textContent='';}
+  }catch(e){showErr('Could not load: '+e.message)}
+}
+function drawFiles(){
+  const f=H.files,t=x=>x?new Date(x).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+  $('files').innerHTML=Object.entries(FILES).map(([k,[n,h]])=>`<div class="fl"><b>${n}</b><div class="note">${f[k]?`${esc(f[k].name)}<br>${fmt(f[k].rows)} rows · ${esc(f[k].by)} · ${t(f[k].at)}`:'<span class="bad">Not uploaded yet.</span> '+h}</div>${can('manage')?`<label class="btn sm" style="margin-top:6px;display:inline-block">Upload<input type="file" data-k="${k}" accept=".xlsx,.xlsb,.xls,.csv" hidden></label>`:''}</div>`).join('')+
+    `<div class="fl"><b>ERP</b><div class="note">${H.erp.sohDate?'Stock on hand '+H.erp.sohDate+' · ':'<span class="bad">No stock yet.</span> '}${H.erp.sold.length?'Sell out '+H.erp.sold[0]+' → '+H.erp.sold[H.erp.sold.length-1]:'no sell out yet'}${H.erp.buy.length?' · purchases '+H.erp.buy.length+' months':''}${H.erpOn?'':'<br><span class="bad">ERP is not connected.</span>'}</div></div>`;
+  $('files').querySelectorAll('input[type=file]').forEach(i=>i.onchange=e=>{const fl=e.target.files[0];e.target.value='';if(fl)upload(i.dataset.k,fl)});
+}
+const U=s=>String(s==null?'':s).trim().toUpperCase().replace(/\.0$/,'');
+const xlDate=v=>{if(typeof v==='number'&&v>20000&&v<80000){const d=new Date(Date.UTC(1899,11,30)+v*864e5);return d.toISOString().slice(0,10)}if(v instanceof Date)return v.toISOString().slice(0,10);const s=String(v||'');const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[0];const d=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);return d?`${d[3]}-${d[1].padStart(2,'0')}-${d[2].padStart(2,'0')}`:''};
+function headerAt(rows,test){for(let i=0;i<Math.min(rows.length,30);i++){const r=rows[i].map(c=>String(c??'').trim().toLowerCase());if(test(r))return i}return -1}
+const col=(h,...names)=>{for(const n of names){const i=h.findIndex(c=>c===n);if(i>=0)return i}for(const n of names){const i=h.findIndex(c=>c.includes(n));if(i>=0)return i}return -1};
+async function readRows(kind,file){
+  let wb;
+  try{wb=XLSX.read(await file.arrayBuffer(),{type:'array'})}
+  catch(e){throw new Error(/\.xlsb$/i.test(file.name)?'This .xlsb file cannot be read in the browser. Open it in Excel, Save As "Excel Workbook (.xlsx)", then upload that.':e.message)}
+  const sh=kind==='master'&&wb.Sheets.MD?wb.Sheets.MD:wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(sh,{header:1,defval:'',raw:true});
+  if(kind==='avail'){return rows.filter(r=>U(r[0])&&!/^sku/i.test(String(r[0]))).map(r=>[U(r[0]),r[1]===0||r[1]==='0'?0:1])}
+  if(kind==='slow'){const h=headerAt(rows,r=>r.some(c=>c.startsWith('sku')));const c=h<0?0:Math.max(0,col(rows[h].map(x=>String(x).trim().toLowerCase()),'sku#','sku'));return rows.slice(h+1).filter(r=>U(r[c])).map(r=>[U(r[c])])}
+  if(kind==='pipe'){const h=headerAt(rows,r=>r.some(c=>c==='sku'||c==='sku#'));if(h<0)throw new Error('No SKU column found.');const hh=rows[h].map(x=>String(x).trim().toLowerCase());const cs=col(hh,'sku','sku#'),cq=col(hh,'sum of quantity','quantity','qty');if(cq<0)throw new Error('No quantity column found.');
+    return rows.slice(h+1).filter(r=>U(r[cs])&&!/^grand/i.test(String(r[cs]))).map(r=>[U(r[cs]),Number(r[cq])||0])}
+  const h=headerAt(rows,r=>r.includes('item id')||r.some(c=>c.startsWith('sku')));if(h<0)throw new Error('No "Item Id" column found.');
+  const hh=rows[h].map(x=>String(x).replace(/\s+/g,' ').trim().toLowerCase());
+  const c={sku:col(hh,'item id','sku#','sku'),dv:col(hh,'design variation','dv'),name:col(hh,'item name','description'),cat:col(hh,'dna category','category'),sub:col(hh,'new collection - sub gbu name','sub category'),launch:col(hh,'real campaign launch'),fob:col(hh,'eg (usd)','fob'),rrp:col(hh,'rrp [egp] final','rrp [egp]','rp'),st:col(hh,'ass. cloud','pandora status','status')};
+  if(c.fob<0)throw new Error('No "EG (USD)" (FOB) column found.');
+  const g=(r,i)=>i<0?'':r[i];
+  return rows.slice(h+1).filter(r=>U(r[c.sku])).map(r=>[U(r[c.sku]),U(g(r,c.dv)),String(g(r,c.name)),String(g(r,c.cat)),String(g(r,c.sub)),xlDate(g(r,c.launch)),Number(g(r,c.fob))||0,Number(g(r,c.rrp))||0,String(g(r,c.st))])
+}
+async function upload(kind,file){
+  showErr('');$('syncMsg').textContent='Reading '+file.name+'…';
+  try{const rows=await readRows(kind,file);if(!rows.length)throw new Error('No SKUs found in '+file.name);
+    const P=6000,parts=Math.max(1,Math.ceil(rows.length/P));
+    for(let p=0;p<parts;p++){$('syncMsg').textContent=`Uploading ${FILES[kind][0]} ${p+1}/${parts}…`;await api('/api/refill?op=file',{kind,name:file.name,rows:rows.slice(p*P,p*P+P),part:p,parts})}
+    $('syncMsg').textContent=`${FILES[kind][0]}: ${fmt(rows.length)} rows saved.`;await reload();
+  }catch(e){$('syncMsg').textContent='';showErr(file.name+': '+e.message)}
+}
+async function reload(){const id=O&&O.id;H=await api('/api/refill');drawFiles();if(id)openOrder(id)}
+const monthsBack=(today,n)=>{const [y,m]=today.split('-').map(Number);const o=[];for(let k=n;k>=0;k--){const d=new Date(Date.UTC(y,m-1-k,1));o.push(d.toISOString().slice(0,7))}return o};
+$('sync').onclick=async()=>{
+  const b=$('sync');b.disabled=true;showErr('');const errs=[];
+  const n=Math.max(+($('pm').value||6),6),ms=monthsBack(H.today,n); // the last n full months and this month
+  const steps=[['soh'],...ms.map(m=>['sales',m]),...ms.map(m=>['buy',m])];
+  for(let i=0;i<steps.length;i++){const [what,month]=steps[i];$('syncMsg').textContent=`Syncing ${i+1}/${steps.length}: ${what==='soh'?'stock on hand':what==='sales'?'sell out '+month:'purchases '+month}…`;
+    try{await api('/api/refill?op=sync',{what,month})}catch(e){errs.push((month||'stock')+' '+what+': '+e.message)}}
+  $('syncMsg').textContent=errs.length?'Done with problems.':'ERP synced.';if(errs.length)showErr(errs.join(' · '));b.disabled=false;await reload();
+};
+$('newo').onclick=async()=>{const d=new Date(H.today);const def=d.toLocaleString('en',{month:'short'})+'.'+String(d.getFullYear()).slice(2);const name=prompt('Name of the new order',def);if(!name)return;
+  try{await api("/api/refill?op=new",{name});await boot()}catch(e){showErr(e.message)}};
+
+/* ---------- one order ---------- */
+async function openOrder(id){
+  if(!id)return;showErr('');
+  try{const j=await api('/api/refill?order='+id);O=j.order;
+    if(!j.items.length){$('main').hidden=true;showErr('Upload the Available to Order file first.');drawStatus();return}
+    const months=j.months,today=j.today;
+    // the Sell Out period: the last full months before this month
+    S.months=months;S.today=today;S.notListed=j.notListed||[];
+    items=j.items.map(r=>({sku:r[0],av:!!r[1],dv:r[2]||r[0].split('-')[0],name:r[3],cat:r[4]==='Charm'?'Charms':(r[4]||'No category'),sub:r[5],launch:r[6],fob:r[7],rrp:r[8],status:r[9],inMaster:!!r[10],soh:r[11],pipe:r[12],slow:!!r[13],soldBy:r[14],boughtBy:r[15],fb:O.fb[r[0]]??null,note:O.notes[r[0]]||''}));
+    CATS=[...new Set(items.map(i=>i.cat))].sort();
+    $('fc').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
+    $('cats').innerHTML=CATS.map(c=>`<span class="chip" data-c="${esc(c)}">${esc(c)}</span>`).join('');
+    const s=O.settings;$('pm').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=s.budget;
+    S.stop=new Set(O.stop||[]);S.page=0;$('main').hidden=false;$('ord').value=O.id;
+    if(!months.length)showErr('No sell out from ERP yet. Press Sync from ERP.');
+    calc();
+  }catch(e){showErr('Could not open the order: '+e.message)}
+}
+let saveT=0;
+function saveSettings(){if(!can('manage')||locked())return;clearTimeout(saveT);saveT=setTimeout(async()=>{try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:+$('bg').value},stop:[...S.stop]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}},700)}
+['pm','lt','cv','mq','nm','bg'].forEach(id=>$(id).oninput=()=>{calc();saveSettings()});
+$('cats').onclick=e=>{const c=e.target.dataset.c;if(!c||!can('manage')||locked())return;S.stop.has(c)?S.stop.delete(c):S.stop.add(c);calc();saveSettings()};
+['q','fc','ff'].forEach(id=>$(id).oninput=()=>{S.page=0;drawTable()});
+const monthsSince=d=>d?(new Date(S.today)-new Date(d))/(864e5*30.44):999;
+
+function calc(){
+  const pm=Math.max(1,+$('pm').value||6),lt=+$('lt').value||0,cv=+$('cv').value||0,mq=Math.max(1,+$('mq').value||1),nm=+$('nm').value||0;
+  // the period: the last pm full months before this month (this month is still running)
+  const cur=S.today.slice(0,7),idx=S.months.map((m,i)=>[m,i]).filter(([m])=>m<cur).slice(-pm).map(x=>x[1]);
+  S.period=idx.length?S.months[idx[0]]+' → '+S.months[idx[idx.length-1]]:'no months synced';S.pmUsed=idx.length||pm;
+  $('formula').innerHTML=`Sell Out period: <b>${esc(S.period)}</b> (${idx.length} months). Monthly sales = Sell Out ÷ months · Target = monthly × (${lt} lead + ${cv} cover) · <b>Proposed = Target − SOH − Pipeline</b> (0 if below ${mq}). Cover = (SOH + Pipeline + order) ÷ monthly sales. <b>New</b> = launched in the last ${nm} months: its sales are spread over the months it has been on sale; with no sales yet, or launched this month, it waits for a manual decision.`;
+  for(const i of items){
+    i.sell=idx.reduce((a,k)=>a+(i.soldBy[k]||0),0);i.bought=idx.reduce((a,k)=>a+(i.boughtBy[k]||0),0);
+    i.age=monthsSince(i.launch);i.isNew=i.inMaster&&i.age<=nm;
+    const span=i.isNew?Math.min(S.pmUsed,Math.max(1,i.age)):S.pmUsed;i.mon=i.sell>0?i.sell/span:0;i.flag='';
+    let p=Math.ceil(i.mon*(lt+cv)-i.soh-i.pipe);if(p<mq)p=0;
+    if(!i.av){p=0;i.flag='na'}
+    else if(i.slow){p=0;i.flag='slow'}
+    else if(S.stop.has(i.cat)){i.flag='stop';i.would=p;p=0}
+    else if(i.isNew&&(i.age<1||i.sell<=0)){p=0;i.flag='man'}
+    i.prop=p;i.fin=i.fb==null?p:i.fb;
+    i.coverNow=i.mon?(i.soh+i.pipe)/i.mon:99;i.coverAfter=i.mon?(i.soh+i.pipe+i.fin)/i.mon:99;
+    i.st=i.sell+i.soh?i.sell/(i.sell+i.soh):0;
+    if(!i.flag&&i.sell>0&&i.soh<=0&&i.pipe===0)i.flag='pri';
+  }
+  draw();
+}
+const totals=l=>{let q=0,f=0;for(const i of l){q+=i.fin;f+=i.fin*i.fob}return {q,f}};
+function drawStatus(){
+  $('status').textContent=O?O.status:'';
+  const st=$('stBtn');st.hidden=!O||O.status==='Approved'||(O.status==='Draft'?!can('input'):!can('manage'));st.textContent=O&&O.status==='Draft'?'Submit':'Approve';
+  $('reopen').hidden=!O||O.status==='Draft'||!can('manage');
+}
+function draw(){
+  drawStatus();
+  document.querySelectorAll('#cats .chip').forEach(c=>c.classList.toggle('off',S.stop.has(c.dataset.c)));
+  ['pm','lt','cv','mq','nm','bg'].forEach(id=>$(id).disabled=locked()||!can('manage'));
+  const t=totals(items),bg=+$('bg').value||0,ord=items.filter(i=>i.fin>0);
+  const stopped=items.filter(i=>i.flag==='stop').reduce((a,i)=>a+(i.would||0),0);
+  $('kpis').innerHTML=[['SKUs to order',fmt(ord.length)],['Pieces',fmt(t.q)],['Total FOB',usd(t.f)],['Need a manual decision',fmt(items.filter(i=>i.flag==='man').length)],['Held back by stopped categories',fmt(stopped)+' pcs']]
+    .map(k=>`<div class="kpi"><small>${k[0]}</small><b>${k[1]}</b></div>`).join('');
+  const over=t.f-bg,pct=bg?Math.min(100,t.f/bg*100):0;
+  $('budget').className='card'+(over>0?' over':'');
+  $('budget').innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">Budget</h2><span><b>${usd(t.f)}</b> of ${usd(bg)} · ${bg?Math.round(t.f/bg*100):0}%</span></div><div class="bar"><i style="width:${pct}%"></i></div>`+
+    (over>0?`<div class="alert">Over budget by ${usd(over)}. ${can('input')&&!locked()?'<button class="btn" id="fit">Cut to fit the budget</button> <span style="font-weight:400">keeps the items that run out first; it writes Team Feedback</span>':''}</div>`:`<div class="note good">Within budget · ${usd(-over)} left</div>`);
+  if($('fit'))$('fit').onclick=fit;
+  const tot=items.reduce((a,i)=>a+i.sell,0)||1,nw=items.filter(i=>i.isNew),nt=totals(nw),ot=totals(items.filter(i=>!i.isNew));
+  $('sum').innerHTML=`<div class="row note" style="margin-bottom:6px"><span class="tag t-new">new</span> ${fmt(nw.length)} SKUs · ${fmt(nt.q)} pcs · ${usd(nt.f)} &nbsp;|&nbsp; old ${fmt(ot.q)} pcs · ${usd(ot.f)}</div><table><tr><th class="l">Category</th><th>Sell Out mix</th><th>SOH</th><th>Pipeline</th><th>Bought</th><th>Cover now (mo)</th><th>Order pcs</th><th>FOB</th><th>FOB mix</th><th>Cover after (mo)</th></tr>`+
+    CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l),sum=k=>l.reduce((a,i)=>a+i[k],0),mon=sum('mon'),cov=mon?(sum('soh')+sum('pipe'))/mon:0;
+      return `<tr><td class="l">${esc(c)}${S.stop.has(c)?' <span class="tag t-stop">stopped</span>':''}</td><td>${Math.round(sum('sell')/tot*100)}%</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('bought'))}</td><td class="${cov>8?'bad':''}">${mon?m1(cov):'-'}</td><td>${fmt(x.q)}</td><td>${usd(x.f)}</td><td>${t.f?Math.round(x.f/t.f*100):0}%</td><td>${mon?m1((sum('soh')+sum('pipe')+x.q)/mon):'-'}</td></tr>`}).join('')+
+    '</table><div class="note">Cover in red: more than 8 months of stock. A good one to stop.</div>';
+  const pri=items.filter(i=>i.flag==='pri').sort((a,b)=>b.sell-a.sell);
+  $('pri').innerHTML=pri.length?`<table><tr><th class="l">SKU</th><th class="l">Item</th><th>Sold</th><th>Order</th></tr>${pri.slice(0,80).map(i=>`<tr><td class="l">${esc(i.sku)}</td><td class="name">${esc(i.name)}</td><td>${fmt(i.sell)}</td><td><b>${fmt(i.fin)}</b></td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
+  $('nl').innerHTML=S.notListed.length?`<table><tr><th class="l">SKU</th><th class="l">Item</th><th>Sold</th><th>SOH</th></tr>${S.notListed.map(r=>`<tr><td class="l">${esc(r[0])}</td><td class="name">${esc(r[1])}</td><td>${fmt(r[2])}</td><td>${fmt(r[3])}</td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
+  $('log').innerHTML=(O.log||[]).slice().reverse().slice(0,200).map(l=>`<div><b>${esc(l.what)}</b> · ${esc(l.by)} · <span class="note">${new Date(l.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('');
+  drawTable();
+}
+async function saveFb(lines){try{await api('/api/refill?op=fb',{id:O.id,lines});$('saved').textContent='Saved.';setTimeout(()=>$('saved').textContent='',1500)}catch(e){showErr(e.message)}}
+async function fit(){
+  const bg=+$('bg').value||0;let sum=0;const ch=[];
+  const order=items.filter(i=>i.fin>0).sort((a,b)=>a.coverNow-b.coverNow);
+  for(const i of order){const cost=i.fin*i.fob;if(sum+cost<=bg){sum+=cost;continue}const k=Math.max(0,Math.floor((bg-sum)/(i.fob||1)));if(k!==i.fin){i.fb=k;ch.push([i.sku,k])}sum+=k*i.fob}
+  calc();if(ch.length)await saveFb(ch);
+}
+function filtered(){
+  const q=$('q').value.trim().toUpperCase(),c=$('fc').value,f=$('ff').value;
+  return items.filter(i=>(!q||i.sku.includes(q)||i.dv.includes(q)||i.name.toUpperCase().includes(q))&&(!c||i.cat===c)&&
+    (!f||(f==='order'&&i.fin>0)||(f==='man'&&i.flag==='man')||(f==='slow'&&i.slow)||(f==='stop'&&i.flag==='stop')||(f==='na'&&!i.av)||(f==='nm'&&!i.inMaster)||(f==='fb'&&i.fb!=null)||(f==='new'&&i.isNew)||(f==='old'&&!i.isNew)));
+}
+// SKUs of the same DV stay together; DVs that run out first come first
+function grouped(l){const g=new Map();for(const i of l){if(!g.has(i.dv))g.set(i.dv,[]);g.get(i.dv).push(i)}
+  return [...g.values()].map(x=>{x.sort((a,b)=>a.sku.localeCompare(b.sku,undefined,{numeric:true}));const s=x.reduce((a,i)=>a+i.soh+i.pipe,0),mon=x.reduce((a,i)=>a+i.mon,0);x.cover=mon?s/mon:99;return x}).sort((a,b)=>a.cover-b.cover)}
+const TAG={slow:'<span class="tag t-slow">slow</span>',stop:'<span class="tag t-stop">stopped</span>',man:'<span class="tag t-man">decide</span>',pri:'<span class="tag t-pri">priority</span>',na:'<span class="tag t-na">not available</span>'};
+function drawTable(){
+  const l=filtered(),gs=grouped(l),P=40,pages=Math.max(1,Math.ceil(gs.length/P));S.page=Math.min(S.page,pages-1);
+  $('cnt').textContent=fmt(l.length)+' SKUs in '+fmt(gs.length)+' DVs';
+  const ro=locked()||!can('input'),lt=+$('lt').value||0;
+  const row=(i,one)=>`<tr class="${one?'':'size'}"><td>${one?pic(i.dv):''}</td><td class="l">${esc(i.sku)}</td><td class="name" title="${esc(i.name)}">${esc(i.name)||'<span class="note">not in the master</span>'}</td><td class="l">${esc(i.cat)}</td><td>${fmt(i.soh)}</td><td>${fmt(i.pipe)}</td><td>${fmt(i.sell)}</td><td>${fmt(i.bought)}</td><td>${m1(i.mon)}</td><td>${Math.round(i.st*100)}%</td>
+    <td class="${i.coverNow<lt?'bad':''}">${m1(i.coverNow)}</td><td>${i.prop||''}${i.flag==='stop'&&i.would?`<span class="note"> (${i.would})</span>`:''}</td>
+    <td><input type="number" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}></td><td><input class="nt" data-n="${esc(i.sku)}" value="${esc(i.note)}" placeholder="comment" ${ro?'disabled':''}></td>
+    <td>${m1(i.coverAfter)}</td><td>${i.fob}</td><td>${fmt(i.fin*i.fob)}</td><td class="l">${i.isNew?'<span class="tag t-new">new</span> ':''}${i.inMaster?'':'<span class="tag t-nm">no master</span> '}${TAG[i.flag]||''}</td></tr>`;
+  $('tbl').innerHTML=`<tr><th></th><th class="l">SKU</th><th class="l">Item</th><th class="l">Category</th><th>SOH</th><th>Pipeline</th><th>Sell Out</th><th>Bought</th><th>Sold/mo</th><th>Sell-through</th><th>Cover now</th><th>Proposed</th><th>Team</th><th class="l">Comment</th><th>Cover after</th><th>FOB</th><th>Total FOB</th><th class="l"></th></tr>`+
+    gs.slice(S.page*P,S.page*P+P).map(g=>{const one=g.length===1,sum=k=>g.reduce((a,i)=>a+i[k],0);
+      return (one?'':`<tr class="dvh"><td>${pic(g[0].dv)}</td><td class="l"><b>${esc(g[0].dv)}</b></td><td class="name"><b>${esc(g[0].name)}</b> · ${g.length} sizes</td><td class="l">${esc(g[0].cat)}</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('sell'))}</td><td>${fmt(sum('bought'))}</td><td>${m1(sum('mon'))}</td><td></td><td>${m1(g.cover)}</td><td>${fmt(sum('prop'))}</td><td><b>${fmt(sum('fin'))}</b></td><td></td><td></td><td></td><td>${fmt(g.reduce((a,i)=>a+i.fin*i.fob,0))}</td><td></td></tr>`)+g.map(i=>row(i,one)).join('')}).join('');
+  $('tbl').querySelectorAll('input[data-s]').forEach(inp=>inp.onchange=()=>{const i=items.find(x=>x.sku===inp.dataset.s);const v=inp.value.trim();i.fb=v===''?null:Math.max(0,parseInt(v)||0);calc();saveFb([[i.sku,i.fb]])});
+  $('tbl').querySelectorAll('input[data-n]').forEach(inp=>inp.onchange=()=>{const i=items.find(x=>x.sku===inp.dataset.n);i.note=inp.value.trim();saveFb([[i.sku,i.fb,i.note]])});
+  $('pager').innerHTML=pages>1?`<button class="btn sm" id="pv" ${S.page?'':'disabled'}>‹</button><span class="note">Page ${S.page+1} of ${pages}</span><button class="btn sm" id="nx" ${S.page<pages-1?'':'disabled'}>›</button>`:'';
+  if($('pv')){$('pv').onclick=()=>{S.page--;drawTable()};$('nx').onclick=()=>{S.page++;drawTable()}}
+}
+async function setStatus(status){
+  try{const body={id:O.id,status};if(status==='Approved')body.lines=items.filter(i=>i.fin>0||i.prop>0).map(i=>[i.sku,i.prop,i.fin,i.fob]);
+    await api('/api/refill?op=status',body);H=await api('/api/refill');boot()}catch(e){showErr(e.message)}}
+$('stBtn').onclick=()=>{const to=O.status==='Draft'?'Submitted':'Approved';if(confirm(to==='Approved'?'Approve this order? It will be locked.':'Submit this order for approval?'))setStatus(to)};
+$('reopen').onclick=()=>{if(confirm('Reopen this order so it can be changed?'))setStatus('Draft')};
+$('xlsx').onclick=()=>{if(!O||!items.length)return;
+  const rows=items.slice().sort((a,b)=>a.dv.localeCompare(b.dv)||a.sku.localeCompare(b.sku,undefined,{numeric:true})).map(i=>({'SKU#':i.sku,'Proposed QTY':i.prop,'Team Feedback':i.fin,'Diff':i.fin-i.prop,'FOB':i.fob,'Total FOB $':Math.round(i.fin*i.fob*100)/100,'DV':i.dv,'RP':i.rrp,'Description':i.name,'Category':i.cat,'Real Campaign Launch':i.launch,'Sub Category':i.sub,'Pandora Status':i.status,
+    'Shipments in Pipeline':i.pipe,'Purchases (period)':i.bought,'Sell Out':i.sell,'Monthly sales':Math.round(i.mon*100)/100,'SOH':i.soh,'Sell-through %':Math.round(i.st*100),'Cover now (months)':Math.round(i.coverNow*10)/10,'Cover after (months)':Math.round(i.coverAfter*10)/10,'Slow Moving FLG':i.slow?'Y':'N','Collection':i.isNew?'New':'Old','Comment':i.note,
+    'Note':{na:'Not available to order',slow:'Slow moving',stop:'Category stopped',man:'New item: decide by hand',pri:'Selling, out of stock'}[i.flag]||''}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Items');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l);return {Category:c,'Order QTY':x.q,'Total FOB $':Math.round(x.f),'Sell Out':l.reduce((a,i)=>a+i.sell,0),'Stopped':S.stop.has(c)?'Y':''}})),'Summary');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Item:'Order',Value:O.name},{Item:'Status',Value:O.status},{Item:'Sell Out period',Value:S.period},{Item:'Lead time (months)',Value:+$('lt').value},{Item:'Cover after arrival (months)',Value:+$('cv').value},{Item:'Budget $',Value:+$('bg').value},{Item:'Stopped categories',Value:[...S.stop].join(', ')}]),'Settings');
+  XLSX.writeFile(wb,`Order Sheet ${O.name}.xlsx`)};
+boot();
+</script>
+</body></html>

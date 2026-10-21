@@ -81,7 +81,7 @@ module.exports = async function handler(req, res) {
     const admins = [];
     for (const a of staffAccounts()) admins.push({ username: a.user, role: a.role, label: a.label, off: a.role !== 'admin' && await users.envOff(a.user) });
     return send(res, 200, {
-      ok: true, accounts: list, admins, resets, hasData: !!data,
+      ok: true, accounts: list, admins, resets, hasData: !!data, refill: (await store.getJSON(require('./_refill').ACCESS)) || {},
       people: people.map(p => ({ ...p, takenBy: taken.get(p.store + '|' + p.name) || '' })).sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name))
     });
   }
@@ -98,6 +98,19 @@ module.exports = async function handler(req, res) {
       if (staffAccounts().some(a => normName(a.user) === uname) || await users.getUser(uname)) return send(res, 409, { ok: false, error: 'That username is taken. Choose another.' });
       await users.createSpecial({ username: uname, password: pw, name, role: b.role });
       return send(res, 200, { ok: true, username: uname });
+    }
+    if (b.action === 'refillaccess') {
+      // Refill Order: none / view / input / manage for one person ("env:<user>" for accounts kept in Vercel settings, "u:<username>" for the others)
+      const { LEVELS, ACCESS } = require('./_refill');
+      const k = String(b.key || '');
+      const m = /^env:(.+)$/.exec(k), u = /^u:(.+)$/.exec(k);
+      const real = m ? staffAccounts().some(a => a.role !== 'admin' && String(a.user).toLowerCase() === m[1]) : u ? !!(await users.getUser(u[1])) : false;
+      if (!real) return send(res, 404, { ok: false, error: 'Account not found.' });
+      if (!LEVELS.includes(b.level)) return send(res, 400, { ok: false, error: 'Unknown access level.' });
+      const acc = (await store.getJSON(ACCESS)) || {};
+      if (b.level === 'none') delete acc[k]; else acc[k] = b.level;
+      await store.putJSON(ACCESS, acc);
+      return send(res, 200, { ok: true });
     }
     if (b.action === 'envdisable' || b.action === 'envenable') {
       // area managers (accounts kept in Vercel settings): switch off / on, same as anyone else. The super admin cannot be switched off.

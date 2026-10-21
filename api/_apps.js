@@ -17,6 +17,7 @@ const APPS = [
   { id: 'zonestock', title: 'Zone Stock', desc: 'What is in each zone of the store: counts, goods received, moves, and sales taken off automatically.', href: '/vm/stock', allow: f => !!f.vm || (!!f.staff && (f.staff.role === 'admin' || f.staff.role === 'store')) },
   { id: 'stock', title: 'Stock balance', desc: 'How many pieces are in stock in each category, store by store, for the dates you pick.', href: '/stock', allow: f => !!f.vm || (!!f.staff && f.staff.role !== 'staff' && f.staff.role !== 'store') },
   { id: 'stockcount', title: 'Stock Count', desc: 'Count a store with scanners or phones and see what matches the ERP stock balance and what differs.', href: '/stockcount', allow: f => !!f.sc || (!!f.staff && f.staff.role === 'admin') },
+  { id: 'refill', title: 'Refill Order', desc: 'The suggested refill order to Pandora: stock, pipeline, sell out and budget, with the team feedback.', href: '/refill', allow: f => !!f.refill && f.refill !== 'none' },
   { id: 'vm', title: 'VM Report', desc: 'The Visual Merchandiser report.', href: '/vm', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') }
 ];
 
@@ -38,7 +39,8 @@ async function sessionFacts(req) {
   const vm = !!who && who.kind === 'vm';
   const sc = !!who && who.kind === 'sc';
   const staff = who && !vm && !sc ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', overseer: !!who.info.overseer, who } : null;
-  return { dash, staff, vm, sc, vmName: vm || sc ? who.user.name : '' };
+  const refill = who ? await require('./_refill').levelFor(who) : 'none'; // Refill Order access level, set on Staff approvals
+  return { dash, staff, vm, sc, refill, vmName: vm || sc ? who.user.name : '' };
 }
 
 // Area managers are greeted by first name ("Hello Joseph"). Everyone else keeps their usual label.

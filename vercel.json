@@ -20,6 +20,10 @@
       "destination": "/api/erp?stock=1"
     },
     {
+      "source": "/api/refill",
+      "destination": "/api/erp?refill=1"
+    },
+    {
       "source": "/api/zonestock",
       "destination": "/api/vm?zonestock=1"
     },
