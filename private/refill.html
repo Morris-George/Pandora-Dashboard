@@ -61,6 +61,8 @@ tbody tr:hover td,table tr:hover>td{background:color-mix(in srgb,var(--accent) 7
 .gauge em{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink2);font-style:normal}.gauge em span{position:absolute;top:22px;transform:translateX(-50%);font-size:10.5px;color:var(--ink2);white-space:nowrap}
 .brand{display:flex;align-items:center;gap:12px;margin-top:4px}.brand .logo{width:72px;height:auto;max-height:44px;object-fit:contain}.brand h1{padding-left:12px;border-left:1px solid var(--line)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo{filter:brightness(0) invert(1)}}:root[data-theme="dark"] .logo{filter:brightness(0) invert(1)}
+[data-drill]{cursor:pointer}tr[data-drill]:hover td,td[data-drill]:hover{background:color-mix(in srgb,var(--accent) 14%,transparent)!important}.kpi[data-drill]:hover{border-color:var(--accent)}
+.qk{padding:7px 10px;border-top:1px solid var(--line);font-size:13.5px}.qk:first-child{border-top:0}.qk[data-drill]:hover{background:color-mix(in srgb,var(--accent) 10%,transparent);border-radius:8px}
 .log div{border-top:1px solid var(--line);padding:4px 0;font-size:12.5px}
 </style>
 </head>
@@ -102,20 +104,21 @@ tbody tr:hover td,table tr:hover>td{background:color-mix(in srgb,var(--accent) 7
 </div>
 <div class="row tabs" style="margin:14px 0 4px"><button class="btn tab on" data-tab="order">Order</button><button class="btn tab" data-tab="ins">Insights</button></div>
 <div id="ins" hidden>
-<div class="card"><h2>Compare with the Last Order</h2><div id="iPrev"></div></div>
-<div class="card"><h2>Team Changes vs. Generated, by Category</h2><div class="note">Generated = the page's Proposed quantity. Same = the team kept it. The rest are the team's changes.</div><div class="tw" id="iTeam"></div></div>
+<div class="card"><h2>Quick Read</h2><div class="note">What this order looks like and what to check before submitting. Click a line to see the SKUs.</div><div id="iKey"></div></div>
+<div class="card"><h2>Compare with the Last Order</h2><div class="note">Question: are we ordering more or less than last time, and in which categories?</div><div id="iPrev"></div></div>
+<div class="card"><h2>Team Changes vs. Generated, by Category</h2><div class="note">Question: how much of the order is the page's suggestion and how much did the team change? Click a number to see those SKUs.</div><div class="tw" id="iTeam"></div></div>
 <div class="grid2">
-  <div class="card"><h2>Budget by Category</h2><div class="note">Order FOB per category: the part kept as generated and the part the team added.</div><div id="iBud"></div></div>
-  <div class="card"><h2>ABC Classes</h2><div class="note">By sales value (Sell Out × RP): A = top 80%, B = next 15%, C = the rest.</div><div class="tw" id="iAbc"></div></div>
+  <div class="card"><h2>Budget by Category</h2><div class="note">Question: where does the money go? Pink = the page's suggestion, blue = extra added by the team.</div><div id="iBud"></div></div>
+  <div class="card"><h2>ABC Classes</h2><div class="note">Question: are we spending on the items that bring the money? A = the few SKUs making 80% of sales value, C = the tail.</div><div class="tw" id="iAbc"></div></div>
 </div>
-<div class="card"><h2>Cover Heat Map</h2><div class="note">Months of stock after this order, category × collection. Red: under the lead time. Amber: over 8 months.</div><div class="tw" id="iHeat"></div></div>
+<div class="card"><h2>Cover Heat Map</h2><div class="note">Question: after this order, where will we run short or hold too much? Each box = months of stock. Red = runs out before the shipment, amber = too much, green = fine.</div><div class="tw" id="iHeat"></div></div>
 <div class="grid2">
-  <div class="card"><h2>Lost Sales</h2><div class="note">Selling items with no stock today: monthly sales × lead time, until the shipment arrives.</div><div class="tw" id="iLost" style="max-height:420px"></div></div>
-  <div class="card"><h2>New vs. Carry-Over</h2><div class="note">New items' monthly sales against the carry-over average of the same category.</div><div class="tw" id="iNew" style="max-height:420px"></div></div>
+  <div class="card"><h2>Lost Sales</h2><div class="note">Question: what sales are we losing now? Items that sell but have no stock today, and what we lose until the shipment arrives.</div><div class="tw" id="iLost" style="max-height:420px"></div></div>
+  <div class="card"><h2>New vs. Carry-Over</h2><div class="note">Question: which new items are hits or misses? 100 = sells like an average old item of its category.</div><div class="tw" id="iNew" style="max-height:420px"></div></div>
 </div>
 <div class="grid2">
-  <div class="card"><h2>Move Between Stores Before Ordering</h2><div class="note">Ordered SKUs with 3+ pieces in one place and none in others. Stores here = places with stock of any SKU.</div><div class="tw" id="iMove" style="max-height:420px"></div></div>
-  <div class="card"><h2>Size Curve</h2><div class="note">Per DV: share of each size in sales vs in stock after the order. Off by 10 points or more is flagged.</div><div class="tw" id="iSize" style="max-height:420px"></div></div>
+  <div class="card"><h2>Move Between Stores Before Ordering</h2><div class="note">Question: can we fix it by moving stock instead of buying? SKUs we order while one place holds 3+ pieces and others have none.</div><div class="tw" id="iMove" style="max-height:420px"></div></div>
+  <div class="card"><h2>Size Curve</h2><div class="note">Question: do the sizes we stock match the sizes that sell? Red size = will run out first.</div><div class="tw" id="iSize" style="max-height:420px"></div></div>
 </div>
 </div>
 <div id="ordTab">
@@ -370,7 +373,7 @@ function draw(){
   const t=totals(items),bg=bgVal()||0,ord=items.filter(i=>i.fin>0);
   const stopped=items.filter(i=>i.flag==='stop').reduce((a,i)=>a+(i.would||0),0);
   $('kpis').innerHTML=[['SKUs to order',fmt(ord.length)],['Pieces',fmt(t.q)],['Total FOB',usd(t.f)],['Need a manual decision',fmt(items.filter(i=>i.flag==='man').length)],['Held back by stopped categories',fmt(stopped)+' pcs']]
-    .map(k=>`<div class="kpi"><small>${k[0]}</small><b>${k[1]}</b></div>`).join('');
+    .map((k,n)=>`<div class="kpi" data-drill="kpi:${['order','order','order','man','stop'][n]}"><small>${k[0]}</small><b>${k[1]}</b></div>`).join('');
   const over=t.f-bg,pct=bg?Math.min(100,t.f/bg*100):0;
   $('budget').className='card'+(over>0?' over':'');
   $('budget').innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">Budget</h2><span><b>${usd(t.f)}</b> of ${usd(bg)} · ${bg?Math.round(t.f/bg*100):0}%</span></div><div class="gauge"><i style="width:${bg?Math.min(100,t.f/Math.max(bg,t.f)*100):0}%"></i>${over>0?`<em style="left:${bg/t.f*100}%"><span>budget</span></em>`:''}</div><div style="height:${over>0?14:0}px"></div>`+
@@ -379,7 +382,7 @@ function draw(){
   const tot=items.reduce((a,i)=>a+i.sell,0)||1,nw=items.filter(i=>i.isNew),nt=totals(nw),ot=totals(items.filter(i=>!i.isNew));
   $('sum').innerHTML=`<div class="row note" style="margin-bottom:6px"><span class="tag t-new">new</span> ${fmt(nw.length)} SKUs · ${fmt(nt.q)} pcs · ${usd(nt.f)} &nbsp;|&nbsp; old ${fmt(ot.q)} pcs · ${usd(ot.f)}</div><table><tr><th class="l">Category</th><th>Sell Out mix</th><th>SOH</th><th>Pipeline</th><th>Bought</th><th>Cover now (mo)</th><th>Order pcs</th><th>FOB</th><th>FOB mix</th><th>Cover after (mo)</th></tr>`+
     CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l),sum=k=>l.reduce((a,i)=>a+i[k],0),mon=sum('mon'),cov=mon?(sum('soh')+sum('pipe'))/mon:0;
-      return `<tr><td class="l">${esc(c)}${S.stop.has(c)?' <span class="tag t-stop">stopped</span>':''}</td><td>${Math.round(sum('sell')/tot*100)}%</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('bought'))}</td><td>${pill(cov,+$('lt').value||0,mon>0)}</td><td>${fmt(x.q)}</td><td>${usd(x.f)}</td><td>${t.f?Math.round(x.f/t.f*100):0}%</td><td>${pill((sum('soh')+sum('pipe')+x.q)/mon,+$('lt').value||0,mon>0)}</td></tr>`}).join('')+sumTotal(t)+
+      return `<tr data-drill="cat:${esc(c)}"><td class="l">${esc(c)}${S.stop.has(c)?' <span class="tag t-stop">stopped</span>':''}</td><td>${Math.round(sum('sell')/tot*100)}%</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('bought'))}</td><td>${pill(cov,+$('lt').value||0,mon>0)}</td><td>${fmt(x.q)}</td><td>${usd(x.f)}</td><td>${t.f?Math.round(x.f/t.f*100):0}%</td><td>${pill((sum('soh')+sum('pipe')+x.q)/mon,+$('lt').value||0,mon>0)}</td></tr>`}).join('')+sumTotal(t)+
     '</table><div class="note">Cover: <span class="pill p-low">red</span> runs out before the shipment arrives · <span class="pill p-ok">green</span> fine · <span class="pill p-high">amber</span> more than 8 months of stock, a good one to stop.</div>';
   drawMix(t);
   const pri=items.filter(i=>i.flag==='pri').sort((a,b)=>b.sell-a.sell);
@@ -402,7 +405,7 @@ function drawMix(t){
   const bar=k=>`<div class="mixbar">${rows.map((r,n)=>`<i title="${esc(r.c)} ${p1(pc(r[k],all[k]))}" style="width:${pc(r[k],all[k])}%;background:${COL[n%COL.length]}"></i>`).join('')}</div>`;
   const MK=[['sell','Sales mix','var(--accent)'],['soh','Stock mix','#8FB8DE'],['pipe','Pipeline mix','#B9A3D9'],['q','Order mix','#7FC8A9']],gmx=Math.max(1,...rows.flatMap(r=>MK.map(([k])=>pc(r[k],all[k]))));
   $('mix').innerHTML=`<table><tr><th class="l">Category</th><th>Sell Out pcs</th><th>Sales mix</th><th>SOH pcs</th><th>Stock mix</th><th>Pipeline mix</th><th>Order pcs</th><th>Order mix</th><th>Order FOB mix</th></tr>`+
-    rows.map(r=>{const sm=pc(r.sell,all.sell);return `<tr><td class="l">${esc(r.c)}${S.stop.has(r.c)?' <span class="tag t-stop">stopped</span>':''}</td><td>${fmt(r.sell)}</td><td><b>${p1(sm)}</b></td><td>${fmt(r.soh)}</td>${cell(pc(r.soh,all.soh),sm)}${cell(pc(r.pipe,all.pipe),sm)}<td>${fmt(r.q)}</td>${cell(pc(r.q,all.q),sm)}${cell(pc(r.f,all.f),sm)}</tr>`}).join('')+
+    rows.map(r=>{const sm=pc(r.sell,all.sell);return `<tr data-drill="cat:${esc(r.c)}"><td class="l">${esc(r.c)}${S.stop.has(r.c)?' <span class="tag t-stop">stopped</span>':''}</td><td>${fmt(r.sell)}</td><td><b>${p1(sm)}</b></td><td>${fmt(r.soh)}</td>${cell(pc(r.soh,all.soh),sm)}${cell(pc(r.pipe,all.pipe),sm)}<td>${fmt(r.q)}</td>${cell(pc(r.q,all.q),sm)}${cell(pc(r.f,all.f),sm)}</tr>`}).join('')+
     `<tr><td class="l"><b>Total</b></td><td><b>${fmt(all.sell)}</b></td><td>100%</td><td><b>${fmt(all.soh)}</b></td><td>100%</td><td>100%</td><td><b>${fmt(all.q)}</b></td><td>100%</td><td>100%</td></tr></table>
     <div class="legend">${MK.map(([k,n,c])=>`<span style="--c:${c}">${n}</span>`).join('')}</div>
     <div class="gb">${rows.map(r=>`<b style="font-size:12.5px">${esc(r.c)}</b><div class="bars">${MK.map(([k,n,c])=>{const v=pc(r[k],all[k]);return `<div title="${n} ${p1(v)}"><i style="width:${v/gmx*100}%;background:${c}"></i>${p1(v)}</div>`}).join('')}</div>`).join('')}</div>
@@ -494,6 +497,7 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelect
 const sizeOf=sku=>{const m=String(sku).split('-');return m.length>1?m.slice(1).join('-'):'-'};
 const coll=g=>{const t=String(g||'').split(' - ')[0].trim();return t||'No item group'};
 function drawInsights(){
+  S.hv={};
   const lt=+$('lt').value||0,pcs=n=>fmt(n)+' pcs';
   // 1. the last order: what it had, what arrived since, how this order differs by category
   const P=S.prev;
@@ -506,7 +510,7 @@ function drawInsights(){
     const both=items.filter(i=>i.fin>0&&pm.get(i.sku)>0).length,onlyNow=items.filter(i=>i.fin>0&&!pm.get(i.sku)).length,onlyLast=[...pm].filter(([k,q])=>q>0&&!((by.get(k)||{}).fin>0)).length;
     $('iPrev').innerHTML=`<div class="kpis" style="margin-bottom:8px">${[['Last order: '+esc(P.name),pcs(lastQ)],['This order',pcs(t.q)],['Change',(t.q-lastQ>=0?'+':'')+fmt(t.q-lastQ)+' pcs'],['Received since then',pcs(arr)],['SKUs in both / new / dropped',`${fmt(both)} / ${fmt(onlyNow)} / ${fmt(onlyLast)}`]].map(k=>`<div class="kpi"><small>${k[0]}</small><b>${k[1]}</b></div>`).join('')}</div>
       <div class="note">${esc(P.status)}${P.status==='Approved'?' (approved quantities)':' (not approved: team quantities only)'}${P.at?' · '+new Date(P.at).toLocaleDateString():''}${lastF?' · last order FOB '+usd(lastF):''} · Received = ERP purchases since that month.</div>
-      <table><tr><th class="l">Category</th><th>Last order</th><th>This order</th><th>Change</th><th>Change %</th></tr>${[...cats].sort((a,b)=>b[1].now-a[1].now).map(([c,o])=>{const d=o.now-o.last;return `<tr><td class="l">${esc(c)}</td><td>${fmt(o.last)}</td><td>${fmt(o.now)}</td><td class="${d<0?'bad':d>0?'good':''}">${d>0?'+':''}${fmt(d)}</td><td>${o.last?Math.round(d/o.last*100)+'%':'-'}</td></tr>`}).join('')}</table>`}
+      <table><tr><th class="l">Category</th><th>Last order</th><th>This order</th><th>Change</th><th>Change %</th></tr>${[...cats].sort((a,b)=>b[1].now-a[1].now).map(([c,o])=>{const d=o.now-o.last;return `<tr data-drill="prev:${esc(c)}"><td class="l">${esc(c)}</td><td>${fmt(o.last)}</td><td>${fmt(o.now)}</td><td class="${d<0?'bad':d>0?'good':''}">${d>0?'+':''}${fmt(d)}</td><td>${o.last?Math.round(d/o.last*100)+'%':'-'}</td></tr>`}).join('')}</table>`}
   // 2. team vs generated by category: what stayed as generated and the team's changes
   const T=new Map(),z=()=>({gen:0,same:0,sameS:0,up:0,upS:0,dn:0,dnS:0,add:0,addS:0,rm:0,rmS:0,fin:0});
   for(const i of items){if(!i.prop&&!i.fin)continue;const o=T.get(i.cat)||z();T.set(i.cat,o);o.gen+=i.prop;o.fin+=i.fin;
@@ -514,7 +518,7 @@ function drawInsights(){
     else if(!i.prop){o.add+=i.fin;o.addS++}else if(!i.fin){o.rm+=i.prop;o.rmS++}
     else if(i.fin>i.prop){o.same+=i.prop;o.up+=i.fin-i.prop;o.upS++}else{o.same+=i.fin;o.dn+=i.prop-i.fin;o.dnS++}}
   const tt=z();for(const o of T.values())for(const k in tt)tt[k]+=o[k];
-  const trow=(c,o,b)=>`<tr${b?' style="font-weight:800"':''}><td class="l">${esc(c)}</td><td>${fmt(o.gen)}</td><td>${fmt(o.same)}<br><span class="note" style="font-size:11px">${o.sameS} SKUs</span></td><td class="good">+${fmt(o.up)}<br><span class="note" style="font-size:11px">${o.upS} SKUs</span></td><td class="bad">−${fmt(o.dn)}<br><span class="note" style="font-size:11px">${o.dnS} SKUs</span></td><td class="good">+${fmt(o.add)}<br><span class="note" style="font-size:11px">${o.addS} SKUs</span></td><td class="bad">−${fmt(o.rm)}<br><span class="note" style="font-size:11px">${o.rmS} SKUs</span></td><td><b>${fmt(o.fin)}</b></td><td>${o.gen?Math.round(o.same/o.gen*100)+'%':'-'}</td></tr>`;
+  const trow=(c,o,b)=>`<tr data-drill="cat:${esc(c)}"${b?' style="font-weight:800"':''}><td class="l">${esc(c)}</td><td>${fmt(o.gen)}</td><td data-drill="team:${esc(c)}|same">${fmt(o.same)}<br><span class="note" style="font-size:11px">${o.sameS} SKUs</span></td><td class="good" data-drill="team:${esc(c)}|up">+${fmt(o.up)}<br><span class="note" style="font-size:11px">${o.upS} SKUs</span></td><td class="bad" data-drill="team:${esc(c)}|dn">−${fmt(o.dn)}<br><span class="note" style="font-size:11px">${o.dnS} SKUs</span></td><td class="good" data-drill="team:${esc(c)}|add">+${fmt(o.add)}<br><span class="note" style="font-size:11px">${o.addS} SKUs</span></td><td class="bad" data-drill="team:${esc(c)}|rm">−${fmt(o.rm)}<br><span class="note" style="font-size:11px">${o.rmS} SKUs</span></td><td><b>${fmt(o.fin)}</b></td><td>${o.gen?Math.round(o.same/o.gen*100)+'%':'-'}</td></tr>`;
   const rs={};items.filter(i=>i.reason).forEach(i=>{const o=rs[i.reason]||(rs[i.reason]={n:0,d:0});o.n++;o.d+=i.fin-i.prop});const re=Object.entries(rs);
   $('iTeam').innerHTML=`<table><tr><th class="l">Category</th><th>Generated pcs</th><th>Same as generated</th><th>Raised</th><th>Lowered</th><th>Added</th><th>Removed</th><th>Final pcs</th><th>Kept %</th></tr>${[...T].sort((a,b)=>b[1].fin-a[1].fin).map(([c,o])=>trow(c,o)).join('')}${trow('Total',tt,1)}</table>
     <div class="note">Same = pieces as generated (for a raised SKU its generated part, for a lowered SKU what is left). Raised / lowered = only the difference. Added: generated 0, the team ordered. Removed: generated, the team set 0.</div>
@@ -522,15 +526,15 @@ function drawInsights(){
   // 3. budget by category: kept as generated vs the team's extra
   const bg=bgVal()||0,B=CATS.map(c=>{const l=items.filter(i=>i.cat===c);return {c,f:l.reduce((a,i)=>a+i.fin*i.fob,0),g:l.reduce((a,i)=>a+Math.min(i.fin,i.prop)*i.fob,0)}}).filter(x=>x.f).sort((a,b)=>b.f-a.f);
   const mx=Math.max(1,...B.map(x=>x.f));
-  $('iBud').innerHTML=B.length?`<table>${B.map(x=>`<tr><td class="l" style="width:120px">${esc(x.c)}</td><td style="width:55%"><div class="hb" style="width:${x.f/mx*100}%"><i title="As generated ${usd(x.g)}" style="width:${x.g/x.f*100}%;background:var(--accent)"></i><i title="Team added ${usd(x.f-x.g)}" style="width:${(x.f-x.g)/x.f*100}%;background:#8FB8DE"></i></div></td><td>${usd(x.f)}</td><td>${bg?Math.round(x.f/bg*100)+'%':''}</td></tr>`).join('')}</table>
+  $('iBud').innerHTML=B.length?`<table>${B.map(x=>`<tr data-drill="cat:${esc(x.c)}"><td class="l" style="width:120px">${esc(x.c)}</td><td style="width:55%"><div class="hb" style="width:${x.f/mx*100}%"><i title="As generated ${usd(x.g)}" style="width:${x.g/x.f*100}%;background:var(--accent)"></i><i title="Team added ${usd(x.f-x.g)}" style="width:${(x.f-x.g)/x.f*100}%;background:#8FB8DE"></i></div></td><td>${usd(x.f)}</td><td>${bg?Math.round(x.f/bg*100)+'%':''}</td></tr>`).join('')}</table>
     <div class="note"><span style="color:var(--accent)">■</span> as generated &nbsp; <span style="color:#8FB8DE">■</span> team added · % = share of the budget ${usd(bg)}</div>`:'<div class="note">Nothing ordered yet.</div>';
   // 4. ABC classes
   const A={A:[],B:[],C:[],'':[]};items.forEach(i=>A[i.abc||''].push(i));const val=i=>i.sell*(i.rrp||i.fob),sv=items.reduce((a,i)=>a+val(i),0)||1;
-  $('iAbc').innerHTML=`<table><tr><th class="l">Class</th><th>SKUs</th><th>Sales value</th><th>SOH</th><th>Order pcs</th><th>FOB</th><th>Cover after</th></tr>${['A','B','C',''].map(k=>{const l=A[k],x=totals(l),mon=l.reduce((a,i)=>a+i.mon,0);return `<tr><td class="l">${k||'No sales'}</td><td>${fmt(l.length)}</td><td>${Math.round(l.reduce((a,i)=>a+val(i),0)/sv*100)}%</td><td>${fmt(l.reduce((a,i)=>a+i.soh,0))}</td><td>${fmt(x.q)}</td><td>${usd(x.f)}</td><td>${mon?m1((l.reduce((a,i)=>a+i.soh+i.pipe,0)+x.q)/mon):'-'}</td></tr>`}).join('')}</table>
+  $('iAbc').innerHTML=`<table><tr><th class="l">Class</th><th>SKUs</th><th>Sales value</th><th>SOH</th><th>Order pcs</th><th>FOB</th><th>Cover after</th></tr>${['A','B','C',''].map(k=>{const l=A[k],x=totals(l),mon=l.reduce((a,i)=>a+i.mon,0);return `<tr data-drill="abc:${k}"><td class="l">${k||'No sales'}</td><td>${fmt(l.length)}</td><td>${Math.round(l.reduce((a,i)=>a+val(i),0)/sv*100)}%</td><td>${fmt(l.reduce((a,i)=>a+i.soh,0))}</td><td>${fmt(x.q)}</td><td>${usd(x.f)}</td><td>${mon?m1((l.reduce((a,i)=>a+i.soh+i.pipe,0)+x.q)/mon):'-'}</td></tr>`}).join('')}</table>
     <div class="note">${$('abc').checked?`Cover in use: A ${esc($('ca').value)} · B ${esc($('cb').value)} · C ${esc($('cc').value)} months.`:'Cover by ABC class is off (Settings): every class uses the same cover.'}</div>`;
   // 5. cover heat map: category × collection (the part of the ERP item group before " - ")
   const cols=[...new Set(items.map(i=>coll(i.grp)))].sort(),hc=v=>v<lt?'background:var(--bad);color:#fff':v>8?'background:#F2C46D;color:#2A1018':'background:color-mix(in srgb,var(--good) 35%,transparent)';
-  $('iHeat').innerHTML=`<table class="heat"><tr><th class="l">Category</th>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>${CATS.map(c=>`<tr><td class="l">${esc(c)}</td>${cols.map(g=>{const l=items.filter(i=>i.cat===c&&coll(i.grp)===g);if(!l.length)return '<td></td>';const mon=l.reduce((a,i)=>a+i.mon,0),st=l.reduce((a,i)=>a+i.soh+i.pipe+i.fin,0),v=mon?st/mon:0;return `<td style="${mon?hc(v):''}" title="${esc(c)} · ${esc(g)}: ${fmt(st)} pcs after the order, ${m1(mon)} sold/mo">${mon?m1(v):st?'no sales':''}</td>`}).join('')}</tr>`).join('')}</table>`;
+  $('iHeat').innerHTML=`<table class="heat"><tr><th class="l">Category</th>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr>${CATS.map(c=>`<tr><td class="l" data-drill="cat:${esc(c)}">${esc(c)}</td>${cols.map(g=>{const l=items.filter(i=>i.cat===c&&coll(i.grp)===g);if(!l.length)return '<td></td>';const mon=l.reduce((a,i)=>a+i.mon,0),st=l.reduce((a,i)=>a+i.soh+i.pipe+i.fin,0),v=mon?st/mon:0;return `<td data-drill="heat:${esc(c)}|${esc(g)}" style="${mon?hc(v):''}" title="${esc(c)} · ${esc(g)}: ${fmt(st)} pcs after the order, ${m1(mon)} sold/mo">${mon?m1(v):st?'no sales':''}</td>`}).join('')}</tr>`).join('')}</table>`;
   // 6. lost sales: out of stock today, monthly sales × lead time
   const lost=items.filter(i=>i.soh<=0&&i.mon>0).map(i=>({i,p:i.mon*lt,e:i.mon*lt*(i.rrp||0)})).sort((a,b)=>b.e-a.e||b.p-a.p);
   $('iLost').innerHTML=lost.length?`<div class="note"><b>${fmt(lost.length)}</b> SKUs out of stock · about <b>${pcs(lost.reduce((a,x)=>a+x.p,0))}</b> · <b>EGP ${fmt(lost.reduce((a,x)=>a+x.e,0))}</b> at RP until the shipment arrives (${lt} months).</div><table><tr><th class="l">SKU</th><th class="l">Item</th><th>Sold/mo</th><th>Pipeline</th><th>Lost pcs</th><th>Lost EGP</th><th>Order</th></tr>${lost.slice(0,60).map(({i,p,e})=>`<tr><td class="l cl" data-d="${esc(i.sku)}">${esc(i.sku)}</td><td class="name">${esc(i.name)}</td><td>${m1(i.mon)}</td><td>${fmt(i.pipe)}</td><td>${fmt(p)}</td><td>${fmt(e)}</td><td>${fmt(i.fin)}</td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
@@ -547,8 +551,51 @@ function drawInsights(){
   const sc=[...dvs.values()].filter(g=>g.length>1&&g.some(i=>i.fin>0)).map(g=>{const ts=g.reduce((a,i)=>a+i.sell,0),tk=g.reduce((a,i)=>a+i.soh+i.pipe+i.fin,0);if(!ts||!tk)return null;
     const rows=g.map(i=>({s:sizeOf(i.sku),sale:i.sell/ts*100,stk:(i.soh+i.pipe+i.fin)/tk*100}));return {g,rows,dev:Math.max(...rows.map(x=>Math.abs(x.stk-x.sale)))}}).filter(Boolean).sort((a,b)=>b.dev-a.dev);
   $('iSize').innerHTML=sc.length?`<div class="note">${sc.filter(x=>x.dev>=10).length} of ${sc.length} ordered DVs are off by 10+ points.</div><table><tr><th class="l">DV</th><th class="l">Size: sales % → stock after order %</th><th>Max off</th></tr>${sc.slice(0,80).map(x=>`<tr><td class="l cl" data-d="${esc(x.g[0].sku)}">${esc(x.g[0].dv)}</td><td class="l">${x.rows.map(r=>`<span class="${Math.abs(r.stk-r.sale)>=10?(r.stk<r.sale?'bad':'good'):''}">${esc(r.s)}: ${Math.round(r.sale)}→${Math.round(r.stk)}</span>`).join(' · ')}</td><td>${Math.round(x.dev)}</td></tr>`).join('')}</table><div class="note">Red: less stock than its sales share (runs out first). Green: more.</div>`:'<div class="note">No ordered DV with several sizes and sales.</div>';
+  const Q=[],ln=(t,k)=>Q.push(`<div class="qk"${k?` data-drill="${k}"`:''}>${t}${k?' <span class="note">›</span>':''}</div>`);
+  const t0=totals(items);
+  if(S.prev){const lq=S.prev.lines.reduce((a,l)=>a+(l[2]||0),0),d=t0.q-lq;ln(`This order is <b>${fmt(t0.q)} pcs</b>, ${d>=0?'<b class="good">'+fmt(d)+' more</b>':'<b class="bad">'+fmt(-d)+' fewer</b>'} than the last order (${esc(S.prev.name)}).`)}
+  else ln(`This order is <b>${fmt(t0.q)} pcs</b> for <b>${usd(t0.f)}</b>. There is no earlier order to compare with.`,'kpi:order');
+  ln(tt.gen?`The team kept <b>${Math.round(tt.same/tt.gen*100)}%</b> of the suggestion: raised ${tt.upS}, lowered ${tt.dnS}, added ${tt.addS}, removed ${tt.rmS} SKUs.`:'Nothing generated yet.',(tt.upS+tt.dnS+tt.addS+tt.rmS)?'team:Total|chg':'');
+  if(B.length)ln(`Most of the money goes to <b>${esc(B[0].c)}</b> (${usd(B[0].f)}${bg?', '+Math.round(B[0].f/bg*100)+'% of the budget':''}).${bg&&t0.f>bg?' <b class="bad">The order is over budget by '+usd(t0.f-bg)+'.</b>':''}`,'cat:'+B[0].c);
+  const noOrd=lost.filter(x=>!x.i.fin).length;
+  if(lost.length)ln(`<b>${fmt(lost.length)}</b> selling SKUs are out of stock (about EGP ${fmt(lost.reduce((a,x)=>a+x.e,0))} lost until the shipment). ${noOrd?'<b class="bad">'+noOrd+' of them are not in this order</b>: check them.':'All of them are in this order.'}`,noOrd?'lost:no':'lost:all');
+  const hv=items.filter(i=>i.fin>0).map(heatV),lowN=hv.filter(m=>m.low).length,highN=hv.filter(m=>m.high).length;
+  if(lowN)ln(`<b>${fmt(lowN)}</b> ordered SKUs sit in red heat-map boxes: they still run out before the shipment arrives.`,'heat2:low');
+  if(highN)ln(`<b>${fmt(highN)}</b> ordered SKUs sit in amber boxes: more than 8 months of stock after this order. Consider cutting.`,'heat2:high');
+  const off=sc.filter(x=>x.dev>=10).length;if(off)ln(`<b>${off}</b> ordered DVs have a size mix that does not match sales. See Size Curve.`);
+  if(mv.length)ln(`<b>${mv.length}</b> ordered SKUs could be moved between stores first. See Move Between Stores.`);
+  const hits=nw.filter(x=>x.r>=1.5).length;if(hits)ln(`<b>${hits}</b> new items sell 1.5× or more than an average old item. Make sure they are ordered.`);
+  $('iKey').innerHTML=Q.join('');
   $('ins').querySelectorAll('td[data-d]').forEach(td=>td.onclick=()=>details(td.dataset.d));
 }
+// the drill-down: click a category, class, cell or KPI to see the SKUs behind the figure
+function heatV(i){const lt=+$('lt').value||0,k=i.cat+'|'+coll(i.grp);S.hv=S.hv||{};if(!S.hv[k]){const l=items.filter(x=>x.cat===i.cat&&coll(x.grp)===coll(i.grp)),mon=l.reduce((a,x)=>a+x.mon,0),st=l.reduce((a,x)=>a+x.soh+x.pipe+x.fin,0),v=mon?st/mon:0;S.hv[k]={low:mon>0&&v<lt,high:mon>0&&v>8}}return S.hv[k]}
+function drillOf(key){
+  const [kind,v='']=[key.slice(0,key.indexOf(':')),key.slice(key.indexOf(':')+1)],[a,b]=v.split('|'),isCat=c=>i=>c==='Total'||i.cat===c;
+  const T={same:i=>(i.prop||i.fin)&&(i.fb==null||i.fin===i.prop),up:i=>i.fb!=null&&i.prop>0&&i.fin>i.prop,dn:i=>i.fb!=null&&i.fin>0&&i.fin<i.prop,add:i=>i.fb!=null&&!i.prop&&i.fin>0,rm:i=>i.fb!=null&&i.prop>0&&!i.fin,chg:i=>i.fb!=null&&i.fin!==i.prop};
+  const N={same:'kept as generated',up:'raised by the team',dn:'lowered by the team',add:'added by the team',rm:'removed by the team',chg:'changed by the team'};
+  if(kind==='cat')return [v,isCat(v)];
+  if(kind==='prev'){const pm=new Map((S.prev?S.prev.lines:[]).map(l=>[l[0],l[2]]));return [v+' · last order vs this order',i=>(v==='Not in this order'?false:i.cat===v)&&(i.fin>0||pm.get(i.sku)>0),pm]}
+  if(kind==='team')return [(a==='Total'?'All categories':a)+' · '+N[b],i=>isCat(a)(i)&&T[b](i)];
+  if(kind==='abc')return [v?'Class '+v:'No sales',i=>(i.abc||'')===v];
+  if(kind==='heat')return [a+' · '+b,i=>i.cat===a&&coll(i.grp)===b];
+  if(kind==='lost')return [v==='no'?'Out of stock, selling, not in this order':'Out of stock and selling',i=>i.soh<=0&&i.mon>0&&(v!=='no'||!i.fin)];
+  if(kind==='heat2')return [v==='low'?'Will run out before the shipment (red boxes)':'Too much stock after this order (amber boxes)',i=>{if(!(i.fin>0))return false;const m=heatV(i);return v==='low'?m.low:m.high}];
+  if(kind==='kpi')return [{order:'SKUs to order',man:'Need a manual decision',stop:'Held back by stopped categories'}[v],{order:i=>i.fin>0,man:i=>i.flag==='man',stop:i=>i.flag==='stop'}[v]];
+  return null;
+}
+function drill(key){
+  const d=drillOf(key);if(!d||!d[1])return;const [title,f,pm]=d,l=items.filter(f).sort((x,y)=>y.fin-x.fin||y.sell-x.sell),t=totals(l),lt=+$('lt').value||0;S.lastDrill=key;
+  const sum=k=>l.reduce((a,i)=>a+(i[k]||0),0),mon=sum('mon'),sub=new Map();l.forEach(i=>{const g=coll(i.grp);const o=sub.get(g)||{n:0,q:0,sell:0};o.n++;o.q+=i.fin;o.sell+=i.sell;sub.set(g,o)});
+  $('det').innerHTML=`<div class="box" style="max-width:1100px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(title)}</h2><button class="btn sm" id="detX">Close</button></div>
+    <div class="kpis" style="margin:10px 0">${[['SKUs',fmt(l.length)],['Sell Out',fmt(sum('sell'))],['SOH + pipeline',fmt(sum('soh')+sum('pipe'))],['Order pcs',fmt(t.q)],['Order FOB',usd(t.f)]].map(k=>`<div class="kpi"><small>${k[0]}</small><b>${k[1]}</b></div>`).join('')}</div>
+    ${sub.size>1?`<div class="note" style="margin-bottom:6px">By collection: ${[...sub].sort((x,y)=>y[1].sell-x[1].sell).map(([g,o])=>`<b>${esc(g)}</b> ${fmt(o.sell)} sold · ${fmt(o.q)} ordered`).join(' &nbsp;|&nbsp; ')}</div>`:''}
+    ${l.length?`<div class="tw" style="max-height:55vh"><table><tr><th></th><th class="l">SKU</th><th class="l">Item</th><th class="l">Category</th><th>SOH</th><th>Pipeline</th><th>Sell Out</th><th>Trend</th><th>Sold/mo</th><th>Cover now</th><th>Proposed</th><th>Team</th>${pm?'<th>Last order</th>':''}<th>Total FOB</th><th class="l"></th></tr>${l.slice(0,400).map(i=>`<tr data-d="${esc(i.sku)}"><td>${pic(i.dv)}</td><td class="l cl">${esc(i.sku)}</td><td class="name">${esc(i.name)}</td><td class="l">${esc(i.cat)}</td><td>${fmt(i.soh)}</td><td>${fmt(i.pipe)}</td><td>${fmt(i.sell)}</td><td>${spark(i.soldBy)}</td><td>${m1(i.mon)}</td><td>${pill(i.coverNow,lt)}</td><td>${fmt(i.prop)}</td><td><b>${fmt(i.fin)}</b></td>${pm?`<td>${fmt(pm.get(i.sku)||0)}</td>`:''}<td>${usd(i.fin*i.fob)}</td><td class="l">${i.reason?`<span class="note">${esc(i.reason)}</span>`:''}</td></tr>`).join('')}</table></div>${l.length>400?'<div class="note">First 400 shown.</div>':''}`:'<div class="note">No SKUs.</div>'}
+    <div class="note" style="margin-top:6px">Click a SKU for its details.</div></div>`;
+  $('det').hidden=false;fillPics();$('detX').onclick=()=>{$('det').hidden=true;S.lastDrill=null};$('det').onclick=e=>{if(e.target.id==='det'){$('det').hidden=true;S.lastDrill=null}};
+  $('det').querySelectorAll('tr[data-d]').forEach(tr=>tr.onclick=e=>{if(!e.target.closest('.img'))details(tr.dataset.d)});
+}
+document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('[data-drill]');if(!el||e.target.closest('input,select,button,.img')||el.closest('#det'))return;drill(el.dataset.drill)});
 // the item details panel: sales trend, stock forecast, stock per store, size curve
 function details(sku){
   const i=items.find(x=>x.sku===sku);if(!i)return;const lt=+$('lt').value||0,cv=+$('cv').value||0,H2=120,W=320;
@@ -559,13 +606,13 @@ function details(sku){
   const fx=Math.max(1,...pts),sx=W/N,line=pts.map((v,k)=>`${(k*sx).toFixed(1)},${(H2-v/fx*H2).toFixed(1)}`).join(' ');
   const fc=`<svg width="100%" viewBox="0 0 ${W} ${H2+16}"><polyline points="${line}" fill="none" stroke="var(--good)" stroke-width="2"/><line x1="${L*sx}" x2="${L*sx}" y1="0" y2="${H2}" stroke="var(--ink2)" stroke-dasharray="3 3"/><text x="${L*sx+3}" y="10" font-size="9" fill="currentColor">arrival</text>${pts.map((v,k)=>`<text x="${Math.min(W-4,Math.max(4,k*sx))}" y="${H2+12}" font-size="8" text-anchor="middle" fill="currentColor">${k}</text>`).join('')}</svg>`;
   const sib=items.filter(x=>x.dv===i.dv),ts=sib.reduce((a,x)=>a+x.sell,0);
-  $('det').innerHTML=`<div class="box"><div class="row" style="justify-content:space-between"><div class="row">${pic(i.dv)}<div><b>${esc(i.sku)}</b> <span class="note">${esc(i.cat)}${i.grp?' · '+esc(i.grp):''}${i.abc?' · class '+i.abc:''}</span><div>${esc(i.name)}</div></div></div><button class="btn sm" id="detX">Close</button></div>
+  $('det').innerHTML=`<div class="box"><div class="row" style="justify-content:space-between"><div class="row">${pic(i.dv)}<div><b>${esc(i.sku)}</b> <span class="note">${esc(i.cat)}${i.grp?' · '+esc(i.grp):''}${i.abc?' · class '+i.abc:''}</span><div>${esc(i.name)}</div></div></div><span>${S.lastDrill?'<button class="btn sm" id="detB">‹ Back</button> ':''}<button class="btn sm" id="detX">Close</button></span></div>
     <div class="kpis" style="margin:10px 0">${[['SOH',fmt(i.soh)],['Pipeline',fmt(i.pipe)],['Sold/mo',m1(i.mon)],['Proposed',fmt(i.prop)],['Order',fmt(i.fin)]].map(k=>`<div class="kpi"><small>${k[0]}</small><b>${k[1]}</b></div>`).join('')}</div>
     <div class="grid2"><div><h2>Sales per month</h2>${bars}</div><div><h2>Stock forecast (months from now)</h2>${fc}</div></div>
     <div class="grid2"><div><h2>Stock per store</h2>${i.wh.length?`<table>${i.wh.slice().sort((a,b)=>b[1]-a[1]).map(w=>`<tr><td class="l">${esc(w[0])}</td><td>${fmt(w[1])}</td></tr>`).join('')}</table>`:'<div class="note">No stock in any store.</div>'}</div>
     <div><h2>Size curve (${esc(i.dv)})</h2>${sib.length>1?`<table><tr><th class="l">SKU</th><th>Sales %</th><th>Stock after order</th><th>Order</th></tr>${sib.map(x=>`<tr${x===i?' style="font-weight:800"':''}><td class="l">${esc(x.sku)}</td><td>${ts?Math.round(x.sell/ts*100)+'%':'-'}</td><td>${fmt(x.soh+x.pipe+x.fin)}</td><td>${fmt(x.fin)}</td></tr>`).join('')}</table>`:'<div class="note">One size only.</div>'}</div></div>
     ${i.note||i.reason?`<div class="note" style="margin-top:8px">${i.reason?'<b>'+esc(i.reason)+'</b> · ':''}${esc(i.note)}</div>`:''}</div>`;
-  $('det').hidden=false;fillPics();$('detX').onclick=()=>$('det').hidden=true;$('det').onclick=e=>{if(e.target.id==='det')$('det').hidden=true};
+  $('det').hidden=false;fillPics();$('detX').onclick=()=>{$('det').hidden=true;S.lastDrill=null};$('det').onclick=e=>{if(e.target.id==='det'){$('det').hidden=true;S.lastDrill=null}};if($('detB'))$('detB').onclick=()=>drill(S.lastDrill);
 }
 /* descriptions shown when the mouse rests on a setting, a heading or a figure */
 const TIPS={
