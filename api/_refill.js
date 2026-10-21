@@ -80,16 +80,20 @@ async function syncPart(b) {
     try { list = await runReport('Branches Stock Balance', { company: company(), from_date: d, to_date: d, item_group: 'Pandora', valuation_field_type: 'Currency' }); }
     catch (_) { list = await runReport('Branches Stock Balance', { from_date: d, to_date: d }); }
     // the SKU is in "sku"; "item_code" is ERP's own code (kept to read the Stock Ledger, which only has item_code)
-    const soh = {}, code2sku = {}; erp.grp = erp.grp || {};
+    const soh = {}, code2sku = {}, wh = {}; erp.grp = erp.grp || {};
     let kept = 0;
     for (const x of list) {
       const s = skuOf(pick(x, 'sku', 'sku-item', 'item_code', 'item')); if (!s) continue;
       if (x.item_code) code2sku[skuOf(x.item_code)] = s;
       if (groupOf(x)) erp.grp[s] = groupOf(x).slice(0, 80);
       if (!keepRow(x)) continue;
-      soh[s] = (soh[s] || 0) + num(pick(x, 'bal_qty', 'balance_qty', 'balance')); kept++;
+      const q = num(pick(x, 'bal_qty', 'balance_qty', 'balance'));
+      soh[s] = (soh[s] || 0) + q; kept++;
+      // where the pieces are: "City Stars - AN" -> "City Stars"
+      const w = str(x.warehouse, 60).replace(/\s-\s[A-Za-z]{1,5}$/, '').replace(/^Pandora\s+/i, '') || '?';
+      if (q) { const m = wh[s] || (wh[s] = {}); m[w] = (m[w] || 0) + q; }
     }
-    erp.code2sku = code2sku;
+    erp.code2sku = code2sku; erp.wh = wh;
     erp.diag = Object.assign(erp.diag || {}, { soh: { raw: list.length, kept, keys: list[0] ? Object.keys(list[0]).slice(0, 30) : [] } });
     erp.soh = soh; erp.at.soh = new Date().toISOString(); erp.sohDate = d;
     await store.putJSON(ERP, erp);
@@ -166,14 +170,14 @@ async function joined() {
   const S = new Set((sl ? sl.rows : []).map(r => r[0]));
   const e = erp || { soh: {}, sold: {}, buy: {} };
   const months = Object.keys(e.sold).sort();
-  // item: [sku, available, dv, name, cat, sub, launch, fob, rrp, status, inMaster, soh, pipe, slow, [sold per month], [bought per month], ERP item group]
+  // item: [sku, available, dv, name, cat, sub, launch, fob, rrp, status, inMaster, soh, pipe, slow, [sold per month], [bought per month], ERP item group, [[store, pcs]]]
   const G = (erp && erp.grp) || {}, OUT = await groupsOut();
   const outGroup = s => !!G[s] && OUT.has(G[s]);
   const items = av.rows.filter(([s]) => { const m = M.get(s); return !(m && notJewel(m[3], m[2])) && !(G[s] && notJewel(G[s], '')) && !outGroup(s); }).map(([s, a]) => {
     const m = M.get(s);
     return [s, a, m ? m[1] : s.split('-')[0], m ? m[2] : '', m ? m[3] : '', m ? m[4] : '', m ? m[5] : '', m ? m[6] : 0, m ? m[7] : 0, m ? m[8] : '', m ? 1 : 0,
       Math.round(e.soh[s] || 0), P.get(s) || 0, S.has(s) ? 1 : 0,
-      months.map(k => Math.round((e.sold[k] || {})[s] || 0)), months.map(k => Math.round((e.buy[k] || {})[s] || 0)), G[s] || ''];
+      months.map(k => Math.round((e.sold[k] || {})[s] || 0)), months.map(k => Math.round((e.buy[k] || {})[s] || 0)), G[s] || '', Object.entries((e.wh || {})[s] || {}).filter(x => x[1]).map(([w, q]) => [w, Math.round(q)])];
   });
   // selling, but not on the Available to Order list (for information only)
   const avs = new Set(av.rows.map(r => r[0])), off = new Map();
@@ -283,7 +287,15 @@ module.exports = async function handler(req, res) {
       if (!/^[a-f0-9]{12}$/.test(id)) return send(res, 404, { ok: false, error: 'Not found.' });
       const o = await store.getJSON('rf/orders/' + id + '.json');
       if (!o) return send(res, 404, { ok: false, error: 'Not found.' });
-      return send(res, 200, { ok: true, level: lvl, today: cairoToday(), order: o, ...(await joined()) });
+      const idx0 = (await store.getJSON(ORDERS)) || [], at = idx0.findIndex(x => x.id === id);
+      let prev = null;
+      for (let k = at - 1; k >= 0 && !prev; k--) {
+        const po = await store.getJSON('rf/orders/' + idx0[k].id + '.json');
+        if (po) prev = { name: po.name, status: po.status, at: (po.approved && po.approved.at) || po.createdAt,
+          // [sku, proposed, final] — the approved copy, or (not approved) the team's numbers only
+          lines: po.approved ? po.approved.lines.map(l => [l[0], l[1], l[2]]) : Object.entries(po.fb || {}).map(([k2, q]) => [k2, null, q]) };
+      }
+      return send(res, 200, { ok: true, level: lvl, today: cairoToday(), order: o, prev, ...(await joined()) });
     }
     const erp = (await store.getJSON(ERP)) || { at: {}, sold: {}, buy: {} };
     return send(res, 200, {
@@ -338,7 +350,7 @@ module.exports = async function handler(req, res) {
     const o = {
       id: crypto.randomBytes(6).toString('hex'), name, status: 'Draft', createdAt: new Date().toISOString(), by,
       settings: prev ? prev.settings : { pm: 6, lt: 2, cv: 3, mq: 1, nm: 9, budget: 150000 }, stop: prev ? prev.stop : [], stopSub: prev ? prev.stopSub || [] : [],
-      fb: {}, notes: {}, log: [{ at: new Date().toISOString(), by, what: 'Created' }]
+      fb: {}, notes: {}, reasons: {}, log: [{ at: new Date().toISOString(), by, what: 'Created' }]
     };
     await store.putJSON('rf/orders/' + o.id + '.json', o);
     idx.push({ id: o.id, name, status: o.status, at: o.createdAt });
@@ -359,7 +371,8 @@ module.exports = async function handler(req, res) {
   if (o.status === 'Approved' && !(op === 'status' && b.status === 'Draft')) return send(res, 400, { ok: false, error: 'This order is approved. Reopen it first.' });
   if (op === 'settings') {
     const s = b.settings || {}, cl = (v, lo, hi, d) => { const n = Number(v); return isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
-    o.settings = { pm: cl(s.pm, 1, 24, 6), lt: cl(s.lt, 0, 12, 2), cv: cl(s.cv, 0, 24, 3), mq: Math.round(cl(s.mq, 1, 1000, 1)), nm: cl(s.nm, 0, 36, 9), budget: Math.round(cl(s.budget, 0, 1e8, 0) * 100) / 100 };
+    o.settings = { pm: cl(s.pm, 1, 24, 6), lt: cl(s.lt, 0, 12, 2), cv: cl(s.cv, 0, 24, 3), mq: Math.round(cl(s.mq, 1, 1000, 1)), nm: cl(s.nm, 0, 36, 9), budget: Math.round(cl(s.budget, 0, 1e8, 0) * 100) / 100,
+      tw: Math.round(cl(s.tw, 0, 100, 60)), season: !!s.season, abc: !!s.abc, ca: cl(s.ca, 0, 24, 4), cb: cl(s.cb, 0, 24, 3), cc: cl(s.cc, 0, 24, 2) };
     o.stop = Array.isArray(b.stop) ? b.stop.map(c => str(c, 40)).filter(Boolean).slice(0, 30) : o.stop;
     o.stopSub = Array.isArray(b.stopSub) ? b.stopSub.map(c => str(c, 80)).filter(Boolean).slice(0, 60) : (o.stopSub || []);
     log('Settings changed');
@@ -370,6 +383,7 @@ module.exports = async function handler(req, res) {
       const s = skuOf(l[0]); if (!SKU.test(s)) continue;
       if (l[1] === null || l[1] === '' || l[1] === undefined) delete o.fb[s]; else o.fb[s] = Math.max(0, Math.min(100000, Math.round(Number(l[1]) || 0)));
       if (l[2] !== undefined) { const t = str(l[2], 200); if (t) o.notes[s] = t; else delete o.notes[s]; }
+      if (l[3] !== undefined) { o.reasons = o.reasons || {}; const t = str(l[3], 40); if (t) o.reasons[s] = t; else delete o.reasons[s]; }
       n++;
     }
     log(n === 1 ? 'Team feedback: ' + skuOf(b.lines[0][0]) : 'Team feedback: ' + n + ' lines');
