@@ -68,14 +68,15 @@ tbody tr:hover td,table tr:hover>td{background:color-mix(in srgb,var(--accent) 7
 @media(max-width:800px){.mlr{grid-template-columns:1fr 1fr 1fr;}.mlr .dv,.mlr .say{grid-column:1/-1}}
 .szs{display:flex;flex-wrap:wrap;gap:6px}.sz{border:1px solid var(--line);border-radius:8px;padding:4px 7px;width:92px;font-size:11px;color:var(--ink2)}.sz b{color:var(--ink);font-size:12.5px}.sz.short{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent)}.sz.long{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 8%,transparent)}
 .sb{height:5px;background:var(--soft);border-radius:99px;margin:2px 0;overflow:hidden}.sb i{display:block;height:100%}
+.btn.del{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,var(--line))}.btn.del:hover{background:var(--bad);color:#fff}
 .log div{border-top:1px solid var(--line);padding:4px 0;font-size:12.5px}
 </style>
 </head>
 <body><div class="wrap">
-<header class="row" style="justify-content:space-between;align-items:flex-end">
-  <div><a class="crumb" href="/">&larr; Home</a><div class="brand"><img class="logo" src="/pandora-logo.png" alt="Pandora"><h1>Refill Order</h1></div><div class="sub">Suggested order to Pandora from the available to order list, stock, pipeline and sell out. SKUs of the same DV stay together.</div></div>
+<header class="row" style="justify-content:space-between;align-items:flex-end;position:relative">
+  <div><a class="crumb" href="/" style="position:absolute;right:0;top:0">&larr; Home</a><div class="brand"><img class="logo" src="/pandora-logo.png" alt="Pandora"><h1>Refill Order</h1></div><div class="sub">Suggested order to Pandora from the available to order list, stock, pipeline and sell out. SKUs of the same DV stay together.</div></div>
   <div class="row"><select id="ord" aria-label="Order"></select><button class="btn" id="newo" hidden>New order</button>
-    <span class="status" id="status"></span><button class="btn" id="stBtn" hidden></button><button class="btn" id="reopen" hidden>Reopen</button><button class="btn" id="xlsx">Export Excel</button><label class="btn" id="fbUp" hidden>Upload team sheet<input type="file" id="fbFile" accept=".xlsx,.xls" hidden></label></div>
+    <span class="status" id="status"></span><button class="btn" id="stBtn" hidden></button><button class="btn" id="reopen" hidden>Reopen</button><button class="btn" id="xlsx">Export Excel</button><button class="btn del" id="delo" hidden>Delete order</button><label class="btn" id="fbUp" hidden>Upload team sheet<input type="file" id="fbFile" accept=".xlsx,.xls" hidden></label></div>
 </header>
 <div class="err" id="err" hidden></div>
 
@@ -218,7 +219,7 @@ async function boot(){
     drawFiles();
     const sel=$('ord');sel.innerHTML=H.orders.length?H.orders.map(o=>`<option value="${o.id}">${esc(o.name)} · ${esc(o.status)}</option>`).join(''):'<option value="">No orders yet</option>';
     sel.onchange=()=>openOrder(sel.value);
-    if(H.orders.length)openOrder(H.orders[0].id);else{$('main').hidden=true;$('status').textContent='';}
+    if(H.orders.length)openOrder(H.orders[0].id);else{$('main').hidden=true;$('status').textContent='';drawStatus()}
   }catch(e){showErr('Could not load: '+e.message)}
 }
 /* ERP item groups left out of everything (services, packaging, boxes...). Manage only can change them. */
@@ -369,6 +370,7 @@ function drawStatus(){
   $('status').textContent=O?O.status:'';
   const st=$('stBtn');st.hidden=!O||O.status==='Approved'||(O.status==='Draft'?!can('input'):!can('manage'));st.textContent=O&&O.status==='Draft'?'Submit':'Approve';
   $('reopen').hidden=!O||O.status==='Draft'||!can('manage');
+  $('delo').hidden=!O||!can('manage');
 }
 function draw(){
   drawStatus();
@@ -473,6 +475,10 @@ async function setStatus(status){
   try{const body={id:O.id,status};if(status==='Approved')body.lines=items.filter(i=>i.fin>0||i.prop>0).map(i=>[i.sku,i.prop,i.fin,i.fob]);
     await api('/api/refill?op=status',body);H=await api('/api/refill');boot()}catch(e){showErr(e.message)}}
 $('stBtn').onclick=()=>{const to=O.status==='Draft'?'Submitted':'Approved';if(confirm(to==='Approved'?'Approve this order? It will be locked.':'Submit this order for approval?'))setStatus(to)};
+$('delo').onclick=async()=>{if(!O)return;const t=prompt(`Delete the order "${O.name}" (${O.status}) for good? Its quantities, comments and history are removed and cannot be brought back.
+
+Type the order name to confirm:`);if(t==null)return;if(t.trim()!==O.name){alert('The name does not match. Nothing was deleted.');return}
+  try{await api('/api/refill?op=delete',{id:O.id});O=null;items=[];H=await api('/api/refill');boot()}catch(e){showErr(e.message)}};
 $('reopen').onclick=()=>{if(confirm('Reopen this order so it can be changed?'))setStatus('Draft')};
 $('xlsx').onclick=()=>{if(!O||!items.length)return;
   const rows=items.slice().sort((a,b)=>a.dv.localeCompare(b.dv)||a.sku.localeCompare(b.sku,undefined,{numeric:true})).map(i=>({'SKU#':i.sku,'Proposed QTY':i.prop,'Team Feedback':i.fin,'Diff':i.fin-i.prop,'FOB':i.fob,'Total FOB $':Math.round(i.fin*i.fob*100)/100,'DV':i.dv,'RP':i.rrp,'Description':i.name,'Category':i.cat,'Real Campaign Launch':i.launch,'Sub Category':i.sub,'Item Group':i.grp,'Pandora Status':i.status,
