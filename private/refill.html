@@ -102,20 +102,20 @@ tbody tr:hover td,table tr:hover>td{background:color-mix(in srgb,var(--accent) 7
 </div>
 <div class="row tabs" style="margin:14px 0 4px"><button class="btn tab on" data-tab="order">Order</button><button class="btn tab" data-tab="ins">Insights</button></div>
 <div id="ins" hidden>
-<div class="card"><h2>Compare with the last order</h2><div id="iPrev"></div></div>
+<div class="card"><h2>Compare with the Last Order</h2><div id="iPrev"></div></div>
 <div class="card"><h2>Team Changes vs. Generated, by Category</h2><div class="note">Generated = the page's Proposed quantity. Same = the team kept it. The rest are the team's changes.</div><div class="tw" id="iTeam"></div></div>
 <div class="grid2">
   <div class="card"><h2>Budget by Category</h2><div class="note">Order FOB per category: the part kept as generated and the part the team added.</div><div id="iBud"></div></div>
-  <div class="card"><h2>ABC classes</h2><div class="note">By sales value (Sell Out × RP): A = top 80%, B = next 15%, C = the rest.</div><div class="tw" id="iAbc"></div></div>
+  <div class="card"><h2>ABC Classes</h2><div class="note">By sales value (Sell Out × RP): A = top 80%, B = next 15%, C = the rest.</div><div class="tw" id="iAbc"></div></div>
 </div>
-<div class="card"><h2>Cover heat map</h2><div class="note">Months of stock after this order, category × collection. Red: under the lead time. Amber: over 8 months.</div><div class="tw" id="iHeat"></div></div>
+<div class="card"><h2>Cover Heat Map</h2><div class="note">Months of stock after this order, category × collection. Red: under the lead time. Amber: over 8 months.</div><div class="tw" id="iHeat"></div></div>
 <div class="grid2">
-  <div class="card"><h2>Lost sales</h2><div class="note">Selling items with no stock today: monthly sales × lead time, until the shipment arrives.</div><div class="tw" id="iLost" style="max-height:420px"></div></div>
-  <div class="card"><h2>New vs carry-over</h2><div class="note">New items' monthly sales against the carry-over average of the same category.</div><div class="tw" id="iNew" style="max-height:420px"></div></div>
+  <div class="card"><h2>Lost Sales</h2><div class="note">Selling items with no stock today: monthly sales × lead time, until the shipment arrives.</div><div class="tw" id="iLost" style="max-height:420px"></div></div>
+  <div class="card"><h2>New vs. Carry-Over</h2><div class="note">New items' monthly sales against the carry-over average of the same category.</div><div class="tw" id="iNew" style="max-height:420px"></div></div>
 </div>
 <div class="grid2">
-  <div class="card"><h2>Move between stores before ordering</h2><div class="note">Ordered SKUs with 3+ pieces in one place and none in others. Stores here = places with stock of any SKU.</div><div class="tw" id="iMove" style="max-height:420px"></div></div>
-  <div class="card"><h2>Size curve</h2><div class="note">Per DV: share of each size in sales vs in stock after the order. Off by 10 points or more is flagged.</div><div class="tw" id="iSize" style="max-height:420px"></div></div>
+  <div class="card"><h2>Move Between Stores Before Ordering</h2><div class="note">Ordered SKUs with 3+ pieces in one place and none in others. Stores here = places with stock of any SKU.</div><div class="tw" id="iMove" style="max-height:420px"></div></div>
+  <div class="card"><h2>Size Curve</h2><div class="note">Per DV: share of each size in sales vs in stock after the order. Off by 10 points or more is flagged.</div><div class="tw" id="iSize" style="max-height:420px"></div></div>
 </div>
 </div>
 <div id="ordTab">
