@@ -222,44 +222,54 @@ module.exports = async function handler(req, res) {
     if (!/^[A-Z0-9_]{4,20}$/.test(dv) || !process.env.ERP_URL) return res.status(404).end();
     const base = String(process.env.ERP_URL).replace(/\/+$/, ''), auth = { Authorization: `token ${process.env.ERP_API_KEY}:${process.env.ERP_API_SECRET}` };
     const cache = (await store.getJSON('rf/erpimg.json')) || {};
+    const why = url.searchParams.get('why') === '1', log = [];
     try {
       let path = cache[dv];
-      if (path === undefined) {
+      if (why || path === undefined || (path === '' && !(cache['@' + dv] > Date.now() - 864e5))) {
         const erp = (await store.getJSON(ERP)) || {};
         const codes = Object.entries(erp.code2sku || {}).filter(([, sku]) => sku === dv || sku.startsWith(dv + '-')).map(([c]) => c).slice(0, 6);
         path = '';
+        log.push('ERP item codes for this design: ' + (codes.join(', ') || 'none known (press Sync from ERP), trying ' + dv));
         for (const c of codes.length ? codes : [dv]) {
-          const r = await fetch(base + '/api/resource/Item/' + encodeURIComponent(c) + '?fields=' + encodeURIComponent('["image"]'), { headers: auth, signal: AbortSignal.timeout(8000) });
-          if (!r.ok) continue;
-          const im = ((await r.json()).data || {}).image;
+          const r = await fetch(base + '/api/resource/Item/' + encodeURIComponent(c), { headers: auth, signal: AbortSignal.timeout(8000) });
+          if (!r.ok) { log.push(c + ': ERP answered ' + r.status); continue; }
+          const d = (await r.json()).data || {};
+          const im = d.image || d.website_image || d.thumbnail;
+          log.push(c + ': picture ' + (im || 'none'));
           if (im) { path = String(im); break; }
         }
-        cache[dv] = path; await store.putJSON('rf/erpimg.json', cache);
+        cache[dv] = path; cache['@' + dv] = Date.now(); await store.putJSON('rf/erpimg.json', cache);
       }
-      if (!path) return res.status(404).end();
+      if (!path) return why ? send(res, 200, { ok: true, dv, erp: log }) : res.status(404).end();
       const url2 = /^https?:/.test(path) ? path : base + (path.startsWith('/') ? '' : '/') + path;
       const r = await fetch(url2, { headers: url2.startsWith(base) ? auth : {}, signal: AbortSignal.timeout(10000) });
       const type = r.headers.get('content-type') || '';
+      if (why) {
+        // and what the site gives for the same design
+        let site = '';
+        try { const r2 = await fetch('https://pandoraeg.com/search/suggest.json?q=' + encodeURIComponent(dv) + '&resources[type]=product&resources[limit]=4', { signal: AbortSignal.timeout(8000) }); site = r2.status + ' ' + (await r2.text()).slice(0, 300); } catch (e) { site = String(e.message || e); }
+        return send(res, 200, { ok: true, dv, erp: log, file: url2, fileAnswer: r.status + ' ' + type, site });
+      }
       if (!r.ok || !/^image\//.test(type)) return res.status(404).end();
       const buf = Buffer.from(await r.arrayBuffer());
       if (buf.length > 3e6) return res.status(404).end();
       res.setHeader('Content-Type', type); res.setHeader('Cache-Control', 'private, max-age=604800'); res.setHeader('X-Content-Type-Options', 'nosniff');
       return res.status(200).end(buf);
-    } catch (_) { return res.status(404).end(); }
+    } catch (e) { return why ? send(res, 200, { ok: false, dv, erp: log, error: String(e.message || e) }) : res.status(404).end(); }
   }
   if (req.method === 'GET' && url.searchParams.get('pics')) {
     // pictures the page could not find: search pandoraeg.com for each design (that search cannot be called from the browser)
     const want = [...new Set(url.searchParams.get('pics').split(',').map(d => skuOf(d)).filter(d => /^[A-Z0-9_]{4,20}$/.test(d)))].slice(0, 40);
     const cache = (await store.getJSON('rf/webpics.json')) || {};
     let changed = false;
-    await Promise.all(want.filter(d => !(d in cache)).map(async d => {
+    await Promise.all(want.filter(d => !cache[d] && !(cache['@' + d] > Date.now() - 864e5)).map(async d => {
       try {
         const r = await fetch('https://pandoraeg.com/search/suggest.json?q=' + encodeURIComponent(d) + '&resources[type]=product&resources[limit]=4', { signal: AbortSignal.timeout(8000) });
         const j = await r.json();
         const l = (j.resources && j.resources.results && j.resources.results.products) || [];
         const hit = l.find(x => String(x.handle || x.url || '').toLowerCase().includes(d.toLowerCase()));
         const u = hit && (hit.image || (hit.featured_image && hit.featured_image.url)) || '';
-        cache[d] = /^https?:/.test(u) || u.startsWith('//') ? u : ''; changed = true;
+        cache[d] = /^https?:/.test(u) || u.startsWith('//') ? u : ''; cache['@' + d] = Date.now(); changed = true;
       } catch (_) {}
     }));
     if (changed) await store.putJSON('rf/webpics.json', cache);

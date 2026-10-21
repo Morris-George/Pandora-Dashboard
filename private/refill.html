@@ -108,13 +108,17 @@ const pic=dv=>{const v=PICS[String(dv||'').toUpperCase()]||PICS[String(dv||'')];
   return `<span class="img" data-dv="${esc(String(dv||'').toUpperCase())}">no<br>image</span>`};
 async function loadWeb(){
   if(WEB.map)return;if(WEB.state==='loading')return WEB.wait;WEB.state='loading';let done;WEB.wait=new Promise(r=>done=r);const map={};
-  try{for(let page=1;page<=40;page++){const r=await fetch(SITE+'/products.json?limit=250&page='+page);if(!r.ok)break;const list=(await r.json()).products||[];
+  let whole=false;
+  try{for(let page=1;page<=40;page++){const r=await fetch(SITE+'/products.json?limit=250&page='+page);if(!r.ok)throw new Error('site '+r.status);const list=(await r.json()).products||[];
       for(const pr of list){const first=pr.images&&pr.images[0]?pr.images[0].src:'';
         // the design code also ends the product link (…-382234c00), even when the sizes have no SKU on the site
         const hd=(String(pr.handle||'').match(/-([0-9]{5,6}[a-z0-9_]*)$/i)||[])[1];if(hd&&first&&!map[hd.toUpperCase()])map[hd.toUpperCase()]=first;
         for(const v of pr.variants||[]){const sku=String(v.sku||'').toUpperCase();if(!sku)continue;const img=(v.featured_image&&v.featured_image.src)||first;if(!img)continue;const dv=sku.split('-')[0];if(!map[dv])map[dv]=first||img;if(!map[sku])map[sku]=img}}
-      if(list.length<250)break}
-    WEB.map=map;try{localStorage.setItem('rf.webpics2',JSON.stringify({at:Date.now(),map}))}catch(_){}
+      if(list.length<250){whole=true;break}}
+  }catch(_){}
+  // use what was read; keep it on this computer only when the whole list came
+  WEB.map=map;if(whole)try{localStorage.setItem('rf.webpics2',JSON.stringify({at:Date.now(),map}))}catch(_){}
+  try{
   }catch(_){}
   WEB.state='done';done();
 }
