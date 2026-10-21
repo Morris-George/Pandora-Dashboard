@@ -192,7 +192,7 @@ async function openOrder(id){
     if(!j.items.length){$('main').hidden=true;showErr('Upload the Available to Order file first.');drawStatus();return}
     const months=j.months,today=j.today;
     // the Sell Out period: the last full months before this month
-    S.months=months;S.today=today;S.notListed=j.notListed||[];S.allCats=j.allCats||{};
+    S.months=months;S.today=today;S.notListed=j.notListed||[];S.allCats=j.allCats||{};S.allSkipped=j.allSkipped||{};S.allNeg=j.allNeg||{pcs:0,skus:0};S.allSohRaw=j.allSohRaw||0;
     items=j.items.map(r=>({sku:r[0],av:!!r[1],dv:r[2]||r[0].split('-')[0],name:r[3],cat:r[4]==='Charm'?'Charms':(r[4]||'No category'),sub:r[5],launch:r[6],fob:r[7],rrp:r[8],status:r[9],inMaster:!!r[10],soh:Math.max(0,r[11]),neg:r[11]<0?r[11]:0,pipe:r[12],slow:!!r[13],soldBy:r[14],boughtBy:r[15],fb:O.fb[r[0]]??null,note:O.notes[r[0]]||''}));
     CATS=[...new Set(items.map(i=>i.cat))].sort();
     $('fc').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
@@ -285,7 +285,12 @@ function drawMix(t){
     rows.map(r=>{const sm=pc(r.sell,all.sell);return `<tr><td class="l">${esc(r.c)}${S.stop.has(r.c)?' <span class="tag t-stop">stopped</span>':''}</td><td>${fmt(r.sell)}</td><td><b>${p1(sm)}</b></td><td>${fmt(r.soh)}</td>${cell(pc(r.soh,all.soh),sm)}${cell(pc(r.pipe,all.pipe),sm)}<td>${fmt(r.q)}</td>${cell(pc(r.q,all.q),sm)}${cell(pc(r.f,all.f),sm)}</tr>`}).join('')+
     `<tr><td class="l"><b>Total</b></td><td><b>${fmt(all.sell)}</b></td><td>100%</td><td><b>${fmt(all.soh)}</b></td><td>100%</td><td>100%</td><td><b>${fmt(all.q)}</b></td><td>100%</td><td>100%</td></tr></table>
     <table style="margin-top:8px"><tr><td class="l" style="width:110px">Sales mix</td><td>${bar('sell')}</td></tr><tr><td class="l">Stock mix</td><td>${bar('soh')}</td></tr><tr><td class="l">Order mix</td><td>${bar('q')}</td></tr></table>
-    <div class="note">Small red / green numbers: points above / below the sales mix.</div>`;
+    <div class="note">Small red / green numbers: points above / below the sales mix.</div>
+    <details style="margin-top:8px"><summary class="note" style="cursor:pointer">How the SOH total is made (check it against ERP)</summary><div class="note" style="margin-top:6px">
+      ERP stock on hand, all SKUs synced: <b>${fmt(S.allSohRaw)}</b> pcs.<br>
+      ${S.allNeg.skus?`Negative balances (counted as they are, like ERP): <b>${fmt(S.allNeg.skus)}</b> SKUs, <b>${fmt(S.allNeg.pcs)}</b> pcs.<br>`:''}
+      ${Object.entries(S.allSkipped).map(([w,k])=>`Not counted, ${esc(w)}: <b>${fmt(k.pcs)}</b> pcs in ${fmt(k.skus)} SKUs${k.ex.length?' · e.g. '+k.ex.map(esc).join(', '):''}`).join('<br>')||'Nothing left out.'}
+    </div></details>`;
 }
 // the Total row of Summary by category (shown or hidden with "Show totals", remembered on this computer)
 function sumTotal(t){

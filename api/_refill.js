@@ -189,17 +189,22 @@ async function joined() {
   // {category: [soh, pipeline, [sold per month]]}. Category from the master, else from the ERP item group.
   const ercat = g => { const l = String(g || '').toLowerCase(); if (l.includes('earring')) return 'Earrings'; if (l.includes(' ring') || /^rings?/.test(l)) return 'Rings'; if (l.includes('bracelet')) return 'Bracelets'; if (l.includes('necklace') || l.includes('pendant')) return 'Necklaces & Pendants'; if (['charm', 'clip', 'dangle', 'medallion', 'spacer'].some(x => l.includes(x))) return 'Charms'; return ''; };
   const all = new Set([...Object.keys(e.soh || {}), ...P.keys()]); months.forEach(k => Object.keys(e.sold[k] || {}).forEach(x => all.add(x)));
-  const allCats = {};
+  const allCats = {}, skipped = {}, neg = { pcs: 0, skus: 0 };
+  // what is not counted, and why (stock pieces + a few SKUs), so the total can be checked against ERP
+  const skip = (why, s) => { const k = skipped[why] || (skipped[why] = { pcs: 0, skus: 0, ex: [] }); k.pcs += Math.round(e.soh[s] || 0); k.skus++; if (k.ex.length < 12 && (e.soh[s] || 0)) k.ex.push(s + ' (' + Math.round(e.soh[s]) + (G[s] ? ', ' + G[s] : '') + ')'); };
   for (const s of all) {
-    if (!/^[12357]\d{4,5}/.test(s) || outGroup(s) || (G[s] && notJewel(G[s], ''))) continue;
-    const m = M.get(s); if (m && notJewel(m[3], m[2])) continue;
-    let c = m && m[3] ? m[3] : ercat(G[s]); if (c === 'Charm') c = 'Charms'; if (!c) continue;
+    if (outGroup(s)) { skip('Item group left out', s); continue; }
+    if (G[s] && notJewel(G[s], '')) { skip('Service, box or bag group', s); continue; }
+    if (!/^[12357]\d{4,5}/.test(s)) { skip('Not a Pandora code', s); continue; }
+    const m = M.get(s); if (m && notJewel(m[3], m[2])) { skip('Box or bag in the master', s); continue; }
+    let c = m && m[3] ? m[3] : ercat(G[s]); if (c === 'Charm') c = 'Charms'; if (!c) { skip('No category (not in the master, ERP group unknown)', s); continue; }
+    if ((e.soh[s] || 0) < 0) { neg.pcs += Math.round(e.soh[s]); neg.skus++; }
     const a = allCats[c] || (allCats[c] = [0, 0, months.map(() => 0)]);
-    a[0] += Math.max(0, e.soh[s] || 0); a[1] += P.get(s) || 0;
+    a[0] += e.soh[s] || 0; // net, like ERP: a negative balance lowers the total a[1] += P.get(s) || 0;
     months.forEach((k, i) => { a[2][i] += Math.round((e.sold[k] || {})[s] || 0); });
   }
   for (const c in allCats) a2r(allCats[c]);
-  return { items, months, notListed, allCats, sohDate: e.sohDate || '', boughtMonths: Object.keys(e.buy || {}).sort() };
+  return { items, months, notListed, allCats, allSkipped: skipped, allNeg: neg, allSohRaw: Math.round(Object.values(e.soh || {}).reduce((a, q) => a + q, 0)), sohDate: e.sohDate || '', boughtMonths: Object.keys(e.buy || {}).sort() };
 }
 
 module.exports = async function handler(req, res) {
