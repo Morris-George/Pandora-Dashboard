@@ -18,6 +18,9 @@ const { whoami } = require('./_auth');
 const ACCESS = 'rf/access.json';
 const ERP = 'rf/erp.json';
 const ORDERS = 'rf/orders/index.json';
+const GROUPS = 'rf/groups.json'; // ERP item groups left out of the whole analysis (chosen on the page)
+const DEFAULT_OUT = ['Pandora Services', 'Pandora Maintenance', 'Miscellaneous accessories', 'Jewellery Boxes - Customer utility', 'Pandora Packaging'];
+const groupsOut = async () => { const g = await store.getJSON(GROUPS); return new Set(g && Array.isArray(g.exclude) ? g.exclude : DEFAULT_OUT); };
 const KINDS = { avail: 'Available to Order', master: 'Master Data', pipe: 'Pipeline', slow: 'Slow Moving' };
 const LEVELS = ['none', 'view', 'input', 'manage'];
 const SKU = /^[A-Z0-9][A-Z0-9\-_./]{0,39}$/;
@@ -163,8 +166,9 @@ async function joined() {
   const e = erp || { soh: {}, sold: {}, buy: {} };
   const months = Object.keys(e.sold).sort();
   // item: [sku, available, dv, name, cat, sub, launch, fob, rrp, status, inMaster, soh, pipe, slow, [sold per month], [bought per month]]
-  const G = (erp && erp.grp) || {};
-  const items = av.rows.filter(([s]) => { const m = M.get(s); return !(m && notJewel(m[3], m[2])) && !(G[s] && notJewel(G[s], '')); }).map(([s, a]) => {
+  const G = (erp && erp.grp) || {}, OUT = await groupsOut();
+  const outGroup = s => !!G[s] && OUT.has(G[s]);
+  const items = av.rows.filter(([s]) => { const m = M.get(s); return !(m && notJewel(m[3], m[2])) && !(G[s] && notJewel(G[s], '')) && !outGroup(s); }).map(([s, a]) => {
     const m = M.get(s);
     return [s, a, m ? m[1] : s.split('-')[0], m ? m[2] : '', m ? m[3] : '', m ? m[4] : '', m ? m[5] : '', m ? m[6] : 0, m ? m[7] : 0, m ? m[8] : '', m ? 1 : 0,
       Math.round(e.soh[s] || 0), P.get(s) || 0, S.has(s) ? 1 : 0,
@@ -176,6 +180,7 @@ async function joined() {
     if (avs.has(s) || q <= 0) continue;
     const m = M.get(s); if (m && notJewel(m[3], m[2])) continue;
     if (G[s] && notJewel(G[s], '')) continue;
+    if (outGroup(s)) continue;
     off.set(s, (off.get(s) || 0) + q);
   }
   const notListed = [...off.entries()].filter(([s]) => /^[12357]\d{4,5}/.test(s) && (M.has(s) || !/BAG|BOX|POUCH/i.test(s))).sort((a, b) => b[1] - a[1]).slice(0, 150).map(([s, q]) => [s, (M.get(s) || [])[2] || '', q, Math.round(e.soh[s] || 0)]);
@@ -204,17 +209,24 @@ module.exports = async function handler(req, res) {
       ok: true, level: lvl, me: by, today: cairoToday(), files: await fileList(),
       erp: { diag: lvl === 'manage' ? erp.diag || null : null, at: erp.at || {}, sold: Object.keys(erp.sold || {}).sort(), buy: Object.keys(erp.buy || {}).sort(), sohDate: erp.sohDate || '' },
       erpOn: !!(process.env.ERP_URL && process.env.ERP_API_KEY && process.env.ERP_API_SECRET),
-      orders: ((await store.getJSON(ORDERS)) || []).slice().reverse()
+      orders: ((await store.getJSON(ORDERS)) || []).slice().reverse(),
+      groups: (() => { const c = {}; for (const g of Object.values(erp.grp || {})) c[g] = (c[g] || 0) + 1; return Object.entries(c).sort((a, b) => a[0].localeCompare(b[0])); })(),
+      groupsOut: [...(await groupsOut())]
     });
   }
 
   if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
   const op = url.searchParams.get('op');
   const b = await readJSON(req) || {};
-  const need = { file: 'manage', sync: 'manage', new: 'manage', settings: 'manage', delete: 'manage', fb: 'input', status: 'input' }[op];
+  const need = { groups: 'manage', file: 'manage', sync: 'manage', new: 'manage', settings: 'manage', delete: 'manage', fb: 'input', status: 'input' }[op];
   if (!need) return send(res, 400, { ok: false, error: 'Unknown action.' });
   if (!atLeast(lvl, need)) return send(res, 403, { ok: false, error: 'Your access does not allow this.' });
 
+  if (op === 'groups') {
+    if (!Array.isArray(b.exclude) || b.exclude.length > 500) return send(res, 400, { ok: false, error: 'Bad list.' });
+    await store.putJSON(GROUPS, { exclude: [...new Set(b.exclude.map(g => str(g, 80)).filter(Boolean))], by, at: new Date().toISOString() });
+    return send(res, 200, { ok: true });
+  }
   if (op === 'file') {
     if (!KINDS[b.kind]) return send(res, 400, { ok: false, error: 'Unknown file.' });
     const rows = cleanRows(b.kind, b.rows);

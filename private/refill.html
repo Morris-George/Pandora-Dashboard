@@ -53,6 +53,7 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
 
 <div class="card" id="filesCard"><h2>Files and ERP</h2><div class="note" style="margin-bottom:8px">Upload the newest files before each order. Available to Order decides which SKUs can be ordered; everything else is only information.</div>
   <div class="files" id="files"></div>
+  <div id="grpBox" style="margin-top:10px"></div>
   <div class="row" style="margin-top:10px"><label class="note" id="erpMl" title="How many full months of sales and purchases to bring from ERP. The same number is the Sell Out period in Settings.">Months <input type="number" id="erpM" min="1" max="24" value="6" style="width:70px"></label><button class="btn go" id="sync" hidden>Sync from ERP</button><span class="note" id="syncMsg"></span></div>
 </div>
 
@@ -115,7 +116,25 @@ async function boot(){
     if(H.orders.length)openOrder(H.orders[0].id);else{$('main').hidden=true;$('status').textContent='';}
   }catch(e){showErr('Could not load: '+e.message)}
 }
+/* ERP item groups left out of everything (services, packaging, boxes...). Manage only can change them. */
+let GPEND=null;
+function drawGroups(){
+  const out=new Set(H.groupsOut||[]),box=$('grpBox');
+  if(!GPEND){box.innerHTML=`<div class="note"><b>Item groups left out:</b> ${[...out].map(esc).join(', ')||'none'} ${can('manage')?'<button class="btn sm" id="grpEdit">Choose</button>':''}</div>`;
+    if($('grpEdit'))$('grpEdit').onclick=()=>{GPEND=new Set(out);drawGroups()};return}
+  const all=new Map((H.groups||[]).map(([g,n])=>[g,n]));out.forEach(g=>{if(!all.has(g))all.set(g,0)});
+  const q=(box.dataset.q||'').toLowerCase();
+  box.innerHTML=`<div class="fl"><div class="row" style="justify-content:space-between"><b>Item groups left out of the analysis</b><input id="grpQ" placeholder="Search a group" value="${esc(box.dataset.q||'')}" style="width:200px"></div>
+    <div class="note" style="margin:4px 0">Ticked groups are left out of stock, sales, purchases and the order. The list fills from ERP after a Sync.</div>
+    <div style="max-height:260px;overflow:auto;columns:2 260px">${[...all].filter(([g])=>!q||g.toLowerCase().includes(q)).sort((a,b)=>(GPEND.has(b[0])-GPEND.has(a[0]))||a[0].localeCompare(b[0])).map(([g,n])=>`<label class="note" style="display:block;break-inside:avoid"><input type="checkbox" data-g="${esc(g)}" ${GPEND.has(g)?'checked':''}> ${esc(g)} <span style="opacity:.7">(${n} SKUs)</span></label>`).join('')||'<div class="note">No groups yet. Press Sync from ERP first.</div>'}</div>
+    <div class="row" style="margin-top:8px"><button class="btn go sm" id="grpSave">Save</button><button class="btn sm" id="grpCancel">Cancel</button></div></div>`;
+  $('grpQ').oninput=e=>{box.dataset.q=e.target.value;const pos=e.target.selectionStart;drawGroups();$('grpQ').focus();$('grpQ').setSelectionRange(pos,pos)};
+  box.querySelectorAll('input[data-g]').forEach(c=>c.onchange=()=>{c.checked?GPEND.add(c.dataset.g):GPEND.delete(c.dataset.g)});
+  $('grpCancel').onclick=()=>{GPEND=null;box.dataset.q='';drawGroups()};
+  $('grpSave').onclick=async()=>{try{await api('/api/refill?op=groups',{exclude:[...GPEND]});GPEND=null;box.dataset.q='';await reload()}catch(e){showErr(e.message)}};
+}
 function drawFiles(){
+  drawGroups();
   const f=H.files,t=x=>x?new Date(x).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
   $('files').innerHTML=Object.entries(FILES).map(([k,[n,h]])=>`<div class="fl"><b>${n}</b><div class="note">${f[k]?`${esc(f[k].name)}<br>${fmt(f[k].rows)} rows · ${esc(f[k].by)} · ${t(f[k].at)}`:'<span class="bad">Not uploaded yet.</span> '+h}</div>${can('manage')?`<label class="btn sm" style="margin-top:6px;display:inline-block">Upload<input type="file" data-k="${k}" accept=".xlsx,.xlsb,.xls,.csv" hidden></label>`:''}</div>`).join('')+
     `<div class="fl"><b>ERP</b><div class="note">${H.erp.sohDate?'Stock on hand '+H.erp.sohDate+' · ':'<span class="bad">No stock yet.</span> '}${H.erp.sold.length?'Sell out '+H.erp.sold[0]+' → '+H.erp.sold[H.erp.sold.length-1]:'no sell out yet'}${H.erp.buy.length?' · purchases '+H.erp.buy.length+' months':''}${H.erpOn?'':'<br><span class="bad">ERP is not connected.</span>'}</div>${diagHtml(H.erp.diag)}</div>`;
