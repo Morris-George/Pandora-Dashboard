@@ -63,6 +63,9 @@ tbody tr:hover td,table tr:hover>td{background:color-mix(in srgb,var(--accent) 7
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .logo{filter:brightness(0) invert(1)}}:root[data-theme="dark"] .logo{filter:brightness(0) invert(1)}
 [data-drill]{cursor:pointer}tr[data-drill]:hover td,td[data-drill]:hover{background:color-mix(in srgb,var(--accent) 14%,transparent)!important}.kpi[data-drill]:hover{border-color:var(--accent)}
 .qk{padding:7px 10px;border-top:1px solid var(--line);font-size:13.5px}.qk:first-child{border-top:0}.qk[data-drill]:hover{background:color-mix(in srgb,var(--accent) 10%,transparent);border-radius:8px}
+.ml{display:flex;flex-direction:column;margin-top:6px}.mlr{display:grid;grid-template-columns:150px 80px 70px 80px minmax(120px,1fr) minmax(220px,1.4fr);gap:10px;align-items:center;padding:8px 6px;border-top:1px solid var(--line);font-size:13px;cursor:pointer;border-radius:8px}.mlr:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.dv{position:relative;height:12px;background:var(--soft);border-radius:99px}.dv::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;background:var(--ink2)}.dv i{position:absolute;top:0;bottom:0;border-radius:99px}
+@media(max-width:800px){.mlr{grid-template-columns:1fr 1fr 1fr;}.mlr .dv,.mlr .say{grid-column:1/-1}}
 .log div{border-top:1px solid var(--line);padding:4px 0;font-size:12.5px}
 </style>
 </head>
@@ -407,8 +410,13 @@ function drawMix(t){
   $('mix').innerHTML=`<table><tr><th class="l">Category</th><th>Sell Out pcs</th><th>Sales mix</th><th>SOH pcs</th><th>Stock mix</th><th>Pipeline mix</th><th>Order pcs</th><th>Order mix</th><th>Order FOB mix</th></tr>`+
     rows.map(r=>{const sm=pc(r.sell,all.sell);return `<tr data-drill="cat:${esc(r.c)}"><td class="l">${esc(r.c)}${S.stop.has(r.c)?' <span class="tag t-stop">stopped</span>':''}</td><td>${fmt(r.sell)}</td><td><b>${p1(sm)}</b></td><td>${fmt(r.soh)}</td>${cell(pc(r.soh,all.soh),sm)}${cell(pc(r.pipe,all.pipe),sm)}<td>${fmt(r.q)}</td>${cell(pc(r.q,all.q),sm)}${cell(pc(r.f,all.f),sm)}</tr>`}).join('')+
     `<tr><td class="l"><b>Total</b></td><td><b>${fmt(all.sell)}</b></td><td>100%</td><td><b>${fmt(all.soh)}</b></td><td>100%</td><td>100%</td><td><b>${fmt(all.q)}</b></td><td>100%</td><td>100%</td></tr></table>
-    <div class="legend">${MK.map(([k,n,c])=>`<span style="--c:${c}">${n}</span>`).join('')}</div>
-    <div class="gb">${rows.map(r=>`<b style="font-size:12.5px">${esc(r.c)}</b><div class="bars">${MK.map(([k,n,c])=>{const v=pc(r[k],all[k]);return `<div title="${n} ${p1(v)}"><i style="width:${v/gmx*100}%;background:${c}"></i>${p1(v)}</div>`}).join('')}</div>`).join('')}</div>
+    <h2 style="margin-top:14px">Is the order in line with sales?</h2>
+    <div class="note">One line per category. The bar shows the order share minus the sales share: right (green) = we order more than it sells, left (red) = less. Click a line for its SKUs.</div>
+    <div class="ml">${rows.map(r=>{const sm=pc(r.sell,all.sell),st=pc(r.soh,all.soh),om=pc(r.q,all.q),d=om-sm,ds=st-sm,w=Math.min(50,Math.abs(d)*1.5);
+      const say=S.stop.has(r.c)?'<span class="note">stopped</span>':Math.abs(d)<3?'<span class="note">in line with sales</span>':d>0?`<b class="good">ordering ${Math.round(d)} pts more than it sells</b>`:`<b class="bad">ordering ${Math.round(-d)} pts less than it sells</b>`;
+      const stk=Math.abs(ds)<3?'':ds>0?` · stock already ${Math.round(ds)} pts above sales`:` · stock ${Math.round(-ds)} pts below sales`;
+      return `<div class="mlr" data-drill="cat:${esc(r.c)}"><b>${esc(r.c)}</b><span>Sales <b>${p1(sm)}</b></span><span>Stock ${p1(st)}</span><span>Order <b>${p1(om)}</b></span>
+        <div class="dv"><i style="${d>=0?'left:50%':'right:50%'};width:${w}%;background:${S.stop.has(r.c)||Math.abs(d)<3?'var(--ink2)':d>0?'var(--good)':'var(--bad)'}"></i></div><span class="say">${say}<span class="note">${stk}</span></span></div>`}).join('')}</div>
     <div class="note">Small red / green numbers: points above / below the sales mix.</div>
     <details style="margin-top:8px"><summary class="note" style="cursor:pointer">How the SOH total is made (check it against ERP)</summary><div class="note" style="margin-top:6px">
       ERP stock on hand, all SKUs synced: <b>${fmt(S.allSohRaw)}</b> pcs.<br>
