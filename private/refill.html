@@ -34,7 +34,7 @@ th.l,td.l{text-align:left}td.name{max-width:250px;overflow:hidden;text-overflow:
 td input{width:64px;padding:3px 6px}td input.nt{width:120px}
 .dvh td{background:var(--soft);border-top:2px solid var(--line)}tr.size td:nth-child(2){padding-left:18px}
 .tag{font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px}.t-slow{background:var(--soft);color:var(--bad)}.t-stop,.t-na{background:var(--bad);color:#fff}.t-man{background:#F2C46D;color:#2A1018}.t-pri{background:var(--good);color:#fff}.t-new{background:#8FB8DE;color:#10202A}.t-nm{background:#B9A3D9;color:#1E1530}
-.img{width:36px;height:36px;border-radius:6px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink2);overflow:hidden;vertical-align:middle}.img img{width:100%;height:100%;object-fit:cover}
+.img{width:36px;height:36px;border-radius:6px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink2);overflow:hidden;vertical-align:middle}.img img{width:100%;height:100%;object-fit:cover;cursor:zoom-in}.hide{display:none!important}#zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out}#zoom img{max-width:90vw;max-height:90vh;border-radius:10px;background:#fff}
 .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:14px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
 .good{color:var(--good)}.bad{color:var(--bad)}
 .status{font-weight:800;border-radius:99px;padding:3px 12px;background:var(--soft)}
@@ -45,7 +45,7 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
 </head>
 <body><div class="wrap">
 <header class="row" style="justify-content:space-between;align-items:flex-end">
-  <div><a class="crumb" href="/">&larr; Home</a><h1>Refill Order</h1><div class="sub">Suggested order to Pandora from the Available to Order list, stock, pipeline and sell out. SKUs of the same DV stay together.</div></div>
+  <div><a class="crumb" href="/">&larr; Home</a><h1>Refill Order</h1><div class="sub">Suggested order to Pandora from the available to order list, stock, pipeline and sell out. SKUs of the same DV stay together.</div></div>
   <div class="row"><select id="ord" aria-label="Order"></select><button class="btn" id="newo" hidden>New order</button>
     <span class="status" id="status"></span><button class="btn" id="stBtn" hidden></button><button class="btn" id="reopen" hidden>Reopen</button><button class="btn" id="xlsx">Export Excel</button><label class="btn" id="fbUp" hidden>Upload team sheet<input type="file" id="fbFile" accept=".xlsx,.xls" hidden></label></div>
 </header>
@@ -68,7 +68,7 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
     <label class="f">Budget FOB ($)<input type="text" id="bg" inputmode="decimal" style="text-align:right"></label>
   </div>
   <div class="note" style="margin:10px 0 4px">Stop ordering a category (click to switch off / on):</div><div class="chips" id="cats"></div>
-  <div class="note" style="margin:10px 0 4px">Stop ordering an item group (from ERP, for example Pandora Moments - Charm):</div><div class="chips" id="subs"></div>
+  <div class="note" style="margin:10px 0 4px">Stop ordering an item group (from ERP, for example Pandora Moments - Charm): <button type="button" class="btn" id="subsT" onclick="const h=document.getElementById('subs').classList.toggle('hide');this.textContent=h?'Show groups':'Hide groups'">Show groups</button></div><div class="chips hide" id="subs"></div>
   <div class="note" id="formula" style="margin-top:8px"></div>
 </div>
 <div class="kpis" id="kpis"></div>
@@ -87,7 +87,7 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
 </div>
 <div class="card"><h2>Selling, out of stock, nothing coming</h2><div class="note">Sold in the period, no stock, no pipeline. They come first.</div><div class="tw" id="pri" style="max-height:320px"></div></div>
 <div class="grid2">
-  <div class="card"><h2>Selling, but not on the Available to Order list</h2><div class="note">For information only: they cannot be ordered this time.</div><div class="tw" id="nl" style="max-height:320px"></div></div>
+  <div class="card"><h2>Selling, but not on the available to order list</h2><div class="note">For information only: they cannot be ordered this time.</div><div class="tw" id="nl" style="max-height:320px"></div></div>
   <div class="card"><h2>History</h2><div class="log tw" id="log" style="max-height:320px"></div></div>
 </div>
 </div>
@@ -468,4 +468,4 @@ new MutationObserver(()=>{clearTimeout(window.__tt);window.__tt=setTimeout(apply
 applyTips();
 boot();
 </script>
-</body></html>
+<script>document.addEventListener("click",e=>{const z=document.getElementById("zoom");if(z){z.remove();return}const im=e.target.closest&&e.target.closest(".img img");if(!im)return;e.stopPropagation();e.preventDefault();const d=document.createElement("div");d.id="zoom";d.innerHTML="<img alt=\"\">";d.firstChild.src=im.src;document.body.appendChild(d)},true);</script></body></html>
