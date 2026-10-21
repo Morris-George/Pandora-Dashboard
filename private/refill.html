@@ -301,6 +301,51 @@ $('fbFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f
     calc();$('saved').textContent=`${fmt(lines.length)} lines updated from ${f.name}`+(skip?`, ${fmt(skip)} skipped (not in this order or not a number)`:'')+'.';
     if(lines.length)O=(await api('/api/refill?order='+O.id)).order,draw();
   }catch(er){showErr(f.name+': '+er.message)}};
+/* descriptions shown when the mouse rests on a setting, a heading or a figure */
+const TIPS={
+  'Sell Out period (months)':'How many full months of sales the order is based on. 6 = the sales of the last 6 full months (this month is left out because it is not finished).',
+  'Lead time (months)':'How long a shipment takes to arrive after the order is placed. The order has to cover these months too.',
+  'Cover after arrival (months)':'How many months of sales the stock should last after the shipment arrives.',
+  'Min. qty per SKU':'A suggestion smaller than this is dropped to 0.',
+  'New = launched within (months)':'An item launched within this many months is New collection. Its monthly sales = Sell Out ÷ the months it has been on sale, not the whole period.',
+  'Budget FOB ($)':'The most this order should cost at FOB. The page warns you when the order goes over it.',
+  'SOH':'Stock on hand today: every store and warehouse, from ERP.',
+  'Pipeline':'Pieces already ordered and on the way (the Pipeline file).',
+  'Sell Out':'Pieces sold in the Sell Out period (from ERP).',
+  'Bought':'Pieces received from purchases in the Sell Out period (Stock Ledger, purchases only).',
+  'Sold/mo':'Average pieces sold per month = Sell Out ÷ months in the period (or ÷ months on sale for a new item).',
+  'Sell-through':'Sell Out ÷ (Sell Out + SOH): how much of the stock was sold.',
+  'Cover now':'How many months the stock lasts without this order = (SOH + Pipeline) ÷ Sold/mo. Red: it runs out before the shipment arrives.',
+  'Cover now (mo)':'How many months the stock lasts without this order = (SOH + Pipeline) ÷ monthly sales.',
+  'Proposed':'Suggested quantity = Sold/mo × (Lead time + Cover) − SOH − Pipeline. In brackets: what a stopped category would have ordered.',
+  'Team':'Team Feedback: the quantity the team wants. Empty = take the Proposed quantity.',
+  'Comment':'A note from the team about this SKU.',
+  'Cover after':'How many months the stock lasts with this order = (SOH + Pipeline + order) ÷ Sold/mo.',
+  'Cover after (mo)':'How many months the stock lasts with this order.',
+  'FOB':'Cost of one piece in US dollars (EG (USD) in the master data).',
+  'Total FOB':'Order quantity × FOB.',
+  'Sell Out mix':'The category share of all pieces sold in the period.',
+  'Order pcs':'Pieces in this order (Team Feedback where given, otherwise Proposed).',
+  'FOB mix':'The category share of the order cost.',
+  'SKUs to order':'SKUs with a quantity in this order.',
+  'Pieces':'All pieces in this order.',
+  'Total FOB':'The cost of this order in US dollars.',
+  'Need a manual decision':'New items with no sales yet, or launched this month: the page cannot suggest a number, the team decides.',
+  'Held back by stopped categories':'Pieces the stopped categories would have ordered.',
+  'Sold':'Pieces sold in the Sell Out period.',
+  'Order':'Pieces in this order.'
+};
+const TAGTIPS={slow:'On the Slow Moving list: not ordered.',stopped:'Its category is stopped: not ordered.',decide:'New item with no sales yet: the team decides.',priority:'Selling, no stock and nothing coming.','not available':'Quantity 0 on the Available to Order list: cannot be ordered.',new:'New collection: launched within the months set above.','no master':'Not found in the master data: no name, category or FOB.'};
+function applyTips(){
+  document.querySelectorAll('label.f').forEach(l=>{const t=TIPS[l.firstChild.textContent.trim()];if(t)l.title=t});
+  document.querySelectorAll('th,.kpi small').forEach(e=>{const t=TIPS[e.textContent.trim()];if(t){e.title=t;e.style.cursor='help'}});
+  document.querySelectorAll('.tag').forEach(e=>{const t=TAGTIPS[e.textContent.trim()];if(t)e.title=t});
+  const f=$('fbUp');if(f)f.title='Upload the Excel exported from this page after the team filled Team Feedback and Comment. Empty, or the same as Proposed, means no change.';
+  $('xlsx').title='Download this order as Excel (same columns as the order sheet).';
+  const sy=$('sync');if(sy)sy.title='Get stock on hand, sell out and purchases from ERP for the last months.';
+}
+new MutationObserver(()=>{clearTimeout(window.__tt);window.__tt=setTimeout(applyTips,50)}).observe(document.body,{childList:true,subtree:true});
+applyTips();
 boot();
 </script>
 </body></html>
