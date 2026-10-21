@@ -166,14 +166,14 @@ async function joined() {
   const S = new Set((sl ? sl.rows : []).map(r => r[0]));
   const e = erp || { soh: {}, sold: {}, buy: {} };
   const months = Object.keys(e.sold).sort();
-  // item: [sku, available, dv, name, cat, sub, launch, fob, rrp, status, inMaster, soh, pipe, slow, [sold per month], [bought per month]]
+  // item: [sku, available, dv, name, cat, sub, launch, fob, rrp, status, inMaster, soh, pipe, slow, [sold per month], [bought per month], ERP item group]
   const G = (erp && erp.grp) || {}, OUT = await groupsOut();
   const outGroup = s => !!G[s] && OUT.has(G[s]);
   const items = av.rows.filter(([s]) => { const m = M.get(s); return !(m && notJewel(m[3], m[2])) && !(G[s] && notJewel(G[s], '')) && !outGroup(s); }).map(([s, a]) => {
     const m = M.get(s);
     return [s, a, m ? m[1] : s.split('-')[0], m ? m[2] : '', m ? m[3] : '', m ? m[4] : '', m ? m[5] : '', m ? m[6] : 0, m ? m[7] : 0, m ? m[8] : '', m ? 1 : 0,
       Math.round(e.soh[s] || 0), P.get(s) || 0, S.has(s) ? 1 : 0,
-      months.map(k => Math.round((e.sold[k] || {})[s] || 0)), months.map(k => Math.round((e.buy[k] || {})[s] || 0))];
+      months.map(k => Math.round((e.sold[k] || {})[s] || 0)), months.map(k => Math.round((e.buy[k] || {})[s] || 0)), G[s] || ''];
   });
   // selling, but not on the Available to Order list (for information only)
   const avs = new Set(av.rows.map(r => r[0])), off = new Map();
@@ -351,7 +351,7 @@ module.exports = async function handler(req, res) {
     const s = b.settings || {}, cl = (v, lo, hi, d) => { const n = Number(v); return isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
     o.settings = { pm: cl(s.pm, 1, 24, 6), lt: cl(s.lt, 0, 12, 2), cv: cl(s.cv, 0, 24, 3), mq: Math.round(cl(s.mq, 1, 1000, 1)), nm: cl(s.nm, 0, 36, 9), budget: Math.round(cl(s.budget, 0, 1e8, 0) * 100) / 100 };
     o.stop = Array.isArray(b.stop) ? b.stop.map(c => str(c, 40)).filter(Boolean).slice(0, 30) : o.stop;
-    o.stopSub = Array.isArray(b.stopSub) ? b.stopSub.map(c => str(c, 60)).filter(Boolean).slice(0, 60) : (o.stopSub || []);
+    o.stopSub = Array.isArray(b.stopSub) ? b.stopSub.map(c => str(c, 80)).filter(Boolean).slice(0, 60) : (o.stopSub || []);
     log('Settings changed');
   } else if (op === 'fb') {
     if (!Array.isArray(b.lines) || b.lines.length > 5000) return send(res, 400, { ok: false, error: 'Bad lines.' });

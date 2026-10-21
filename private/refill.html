@@ -68,7 +68,7 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
     <label class="f">Budget FOB ($)<input type="text" id="bg" inputmode="decimal" style="text-align:right"></label>
   </div>
   <div class="note" style="margin:10px 0 4px">Stop ordering a category (click to switch off / on):</div><div class="chips" id="cats"></div>
-  <div class="note" style="margin:10px 0 4px">Stop ordering a sub category (collection, from the master):</div><div class="chips" id="subs"></div>
+  <div class="note" style="margin:10px 0 4px">Stop ordering an item group (from ERP, for example Pandora Moments - Charm):</div><div class="chips" id="subs"></div>
   <div class="note" id="formula" style="margin-top:8px"></div>
 </div>
 <div class="kpis" id="kpis"></div>
@@ -223,9 +223,9 @@ async function openOrder(id){
     const months=j.months,today=j.today;
     // the Sell Out period: the last full months before this month
     S.months=months;S.today=today;S.notListed=j.notListed||[];S.allCats=j.allCats||{};S.allSkipped=j.allSkipped||{};S.allNeg=j.allNeg||{pcs:0,skus:0};S.allSohRaw=j.allSohRaw||0;
-    items=j.items.map(r=>({sku:r[0],av:!!r[1],dv:r[2]||r[0].split('-')[0],name:r[3],cat:r[4]==='Charm'?'Charms':(r[4]||'No category'),sub:r[5],launch:r[6],fob:r[7],rrp:r[8],status:r[9],inMaster:!!r[10],soh:Math.max(0,r[11]),neg:r[11]<0?r[11]:0,pipe:r[12],slow:!!r[13],soldBy:r[14],boughtBy:r[15],fb:O.fb[r[0]]??null,note:O.notes[r[0]]||''}));
-    CATS=[...new Set(items.map(i=>i.cat))].sort();SUBS=[...new Set(items.map(i=>i.sub).filter(x=>x&&x!=='-'&&!/^#|^0x[0-9a-f]+$/i.test(x)))].sort();
-    $('subs').innerHTML=SUBS.map(c=>`<span class="chip" data-sub="${esc(c)}">${esc(c)}</span>`).join('')||'<span class="note">Upload the master data first.</span>';
+    items=j.items.map(r=>({sku:r[0],av:!!r[1],dv:r[2]||r[0].split('-')[0],name:r[3],cat:r[4]==='Charm'?'Charms':(r[4]||'No category'),sub:r[5],launch:r[6],fob:r[7],rrp:r[8],status:r[9],inMaster:!!r[10],soh:Math.max(0,r[11]),neg:r[11]<0?r[11]:0,pipe:r[12],slow:!!r[13],soldBy:r[14],boughtBy:r[15],grp:r[16]||'',fb:O.fb[r[0]]??null,note:O.notes[r[0]]||''}));
+    CATS=[...new Set(items.map(i=>i.cat))].sort();SUBS=[...new Set(items.map(i=>i.grp).filter(Boolean))].sort();
+    $('subs').innerHTML=SUBS.map(c=>`<span class="chip" data-sub="${esc(c)}">${esc(c)}</span>`).join('')||'<span class="note">No item groups yet. Press Sync from ERP.</span>';
     $('fc').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
     $('cats').innerHTML=CATS.map(c=>`<span class="chip" data-c="${esc(c)}">${esc(c)}</span>`).join('');
     const s=O.settings;$('pm').value=s.pm;$('erpM').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=fmtMoney(s.budget);
@@ -261,7 +261,7 @@ function calc(){
     let p=Math.ceil(i.mon*(lt+cv)-i.soh-i.pipe);if(p<mq)p=0;
     if(!i.av){p=0;i.flag='na'}
     else if(i.slow){p=0;i.flag='slow'}
-    else if(S.stop.has(i.cat)||S.stopSub.has(i.sub)){i.flag='stop';i.would=p;p=0}
+    else if(S.stop.has(i.cat)||S.stopSub.has(i.grp)){i.flag='stop';i.would=p;p=0}
     else if(i.isNew&&(i.age<1||i.sell<=0)){p=0;i.flag='man'}
     i.prop=p;i.fin=i.fb==null?p:i.fb;
     i.coverNow=i.mon?(i.soh+i.pipe)/i.mon:99;i.coverAfter=i.mon?(i.soh+i.pipe+i.fin)/i.mon:99;
@@ -372,13 +372,13 @@ async function setStatus(status){
 $('stBtn').onclick=()=>{const to=O.status==='Draft'?'Submitted':'Approved';if(confirm(to==='Approved'?'Approve this order? It will be locked.':'Submit this order for approval?'))setStatus(to)};
 $('reopen').onclick=()=>{if(confirm('Reopen this order so it can be changed?'))setStatus('Draft')};
 $('xlsx').onclick=()=>{if(!O||!items.length)return;
-  const rows=items.slice().sort((a,b)=>a.dv.localeCompare(b.dv)||a.sku.localeCompare(b.sku,undefined,{numeric:true})).map(i=>({'SKU#':i.sku,'Proposed QTY':i.prop,'Team Feedback':i.fin,'Diff':i.fin-i.prop,'FOB':i.fob,'Total FOB $':Math.round(i.fin*i.fob*100)/100,'DV':i.dv,'RP':i.rrp,'Description':i.name,'Category':i.cat,'Real Campaign Launch':i.launch,'Sub Category':i.sub,'Pandora Status':i.status,
+  const rows=items.slice().sort((a,b)=>a.dv.localeCompare(b.dv)||a.sku.localeCompare(b.sku,undefined,{numeric:true})).map(i=>({'SKU#':i.sku,'Proposed QTY':i.prop,'Team Feedback':i.fin,'Diff':i.fin-i.prop,'FOB':i.fob,'Total FOB $':Math.round(i.fin*i.fob*100)/100,'DV':i.dv,'RP':i.rrp,'Description':i.name,'Category':i.cat,'Real Campaign Launch':i.launch,'Sub Category':i.sub,'Item Group':i.grp,'Pandora Status':i.status,
     'Shipments in Pipeline':i.pipe,'Purchases (period)':i.bought,'Sell Out':i.sell,'Monthly sales':Math.round(i.mon*100)/100,'SOH':i.soh,'ERP negative stock':i.neg||'','Sell-through %':Math.round(i.st*100),'Cover now (months)':Math.round(i.coverNow*10)/10,'Cover after (months)':Math.round(i.coverAfter*10)/10,'Slow Moving FLG':i.slow?'Y':'N','Collection':i.isNew?'New':'Old','Comment':i.note,
     'Note':{na:'Not available to order',slow:'Slow moving',stop:'Category stopped',man:'New item: decide by hand',pri:'Selling, out of stock'}[i.flag]||''}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Items');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l);return {Category:c,'Order QTY':x.q,'Total FOB $':Math.round(x.f),'Sell Out':l.reduce((a,i)=>a+i.sell,0),'Stopped':S.stop.has(c)?'Y':''}})),'Summary');
   // the Settings sheet is only for people who manage the order
-  if(can('manage'))XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Item:'Order',Value:O.name},{Item:'Status',Value:O.status},{Item:'Sell Out period',Value:S.period},{Item:'Lead time (months)',Value:+$('lt').value},{Item:'Cover after arrival (months)',Value:+$('cv').value},{Item:'Budget $',Value:bgVal()},{Item:'Stopped categories',Value:[...S.stop].join(', ')},{Item:'Stopped sub categories',Value:[...S.stopSub].join(', ')}]),'Settings');
+  if(can('manage'))XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Item:'Order',Value:O.name},{Item:'Status',Value:O.status},{Item:'Sell Out period',Value:S.period},{Item:'Lead time (months)',Value:+$('lt').value},{Item:'Cover after arrival (months)',Value:+$('cv').value},{Item:'Budget $',Value:bgVal()},{Item:'Stopped categories',Value:[...S.stop].join(', ')},{Item:'Stopped item groups',Value:[...S.stopSub].join(', ')}]),'Settings');
   XLSX.writeFile(wb,`Order Sheet ${O.name}.xlsx`)};
 /* the team downloads the Excel, fills Team Feedback and Comment, and uploads it back */
 $('fbFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f||!O)return;showErr('');
