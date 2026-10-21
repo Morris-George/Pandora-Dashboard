@@ -178,7 +178,7 @@ async function joined() {
     if (G[s] && notJewel(G[s], '')) continue;
     off.set(s, (off.get(s) || 0) + q);
   }
-  const notListed = [...off.entries()].filter(([s]) => M.has(s) || !/BAG|BOX|POUCH/i.test(s)).sort((a, b) => b[1] - a[1]).slice(0, 150).map(([s, q]) => [s, (M.get(s) || [])[2] || '', q, Math.round(e.soh[s] || 0)]);
+  const notListed = [...off.entries()].filter(([s]) => /^\d{5,6}/.test(s) && (M.has(s) || !/BAG|BOX|POUCH/i.test(s))).sort((a, b) => b[1] - a[1]).slice(0, 150).map(([s, q]) => [s, (M.get(s) || [])[2] || '', q, Math.round(e.soh[s] || 0)]);
   return { items, months, notListed, sohDate: e.sohDate || '', boughtMonths: Object.keys(e.buy || {}).sort() };
 }
 

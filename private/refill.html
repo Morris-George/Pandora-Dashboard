@@ -71,21 +71,19 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
 </div>
 <div class="kpis" id="kpis"></div>
 <div class="card" id="budget"></div>
-<div class="grid2">
-  <div class="card"><h2>Summary by category</h2><div class="tw" id="sum"></div></div>
-  <div class="card"><h2>Selling, out of stock, nothing coming</h2><div class="note">Sold in the period, no stock, no pipeline. They come first.</div><div class="tw" id="pri" style="max-height:320px"></div></div>
-</div>
+<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Summary by category</h2><label class="note"><input type="checkbox" id="showTot"> Show totals</label></div><div class="tw" id="sum" style="margin-top:6px"></div></div>
 <div class="card"><h2>Sales vs stock vs order mix</h2><div class="note">Share of each category in pieces. Compare the order mix with the sales mix: a category with more stock than sales share is overstocked.</div><div class="tw" id="mix"></div></div>
 <div class="card"><h2>Items</h2>
   <div class="row">
     <input type="search" id="q" placeholder="Search SKU, DV or name" style="width:220px">
     <select id="fc"><option value="">All categories</option></select>
-    <select id="ff"><option value="order">With an order</option><option value="">All</option><option value="new">New collection</option><option value="old">Old collection</option><option value="man">Needs a manual decision</option><option value="slow">Slow moving</option><option value="stop">Stopped category</option><option value="na">Not available (qty 0)</option><option value="nm">Not in the master</option><option value="fb">Team changed it</option></select>
+    <select id="ff"><option value="order">With an order</option><option value="">All</option><option value="new">New collection</option><option value="old">Old collection</option><option value="man">Needs a manual decision</option><option value="slow">Slow moving</option><option value="stop">Stopped category</option><option value="na">Not available (qty 0)</option><option value="nm">Not in the master</option><option value="fb">Team changed it</option><option value="neg">Negative stock in ERP</option></select>
     <span class="note" id="cnt"></span><span class="note" id="saved"></span>
   </div>
   <div class="tw" style="margin-top:8px"><table id="tbl"></table></div>
   <div class="pager" id="pager"></div>
 </div>
+<div class="card"><h2>Selling, out of stock, nothing coming</h2><div class="note">Sold in the period, no stock, no pipeline. They come first.</div><div class="tw" id="pri" style="max-height:320px"></div></div>
 <div class="grid2">
   <div class="card"><h2>Selling, but not on the Available to Order list</h2><div class="note">For information only: they cannot be ordered this time.</div><div class="tw" id="nl" style="max-height:320px"></div></div>
   <div class="card"><h2>History</h2><div class="log tw" id="log" style="max-height:320px"></div></div>
@@ -176,7 +174,7 @@ async function openOrder(id){
     const months=j.months,today=j.today;
     // the Sell Out period: the last full months before this month
     S.months=months;S.today=today;S.notListed=j.notListed||[];
-    items=j.items.map(r=>({sku:r[0],av:!!r[1],dv:r[2]||r[0].split('-')[0],name:r[3],cat:r[4]==='Charm'?'Charms':(r[4]||'No category'),sub:r[5],launch:r[6],fob:r[7],rrp:r[8],status:r[9],inMaster:!!r[10],soh:r[11],pipe:r[12],slow:!!r[13],soldBy:r[14],boughtBy:r[15],fb:O.fb[r[0]]??null,note:O.notes[r[0]]||''}));
+    items=j.items.map(r=>({sku:r[0],av:!!r[1],dv:r[2]||r[0].split('-')[0],name:r[3],cat:r[4]==='Charm'?'Charms':(r[4]||'No category'),sub:r[5],launch:r[6],fob:r[7],rrp:r[8],status:r[9],inMaster:!!r[10],soh:Math.max(0,r[11]),neg:r[11]<0?r[11]:0,pipe:r[12],slow:!!r[13],soldBy:r[14],boughtBy:r[15],fb:O.fb[r[0]]??null,note:O.notes[r[0]]||''}));
     CATS=[...new Set(items.map(i=>i.cat))].sort();
     $('fc').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
     $('cats').innerHTML=CATS.map(c=>`<span class="chip" data-c="${esc(c)}">${esc(c)}</span>`).join('');
@@ -244,7 +242,7 @@ function draw(){
   const tot=items.reduce((a,i)=>a+i.sell,0)||1,nw=items.filter(i=>i.isNew),nt=totals(nw),ot=totals(items.filter(i=>!i.isNew));
   $('sum').innerHTML=`<div class="row note" style="margin-bottom:6px"><span class="tag t-new">new</span> ${fmt(nw.length)} SKUs · ${fmt(nt.q)} pcs · ${usd(nt.f)} &nbsp;|&nbsp; old ${fmt(ot.q)} pcs · ${usd(ot.f)}</div><table><tr><th class="l">Category</th><th>Sell Out mix</th><th>SOH</th><th>Pipeline</th><th>Bought</th><th>Cover now (mo)</th><th>Order pcs</th><th>FOB</th><th>FOB mix</th><th>Cover after (mo)</th></tr>`+
     CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l),sum=k=>l.reduce((a,i)=>a+i[k],0),mon=sum('mon'),cov=mon?(sum('soh')+sum('pipe'))/mon:0;
-      return `<tr><td class="l">${esc(c)}${S.stop.has(c)?' <span class="tag t-stop">stopped</span>':''}</td><td>${Math.round(sum('sell')/tot*100)}%</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('bought'))}</td><td class="${cov>8?'bad':''}">${mon?m1(cov):'-'}</td><td>${fmt(x.q)}</td><td>${usd(x.f)}</td><td>${t.f?Math.round(x.f/t.f*100):0}%</td><td>${mon?m1((sum('soh')+sum('pipe')+x.q)/mon):'-'}</td></tr>`}).join('')+
+      return `<tr><td class="l">${esc(c)}${S.stop.has(c)?' <span class="tag t-stop">stopped</span>':''}</td><td>${Math.round(sum('sell')/tot*100)}%</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('bought'))}</td><td class="${cov>8?'bad':''}">${mon?m1(cov):'-'}</td><td>${fmt(x.q)}</td><td>${usd(x.f)}</td><td>${t.f?Math.round(x.f/t.f*100):0}%</td><td>${mon?m1((sum('soh')+sum('pipe')+x.q)/mon):'-'}</td></tr>`}).join('')+sumTotal(t)+
     '</table><div class="note">Cover in red: more than 8 months of stock. A good one to stop.</div>';
   drawMix(t);
   const pri=items.filter(i=>i.flag==='pri').sort((a,b)=>b.sell-a.sell);
@@ -267,6 +265,14 @@ function drawMix(t){
     <table style="margin-top:8px"><tr><td class="l" style="width:110px">Sales mix</td><td>${bar('sell')}</td></tr><tr><td class="l">Stock mix</td><td>${bar('soh')}</td></tr><tr><td class="l">Order mix</td><td>${bar('q')}</td></tr></table>
     <div class="note">Small red / green numbers: points above / below the sales mix.</div>`;
 }
+// the Total row of Summary by category (shown or hidden with "Show totals", remembered on this computer)
+function sumTotal(t){
+  if(!$('showTot').checked)return '';
+  const sum=k=>items.reduce((a,i)=>a+i[k],0),mon=sum('mon'),cov=mon?(sum('soh')+sum('pipe'))/mon:0;
+  return `<tr style="font-weight:800"><td class="l">Total</td><td>100%</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('bought'))}</td><td class="${cov>8?'bad':''}">${mon?m1(cov):'-'}</td><td>${fmt(t.q)}</td><td>${usd(t.f)}</td><td>100%</td><td>${mon?m1((sum('soh')+sum('pipe')+t.q)/mon):'-'}</td></tr>`;
+}
+try{$('showTot').checked=localStorage.getItem('rf.showTot')!=='0'}catch(_){$('showTot').checked=true}
+$('showTot').onchange=()=>{try{localStorage.setItem('rf.showTot',$('showTot').checked?'1':'0')}catch(_){}if(items.length)draw()};
 async function saveFb(lines){try{await api('/api/refill?op=fb',{id:O.id,lines});$('saved').textContent='Saved.';setTimeout(()=>$('saved').textContent='',1500)}catch(e){showErr(e.message)}}
 async function fit(){
   const bg=bgVal()||0;let sum=0;const ch=[];
@@ -277,7 +283,7 @@ async function fit(){
 function filtered(){
   const q=$('q').value.trim().toUpperCase(),c=$('fc').value,f=$('ff').value;
   return items.filter(i=>(!q||i.sku.includes(q)||i.dv.includes(q)||i.name.toUpperCase().includes(q))&&(!c||i.cat===c)&&
-    (!f||(f==='order'&&i.fin>0)||(f==='man'&&i.flag==='man')||(f==='slow'&&i.slow)||(f==='stop'&&i.flag==='stop')||(f==='na'&&!i.av)||(f==='nm'&&!i.inMaster)||(f==='fb'&&i.fb!=null)||(f==='new'&&i.isNew)||(f==='old'&&!i.isNew)));
+    (!f||(f==='order'&&i.fin>0)||(f==='man'&&i.flag==='man')||(f==='slow'&&i.slow)||(f==='stop'&&i.flag==='stop')||(f==='na'&&!i.av)||(f==='nm'&&!i.inMaster)||(f==='fb'&&i.fb!=null)||(f==='neg'&&i.neg<0)||(f==='new'&&i.isNew)||(f==='old'&&!i.isNew)));
 }
 // SKUs of the same DV stay together; DVs that run out first come first
 function grouped(l){const g=new Map();for(const i of l){if(!g.has(i.dv))g.set(i.dv,[]);g.get(i.dv).push(i)}
@@ -287,7 +293,7 @@ function drawTable(){
   const l=filtered(),gs=grouped(l),P=40,pages=Math.max(1,Math.ceil(gs.length/P));S.page=Math.min(S.page,pages-1);
   $('cnt').textContent=fmt(l.length)+' SKUs in '+fmt(gs.length)+' DVs';
   const ro=locked()||!can('input'),lt=+$('lt').value||0;
-  const row=(i,one)=>`<tr class="${one?'':'size'}"><td>${one?pic(i.dv):''}</td><td class="l">${esc(i.sku)}</td><td class="name" title="${esc(i.name)}">${esc(i.name)||'<span class="note">not in the master</span>'}</td><td class="l">${esc(i.cat)}</td><td>${fmt(i.soh)}</td><td>${fmt(i.pipe)}</td><td>${fmt(i.sell)}</td><td>${fmt(i.bought)}</td><td>${m1(i.mon)}</td><td>${Math.round(i.st*100)}%</td>
+  const row=(i,one)=>`<tr class="${one?'':'size'}"><td>${one?pic(i.dv):''}</td><td class="l">${esc(i.sku)}</td><td class="name" title="${esc(i.name)}">${esc(i.name)||'<span class="note">not in the master</span>'}</td><td class="l">${esc(i.cat)}</td><td>${fmt(i.soh)}${i.neg?` <span class="bad" style="font-size:11px" title="ERP shows ${i.neg} (negative stock: a sale posted before the receipt or transfer). Counted as 0. Fix it in ERP.">(${i.neg})</span>`:''}</td><td>${fmt(i.pipe)}</td><td>${fmt(i.sell)}</td><td>${fmt(i.bought)}</td><td>${m1(i.mon)}</td><td>${Math.round(i.st*100)}%</td>
     <td class="${i.coverNow<lt?'bad':''}">${m1(i.coverNow)}</td><td>${i.prop||''}${i.flag==='stop'&&i.would?`<span class="note"> (${i.would})</span>`:''}</td>
     <td><input type="number" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}></td><td><input class="nt" data-n="${esc(i.sku)}" value="${esc(i.note)}" placeholder="comment" ${ro?'disabled':''}></td>
     <td>${m1(i.coverAfter)}</td><td>${i.fob}</td><td>${fmt(i.fin*i.fob)}</td><td class="l">${i.isNew?'<span class="tag t-new">new</span> ':''}${i.inMaster?'':'<span class="tag t-nm">no master</span> '}${TAG[i.flag]||''}</td></tr>`;
@@ -306,7 +312,7 @@ $('stBtn').onclick=()=>{const to=O.status==='Draft'?'Submitted':'Approved';if(co
 $('reopen').onclick=()=>{if(confirm('Reopen this order so it can be changed?'))setStatus('Draft')};
 $('xlsx').onclick=()=>{if(!O||!items.length)return;
   const rows=items.slice().sort((a,b)=>a.dv.localeCompare(b.dv)||a.sku.localeCompare(b.sku,undefined,{numeric:true})).map(i=>({'SKU#':i.sku,'Proposed QTY':i.prop,'Team Feedback':i.fin,'Diff':i.fin-i.prop,'FOB':i.fob,'Total FOB $':Math.round(i.fin*i.fob*100)/100,'DV':i.dv,'RP':i.rrp,'Description':i.name,'Category':i.cat,'Real Campaign Launch':i.launch,'Sub Category':i.sub,'Pandora Status':i.status,
-    'Shipments in Pipeline':i.pipe,'Purchases (period)':i.bought,'Sell Out':i.sell,'Monthly sales':Math.round(i.mon*100)/100,'SOH':i.soh,'Sell-through %':Math.round(i.st*100),'Cover now (months)':Math.round(i.coverNow*10)/10,'Cover after (months)':Math.round(i.coverAfter*10)/10,'Slow Moving FLG':i.slow?'Y':'N','Collection':i.isNew?'New':'Old','Comment':i.note,
+    'Shipments in Pipeline':i.pipe,'Purchases (period)':i.bought,'Sell Out':i.sell,'Monthly sales':Math.round(i.mon*100)/100,'SOH':i.soh,'ERP negative stock':i.neg||'','Sell-through %':Math.round(i.st*100),'Cover now (months)':Math.round(i.coverNow*10)/10,'Cover after (months)':Math.round(i.coverAfter*10)/10,'Slow Moving FLG':i.slow?'Y':'N','Collection':i.isNew?'New':'Old','Comment':i.note,
     'Note':{na:'Not available to order',slow:'Slow moving',stop:'Category stopped',man:'New item: decide by hand',pri:'Selling, out of stock'}[i.flag]||''}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Items');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l);return {Category:c,'Order QTY':x.q,'Total FOB $':Math.round(x.f),'Sell Out':l.reduce((a,i)=>a+i.sell,0),'Stopped':S.stop.has(c)?'Y':''}})),'Summary');
@@ -336,7 +342,7 @@ const TIPS={
   'Min. qty per SKU':'A suggestion smaller than this is dropped to 0.',
   'New = launched within (months)':'An item launched within this many months is New collection. Its monthly sales = Sell Out ÷ the months it has been on sale, not the whole period.',
   'Budget FOB ($)':'The most this order should cost at FOB. The page warns you when the order goes over it.',
-  'SOH':'Stock on hand today: every store and warehouse, from ERP.',
+  'SOH':'Stock on hand today: every store and warehouse, from ERP. A negative ERP balance counts as 0 and shows in red brackets.',
   'Pipeline':'Pieces already ordered and on the way (the Pipeline file).',
   'Sell Out':'Pieces sold in the Sell Out period (from ERP).',
   'Bought':'Pieces received from purchases in the Sell Out period (Stock Ledger, purchases only).',
