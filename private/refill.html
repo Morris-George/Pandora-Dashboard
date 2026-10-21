@@ -47,6 +47,18 @@ td select{padding:3px 4px;font-size:12px;max-width:130px}
 .hb{display:flex;height:16px;border-radius:4px;overflow:hidden;background:var(--soft)}.hb i{display:block;height:100%}
 #det{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px}
 #det[hidden]{display:none}#det .box{background:var(--surface);border-radius:14px;padding:16px;max-width:760px;width:100%;max-height:90vh;overflow:auto}
+.card{box-shadow:0 1px 2px rgba(42,31,36,.04),0 4px 14px rgba(42,31,36,.04)}
+.card>h2,.card>.row>h2{display:flex;align-items:center;gap:8px}.card>h2::before{content:"";width:4px;height:16px;border-radius:2px;background:var(--accent)}
+.kpi{position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(42,31,36,.04)}.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}.kpi:nth-child(2)::before{background:#8FB8DE}.kpi:nth-child(3)::before{background:#7FC8A9}.kpi:nth-child(4)::before{background:#F2C46D}.kpi:nth-child(5)::before{background:#B9A3D9}
+.kpi b{font-variant-numeric:tabular-nums;letter-spacing:-.01em}td{font-variant-numeric:tabular-nums}
+tbody tr:hover td,table tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}.dvh:hover td{background:var(--soft)}
+.tabs{position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0;gap:0!important}.tabs .tab{border-radius:0;padding:8px 22px}.tabs .tab:first-child{border-radius:10px 0 0 10px}.tabs .tab:last-child{border-radius:0 10px 10px 0;border-left:0}
+.pill{display:inline-block;min-width:38px;text-align:center;border-radius:99px;padding:1px 8px;font-weight:700;font-size:11.5px}
+.p-low{background:var(--bad);color:#fff}.p-ok{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}.p-high{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--warn)}.p-none{color:var(--ink2)}
+.gb{display:grid;grid-template-columns:140px 1fr;gap:4px 10px;align-items:center;margin-top:10px}.gb .bars{display:flex;flex-direction:column;gap:2px}.gb .bars div{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink2)}.gb .bars i{display:block;height:8px;border-radius:99px;min-width:2px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink2);margin-top:6px}.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.gauge{position:relative;height:18px;background:var(--soft);border-radius:99px;overflow:visible;margin-top:8px}.gauge i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--good),color-mix(in srgb,var(--good) 70%,var(--accent)))}.over .gauge i{background:linear-gradient(90deg,var(--warn),var(--bad))}
+.gauge em{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink2);font-style:normal}.gauge em span{position:absolute;top:22px;transform:translateX(-50%);font-size:10.5px;color:var(--ink2);white-space:nowrap}
 .log div{border-top:1px solid var(--line);padding:4px 0;font-size:12.5px}
 </style>
 </head>
@@ -108,7 +120,7 @@ td select{padding:3px 4px;font-size:12px;max-width:130px}
 <div class="kpis" id="kpis"></div>
 <div class="card" id="budget"></div>
 <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Summary by category</h2><label class="note"><input type="checkbox" id="showTot"> Show totals</label></div><div class="tw" id="sum" style="margin-top:6px"></div></div>
-<div class="card"><h2>Sales vs stock vs order mix</h2><div class="note">Sales, stock and pipeline count every Pandora SKU of the category, not only the ones on the Available to Order list. Share of each category in pieces. Compare the order mix with the sales mix: a category with more stock than sales share is overstocked.</div><div class="tw" id="mix"></div></div>
+<div class="card"><h2>Sales vs stock vs order mix</h2><div class="note">Sales, stock and pipeline count every Pandora SKU of the category, not only the ones on the Available to Order list. Share of each category in pieces. Compare the order mix with the sales mix: a category with more stock than sales share is overstocked.</div><div class="tw" id="mix" style="max-height:none"></div></div>
 <div class="card"><h2>Items</h2>
   <div class="row">
     <input type="search" id="q" placeholder="Search SKU, DV or name" style="width:220px">
@@ -340,6 +352,7 @@ function calc(){
   $('formula').innerHTML=`Sell Out period: <b>${esc(S.period)}</b> (${idx.length} months). Monthly sales = Sell Out ÷ months${tw?` (recent 3 months weigh ${Math.round(tw*100)}%)`:''}${useSeason?(S.seasonMissing?' · <span class="bad">Seasonality needs last year: press Sync from ERP</span>':' · seasonality on'):''}${useAbc?` · cover A ${cov.A} / B ${cov.B} / C ${cov.C} months`:''} · Target = monthly × (${lt} lead + ${cv} cover) · <b>Proposed = Target − SOH − Pipeline</b> (0 if below ${mq}). Cover = (SOH + Pipeline + order) ÷ monthly sales. <b>New</b> = launched in the last ${nm} months: its sales are spread over the months it has been on sale; with no sales yet, or launched this month, it waits for a manual decision.`;
   draw();
 }
+const pill=(v,lt,on=true)=>!on||v>=99?'<span class="pill p-none">-</span>':`<span class="pill ${v<lt?'p-low':v>8?'p-high':'p-ok'}">${m1(v)}</span>`;
 const totals=l=>{let q=0,f=0;for(const i of l){q+=i.fin;f+=i.fin*i.fob}return {q,f}};
 function drawStatus(){
   $('fbUp').hidden=!O||locked()||!can('input');
@@ -358,14 +371,14 @@ function draw(){
     .map(k=>`<div class="kpi"><small>${k[0]}</small><b>${k[1]}</b></div>`).join('');
   const over=t.f-bg,pct=bg?Math.min(100,t.f/bg*100):0;
   $('budget').className='card'+(over>0?' over':'');
-  $('budget').innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">Budget</h2><span><b>${usd(t.f)}</b> of ${usd(bg)} · ${bg?Math.round(t.f/bg*100):0}%</span></div><div class="bar"><i style="width:${pct}%"></i></div>`+
+  $('budget').innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">Budget</h2><span><b>${usd(t.f)}</b> of ${usd(bg)} · ${bg?Math.round(t.f/bg*100):0}%</span></div><div class="gauge"><i style="width:${bg?Math.min(100,t.f/Math.max(bg,t.f)*100):0}%"></i>${over>0?`<em style="left:${bg/t.f*100}%"><span>budget</span></em>`:''}</div><div style="height:${over>0?14:0}px"></div>`+
     (over>0?`<div class="alert">Over budget by ${usd(over)}. ${can('input')&&!locked()?'<button class="btn" id="fit">Cut to fit the budget</button> <span style="font-weight:400">keeps the items that run out first; it writes Team Feedback</span>':''}</div>`:`<div class="note good">Within budget · ${usd(-over)} left</div>`);
   if($('fit'))$('fit').onclick=fit;
   const tot=items.reduce((a,i)=>a+i.sell,0)||1,nw=items.filter(i=>i.isNew),nt=totals(nw),ot=totals(items.filter(i=>!i.isNew));
   $('sum').innerHTML=`<div class="row note" style="margin-bottom:6px"><span class="tag t-new">new</span> ${fmt(nw.length)} SKUs · ${fmt(nt.q)} pcs · ${usd(nt.f)} &nbsp;|&nbsp; old ${fmt(ot.q)} pcs · ${usd(ot.f)}</div><table><tr><th class="l">Category</th><th>Sell Out mix</th><th>SOH</th><th>Pipeline</th><th>Bought</th><th>Cover now (mo)</th><th>Order pcs</th><th>FOB</th><th>FOB mix</th><th>Cover after (mo)</th></tr>`+
     CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l),sum=k=>l.reduce((a,i)=>a+i[k],0),mon=sum('mon'),cov=mon?(sum('soh')+sum('pipe'))/mon:0;
-      return `<tr><td class="l">${esc(c)}${S.stop.has(c)?' <span class="tag t-stop">stopped</span>':''}</td><td>${Math.round(sum('sell')/tot*100)}%</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('bought'))}</td><td class="${cov>8?'bad':''}">${mon?m1(cov):'-'}</td><td>${fmt(x.q)}</td><td>${usd(x.f)}</td><td>${t.f?Math.round(x.f/t.f*100):0}%</td><td>${mon?m1((sum('soh')+sum('pipe')+x.q)/mon):'-'}</td></tr>`}).join('')+sumTotal(t)+
-    '</table><div class="note">Cover in red: more than 8 months of stock. A good one to stop.</div>';
+      return `<tr><td class="l">${esc(c)}${S.stop.has(c)?' <span class="tag t-stop">stopped</span>':''}</td><td>${Math.round(sum('sell')/tot*100)}%</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('bought'))}</td><td>${pill(cov,+$('lt').value||0,mon>0)}</td><td>${fmt(x.q)}</td><td>${usd(x.f)}</td><td>${t.f?Math.round(x.f/t.f*100):0}%</td><td>${pill((sum('soh')+sum('pipe')+x.q)/mon,+$('lt').value||0,mon>0)}</td></tr>`}).join('')+sumTotal(t)+
+    '</table><div class="note">Cover: <span class="pill p-low">red</span> runs out before the shipment arrives · <span class="pill p-ok">green</span> fine · <span class="pill p-high">amber</span> more than 8 months of stock, a good one to stop.</div>';
   drawMix(t);
   const pri=items.filter(i=>i.flag==='pri').sort((a,b)=>b.sell-a.sell);
   $('pri').innerHTML=pri.length?`<table><tr><th class="l">SKU</th><th class="l">Item</th><th>Sold</th><th>Order</th></tr>${pri.slice(0,80).map(i=>`<tr><td class="l">${esc(i.sku)}</td><td class="name">${esc(i.name)}</td><td>${fmt(i.sell)}</td><td><b>${fmt(i.fin)}</b></td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
@@ -385,10 +398,12 @@ function drawMix(t){
   const rows=cats.map(c=>{const x=totals(items.filter(i=>i.cat===c)),a=AC[c]||[0,0];return {c,sell:sold(c),soh:a[0],pipe:a[1],q:x.q,f:x.f}}).filter(r=>r.sell||r.soh||r.pipe||r.q);
   const COL=['var(--accent)','#8FB8DE','#B9A3D9','#F2C46D','#7FC8A9','#E8A87C','#A3C4BC','#D7A9E3'];
   const bar=k=>`<div class="mixbar">${rows.map((r,n)=>`<i title="${esc(r.c)} ${p1(pc(r[k],all[k]))}" style="width:${pc(r[k],all[k])}%;background:${COL[n%COL.length]}"></i>`).join('')}</div>`;
+  const MK=[['sell','Sales mix','var(--accent)'],['soh','Stock mix','#8FB8DE'],['pipe','Pipeline mix','#B9A3D9'],['q','Order mix','#7FC8A9']],gmx=Math.max(1,...rows.flatMap(r=>MK.map(([k])=>pc(r[k],all[k]))));
   $('mix').innerHTML=`<table><tr><th class="l">Category</th><th>Sell Out pcs</th><th>Sales mix</th><th>SOH pcs</th><th>Stock mix</th><th>Pipeline mix</th><th>Order pcs</th><th>Order mix</th><th>Order FOB mix</th></tr>`+
     rows.map(r=>{const sm=pc(r.sell,all.sell);return `<tr><td class="l">${esc(r.c)}${S.stop.has(r.c)?' <span class="tag t-stop">stopped</span>':''}</td><td>${fmt(r.sell)}</td><td><b>${p1(sm)}</b></td><td>${fmt(r.soh)}</td>${cell(pc(r.soh,all.soh),sm)}${cell(pc(r.pipe,all.pipe),sm)}<td>${fmt(r.q)}</td>${cell(pc(r.q,all.q),sm)}${cell(pc(r.f,all.f),sm)}</tr>`}).join('')+
     `<tr><td class="l"><b>Total</b></td><td><b>${fmt(all.sell)}</b></td><td>100%</td><td><b>${fmt(all.soh)}</b></td><td>100%</td><td>100%</td><td><b>${fmt(all.q)}</b></td><td>100%</td><td>100%</td></tr></table>
-    <table style="margin-top:8px"><tr><td class="l" style="width:110px">Sales mix</td><td>${bar('sell')}</td></tr><tr><td class="l">Stock mix</td><td>${bar('soh')}</td></tr><tr><td class="l">Order mix</td><td>${bar('q')}</td></tr></table>
+    <div class="legend">${MK.map(([k,n,c])=>`<span style="--c:${c}">${n}</span>`).join('')}</div>
+    <div class="gb">${rows.map(r=>`<b style="font-size:12.5px">${esc(r.c)}</b><div class="bars">${MK.map(([k,n,c])=>{const v=pc(r[k],all[k]);return `<div title="${n} ${p1(v)}"><i style="width:${v/gmx*100}%;background:${c}"></i>${p1(v)}</div>`}).join('')}</div>`).join('')}</div>
     <div class="note">Small red / green numbers: points above / below the sales mix.</div>
     <details style="margin-top:8px"><summary class="note" style="cursor:pointer">How the SOH total is made (check it against ERP)</summary><div class="note" style="margin-top:6px">
       ERP stock on hand, all SKUs synced: <b>${fmt(S.allSohRaw)}</b> pcs.<br>
@@ -400,7 +415,7 @@ function drawMix(t){
 function sumTotal(t){
   if(!$('showTot').checked)return '';
   const sum=k=>items.reduce((a,i)=>a+i[k],0),mon=sum('mon'),cov=mon?(sum('soh')+sum('pipe'))/mon:0;
-  return `<tr style="font-weight:800"><td class="l">Total</td><td>100%</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('bought'))}</td><td class="${cov>8?'bad':''}">${mon?m1(cov):'-'}</td><td>${fmt(t.q)}</td><td>${usd(t.f)}</td><td>100%</td><td>${mon?m1((sum('soh')+sum('pipe')+t.q)/mon):'-'}</td></tr>`;
+  return `<tr style="font-weight:800"><td class="l">Total</td><td>100%</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('bought'))}</td><td>${pill(cov,+$('lt').value||0,mon>0)}</td><td>${fmt(t.q)}</td><td>${usd(t.f)}</td><td>100%</td><td>${mon?m1((sum('soh')+sum('pipe')+t.q)/mon):'-'}</td></tr>`;
 }
 try{$('showTot').checked=localStorage.getItem('rf.showTot')!=='0'}catch(_){$('showTot').checked=true}
 $('showTot').onchange=()=>{try{localStorage.setItem('rf.showTot',$('showTot').checked?'1':'0')}catch(_){}if(items.length)draw()};
@@ -425,9 +440,9 @@ function drawTable(){
   $('cnt').textContent=fmt(l.length)+' SKUs in '+fmt(gs.length)+' DVs';
   const ro=locked()||!can('input'),lt=+$('lt').value||0;
   const row=(i,one)=>`<tr class="${one?'':'size'}"><td>${one?pic(i.dv):''}</td><td class="l cl" data-d="${esc(i.sku)}" title="Details">${esc(i.sku)}</td><td class="name" title="${esc(i.name)}">${esc(i.name)||'<span class="note">not in the master</span>'}</td><td class="l">${esc(i.cat)}</td><td>${fmt(i.soh)}${i.neg?` <span class="bad" style="font-size:11px" title="ERP shows ${i.neg} (negative stock: a sale posted before the receipt or transfer). Counted as 0. Fix it in ERP.">(${i.neg})</span>`:''}</td><td>${fmt(i.pipe)}</td><td>${fmt(i.sell)}</td><td>${spark(i.soldBy)}</td><td>${fmt(i.bought)}</td><td>${m1(i.mon)}</td><td>${Math.round(i.st*100)}%</td>
-    <td class="${i.coverNow<lt?'bad':''}">${m1(i.coverNow)}</td><td>${i.prop||''}${i.flag==='stop'&&i.would?`<span class="note"> (${i.would})</span>`:''}</td>
+    <td>${pill(i.coverNow,lt)}</td><td>${i.prop||''}${i.flag==='stop'&&i.would?`<span class="note"> (${i.would})</span>`:''}</td>
     <td><input type="number" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}></td><td><input class="nt" data-n="${esc(i.sku)}" value="${esc(i.note)}" placeholder="comment" ${ro?'disabled':''}></td><td><select data-r="${esc(i.sku)}" ${ro?'disabled':''}>${REASONS.map(x=>`<option${x===i.reason?' selected':''}>${esc(x)}</option>`).join('')}${i.reason&&!REASONS.includes(i.reason)?`<option selected>${esc(i.reason)}</option>`:''}</select></td>
-    <td>${m1(i.coverAfter)}</td><td>${i.fob}</td><td>${fmt(i.fin*i.fob)}</td><td class="l">${i.abc?`<span class="tag t-abc">${i.abc}</span> `:''}${i.isNew?'<span class="tag t-new">new</span> ':''}${i.inMaster?'':'<span class="tag t-nm">no master</span> '}${TAG[i.flag]||''}</td></tr>`;
+    <td>${pill(i.coverAfter,lt)}</td><td>${i.fob}</td><td>${fmt(i.fin*i.fob)}</td><td class="l">${i.abc?`<span class="tag t-abc">${i.abc}</span> `:''}${i.isNew?'<span class="tag t-new">new</span> ':''}${i.inMaster?'':'<span class="tag t-nm">no master</span> '}${TAG[i.flag]||''}</td></tr>`;
   $('tbl').innerHTML=`<tr><th></th><th class="l">SKU</th><th class="l">Item</th><th class="l">Category</th><th>SOH</th><th>Pipeline</th><th>Sell Out</th><th>Trend</th><th>Bought</th><th>Sold/mo</th><th>Sell-through</th><th>Cover now</th><th>Proposed</th><th>Team</th><th class="l">Comment</th><th class="l">Reason</th><th>Cover after</th><th>FOB</th><th>Total FOB</th><th class="l"></th></tr>`+
     gs.slice(S.page*P,S.page*P+P).map(g=>{const one=g.length===1,sum=k=>g.reduce((a,i)=>a+i[k],0);
       return (one?'':`<tr class="dvh"><td>${pic(g[0].dv)}</td><td class="l"><b>${esc(g[0].dv)}</b></td><td class="name"><b>${esc(g[0].name)}</b> · ${g.length} sizes</td><td class="l">${esc(g[0].cat)}</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('sell'))}</td><td>${spark(g[0].soldBy.map((_,k)=>g.reduce((a,i)=>a+(i.soldBy[k]||0),0)))}</td><td>${fmt(sum('bought'))}</td><td>${m1(sum('mon'))}</td><td></td><td>${m1(g.cover)}</td><td>${fmt(sum('prop'))}</td><td><b>${fmt(sum('fin'))}</b></td><td></td><td></td><td></td><td></td><td>${fmt(g.reduce((a,i)=>a+i.fin*i.fob,0))}</td><td></td></tr>`)+g.map(i=>row(i,one)).join('')}).join('');

@@ -204,7 +204,8 @@ async function joined() {
     let c = m && m[3] ? m[3] : ercat(G[s]); if (c === 'Charm') c = 'Charms'; if (!c) { skip('No category (not in the master, ERP group unknown)', s); continue; }
     if ((e.soh[s] || 0) < 0) { neg.pcs += Math.round(e.soh[s]); neg.skus++; }
     const a = allCats[c] || (allCats[c] = [0, 0, months.map(() => 0)]);
-    a[0] += e.soh[s] || 0; // net, like ERP: a negative balance lowers the total a[1] += P.get(s) || 0;
+    a[0] += e.soh[s] || 0; // net, like ERP: a negative balance lowers the total
+    a[1] += P.get(s) || 0;
     months.forEach((k, i) => { a[2][i] += Math.round((e.sold[k] || {})[s] || 0); });
   }
   for (const c in allCats) a2r(allCats[c]);
