@@ -117,7 +117,7 @@ tbody tr:hover td,table tr:hover>td{background:color-mix(in srgb,var(--accent) 7
   <div class="card"><h2>New vs. Carry-Over</h2><div class="note">Question: which new items are hits or misses? 100 = sells like an average old item of its category.</div><div class="tw" id="iNew" style="max-height:420px"></div></div>
 </div>
 <div class="grid2">
-  <div class="card"><h2>Move Between Stores Before Ordering</h2><div class="note">Question: can we fix it by moving stock instead of buying? SKUs we order while one place holds 3+ pieces and others have none.</div><div class="tw" id="iMove" style="max-height:420px"></div></div>
+  <div class="card"><h2>Transfers Between Stores Before Ordering</h2><div class="note">Question: can we fill empty stores by moving stock instead of buying? Click a route to see the SKUs to send.</div><div class="tw" id="iMove" style="max-height:420px"></div></div>
   <div class="card"><h2>Size Curve</h2><div class="note">Question: do the sizes we stock match the sizes that sell? Red size = will run out first.</div><div class="tw" id="iSize" style="max-height:420px"></div></div>
 </div>
 </div>
@@ -545,7 +545,15 @@ function drawInsights(){
   // 8. move between stores before ordering
   const stores=[...new Set(items.flatMap(i=>i.wh.map(w=>w[0])))].sort();
   const mv=items.filter(i=>i.fin>0&&i.wh.length).map(i=>{const has=new Map(i.wh),from=i.wh.filter(w=>w[1]>=3).sort((a,b)=>b[1]-a[1]),to=stores.filter(s=>!(has.get(s)>0));return {i,from,to,can:Math.min(from.reduce((a,w)=>a+w[1]-1,0),to.length)}}).filter(x=>x.from.length&&x.can>0).sort((a,b)=>b.can-a.can);
-  $('iMove').innerHTML=mv.length?`<div class="note">${fmt(mv.length)} ordered SKUs could be balanced first · up to ${pcs(mv.reduce((a,x)=>a+x.can,0))} (1 per empty place, keeping 1 behind).</div><table><tr><th class="l">SKU</th><th>Order</th><th class="l">From (pcs)</th><th>Empty places</th><th>Can move</th></tr>${mv.slice(0,80).map(x=>`<tr><td class="l cl" data-d="${esc(x.i.sku)}">${esc(x.i.sku)}</td><td>${fmt(x.i.fin)}</td><td class="l">${x.from.slice(0,3).map(w=>esc(w[0])+' '+w[1]).join(', ')}</td><td title="${esc(x.to.join(', '))}">${x.to.length}</td><td><b>${x.can}</b></td></tr>`).join('')}</table>`:'<div class="note">'+(stores.length?'Nothing to move.':'No stock per store yet. Press Sync from ERP.')+'</div>';
+  // transfers: each empty place gets 1 piece from the place holding the most; a sending place keeps at least 2
+  const TR=[];for(const x of mv){const left=new Map(x.from.map(w=>[w[0],w[1]]));for(const to of x.to){const src=[...left].filter(([,q])=>q>2).sort((a,b)=>b[1]-a[1])[0];if(!src)break;left.set(src[0],src[1]-1);TR.push({from:src[0],to,i:x.i})}}
+  S.transfers=TR;const R=new Map();TR.forEach(t=>{const k=t.from+'\u2192'+t.to;const o=R.get(k)||{from:t.from,to:t.to,l:[]};o.l.push(t);R.set(k,o)});
+  const routes=[...R.values()].sort((a,b)=>a.from.localeCompare(b.from)||b.l.length-a.l.length);
+  $('iMove').innerHTML=TR.length?`<div class="row" style="justify-content:space-between"><span class="note"><b>${fmt(TR.length)}</b> transfers of 1 piece, ${fmt(new Set(TR.map(t=>t.i.sku)).size)} SKUs, ${routes.length} store-to-store routes. Each sending store keeps at least 2.</span><button class="btn sm" id="trX">Download transfers (Excel)</button></div>
+    ${routes.map(r=>`<details style="border-top:1px solid var(--line);padding:6px 0"><summary style="cursor:pointer"><b>${esc(r.from)}</b> → <b>${esc(r.to)}</b> · ${r.l.length} pcs</summary><table style="margin-top:4px"><tr><th class="l">SKU</th><th class="l">Item</th><th>Pcs</th><th>Order</th></tr>${r.l.map(t=>`<tr><td class="l cl" data-d="${esc(t.i.sku)}">${esc(t.i.sku)}</td><td class="name">${esc(t.i.name)}</td><td>1</td><td>${fmt(t.i.fin)}</td></tr>`).join('')}</table></details>`).join('')}
+    <div class="note" style="margin-top:6px">After the transfers, the order for these SKUs could be lowered by the pieces moved. ERP has no sales per store here, so empty stores are filled one piece each.</div>`:'<div class="note">'+(stores.length?'Nothing to move.':'No stock per store yet. Press Sync from ERP.')+'</div>';
+  if($('trX'))$('trX').onclick=()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(TR.map(t=>({'From store':t.from,'To store':t.to,'SKU#':t.i.sku,'Description':t.i.name,'Category':t.i.cat,'Pcs':1}))),'Transfers');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(routes.map(r=>({'From store':r.from,'To store':r.to,'Pcs':r.l.length}))),'By route');XLSX.writeFile(wb,`Transfers ${O.name}.xlsx`)};
   // 9. size curve: sales share by size vs stock after the order
   const dvs=new Map();items.forEach(i=>{if(sizeOf(i.sku)!=='-'){if(!dvs.has(i.dv))dvs.set(i.dv,[]);dvs.get(i.dv).push(i)}});
   const sc=[...dvs.values()].filter(g=>g.length>1&&g.some(i=>i.fin>0)).map(g=>{const ts=g.reduce((a,i)=>a+i.sell,0),tk=g.reduce((a,i)=>a+i.soh+i.pipe+i.fin,0);if(!ts||!tk)return null;
@@ -563,7 +571,7 @@ function drawInsights(){
   if(lowN)ln(`<b>${fmt(lowN)}</b> ordered SKUs sit in red heat-map boxes: they still run out before the shipment arrives.`,'heat2:low');
   if(highN)ln(`<b>${fmt(highN)}</b> ordered SKUs sit in amber boxes: more than 8 months of stock after this order. Consider cutting.`,'heat2:high');
   const off=sc.filter(x=>x.dev>=10).length;if(off)ln(`<b>${off}</b> ordered DVs have a size mix that does not match sales. See Size Curve.`);
-  if(mv.length)ln(`<b>${mv.length}</b> ordered SKUs could be moved between stores first. See Move Between Stores.`);
+  if(mv.length)ln(`<b>${mv.length}</b> ordered SKUs can fill empty stores by transfer first. See Transfers Between Stores.`);
   const hits=nw.filter(x=>x.r>=1.5).length;if(hits)ln(`<b>${hits}</b> new items sell 1.5× or more than an average old item. Make sure they are ordered.`);
   $('iKey').innerHTML=Q.join('');
   $('ins').querySelectorAll('td[data-d]').forEach(td=>td.onclick=()=>details(td.dataset.d));
