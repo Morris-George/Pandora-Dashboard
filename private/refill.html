@@ -122,7 +122,7 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
 </div>
 
 <div id="main" hidden>
-<div class="card"><h2>Settings</h2>
+<div class="card" id="setCard"><h2>Settings</h2>
   <div class="row">
     <label class="f">Sell Out period (months)<input type="number" id="pm" min="1" max="24"></label>
     <label class="f">Lead time (months)<input type="number" id="lt" min="0" max="12" step="0.5"></label>
@@ -250,7 +250,8 @@ const locked=()=>!O||O.status==='Approved';
 /* ---------- home: files, ERP, orders ---------- */
 async function boot(){
   try{H=await api('/api/refill');LVL=H.level;
-    $('newo').hidden=!can('manage');$('erpMl').hidden=!can('manage')||!H.erpOn;$('sync').hidden=!can('manage')||!H.erpOn;
+    $('newo').hidden=!can('manage');$('filesCard').hidden=!can('manage');$('setCard').hidden=!can('manage'); // only Manage sees files, ERP and settings
+    $('erpMl').hidden=!can('manage')||!H.erpOn;$('sync').hidden=!can('manage')||!H.erpOn;
     drawFiles();
     const sel=$('ord');sel.innerHTML=H.orders.length?H.orders.map(o=>`<option value="${o.id}">${esc(o.name)} · ${esc(o.status)}</option>`).join(''):'<option value="">No orders yet</option>';
     sel.onchange=()=>openOrder(sel.value);
