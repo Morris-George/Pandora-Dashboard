@@ -121,6 +121,11 @@ async function fileList() {
 }
 
 /* ---------- the join the page works on ---------- */
+// bags, boxes and other packaging are left out of the whole analysis. By category first; by name only for clear packaging words
+// ("box chain" is a bracelet, so the word box alone is not enough)
+const NOT_JEWEL_CAT = /accessor|packag|bag|box|pouch|consumable|marketing|display|service/i;
+const NOT_JEWEL_NAME = /\b(gift|paper|shopping|carrier|tote)\s*bags?\b|\bbags?\b.*\b(small|medium|large|xl)\b|\bjewel(le)?ry\s*box|\bgift\s*box|\bpouch|\bpackaging|\bwrapping|\bribbon\b|\bcleaning\s*(kit|cloth)/i;
+const notJewel = (cat, name) => NOT_JEWEL_CAT.test(cat || '') || NOT_JEWEL_NAME.test(name || '');
 async function joined() {
   const [av, md, pp, sl, erp] = await Promise.all(['avail', 'master', 'pipe', 'slow'].map(k => store.getJSON('rf/files/' + k + '.json')).concat([store.getJSON(ERP)]));
   if (!av) return { items: [], months: [] };
@@ -130,7 +135,7 @@ async function joined() {
   const e = erp || { soh: {}, sold: {}, buy: {} };
   const months = Object.keys(e.sold).sort();
   // item: [sku, available, dv, name, cat, sub, launch, fob, rrp, status, inMaster, soh, pipe, slow, [sold per month], [bought per month]]
-  const items = av.rows.map(([s, a]) => {
+  const items = av.rows.filter(([s]) => { const m = M.get(s); return !m || !notJewel(m[3], m[2]); }).map(([s, a]) => {
     const m = M.get(s);
     return [s, a, m ? m[1] : s.split('-')[0], m ? m[2] : '', m ? m[3] : '', m ? m[4] : '', m ? m[5] : '', m ? m[6] : 0, m ? m[7] : 0, m ? m[8] : '', m ? 1 : 0,
       Math.round(e.soh[s] || 0), P.get(s) || 0, S.has(s) ? 1 : 0,
@@ -138,8 +143,12 @@ async function joined() {
   });
   // selling, but not on the Available to Order list (for information only)
   const avs = new Set(av.rows.map(r => r[0])), off = new Map();
-  for (const k of months) for (const [s, q] of Object.entries(e.sold[k] || {})) if (!avs.has(s) && q > 0) off.set(s, (off.get(s) || 0) + q);
-  const notListed = [...off.entries()].sort((a, b) => b[1] - a[1]).slice(0, 150).map(([s, q]) => [s, (M.get(s) || [])[2] || '', q, Math.round(e.soh[s] || 0)]);
+  for (const k of months) for (const [s, q] of Object.entries(e.sold[k] || {})) {
+    if (avs.has(s) || q <= 0) continue;
+    const m = M.get(s); if (m && notJewel(m[3], m[2])) continue;
+    off.set(s, (off.get(s) || 0) + q);
+  }
+  const notListed = [...off.entries()].filter(([s]) => M.has(s) || !/BAG|BOX|POUCH/i.test(s)).sort((a, b) => b[1] - a[1]).slice(0, 150).map(([s, q]) => [s, (M.get(s) || [])[2] || '', q, Math.round(e.soh[s] || 0)]);
   return { items, months, notListed, sohDate: e.sohDate || '', boughtMonths: Object.keys(e.buy || {}).sort() };
 }
 

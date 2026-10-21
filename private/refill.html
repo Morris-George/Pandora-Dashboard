@@ -38,6 +38,7 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
 .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:14px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
 .good{color:var(--good)}.bad{color:var(--bad)}
 .status{font-weight:800;border-radius:99px;padding:3px 12px;background:var(--soft)}
+.mixbar{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--soft);min-width:120px}.mixbar i{display:block;height:100%}
 .pager{display:flex;gap:6px;align-items:center;margin-top:8px}
 .log div{border-top:1px solid var(--line);padding:4px 0;font-size:12.5px}
 </style>
@@ -74,6 +75,7 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
   <div class="card"><h2>Summary by category</h2><div class="tw" id="sum"></div></div>
   <div class="card"><h2>Selling, out of stock, nothing coming</h2><div class="note">Sold in the period, no stock, no pipeline. They come first.</div><div class="tw" id="pri" style="max-height:320px"></div></div>
 </div>
+<div class="card"><h2>Sales vs stock vs order mix</h2><div class="note">Share of each category in pieces. Compare the order mix with the sales mix: a category with more stock than sales share is overstocked.</div><div class="tw" id="mix"></div></div>
 <div class="card"><h2>Items</h2>
   <div class="row">
     <input type="search" id="q" placeholder="Search SKU, DV or name" style="width:220px">
@@ -183,7 +185,7 @@ async function openOrder(id){
 }
 let saveT=0;
 function saveSettings(){if(!can('manage')||locked())return;clearTimeout(saveT);saveT=setTimeout(async()=>{try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:+$('bg').value},stop:[...S.stop]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}},700)}
-['pm','lt','cv','mq','nm','bg'].forEach(id=>$(id).oninput=()=>{calc();saveSettings()});
+['pm','lt','cv','mq','nm','bg'].forEach(id=>$(id).oninput=()=>{calc();saveSettings();applyTips()});
 $('cats').onclick=e=>{const c=e.target.dataset.c;if(!c||!can('manage')||locked())return;S.stop.has(c)?S.stop.delete(c):S.stop.add(c);calc();saveSettings()};
 ['q','fc','ff'].forEach(id=>$(id).oninput=()=>{S.page=0;drawTable()});
 const monthsSince=d=>d?(new Date(S.today)-new Date(d))/(864e5*30.44):999;
@@ -235,11 +237,26 @@ function draw(){
     CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l),sum=k=>l.reduce((a,i)=>a+i[k],0),mon=sum('mon'),cov=mon?(sum('soh')+sum('pipe'))/mon:0;
       return `<tr><td class="l">${esc(c)}${S.stop.has(c)?' <span class="tag t-stop">stopped</span>':''}</td><td>${Math.round(sum('sell')/tot*100)}%</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('bought'))}</td><td class="${cov>8?'bad':''}">${mon?m1(cov):'-'}</td><td>${fmt(x.q)}</td><td>${usd(x.f)}</td><td>${t.f?Math.round(x.f/t.f*100):0}%</td><td>${mon?m1((sum('soh')+sum('pipe')+x.q)/mon):'-'}</td></tr>`}).join('')+
     '</table><div class="note">Cover in red: more than 8 months of stock. A good one to stop.</div>';
+  drawMix(t);
   const pri=items.filter(i=>i.flag==='pri').sort((a,b)=>b.sell-a.sell);
   $('pri').innerHTML=pri.length?`<table><tr><th class="l">SKU</th><th class="l">Item</th><th>Sold</th><th>Order</th></tr>${pri.slice(0,80).map(i=>`<tr><td class="l">${esc(i.sku)}</td><td class="name">${esc(i.name)}</td><td>${fmt(i.sell)}</td><td><b>${fmt(i.fin)}</b></td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
   $('nl').innerHTML=S.notListed.length?`<table><tr><th class="l">SKU</th><th class="l">Item</th><th>Sold</th><th>SOH</th></tr>${S.notListed.map(r=>`<tr><td class="l">${esc(r[0])}</td><td class="name">${esc(r[1])}</td><td>${fmt(r[2])}</td><td>${fmt(r[3])}</td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
   $('log').innerHTML=(O.log||[]).slice().reverse().slice(0,200).map(l=>`<div><b>${esc(l.what)}</b> · ${esc(l.by)} · <span class="note">${new Date(l.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('');
   drawTable();
+}
+// sales, stock, pipeline and order: each category's share, side by side
+function drawMix(t){
+  const sum=(l,k)=>l.reduce((a,i)=>a+(i[k]||0),0),all={sell:sum(items,'sell'),soh:sum(items,'soh'),pipe:sum(items,'pipe'),q:t.q,f:t.f};
+  const pc=(a,b)=>b?a/b*100:0,p1=n=>Math.round(n)+'%';
+  const cell=(v,ref)=>{const d=v-ref;return `<td>${p1(v)}${Math.abs(d)>=3?` <span class="${d>0?'bad':'good'}" style="font-size:11px">${d>0?'+':''}${Math.round(d)}</span>`:''}</td>`};
+  const rows=CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l);return {c,sell:sum(l,'sell'),soh:sum(l,'soh'),pipe:sum(l,'pipe'),q:x.q,f:x.f}});
+  const COL=['var(--accent)','#8FB8DE','#B9A3D9','#F2C46D','#7FC8A9','#E8A87C','#A3C4BC','#D7A9E3'];
+  const bar=k=>`<div class="mixbar">${rows.map((r,n)=>`<i title="${esc(r.c)} ${p1(pc(r[k],all[k]))}" style="width:${pc(r[k],all[k])}%;background:${COL[n%COL.length]}"></i>`).join('')}</div>`;
+  $('mix').innerHTML=`<table><tr><th class="l">Category</th><th>Sell Out pcs</th><th>Sales mix</th><th>SOH pcs</th><th>Stock mix</th><th>Pipeline mix</th><th>Order pcs</th><th>Order mix</th><th>Order FOB mix</th></tr>`+
+    rows.map(r=>{const sm=pc(r.sell,all.sell);return `<tr><td class="l">${esc(r.c)}${S.stop.has(r.c)?' <span class="tag t-stop">stopped</span>':''}</td><td>${fmt(r.sell)}</td><td><b>${p1(sm)}</b></td><td>${fmt(r.soh)}</td>${cell(pc(r.soh,all.soh),sm)}${cell(pc(r.pipe,all.pipe),sm)}<td>${fmt(r.q)}</td>${cell(pc(r.q,all.q),sm)}${cell(pc(r.f,all.f),sm)}</tr>`}).join('')+
+    `<tr><td class="l"><b>Total</b></td><td><b>${fmt(all.sell)}</b></td><td>100%</td><td><b>${fmt(all.soh)}</b></td><td>100%</td><td>100%</td><td><b>${fmt(all.q)}</b></td><td>100%</td><td>100%</td></tr></table>
+    <table style="margin-top:8px"><tr><td class="l" style="width:110px">Sales mix</td><td>${bar('sell')}</td></tr><tr><td class="l">Stock mix</td><td>${bar('soh')}</td></tr><tr><td class="l">Order mix</td><td>${bar('q')}</td></tr></table>
+    <div class="note">Small red / green numbers: points above / below the sales mix.</div>`;
 }
 async function saveFb(lines){try{await api('/api/refill?op=fb',{id:O.id,lines});$('saved').textContent='Saved.';setTimeout(()=>$('saved').textContent='',1500)}catch(e){showErr(e.message)}}
 async function fit(){
@@ -333,10 +350,19 @@ const TIPS={
   'Need a manual decision':'New items with no sales yet, or launched this month: the page cannot suggest a number, the team decides.',
   'Held back by stopped categories':'Pieces the stopped categories would have ordered.',
   'Sold':'Pieces sold in the Sell Out period.',
+  'Sell Out pcs':'Pieces sold in the Sell Out period.',
+  'SOH pcs':'Pieces in stock today, every store and warehouse.',
+  'Sales mix':'The category share of all pieces sold in the period.',
+  'Stock mix':'The category share of all stock today. Red: more stock share than sales share (overstocked).',
+  'Pipeline mix':'The category share of the pieces on the way.',
+  'Order mix':'The category share of the pieces in this order. Compare with the sales mix.',
+  'Order FOB mix':'The category share of this order cost in dollars.',
   'Order':'Pieces in this order.'
 };
 const TAGTIPS={slow:'On the Slow Moving list: not ordered.',stopped:'Its category is stopped: not ordered.',decide:'New item with no sales yet: the team decides.',priority:'Selling, no stock and nothing coming.','not available':'Quantity 0 on the Available to Order list: cannot be ordered.',new:'New collection: launched within the months set above.','no master':'Not found in the master data: no name, category or FOB.'};
 function applyTips(){
+  const pmv=+($('pm')&&$('pm').value)||6;
+  TIPS['Sell Out period (months)']=`Sales of the last ${pmv} full month${pmv===1?'':'s'}${S.period&&S.period!=='no months synced'?' ('+S.period+')':''}. This month is left out because it is not finished.`;
   document.querySelectorAll('label.f').forEach(l=>{const t=TIPS[l.firstChild.textContent.trim()];if(t)l.title=t});
   document.querySelectorAll('th,.kpi small').forEach(e=>{const t=TIPS[e.textContent.trim()];if(t){e.title=t;e.style.cursor='help'}});
   document.querySelectorAll('.tag').forEach(e=>{const t=TAGTIPS[e.textContent.trim()];if(t)e.title=t});
