@@ -101,7 +101,7 @@ const fmt=n=>Math.round(n||0).toLocaleString('en-US'),usd=n=>'$'+(+n||0).toLocal
 const PICS=(window.__PICS=window.__PICS||{});
 /* pictures: the built-in pack first, then the live site pandoraeg.com (its product list, kept 7 days on this computer) */
 const SITE='https://pandoraeg.com',WEB={map:null,state:'idle'};
-try{const c=JSON.parse(localStorage.getItem('rf.webpics')||'null');if(c&&Date.now()-c.at<7*864e5)WEB.map=c.map}catch(_){}
+try{const c=JSON.parse(localStorage.getItem('rf.webpics2')||'null');if(c&&Date.now()-c.at<7*864e5)WEB.map=c.map}catch(_){}
 const small=u=>u?(u.startsWith('//')?'https:'+u:u)+(u.includes('?')?'&':'?')+'width=200':'';
 const webPic=dv=>{const k=String(dv||'').toUpperCase();return WEB.map&&(WEB.map[k]||'')};
 const pic=dv=>{const v=PICS[String(dv||'').toUpperCase()]||PICS[String(dv||'')];if(v)return `<span class="img"><img src="data:image/jpeg;base64,${v}" alt="" loading="lazy"></span>`;
@@ -110,9 +110,11 @@ async function loadWeb(){
   if(WEB.map||WEB.state!=='idle')return;WEB.state='loading';const map={};
   try{for(let page=1;page<=40;page++){const r=await fetch(SITE+'/products.json?limit=250&page='+page);if(!r.ok)break;const list=(await r.json()).products||[];
       for(const pr of list){const first=pr.images&&pr.images[0]?pr.images[0].src:'';
+        // the design code also ends the product link (…-382234c00), even when the sizes have no SKU on the site
+        const hd=(String(pr.handle||'').match(/-([0-9]{5,6}[a-z0-9_]*)$/i)||[])[1];if(hd&&first&&!map[hd.toUpperCase()])map[hd.toUpperCase()]=first;
         for(const v of pr.variants||[]){const sku=String(v.sku||'').toUpperCase();if(!sku)continue;const img=(v.featured_image&&v.featured_image.src)||first;if(!img)continue;const dv=sku.split('-')[0];if(!map[dv])map[dv]=first||img;if(!map[sku])map[sku]=img}}
       if(list.length<250)break}
-    WEB.map=map;try{localStorage.setItem('rf.webpics',JSON.stringify({at:Date.now(),map}))}catch(_){}
+    WEB.map=map;try{localStorage.setItem('rf.webpics2',JSON.stringify({at:Date.now(),map}))}catch(_){}
   }catch(_){}
   WEB.state='done';fillPics();
 }
@@ -125,7 +127,7 @@ async function fillPics(){
   put();
   const ask=[...new Set(boxes.filter(b=>b.dataset.dv&&!ASKED.has(b.dataset.dv)).map(b=>b.dataset.dv))].slice(0,40);
   if(!ask.length)return;ask.forEach(d=>ASKED.add(d));
-  try{const j=await api('/api/refill?pics='+encodeURIComponent(ask.join(',')));Object.assign(WEB.map,j.map);try{localStorage.setItem('rf.webpics',JSON.stringify({at:Date.now(),map:WEB.map}))}catch(_){}put()}catch(_){}
+  try{const j=await api('/api/refill?pics='+encodeURIComponent(ask.join(',')));Object.assign(WEB.map,j.map);try{localStorage.setItem('rf.webpics2',JSON.stringify({at:Date.now(),map:WEB.map}))}catch(_){}put()}catch(_){}
   // not on the site: the picture saved on the item in ERP
   boxes.forEach(b=>{if(!b.isConnected||!b.dataset.dv)return;const dv=b.dataset.dv,im=new Image();im.alt='';im.loading='lazy';im.onload=()=>{if(b.isConnected){b.removeAttribute('data-dv');b.innerHTML='';b.appendChild(im)}};im.src='/api/refill?img='+encodeURIComponent(dv)});
 }
