@@ -68,6 +68,7 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
     <label class="f">Budget FOB ($)<input type="text" id="bg" inputmode="decimal" style="text-align:right"></label>
   </div>
   <div class="note" style="margin:10px 0 4px">Stop ordering a category (click to switch off / on):</div><div class="chips" id="cats"></div>
+  <div class="note" style="margin:10px 0 4px">Stop ordering a sub category (collection, from the master):</div><div class="chips" id="subs"></div>
   <div class="note" id="formula" style="margin-top:8px"></div>
 </div>
 <div class="kpis" id="kpis"></div>
@@ -98,8 +99,37 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Math.round(n||0).toLocaleString('en-US'),usd=n=>'$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),m1=n=>n>=99?'99+':(Math.round(n*10)/10).toFixed(1);
 const PICS=(window.__PICS=window.__PICS||{});
-const pic=dv=>{const v=PICS[String(dv||'').toUpperCase()]||PICS[String(dv||'')];return v?`<span class="img"><img src="data:image/jpeg;base64,${v}" alt="" loading="lazy"></span>`:'<span class="img">no<br>image</span>'};
-let H=null,O=null,items=[],CATS=[],S={page:0},LVL='view';
+/* pictures: the built-in pack first, then the live site pandoraeg.com (its product list, kept 7 days on this computer) */
+const SITE='https://pandoraeg.com',WEB={map:null,state:'idle'};
+try{const c=JSON.parse(localStorage.getItem('rf.webpics')||'null');if(c&&Date.now()-c.at<7*864e5)WEB.map=c.map}catch(_){}
+const small=u=>u?(u.startsWith('//')?'https:'+u:u)+(u.includes('?')?'&':'?')+'width=200':'';
+const webPic=dv=>{const k=String(dv||'').toUpperCase();return WEB.map&&(WEB.map[k]||'')};
+const pic=dv=>{const v=PICS[String(dv||'').toUpperCase()]||PICS[String(dv||'')];if(v)return `<span class="img"><img src="data:image/jpeg;base64,${v}" alt="" loading="lazy"></span>`;
+  const w=webPic(dv);return w?`<span class="img"><img src="${esc(small(w))}" alt="" loading="lazy" referrerpolicy="no-referrer"></span>`:`<span class="img" data-dv="${esc(String(dv||'').toUpperCase())}">no<br>image</span>`};
+async function loadWeb(){
+  if(WEB.map||WEB.state!=='idle')return;WEB.state='loading';const map={};
+  try{for(let page=1;page<=40;page++){const r=await fetch(SITE+'/products.json?limit=250&page='+page);if(!r.ok)break;const list=(await r.json()).products||[];
+      for(const pr of list){const first=pr.images&&pr.images[0]?pr.images[0].src:'';
+        for(const v of pr.variants||[]){const sku=String(v.sku||'').toUpperCase();if(!sku)continue;const img=(v.featured_image&&v.featured_image.src)||first;if(!img)continue;const dv=sku.split('-')[0];if(!map[dv])map[dv]=first||img;if(!map[sku])map[sku]=img}}
+      if(list.length<250)break}
+    WEB.map=map;try{localStorage.setItem('rf.webpics',JSON.stringify({at:Date.now(),map}))}catch(_){}
+  }catch(_){}
+  WEB.state='done';fillPics();
+}
+// a picture still missing after the product list: our server searches pandoraeg.com for those designs (once each)
+const ASKED=new Set();
+async function fillPics(){
+  const boxes=[...document.querySelectorAll('.img[data-dv]')];if(!boxes.length)return;
+  if(!WEB.map){loadWeb();return}
+  const put=()=>boxes.forEach(b=>{const u=webPic(b.dataset.dv);if(u&&b.isConnected){b.removeAttribute('data-dv');b.innerHTML=`<img src="${esc(small(u))}" alt="" loading="lazy" referrerpolicy="no-referrer">`}});
+  put();
+  const ask=[...new Set(boxes.filter(b=>b.dataset.dv&&!ASKED.has(b.dataset.dv)).map(b=>b.dataset.dv))].slice(0,40);
+  if(!ask.length)return;ask.forEach(d=>ASKED.add(d));
+  try{const j=await api('/api/refill?pics='+encodeURIComponent(ask.join(',')));Object.assign(WEB.map,j.map);try{localStorage.setItem('rf.webpics',JSON.stringify({at:Date.now(),map:WEB.map}))}catch(_){}put()}catch(_){}
+  // not on the site: the picture saved on the item in ERP
+  boxes.forEach(b=>{if(!b.isConnected||!b.dataset.dv)return;const dv=b.dataset.dv,im=new Image();im.alt='';im.loading='lazy';im.onload=()=>{if(b.isConnected){b.removeAttribute('data-dv');b.innerHTML='';b.appendChild(im)}};im.src='/api/refill?img='+encodeURIComponent(dv)});
+}
+let SUBS=[];let H=null,O=null,items=[],CATS=[],S={page:0},LVL='view';
 const FILES={avail:['Available to Order','SKU# and quantity (0 = not available). EntireItems file.'],master:['Master Data','The MD sheet: SKU, DV, name, category, launch, EG (USD), RRP.'],pipe:['Pipeline','Purchases in Pipeline: SKU and quantity.'],slow:['Slow Moving','SKU# list.']};
 function showErr(t){$('err').hidden=!t;$('err').textContent=t||''}
 async function api(url,body){const r=await fetch(url,body?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{credentials:'same-origin',cache:'no-store'});if(r.status===401){location.replace('/login.html');throw new Error('sign in')}const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('error '+r.status));return j}
@@ -194,20 +224,22 @@ async function openOrder(id){
     // the Sell Out period: the last full months before this month
     S.months=months;S.today=today;S.notListed=j.notListed||[];S.allCats=j.allCats||{};S.allSkipped=j.allSkipped||{};S.allNeg=j.allNeg||{pcs:0,skus:0};S.allSohRaw=j.allSohRaw||0;
     items=j.items.map(r=>({sku:r[0],av:!!r[1],dv:r[2]||r[0].split('-')[0],name:r[3],cat:r[4]==='Charm'?'Charms':(r[4]||'No category'),sub:r[5],launch:r[6],fob:r[7],rrp:r[8],status:r[9],inMaster:!!r[10],soh:Math.max(0,r[11]),neg:r[11]<0?r[11]:0,pipe:r[12],slow:!!r[13],soldBy:r[14],boughtBy:r[15],fb:O.fb[r[0]]??null,note:O.notes[r[0]]||''}));
-    CATS=[...new Set(items.map(i=>i.cat))].sort();
+    CATS=[...new Set(items.map(i=>i.cat))].sort();SUBS=[...new Set(items.map(i=>i.sub).filter(x=>x&&x!=='-'&&!/^#|^0x[0-9a-f]+$/i.test(x)))].sort();
+    $('subs').innerHTML=SUBS.map(c=>`<span class="chip" data-sub="${esc(c)}">${esc(c)}</span>`).join('')||'<span class="note">Upload the master data first.</span>';
     $('fc').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
     $('cats').innerHTML=CATS.map(c=>`<span class="chip" data-c="${esc(c)}">${esc(c)}</span>`).join('');
     const s=O.settings;$('pm').value=s.pm;$('erpM').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=fmtMoney(s.budget);
-    S.stop=new Set(O.stop||[]);S.page=0;$('main').hidden=false;$('ord').value=O.id;
+    S.stop=new Set(O.stop||[]);S.stopSub=new Set(O.stopSub||[]);S.page=0;$('main').hidden=false;$('ord').value=O.id;
     if(!months.length)showErr('No sell out from ERP yet. Press Sync from ERP.');
     calc();
   }catch(e){showErr('Could not open the order: '+e.message)}
 }
 let saveT=0;
-async function saveNow(){clearTimeout(saveT);if(!O||!can('manage')||locked())return;try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:bgVal()},stop:[...S.stop]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}}
+async function saveNow(){clearTimeout(saveT);if(!O||!can('manage')||locked())return;try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:bgVal()},stop:[...S.stop],stopSub:[...S.stopSub]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}}
 function saveSettings(){if(!can('manage')||locked())return;clearTimeout(saveT);saveT=setTimeout(saveNow,700)}
 ['pm','lt','cv','mq','nm','bg'].forEach(id=>$(id).oninput=()=>{if(id==='pm')$('erpM').value=$('pm').value;calc();saveSettings();applyTips()});
 $('erpM').oninput=()=>{const v=$('erpM').value;if(O&&!$('pm').disabled){$('pm').value=v;calc();saveSettings();applyTips()}};
+$('subs').onclick=e=>{const c=e.target.dataset.sub;if(!c||!can('manage')||locked())return;S.stopSub.has(c)?S.stopSub.delete(c):S.stopSub.add(c);calc();saveSettings()};
 $('cats').onclick=e=>{const c=e.target.dataset.c;if(!c||!can('manage')||locked())return;S.stop.has(c)?S.stop.delete(c):S.stop.add(c);calc();saveSettings()};
 ['q','fc','ff'].forEach(id=>$(id).oninput=()=>{S.page=0;drawTable()});
 const fmtMoney=n=>(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -229,7 +261,7 @@ function calc(){
     let p=Math.ceil(i.mon*(lt+cv)-i.soh-i.pipe);if(p<mq)p=0;
     if(!i.av){p=0;i.flag='na'}
     else if(i.slow){p=0;i.flag='slow'}
-    else if(S.stop.has(i.cat)){i.flag='stop';i.would=p;p=0}
+    else if(S.stop.has(i.cat)||S.stopSub.has(i.sub)){i.flag='stop';i.would=p;p=0}
     else if(i.isNew&&(i.age<1||i.sell<=0)){p=0;i.flag='man'}
     i.prop=p;i.fin=i.fb==null?p:i.fb;
     i.coverNow=i.mon?(i.soh+i.pipe)/i.mon:99;i.coverAfter=i.mon?(i.soh+i.pipe+i.fin)/i.mon:99;
@@ -248,6 +280,7 @@ function drawStatus(){
 function draw(){
   drawStatus();
   document.querySelectorAll('#cats .chip').forEach(c=>c.classList.toggle('off',S.stop.has(c.dataset.c)));
+  document.querySelectorAll('#subs .chip').forEach(c=>c.classList.toggle('off',S.stopSub.has(c.dataset.sub)));
   ['pm','lt','cv','mq','nm','bg'].forEach(id=>$(id).disabled=locked()||!can('manage'));
   const t=totals(items),bg=bgVal()||0,ord=items.filter(i=>i.fin>0);
   const stopped=items.filter(i=>i.flag==='stop').reduce((a,i)=>a+(i.would||0),0);
@@ -331,6 +364,7 @@ function drawTable(){
   $('tbl').querySelectorAll('input[data-n]').forEach(inp=>inp.onchange=()=>{const i=items.find(x=>x.sku===inp.dataset.n);i.note=inp.value.trim();saveFb([[i.sku,i.fb,i.note]])});
   $('pager').innerHTML=pages>1?`<button class="btn sm" id="pv" ${S.page?'':'disabled'}>‹</button><span class="note">Page ${S.page+1} of ${pages}</span><button class="btn sm" id="nx" ${S.page<pages-1?'':'disabled'}>›</button>`:'';
   if($('pv')){$('pv').onclick=()=>{S.page--;drawTable()};$('nx').onclick=()=>{S.page++;drawTable()}}
+  fillPics();
 }
 async function setStatus(status){
   try{const body={id:O.id,status};if(status==='Approved')body.lines=items.filter(i=>i.fin>0||i.prop>0).map(i=>[i.sku,i.prop,i.fin,i.fob]);
@@ -344,7 +378,7 @@ $('xlsx').onclick=()=>{if(!O||!items.length)return;
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Items');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l);return {Category:c,'Order QTY':x.q,'Total FOB $':Math.round(x.f),'Sell Out':l.reduce((a,i)=>a+i.sell,0),'Stopped':S.stop.has(c)?'Y':''}})),'Summary');
   // the Settings sheet is only for people who manage the order
-  if(can('manage'))XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Item:'Order',Value:O.name},{Item:'Status',Value:O.status},{Item:'Sell Out period',Value:S.period},{Item:'Lead time (months)',Value:+$('lt').value},{Item:'Cover after arrival (months)',Value:+$('cv').value},{Item:'Budget $',Value:bgVal()},{Item:'Stopped categories',Value:[...S.stop].join(', ')}]),'Settings');
+  if(can('manage'))XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Item:'Order',Value:O.name},{Item:'Status',Value:O.status},{Item:'Sell Out period',Value:S.period},{Item:'Lead time (months)',Value:+$('lt').value},{Item:'Cover after arrival (months)',Value:+$('cv').value},{Item:'Budget $',Value:bgVal()},{Item:'Stopped categories',Value:[...S.stop].join(', ')},{Item:'Stopped sub categories',Value:[...S.stopSub].join(', ')}]),'Settings');
   XLSX.writeFile(wb,`Order Sheet ${O.name}.xlsx`)};
 /* the team downloads the Excel, fills Team Feedback and Comment, and uploads it back */
 $('fbFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f||!O)return;showErr('');

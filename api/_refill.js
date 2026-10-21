@@ -216,6 +216,57 @@ module.exports = async function handler(req, res) {
   const url = new URL(req.url, 'https://x.invalid');
   const by = nameOf(who);
 
+  if (req.method === 'GET' && url.searchParams.get('img')) {
+    // the picture saved on the item in ERP, for a design with no picture anywhere else (ERP files need the API key, so it comes through here)
+    const dv = skuOf(url.searchParams.get('img'));
+    if (!/^[A-Z0-9_]{4,20}$/.test(dv) || !process.env.ERP_URL) return res.status(404).end();
+    const base = String(process.env.ERP_URL).replace(/\/+$/, ''), auth = { Authorization: `token ${process.env.ERP_API_KEY}:${process.env.ERP_API_SECRET}` };
+    const cache = (await store.getJSON('rf/erpimg.json')) || {};
+    try {
+      let path = cache[dv];
+      if (path === undefined) {
+        const erp = (await store.getJSON(ERP)) || {};
+        const codes = Object.entries(erp.code2sku || {}).filter(([, sku]) => sku === dv || sku.startsWith(dv + '-')).map(([c]) => c).slice(0, 6);
+        path = '';
+        for (const c of codes.length ? codes : [dv]) {
+          const r = await fetch(base + '/api/resource/Item/' + encodeURIComponent(c) + '?fields=' + encodeURIComponent('["image"]'), { headers: auth, signal: AbortSignal.timeout(8000) });
+          if (!r.ok) continue;
+          const im = ((await r.json()).data || {}).image;
+          if (im) { path = String(im); break; }
+        }
+        cache[dv] = path; await store.putJSON('rf/erpimg.json', cache);
+      }
+      if (!path) return res.status(404).end();
+      const url2 = /^https?:/.test(path) ? path : base + (path.startsWith('/') ? '' : '/') + path;
+      const r = await fetch(url2, { headers: url2.startsWith(base) ? auth : {}, signal: AbortSignal.timeout(10000) });
+      const type = r.headers.get('content-type') || '';
+      if (!r.ok || !/^image\//.test(type)) return res.status(404).end();
+      const buf = Buffer.from(await r.arrayBuffer());
+      if (buf.length > 3e6) return res.status(404).end();
+      res.setHeader('Content-Type', type); res.setHeader('Cache-Control', 'private, max-age=604800'); res.setHeader('X-Content-Type-Options', 'nosniff');
+      return res.status(200).end(buf);
+    } catch (_) { return res.status(404).end(); }
+  }
+  if (req.method === 'GET' && url.searchParams.get('pics')) {
+    // pictures the page could not find: search pandoraeg.com for each design (that search cannot be called from the browser)
+    const want = [...new Set(url.searchParams.get('pics').split(',').map(d => skuOf(d)).filter(d => /^[A-Z0-9_]{4,20}$/.test(d)))].slice(0, 40);
+    const cache = (await store.getJSON('rf/webpics.json')) || {};
+    let changed = false;
+    await Promise.all(want.filter(d => !(d in cache)).map(async d => {
+      try {
+        const r = await fetch('https://pandoraeg.com/search/suggest.json?q=' + encodeURIComponent(d) + '&resources[type]=product&resources[limit]=4', { signal: AbortSignal.timeout(8000) });
+        const j = await r.json();
+        const l = (j.resources && j.resources.results && j.resources.results.products) || [];
+        const hit = l.find(x => String(x.handle || x.url || '').toLowerCase().includes(d.toLowerCase()));
+        const u = hit && (hit.image || (hit.featured_image && hit.featured_image.url)) || '';
+        cache[d] = /^https?:/.test(u) || u.startsWith('//') ? u : ''; changed = true;
+      } catch (_) {}
+    }));
+    if (changed) await store.putJSON('rf/webpics.json', cache);
+    const out = {}; want.forEach(d => { if (cache[d]) out[d] = cache[d]; });
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    return res.status(200).json({ ok: true, map: out });
+  }
   if (req.method === 'GET') {
     const id = url.searchParams.get('order');
     if (id) {
@@ -276,7 +327,7 @@ module.exports = async function handler(req, res) {
     const prev = idx.length ? await store.getJSON('rf/orders/' + idx[idx.length - 1].id + '.json') : null;
     const o = {
       id: crypto.randomBytes(6).toString('hex'), name, status: 'Draft', createdAt: new Date().toISOString(), by,
-      settings: prev ? prev.settings : { pm: 6, lt: 2, cv: 3, mq: 1, nm: 9, budget: 150000 }, stop: prev ? prev.stop : [],
+      settings: prev ? prev.settings : { pm: 6, lt: 2, cv: 3, mq: 1, nm: 9, budget: 150000 }, stop: prev ? prev.stop : [], stopSub: prev ? prev.stopSub || [] : [],
       fb: {}, notes: {}, log: [{ at: new Date().toISOString(), by, what: 'Created' }]
     };
     await store.putJSON('rf/orders/' + o.id + '.json', o);
@@ -300,6 +351,7 @@ module.exports = async function handler(req, res) {
     const s = b.settings || {}, cl = (v, lo, hi, d) => { const n = Number(v); return isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
     o.settings = { pm: cl(s.pm, 1, 24, 6), lt: cl(s.lt, 0, 12, 2), cv: cl(s.cv, 0, 24, 3), mq: Math.round(cl(s.mq, 1, 1000, 1)), nm: cl(s.nm, 0, 36, 9), budget: Math.round(cl(s.budget, 0, 1e8, 0) * 100) / 100 };
     o.stop = Array.isArray(b.stop) ? b.stop.map(c => str(c, 40)).filter(Boolean).slice(0, 30) : o.stop;
+    o.stopSub = Array.isArray(b.stopSub) ? b.stopSub.map(c => str(c, 60)).filter(Boolean).slice(0, 60) : (o.stopSub || []);
     log('Settings changed');
   } else if (op === 'fb') {
     if (!Array.isArray(b.lines) || b.lines.length > 5000) return send(res, 400, { ok: false, error: 'Bad lines.' });
