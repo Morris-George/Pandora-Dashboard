@@ -301,7 +301,8 @@ $('xlsx').onclick=()=>{if(!O||!items.length)return;
     'Note':{na:'Not available to order',slow:'Slow moving',stop:'Category stopped',man:'New item: decide by hand',pri:'Selling, out of stock'}[i.flag]||''}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Items');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(CATS.map(c=>{const l=items.filter(i=>i.cat===c),x=totals(l);return {Category:c,'Order QTY':x.q,'Total FOB $':Math.round(x.f),'Sell Out':l.reduce((a,i)=>a+i.sell,0),'Stopped':S.stop.has(c)?'Y':''}})),'Summary');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Item:'Order',Value:O.name},{Item:'Status',Value:O.status},{Item:'Sell Out period',Value:S.period},{Item:'Lead time (months)',Value:+$('lt').value},{Item:'Cover after arrival (months)',Value:+$('cv').value},{Item:'Budget $',Value:+$('bg').value},{Item:'Stopped categories',Value:[...S.stop].join(', ')}]),'Settings');
+  // the Settings sheet is only for people who manage the order
+  if(can('manage'))XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Item:'Order',Value:O.name},{Item:'Status',Value:O.status},{Item:'Sell Out period',Value:S.period},{Item:'Lead time (months)',Value:+$('lt').value},{Item:'Cover after arrival (months)',Value:+$('cv').value},{Item:'Budget $',Value:+$('bg').value},{Item:'Stopped categories',Value:[...S.stop].join(', ')}]),'Settings');
   XLSX.writeFile(wb,`Order Sheet ${O.name}.xlsx`)};
 /* the team downloads the Excel, fills Team Feedback and Comment, and uploads it back */
 $('fbFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f||!O)return;showErr('');
