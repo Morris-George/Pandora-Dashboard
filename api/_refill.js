@@ -58,6 +58,14 @@ const nameOf = who => who.user ? (who.user.name || who.user.username) : (who.acc
 /* ---------- ERP ---------- */
 const company = () => process.env.ERP_COMPANY || 'All-Niche';
 const monthRange = m => { const [y, mo] = m.split('-').map(Number); const last = new Date(Date.UTC(y, mo, 0)).getUTCDate(); return [m + '-01', m + '-' + String(last).padStart(2, '0')]; };
+// Pandora only; services, boxes, bags and other packaging are left out of stock, sales and purchases
+const groupOf = x => String(pick(x, 'item_group', 'full_group', 'category', 'item_category') || '');
+function keepRow(x) {
+  const brand = String(x.brand || ''), grp = groupOf(x), name = String(pick(x, 'item_name', 'description') || '');
+  if (brand && !/pandora/i.test(brand)) return false;
+  if (!brand && grp && !/pandora/i.test(grp)) return false;
+  return !notJewel(grp, name);
+}
 const pick = (x, ...ks) => { for (const k of ks) if (x[k] != null && x[k] !== '') return x[k]; return null; };
 
 async function syncPart(b) {
@@ -69,8 +77,13 @@ async function syncPart(b) {
     let list;
     try { list = await runReport('Branches Stock Balance', { company: company(), from_date: d, to_date: d, item_group: 'Pandora', valuation_field_type: 'Currency' }); }
     catch (_) { list = await runReport('Branches Stock Balance', { from_date: d, to_date: d }); }
-    const soh = {};
-    for (const x of list) { const s = skuOf(pick(x, 'item_code', 'sku', 'item')); if (s) soh[s] = (soh[s] || 0) + num(pick(x, 'bal_qty', 'balance_qty', 'balance')); }
+    const soh = {}; erp.grp = erp.grp || {};
+    for (const x of list) {
+      const s = skuOf(pick(x, 'item_code', 'sku', 'item')); if (!s) continue;
+      if (groupOf(x)) erp.grp[s] = groupOf(x).slice(0, 80);
+      if (!keepRow(x)) continue;
+      soh[s] = (soh[s] || 0) + num(pick(x, 'bal_qty', 'balance_qty', 'balance'));
+    }
     erp.soh = soh; erp.at.soh = new Date().toISOString(); erp.sohDate = d;
     await store.putJSON(ERP, erp);
     return { skus: Object.keys(soh).length, pcs: Math.round(Object.values(soh).reduce((a, q) => a + q, 0)) };
@@ -80,7 +93,13 @@ async function syncPart(b) {
   const out = {};
   if (b.what === 'sales') {
     const list = await runReport('Sales Report by Item & SKU', { company: company(), from_date: from, to_date: to, brand: 'Pandora' });
-    for (const x of list) { const s = skuOf(pick(x, 'sku-item', 'sku', 'item_code')); if (s) out[s] = (out[s] || 0) + num(pick(x, 'stock_qty', 'qty')); }
+    erp.grp = erp.grp || {};
+    for (const x of list) {
+      const s = skuOf(pick(x, 'sku-item', 'sku', 'item_code')); if (!s) continue;
+      if (groupOf(x)) erp.grp[s] = groupOf(x).slice(0, 80);
+      if (!keepRow(x)) continue;
+      out[s] = (out[s] || 0) + num(pick(x, 'stock_qty', 'qty'));
+    }
     erp.sold[b.month] = out;
   } else if (b.what === 'buy') {
     // Stock Ledger, purchases only (Purchase Receipt, or a Purchase Invoice that moved stock)
@@ -89,6 +108,7 @@ async function syncPart(b) {
     catch (_) { list = await runReport('Stock Ledger', { company: company(), from_date: from, to_date: to, valuation_field_type: 'Currency' }); }
     for (const x of list) {
       if (!/^Purchase (Receipt|Invoice)$/.test(String(x.voucher_type || ''))) continue;
+      if (!keepRow(x)) continue;
       const s = skuOf(pick(x, 'item_code', 'sku')), q = num(pick(x, 'in_qty', 'actual_qty', 'qty'));
       if (s && q > 0) out[s] = (out[s] || 0) + q;
     }
@@ -135,7 +155,8 @@ async function joined() {
   const e = erp || { soh: {}, sold: {}, buy: {} };
   const months = Object.keys(e.sold).sort();
   // item: [sku, available, dv, name, cat, sub, launch, fob, rrp, status, inMaster, soh, pipe, slow, [sold per month], [bought per month]]
-  const items = av.rows.filter(([s]) => { const m = M.get(s); return !m || !notJewel(m[3], m[2]); }).map(([s, a]) => {
+  const G = (erp && erp.grp) || {};
+  const items = av.rows.filter(([s]) => { const m = M.get(s); return !(m && notJewel(m[3], m[2])) && !(G[s] && notJewel(G[s], '')); }).map(([s, a]) => {
     const m = M.get(s);
     return [s, a, m ? m[1] : s.split('-')[0], m ? m[2] : '', m ? m[3] : '', m ? m[4] : '', m ? m[5] : '', m ? m[6] : 0, m ? m[7] : 0, m ? m[8] : '', m ? 1 : 0,
       Math.round(e.soh[s] || 0), P.get(s) || 0, S.has(s) ? 1 : 0,
@@ -146,6 +167,7 @@ async function joined() {
   for (const k of months) for (const [s, q] of Object.entries(e.sold[k] || {})) {
     if (avs.has(s) || q <= 0) continue;
     const m = M.get(s); if (m && notJewel(m[3], m[2])) continue;
+    if (G[s] && notJewel(G[s], '')) continue;
     off.set(s, (off.get(s) || 0) + q);
   }
   const notListed = [...off.entries()].filter(([s]) => M.has(s) || !/BAG|BOX|POUCH/i.test(s)).sort((a, b) => b[1] - a[1]).slice(0, 150).map(([s, q]) => [s, (M.get(s) || [])[2] || '', q, Math.round(e.soh[s] || 0)]);

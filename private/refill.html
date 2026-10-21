@@ -53,7 +53,7 @@ td input{width:64px;padding:3px 6px}td input.nt{width:120px}
 
 <div class="card" id="filesCard"><h2>Files and ERP</h2><div class="note" style="margin-bottom:8px">Upload the newest files before each order. Available to Order decides which SKUs can be ordered; everything else is only information.</div>
   <div class="files" id="files"></div>
-  <div class="row" style="margin-top:10px"><button class="btn go" id="sync" hidden>Sync from ERP</button><span class="note" id="syncMsg"></span></div>
+  <div class="row" style="margin-top:10px"><label class="note" id="erpMl" title="How many full months of sales and purchases to bring from ERP. The same number is the Sell Out period in Settings.">Months <input type="number" id="erpM" min="1" max="24" value="6" style="width:70px"></label><button class="btn go" id="sync" hidden>Sync from ERP</button><span class="note" id="syncMsg"></span></div>
 </div>
 
 <div id="main" hidden>
@@ -110,7 +110,7 @@ const locked=()=>!O||O.status==='Approved';
 /* ---------- home: files, ERP, orders ---------- */
 async function boot(){
   try{H=await api('/api/refill');LVL=H.level;
-    $('newo').hidden=!can('manage');$('sync').hidden=!can('manage')||!H.erpOn;
+    $('newo').hidden=!can('manage');$('erpMl').hidden=!can('manage')||!H.erpOn;$('sync').hidden=!can('manage')||!H.erpOn;
     drawFiles();
     const sel=$('ord');sel.innerHTML=H.orders.length?H.orders.map(o=>`<option value="${o.id}">${esc(o.name)} · ${esc(o.status)}</option>`).join(''):'<option value="">No orders yet</option>';
     sel.onchange=()=>openOrder(sel.value);
@@ -156,7 +156,8 @@ async function reload(){const id=O&&O.id;H=await api('/api/refill');drawFiles();
 const monthsBack=(today,n)=>{const [y,m]=today.split('-').map(Number);const o=[];for(let k=n;k>=0;k--){const d=new Date(Date.UTC(y,m-1-k,1));o.push(d.toISOString().slice(0,7))}return o};
 $('sync').onclick=async()=>{
   const b=$('sync');b.disabled=true;showErr('');const errs=[];
-  const n=Math.max(+($('pm').value||6),6),ms=monthsBack(H.today,n); // the last n full months and this month
+  await saveNow(); // the months typed here are saved before the page reloads
+  const n=Math.max(1,Math.min(24,+$('erpM').value||6)),ms=monthsBack(H.today,n); // the last n full months and this month
   const steps=[['soh'],...ms.map(m=>['sales',m]),...ms.map(m=>['buy',m])];
   for(let i=0;i<steps.length;i++){const [what,month]=steps[i];$('syncMsg').textContent=`Syncing ${i+1}/${steps.length}: ${what==='soh'?'stock on hand':what==='sales'?'sell out '+month:'purchases '+month}…`;
     try{await api('/api/refill?op=sync',{what,month})}catch(e){errs.push((month||'stock')+' '+what+': '+e.message)}}
@@ -177,15 +178,17 @@ async function openOrder(id){
     CATS=[...new Set(items.map(i=>i.cat))].sort();
     $('fc').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
     $('cats').innerHTML=CATS.map(c=>`<span class="chip" data-c="${esc(c)}">${esc(c)}</span>`).join('');
-    const s=O.settings;$('pm').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=fmtMoney(s.budget);
+    const s=O.settings;$('pm').value=s.pm;$('erpM').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=fmtMoney(s.budget);
     S.stop=new Set(O.stop||[]);S.page=0;$('main').hidden=false;$('ord').value=O.id;
     if(!months.length)showErr('No sell out from ERP yet. Press Sync from ERP.');
     calc();
   }catch(e){showErr('Could not open the order: '+e.message)}
 }
 let saveT=0;
-function saveSettings(){if(!can('manage')||locked())return;clearTimeout(saveT);saveT=setTimeout(async()=>{try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:bgVal()},stop:[...S.stop]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}},700)}
-['pm','lt','cv','mq','nm','bg'].forEach(id=>$(id).oninput=()=>{calc();saveSettings();applyTips()});
+async function saveNow(){clearTimeout(saveT);if(!O||!can('manage')||locked())return;try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:bgVal()},stop:[...S.stop]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}}
+function saveSettings(){if(!can('manage')||locked())return;clearTimeout(saveT);saveT=setTimeout(saveNow,700)}
+['pm','lt','cv','mq','nm','bg'].forEach(id=>$(id).oninput=()=>{if(id==='pm')$('erpM').value=$('pm').value;calc();saveSettings();applyTips()});
+$('erpM').oninput=()=>{const v=$('erpM').value;if(O&&!$('pm').disabled){$('pm').value=v;calc();saveSettings();applyTips()}};
 $('cats').onclick=e=>{const c=e.target.dataset.c;if(!c||!can('manage')||locked())return;S.stop.has(c)?S.stop.delete(c):S.stop.add(c);calc();saveSettings()};
 ['q','fc','ff'].forEach(id=>$(id).oninput=()=>{S.page=0;drawTable()});
 const fmtMoney=n=>(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
