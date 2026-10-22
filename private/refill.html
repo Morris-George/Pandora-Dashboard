@@ -111,7 +111,7 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
 <div class="topbar"><div class="brand"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="bt"><span class="eyebrow">RETAIL INTELLIGENCE</span><h1>Refill Order</h1><div class="sub">Suggested order to Pandora from the available to order list, stock, pipeline and sell out. SKUs of the same DV stay together.</div></div></div><div class="top-actions"></div></div>
 <header class="row" style="justify-content:flex-start">
   <div class="row"><select id="ord" aria-label="Order"></select><button class="btn" id="newo" hidden>New order</button>
-    <span class="status" id="status"></span><button class="btn" id="stBtn" hidden></button><button class="btn" id="reopen" hidden>Reopen</button><button class="btn" id="xlsx">Export Excel</button><button class="btn del" id="delo" hidden>Delete order</button><label class="btn" id="fbUp" hidden>Upload team sheet<input type="file" id="fbFile" accept=".xlsx,.xls" hidden></label></div>
+    <span class="status" id="status"></span><button class="btn" id="stBtn" hidden></button><button class="btn" id="reopen" hidden>Reopen</button><button class="btn" id="xlsx">Export Excel</button><label class="btn" id="picBtn" title="Show or hide the product pictures in every list"><input type="checkbox" id="showPics" checked> Pictures</label><button class="btn del" id="delo" hidden>Delete order</button><label class="btn" id="fbUp" hidden>Upload team sheet<input type="file" id="fbFile" accept=".xlsx,.xls" hidden></label></div>
 </header>
 <div class="err" id="err" hidden></div>
 
@@ -143,7 +143,7 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
   <div class="note" style="margin:10px 0 4px">Stop ordering an item group (from ERP, for example Pandora Moments - Charm): <button type="button" class="btn" id="subsT" onclick="const h=document.getElementById('subs').classList.toggle('hide');this.textContent=h?'Show groups':'Hide groups'">Show groups</button></div><div class="chips hide" id="subs"></div>
   <div class="note" id="formula" style="margin-top:8px"></div>
 </div>
-<div class="row tabs" style="margin:14px 0 4px"><button class="btn tab on" data-tab="order">Order</button><button class="btn tab" data-tab="ins">Insights</button><label class="note" style="margin-left:auto;align-self:center"><input type="checkbox" id="showPics" checked> Show pictures</label></div>
+<div class="row tabs" style="margin:14px 0 4px"><button class="btn tab on" data-tab="order">Order</button><button class="btn tab" data-tab="ins">Insights</button></div>
 <div id="ins" hidden>
 <div class="card"><h2>Quick Read</h2><div class="note">What this order looks like and what to check before submitting. Click a line to see the SKUs.</div><div id="iKey"></div></div>
 <div class="card"><h2>Compare with the Last Order</h2><div class="note">Question: are we ordering more or less than last time, and in which categories?</div><div id="iPrev"></div></div>
