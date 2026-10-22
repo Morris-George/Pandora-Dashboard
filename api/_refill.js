@@ -217,8 +217,9 @@ module.exports = async function handler(req, res) {
   const who = await whoami(req);
   if (!who) return send(res, 401, { ok: false, error: 'sign-in-required' });
   const lvl = await levelFor(who);
-  if (lvl === 'none') return send(res, 403, { ok: false, error: 'No access to Refill Order. Ask the super admin.' });
   const url = new URL(req.url, 'https://x.invalid');
+  const picReq = req.method === 'GET' && (url.searchParams.get('img') || url.searchParams.get('pics'));
+  if (lvl === 'none' && !(picReq && await require('./_dist').levelFor(who) !== 'none')) return send(res, 403, { ok: false, error: 'No access to Refill Order. Ask the super admin.' });
   const by = nameOf(who);
 
   if (req.method === 'GET' && url.searchParams.get('img')) {

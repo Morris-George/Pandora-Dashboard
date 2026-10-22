@@ -18,6 +18,8 @@ const APPS = [
   { id: 'stock', title: 'Stock balance', desc: 'How many pieces are in stock in each category, store by store, for the dates you pick.', href: '/stock', allow: f => !!f.vm || (!!f.staff && f.staff.role !== 'staff' && f.staff.role !== 'store') },
   { id: 'stockcount', title: 'Stock Count', desc: 'Count a store with scanners or phones and see what matches the ERP stock balance and what differs.', href: '/stockcount', allow: f => !!f.sc || (!!f.staff && f.staff.role === 'admin') },
   { id: 'refill', title: 'Refill Order', desc: 'The suggested refill order to Pandora: stock, pipeline, sell out and budget, with the team feedback.', href: '/refill', allow: f => !!f.refill && f.refill !== 'none' },
+  { id: 'slow', title: 'Slow Moving', desc: 'Slow moving items from ERP: where they sit, what they are worth, and what to do with them.', href: '/slow', allow: f => !!f.refill && f.refill !== 'none' },
+  { id: 'dist', title: 'Orders Distribution', desc: 'Split a new shipment to the stores by stock, sell out and store priority, and scan it in the warehouse.', href: '/distribution', allow: f => !!f.dist && f.dist !== 'none' },
   { id: 'vm', title: 'VM Report', desc: 'The Visual Merchandiser report.', href: '/vm', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') }
 ];
 
@@ -40,7 +42,8 @@ async function sessionFacts(req) {
   const sc = !!who && who.kind === 'sc';
   const staff = who && !vm && !sc ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', overseer: !!who.info.overseer, who } : null;
   const refill = who ? await require('./_refill').levelFor(who) : 'none'; // Refill Order access level, set on Staff approvals
-  return { dash, staff, vm, sc, refill, vmName: vm || sc ? who.user.name : '' };
+  const dist = who ? await require('./_dist').levelFor(who) : 'none'; // Orders Distribution access level, set on Staff approvals
+  return { dash, staff, vm, sc, refill, dist, vmName: vm || sc ? who.user.name : '' };
 }
 
 // Area managers are greeted by first name ("Hello Joseph"). Everyone else keeps their usual label.

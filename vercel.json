@@ -24,6 +24,14 @@
       "destination": "/api/erp?refill=1"
     },
     {
+      "source": "/api/dist",
+      "destination": "/api/erp?dist=1"
+    },
+    {
+      "source": "/api/slow",
+      "destination": "/api/erp?slow=1"
+    },
+    {
       "source": "/api/zonestock",
       "destination": "/api/vm?zonestock=1"
     },

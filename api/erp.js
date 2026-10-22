@@ -179,7 +179,9 @@ async function sync(m) {
 module.exports = async function handler(req, res) {
   // /api/stock is rewritten here (vercel.json): the Hobby plan allows 12 functions, so the stock balance lives in _stock.js
   { const u = new URL(req.url, 'https://x.invalid'); if (u.searchParams.get('stock') || u.pathname === '/api/stock') return require('./_stock')(req, res);
-    if (u.searchParams.get('refill') || u.pathname === '/api/refill') return require('./_refill')(req, res); } // Refill Order (api/_refill.js)
+    if (u.searchParams.get('refill') || u.pathname === '/api/refill') return require('./_refill')(req, res); // Refill Order (api/_refill.js)
+    if (u.searchParams.get('dist') || u.pathname === '/api/dist') return require('./_dist')(req, res); // Orders Distribution (api/_dist.js)
+    if (u.searchParams.get('slow') || u.pathname === '/api/slow') return require('./_slow')(req, res); } // Refill Order (api/_refill.js)
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   if (!process.env.ERP_URL || !process.env.ERP_API_KEY || !process.env.ERP_API_SECRET) return send(res, 503, { ok: false, error: 'ERP_URL / ERP_API_KEY / ERP_API_SECRET are not set in Vercel.' });
   const url = new URL(req.url, 'https://x.invalid');

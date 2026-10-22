@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head><link rel="icon" type="image/png" href="/favicon.png?v=2">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Slow Moving</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--bg:#FBF6F7;--surface:#FFFFFF;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--accent:#FF93A0;--soft:#FFE4E8;--good:#1F7A4D;--warn:#B7791F;--bad:#C2414F;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--soft:#3A2229;--good:#5CC48E;--warn:#E0A84A;--bad:#FF8A96;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--soft:#3A2229;--good:#5CC48E;--warn:#E0A84A;--bad:#FF8A96;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding:20px 16px 48px}
+.wrap{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}h2{margin:0 0 8px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}h2::before{content:"";width:4px;height:16px;border-radius:2px;background:var(--accent)}
+.sub,.note{color:var(--ink2);font-size:12.5px}.crumb{color:var(--ink2);font-size:12.5px;font-weight:600;text-decoration:none}
+header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0;box-shadow:0 1px 2px rgba(42,31,36,.04),0 4px 14px rgba(42,31,36,.04)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn,select,input{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.btn{cursor:pointer;font-weight:600}.btn.go{background:var(--accent);border-color:var(--accent);color:#2A1018}.btn:disabled{opacity:.5}
+.err{background:var(--accent);color:#2A1018;border-radius:10px;padding:10px 14px;font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.kpi{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 10px 10px 14px;cursor:default}.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}.kpi small{display:block;color:var(--ink2);font-size:11.5px;font-weight:600}.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.tw{overflow:auto;max-height:70vh}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:5px 7px;border-top:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}th{position:sticky;top:0;background:var(--surface);color:var(--ink2);font-size:11.5px;z-index:1;cursor:pointer}
+th.l,td.l{text-align:left}td.name{max-width:260px;overflow:hidden;text-overflow:ellipsis;text-align:left}
+tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr[data-f]{cursor:pointer}
+.img{width:36px;height:36px;border-radius:6px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;vertical-align:middle;font-size:9px;color:var(--ink2)}.img img{width:100%;height:100%;object-fit:cover}.nopic .img{display:none}
+.hb{display:flex;height:12px;border-radius:99px;overflow:hidden;background:var(--soft);min-width:80px}.hb i{display:block;height:100%}
+.tag{font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;margin-right:3px}.t-ord{background:var(--bad);color:#fff}.t-sell{background:var(--good);color:#fff}.t-dead{background:var(--soft);color:var(--bad)}.t-move{background:#8FB8DE;color:#10202A}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer}.chip.on{background:var(--accent);border-color:var(--accent);color:#2A1018}
+.qk{padding:6px 0;border-top:1px solid var(--line)}.qk:first-child{border-top:0}
+.bad{color:var(--bad)}.good{color:var(--good)}
+</style>
+</head>
+<body><div class="wrap">
+<header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Slow Moving</h1><div class="sub">The ERP Slow Moving report with its sales, stock and the refill order, to decide what to move, push or stop.</div></div><div class="actions"></div></header>
+<div class="err" id="err" hidden></div>
+<div class="card"><div class="row" style="justify-content:space-between"><div class="row"><button class="btn go" id="sync" hidden>Refresh from ERP</button><button class="btn" id="xlsx">Download Excel</button><span class="note" id="msg"></span></div><label class="note"><input type="checkbox" id="pics" checked> Show pictures</label></div><div class="note" id="meta" style="margin-top:6px"></div></div>
+<div id="main" hidden>
+<div class="kpis" id="kpis"></div>
+<div class="card"><h2>Quick Read</h2><div id="quick"></div></div>
+<div class="grid2">
+  <div class="card"><h2>By Category</h2><div class="note">Click a row to filter the list below.</div><div class="tw" id="byCat"></div></div>
+  <div class="card"><h2>By Store</h2><div class="note">Where the slow pieces sit. Click a row to filter.</div><div class="tw" id="byStore"></div></div>
+</div>
+<div class="card" id="ageCard"><h2>By Age</h2><div class="note">How long the stock has not moved. Click a bar to filter.</div><div id="byAge"></div></div>
+<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Items</h2><span class="row"><input type="search" id="q" placeholder="Search SKU or name" style="width:220px"><span class="chips" id="flt"></span><span class="note" id="cnt"></span></span></div>
+  <div class="note" style="margin:4px 0 8px">Sold 6 mo = all stores, the last 6 full months (Refill Order ERP sync). <span class="tag t-ord">in the order</span> the newest refill order still orders it · <span class="tag t-sell">selling</span> sold 3+ pieces in 6 months · <span class="tag t-dead">no sales</span> nothing sold in 6 months · <span class="tag t-move">move</span> it sells in another store: send it there. Click a column title to sort.</div>
+  <div class="tw" id="tbl"></div></div>
+<details class="card"><summary class="note" style="cursor:pointer">The report as it comes from ERP (all columns)</summary><div class="tw" id="raw" style="margin-top:8px"></div></details>
+</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="/stockcount-pics-1.js" async></script><script src="/stockcount-pics-2.js" async></script><script src="/stockcount-pics-3.js" async></script><script src="/stockcount-pics-4.js" async></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Math.round(n||0).toLocaleString('en-US'),money=n=>'EGP '+fmt(n);
+const U=s=>String(s==null?'':s).trim().toUpperCase().replace(/\.0$/,'');
+function showErr(t){$('err').hidden=!t;$('err').textContent=t||''}
+async function api(u,body){const r=await fetch(u,body?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{credentials:'same-origin',cache:'no-store'});
+  if(r.status===401){location.replace('/login.html');throw new Error('Sign in again.')}const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('Error '+r.status));return j}
+/* pictures: built-in pack, then ERP, then pandoraeg.com */
+const PICS=(window.__PICS=window.__PICS||{}),WEBQ=new Map(),dvOf=s=>String(s).split('-')[0];
+const pic=sku=>{const dv=dvOf(sku),v=PICS[dv];return `<span class="img">${v?`<img src="data:image/jpeg;base64,${v}" alt="">`:`<img src="/api/refill?img=${encodeURIComponent(dv)}" alt="" loading="lazy" data-dv="${esc(dv)}" onerror="webPic(this)">`}</span>`};
+async function webPic(im){const dv=im.dataset.dv;im.onerror=null;try{if(!WEBQ.has(dv))WEBQ.set(dv,fetch('/api/refill?pics='+encodeURIComponent(dv),{credentials:'same-origin'}).then(r=>r.json()).catch(()=>({})));const j=await WEBQ.get(dv),u=j.map&&j.map[dv];if(u){im.src=(u.startsWith('//')?'https:'+u:u)+(u.includes('?')?'&':'?')+'width=200';return}}catch(_){}im.remove()}
+try{$('pics').checked=localStorage.getItem('sl.pics')!=='0'}catch(_){}
+const applyPics=()=>document.body.classList.toggle('nopic',!$('pics').checked);applyPics();
+$('pics').onchange=()=>{try{localStorage.setItem('sl.pics',$('pics').checked?'1':'0')}catch(_){}applyPics()};
+
+let J=null,ITEMS=[],F={cat:'',store:'',age:'',tag:''},SORT={k:'val',d:-1};
+// which report column is which, by its name (the report's columns are not fixed)
+function findCols(cols){const f=(re,type)=>cols.findIndex(c=>re.test(c.fieldname+' '+c.label)&&(!type||type.test(c.fieldtype||'')));
+  return {sku:J.skuCol>=0?J.skuCol:f(/\b(sku|item[_ ]?code)\b/i),name:f(/item[_ ]?name|description/i),grp:f(/item[_ ]?group|category/i),store:f(/warehouse|branch|store|location/i),
+    qty:f(/(bal(ance)?[_ ]?qty|stock[_ ]?qty|\bqty\b|quantity|balance)/i),val:f(/(value|amount|cost|valuation)/i,/Currency|Float|Data|Int/),age:f(/(age|days|aging|ageing)/i,/Int|Float|Data/),last:f(/(last|latest).*(sale|sold|out|transaction|move|date)|posting[_ ]?date/i),rp:f(/\b(rp|rrp|price|rate)\b/i)}}
+const n=v=>{const x=Number(String(v??'').replace(/,/g,''));return isFinite(x)?x:0};
+const catOf=g=>{const l=String(g||'').toLowerCase();if(l.includes('earring'))return 'Earrings';if(/\bring/.test(l))return 'Rings';if(l.includes('bracelet')||l.includes('bangle'))return 'Bracelets';if(l.includes('necklace')||l.includes('pendant')||l.includes('collier'))return 'Necklaces & Pendants';if(/charm|clip|dangle|spacer|medallion|safety chain/.test(l))return 'Charms';return g?String(g).split(' - ').pop():'Other'};
+const ageBucket=d=>d==null?'':d<90?'Under 3 months':d<180?'3 to 6 months':d<365?'6 to 12 months':'Over a year';
+const AGES=['Under 3 months','3 to 6 months','6 to 12 months','Over a year'];
+
+async function load(){showErr('');
+  try{J=await api('/api/slow');$('sync').hidden=J.level!=='manage';
+    if(!J.snap){$('main').hidden=true;$('meta').innerHTML=J.level==='manage'?'No report yet. Press <b>Refresh from ERP</b>.':'No report yet. Ask a Refill Order manager to refresh it.';return}
+    build();if(!J.snap.rows.length){$('main').hidden=true;$('meta').innerHTML+='<br><b class="bad">ERP returned no rows.</b> The report may need a filter it did not get'+(J.snap.found&&J.snap.found.length?' (its filters: '+J.snap.found.map(esc).join(', ')+')':'')+'. Send this line to the developer.';return}
+    $('main').hidden=false;draw()}catch(e){showErr(e.message)}}
+function build(){const s=J.snap,C=findCols(s.cols),today=Date.now();J.C=C;
+  $('meta').innerHTML=`From ERP ${new Date(s.at).toLocaleString([],{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})} · report "${esc(s.report)}" · ${fmt(s.rows.length)} rows${Object.keys(s.filters||{}).length?' · filters '+Object.entries(s.filters).map(([k,v])=>esc(k)+'='+esc(v)).join(', '):''}${J.order?` · refill order: <b>${esc(J.order.name)}</b> (${esc(J.order.status)})`:''}`+(C.sku<0?' · <b class="bad">No SKU column found in the report: the analysis below needs one.</b>':'');
+  // one line per SKU and store
+  ITEMS=s.rows.map(r=>{const sku=C.sku>=0?U(r[C.sku]):'',inf=(J.info||{})[sku]||{};
+    let age=C.age>=0&&r[C.age]!==''?n(r[C.age]):null;
+    if(age==null&&C.last>=0&&r[C.last]){const t=Date.parse(r[C.last]);if(t)age=Math.round((today-t)/864e5)}
+    const qty=C.qty>=0?n(r[C.qty]):0,val=C.val>=0?n(r[C.val]):0,grp=C.grp>=0?r[C.grp]:inf.grp;
+    const store=C.store>=0?String(r[C.store]||'').replace(/\s-\s[A-Za-z]{1,5}$/,'').replace(/^Pandora\s+/i,''):'All';
+    const best=Object.entries(inf.stores||{}).sort((a,b)=>b[1]-a[1])[0];
+    const tags=[];if(inf.order>0)tags.push('ord');if((inf.sold||0)>=3)tags.push('sell');if(!(inf.sold>0))tags.push('dead');
+    const mv=best&&best[1]>0&&!String(store).toLowerCase().includes(String(best[0]).toLowerCase().split(' ')[0]);if(mv)tags.push('move');
+    return {sku,name:C.name>=0?r[C.name]:'',grp,cat:catOf(grp),store,qty,val,age,ab:ageBucket(age),sold:inf.sold||0,byMonth:inf.byMonth||[],soh:inf.soh||0,order:inf.order||0,best:best?best[0]+' ('+fmt(best[1])+')':'',tags}});
+  $('ageCard').hidden=!ITEMS.some(i=>i.ab);
+}
+const sum=(l,k)=>l.reduce((a,i)=>a+(i[k]||0),0);
+function group(k){const m=new Map();ITEMS.forEach(i=>{const g=i[k]||'—';const o=m.get(g)||{g,l:[]};o.l.push(i);m.set(g,o)});return [...m.values()].map(o=>({...o,qty:sum(o.l,'qty'),val:sum(o.l,'val'),skus:new Set(o.l.map(i=>i.sku)).size,dead:o.l.filter(i=>i.tags.includes('dead')).length})).sort((a,b)=>(b.val-a.val)||(b.qty-a.qty))}
+function draw(){
+  const hasV=J.C.val>=0,tq=sum(ITEMS,'qty'),tv=sum(ITEMS,'val'),skus=new Set(ITEMS.map(i=>i.sku)),ord=ITEMS.filter(i=>i.tags.includes('ord')),dead=ITEMS.filter(i=>i.tags.includes('dead')),mv=ITEMS.filter(i=>i.tags.includes('move'));
+  const totalSoh=Object.values(J.info||{}).length?null:null;
+  $('kpis').innerHTML=[['SKUs',fmt(skus.size)],['Pieces',fmt(tq)],hasV?['Value',money(tv)]:null,['No sales in 6 months',fmt(new Set(dead.map(i=>i.sku)).size)+' SKUs'],['Still in the refill order',fmt(new Set(ord.map(i=>i.sku)).size)+' SKUs'],['Sells in another store',fmt(new Set(mv.map(i=>i.sku)).size)+' SKUs']].filter(Boolean).map(k=>`<div class="kpi"><small>${k[0]}</small><b>${k[1]}</b></div>`).join('');
+  const cats=group('cat'),sts=group('store'),old=ITEMS.filter(i=>i.ab==='Over a year');
+  const Q=[];
+  Q.push(`<b>${fmt(skus.size)}</b> slow SKUs, <b>${fmt(tq)}</b> pieces${hasV?`, worth <b>${money(tv)}</b>`:''}. Most of it is in <b>${esc(cats[0]?cats[0].g:'-')}</b>${hasV&&cats[0]?' ('+Math.round(cats[0].val/(tv||1)*100)+'% of the value)':''}${sts.length>1?` and at <b>${esc(sts[0].g)}</b>`:''}.`);
+  if(ord.length)Q.push(`<b class="bad">${new Set(ord.map(i=>i.sku)).size} slow SKUs are still in the newest refill order</b> (${esc(J.order?J.order.name:'')}): set them to 0 there unless there is a reason.`);
+  if(mv.length)Q.push(`<b>${new Set(mv.map(i=>i.sku)).size}</b> SKUs sit slow in one store but sell in another: move them to the store in the "Sells best at" column.`);
+  if(dead.length)Q.push(`<b>${new Set(dead.map(i=>i.sku)).size}</b> SKUs sold nothing in 6 months: candidates for a promotion, a VM change or a return.`);
+  if(old.length)Q.push(`<b>${fmt(sum(old,'qty'))}</b> pieces have not moved for over a year.`);
+  $('quick').innerHTML=Q.map(t=>`<div class="qk">${t}</div>`).join('');
+  const tbl=(l,k)=>`<table><tr><th class="l">${k==='cat'?'Category':'Store'}</th><th>SKUs</th><th>Pieces</th>${hasV?'<th>Value</th><th>Share</th>':''}<th>No sales</th></tr>${l.map(o=>`<tr data-f="${k}" data-v="${esc(o.g)}" style="${F[k]===o.g?'font-weight:800':''}"><td class="l">${esc(o.g)}</td><td>${fmt(o.skus)}</td><td>${fmt(o.qty)}</td>${hasV?`<td>${money(o.val)}</td><td><div class="hb"><i style="width:${o.val/(tv||1)*100}%;background:var(--accent)"></i></div></td>`:''}<td>${fmt(o.dead)}</td></tr>`).join('')}</table>`;
+  $('byCat').innerHTML=tbl(cats,'cat');$('byStore').innerHTML=tbl(sts,'store');
+  const ag=AGES.map(a=>({a,l:ITEMS.filter(i=>i.ab===a)})),amx=Math.max(1,...ag.map(x=>sum(x.l,'qty')));
+  $('byAge').innerHTML=ag.map(x=>`<div class="row" data-f="ab" data-v="${x.a}" style="cursor:pointer;margin:4px 0;${F.ab===x.a?'font-weight:800':''}"><span style="width:130px">${x.a}</span><div class="hb" style="flex:1"><i style="width:${sum(x.l,'qty')/amx*100}%;background:${x.a==='Over a year'?'var(--bad)':x.a==='6 to 12 months'?'var(--warn)':'var(--accent)'}"></i></div><span style="width:160px;text-align:right">${fmt(sum(x.l,'qty'))} pcs${hasV?' · '+money(sum(x.l,'val')):''}</span></div>`).join('');
+  $('flt').innerHTML=[['','All'],['ord','In the order'],['dead','No sales'],['move','Move'],['sell','Selling']].map(([k,t])=>`<span class="chip ${F.tag===k?'on':''}" data-tag="${k}">${t}</span>`).join('')+(F.cat||F.store||F.ab?` <span class="chip on" data-clear="1">${esc([F.cat,F.store,F.ab].filter(Boolean).join(' · '))} ✕</span>`:'');
+  drawTable();drawRaw();
+}
+function rows(){const q=$('q').value.trim().toUpperCase();return ITEMS.filter(i=>(!q||i.sku.includes(q)||String(i.name).toUpperCase().includes(q))&&(!F.cat||i.cat===F.cat)&&(!F.store||i.store===F.store)&&(!F.ab||i.ab===F.ab)&&(!F.tag||i.tags.includes(F.tag)))}
+function drawTable(){const hasV=J.C.val>=0,hasA=ITEMS.some(i=>i.age!=null);
+  const l=rows().sort((a,b)=>{const x=a[SORT.k],y=b[SORT.k];return (typeof x==='string'?String(x).localeCompare(y):(x||0)-(y||0))*SORT.d});
+  $('cnt').textContent=fmt(l.length)+' rows';
+  const T={ord:'<span class="tag t-ord">in the order</span>',sell:'<span class="tag t-sell">selling</span>',dead:'<span class="tag t-dead">no sales</span>',move:'<span class="tag t-move">move</span>'};
+  const th=(k,t,c='')=>`<th class="${c}" data-sort="${k}">${t}${SORT.k===k?(SORT.d>0?' ▲':' ▼'):''}</th>`;
+  $('tbl').innerHTML=`<table><tr><th></th>${th('sku','SKU','l')}${th('name','Item','l')}${th('cat','Category','l')}${th('store','Store','l')}${th('qty','Pieces')}${hasV?th('val','Value'):''}${hasA?th('age','Days'):''}${th('sold','Sold 6 mo')}<th>Trend</th>${th('soh','Stock all stores')}${th('order','In order')}<th class="l">Sells best at</th><th class="l"></th></tr>`+
+    l.slice(0,600).map(i=>`<tr><td>${pic(i.sku)}</td><td class="l"><b>${esc(i.sku)}</b></td><td class="name" title="${esc(i.name)}">${esc(i.name)}</td><td class="l">${esc(i.cat)}</td><td class="l">${esc(i.store)}</td><td>${fmt(i.qty)}</td>${hasV?`<td>${fmt(i.val)}</td>`:''}${hasA?`<td>${i.age==null?'':fmt(i.age)}</td>`:''}<td>${fmt(i.sold)}</td><td>${spark(i.byMonth)}</td><td>${fmt(i.soh)}</td><td class="${i.order?'bad':''}">${i.order?'<b>'+fmt(i.order)+'</b>':''}</td><td class="l">${esc(i.best)}</td><td class="l">${i.tags.map(t=>T[t]).join('')}</td></tr>`).join('')+'</table>'+(l.length>600?'<div class="note">First 600 shown. Download Excel for all.</div>':'');
+}
+const spark=v=>{if(!v||!v.some(x=>x))return '<span class="note">-</span>';const w=56,h=16,mx=Math.max(1,...v),st=v.length>1?w/(v.length-1):0;return `<svg width="${w}" height="${h}"><polyline points="${v.map((x,k)=>`${(k*st).toFixed(1)},${(h-1-x/mx*(h-2)).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="1.5"/></svg>`};
+function drawRaw(){const s=J.snap;$('raw').innerHTML=`<table><tr>${s.cols.map(c=>`<th class="l">${esc(c.label)}</th>`).join('')}</tr>${s.rows.slice(0,300).map(r=>`<tr>${r.map(v=>`<td class="l">${esc(v)}</td>`).join('')}</tr>`).join('')}</table>${s.rows.length>300?'<div class="note">First 300 rows. Download Excel for all.</div>':''}`}
+document.addEventListener('click',e=>{const f=e.target.closest('[data-f]');if(f&&!e.target.closest('#tbl')){const k=f.dataset.f;F[k]=F[k]===f.dataset.v?'':f.dataset.v;draw();return}
+  const t=e.target.closest('[data-tag]');if(t){F.tag=t.dataset.tag;draw();return}
+  if(e.target.closest('[data-clear]')){F.cat=F.store=F.ab='';draw();return}
+  const s=e.target.closest('th[data-sort]');if(s){const k=s.dataset.sort;SORT=SORT.k===k?{k,d:-SORT.d}:{k,d:typeof ITEMS[0][k]==='string'?1:-1};drawTable()}});
+$('q').oninput=drawTable;
+$('sync').onclick=async()=>{const b=$('sync');b.disabled=true;$('msg').textContent='Running the report in ERP…';try{const j=await api('/api/slow?op=sync',{});$('msg').textContent=fmt(j.rows)+' rows.';await load()}catch(e){$('msg').textContent='';showErr(e.message)}b.disabled=false};
+$('xlsx').onclick=()=>{if(!J||!J.snap)return;const wb=XLSX.utils.book_new(),hasV=J.C.val>=0;
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows().map(i=>({SKU:i.sku,Item:i.name,Category:i.cat,'Item group':i.grp,Store:i.store,Pieces:i.qty,...(hasV?{Value:i.val}:{}),Days:i.age,'Sold 6 months':i.sold,'Stock all stores':i.soh,'In refill order':i.order,'Sells best at':i.best,Flags:i.tags.map(t=>({ord:'In the order',sell:'Selling',dead:'No sales',move:'Move'})[t]).join(', ')}))),'Analysis');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(group('cat').map(o=>({Category:o.g,SKUs:o.skus,Pieces:o.qty,...(hasV?{Value:o.val}:{}),'No sales':o.dead}))),'By category');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(group('store').map(o=>({Store:o.g,SKUs:o.skus,Pieces:o.qty,...(hasV?{Value:o.val}:{}),'No sales':o.dead}))),'By store');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([J.snap.cols.map(c=>c.label),...J.snap.rows]),'ERP report');
+  XLSX.writeFile(wb,'Slow Moving '+new Date(J.snap.at).toISOString().slice(0,10)+'.xlsx')};
+load();
+</script>
+</body>
+</html>

@@ -240,10 +240,19 @@ module.exports = async function handler(req, res) {
     if (!facts.refill || facts.refill === 'none') return toHome();
     return sendFile(res, 'refill.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
   }
+  // Orders Distribution and Slow Moving
+  if (requestedPath === '/distribution' || requestedPath === '/distribution/' || requestedPath === '/distribution.html') {
+    if (!facts.dist || facts.dist === 'none') return toHome();
+    return sendFile(res, 'distribution.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
+  }
+  if (requestedPath === '/slow' || requestedPath === '/slow/' || requestedPath === '/slow.html') {
+    if (!facts.refill || facts.refill === 'none') return toHome();
+    return sendFile(res, 'slow.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
+  }
   // its product pictures, in pieces (one response may not pass 4.5 MB); super admin only, kept by the browser for a day
   const picPart = /^\/stockcount-pics-([1-9])\.js$/.exec(requestedPath);
   if (picPart) {
-    if (!(facts.staff && facts.staff.role === 'admin') && !facts.sc && !(facts.refill && facts.refill !== 'none')) return res.status(404).end();
+    if (!(facts.staff && facts.staff.role === 'admin') && !facts.sc && !(facts.refill && facts.refill !== 'none') && !(facts.dist && facts.dist !== 'none')) return res.status(404).end();
     try {
       const body = fs.readFileSync(path.join(PRIVATE_DIR, 'stockcount-pics-' + picPart[1] + '.js'));
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');

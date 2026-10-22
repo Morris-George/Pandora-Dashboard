@@ -34,7 +34,7 @@ th.l,td.l{text-align:left}td.name{max-width:250px;overflow:hidden;text-overflow:
 td input{width:64px;padding:3px 6px}td input.nt{width:120px}
 .dvh td{background:var(--soft);border-top:2px solid var(--line)}tr.size td:nth-child(2){padding-left:18px}
 .tag{font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px}.t-slow{background:var(--soft);color:var(--bad)}.t-stop,.t-na{background:var(--bad);color:#fff}.t-man{background:#F2C46D;color:#2A1018}.t-pri{background:var(--good);color:#fff}.t-new{background:#8FB8DE;color:#10202A}.t-nm{background:#B9A3D9;color:#1E1530}.t-abc{background:var(--soft);color:var(--ink)}
-.img{width:36px;height:36px;border-radius:6px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink2);overflow:hidden;vertical-align:middle}.img img{width:100%;height:100%;object-fit:cover;cursor:zoom-in}.hide{display:none!important}#zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out}#zoom img{max-width:90vw;max-height:90vh;border-radius:10px;background:#fff}
+.img{width:36px;height:36px;border-radius:6px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink2);overflow:hidden;vertical-align:middle}.img img{width:100%;height:100%;object-fit:cover;cursor:zoom-in}.hide{display:none!important}body.nopic .img{display:none!important}#zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out}#zoom img{max-width:90vw;max-height:90vh;border-radius:10px;background:#fff}
 .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:14px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
 .good{color:var(--good)}.bad{color:var(--bad)}
 .status{font-weight:800;border-radius:99px;padding:3px 12px;background:var(--soft)}
@@ -143,7 +143,7 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
   <div class="note" style="margin:10px 0 4px">Stop ordering an item group (from ERP, for example Pandora Moments - Charm): <button type="button" class="btn" id="subsT" onclick="const h=document.getElementById('subs').classList.toggle('hide');this.textContent=h?'Show groups':'Hide groups'">Show groups</button></div><div class="chips hide" id="subs"></div>
   <div class="note" id="formula" style="margin-top:8px"></div>
 </div>
-<div class="row tabs" style="margin:14px 0 4px"><button class="btn tab on" data-tab="order">Order</button><button class="btn tab" data-tab="ins">Insights</button></div>
+<div class="row tabs" style="margin:14px 0 4px"><button class="btn tab on" data-tab="order">Order</button><button class="btn tab" data-tab="ins">Insights</button><label class="note" style="margin-left:auto;align-self:center"><input type="checkbox" id="showPics" checked> Show pictures</label></div>
 <div id="ins" hidden>
 <div class="card"><h2>Quick Read</h2><div class="note">What this order looks like and what to check before submitting. Click a line to see the SKUs.</div><div id="iKey"></div></div>
 <div class="card"><h2>Compare with the Last Order</h2><div class="note">Question: are we ordering more or less than last time, and in which categories?</div><div id="iPrev"></div></div>
@@ -429,8 +429,8 @@ function draw(){
     '</table><div class="note">Cover: <span class="pill p-low">red</span> runs out before the shipment arrives · <span class="pill p-ok">green</span> fine · <span class="pill p-high">amber</span> more than 8 months of stock, a good one to stop.</div>';
   drawMix(t);
   const pri=items.filter(i=>i.flag==='pri').sort((a,b)=>b.sell-a.sell);
-  $('pri').innerHTML=pri.length?`<table><tr><th class="l">SKU</th><th class="l">Item</th><th>Sold</th><th>Order</th></tr>${pri.slice(0,80).map(i=>`<tr><td class="l">${esc(i.sku)}</td><td class="name">${esc(i.name)}</td><td>${fmt(i.sell)}</td><td><b>${fmt(i.fin)}</b></td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
-  $('nl').innerHTML=S.notListed.length?`<table><tr><th class="l">SKU</th><th class="l">Item</th><th>Sold</th><th>SOH</th></tr>${S.notListed.map(r=>`<tr><td class="l">${esc(r[0])}</td><td class="name">${esc(r[1])}</td><td>${fmt(r[2])}</td><td>${fmt(r[3])}</td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
+  $('pri').innerHTML=pri.length?`<table><tr><th></th><th class="l">SKU</th><th class="l">Item</th><th>Sold</th><th>Order</th></tr>${pri.slice(0,80).map(i=>`<tr><td>${pic(i.dv)}</td><td class="l">${esc(i.sku)}</td><td class="name">${esc(i.name)}</td><td>${fmt(i.sell)}</td><td><b>${fmt(i.fin)}</b></td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
+  $('nl').innerHTML=S.notListed.length?`<table><tr><th></th><th class="l">SKU</th><th class="l">Item</th><th>Sold</th><th>SOH</th></tr>${S.notListed.map(r=>`<tr><td>${pic(String(r[0]).split('-')[0])}</td><td class="l">${esc(r[0])}</td><td class="name">${esc(r[1])}</td><td>${fmt(r[2])}</td><td>${fmt(r[3])}</td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
   $('log').innerHTML=(O.log||[]).slice().reverse().slice(0,200).map(l=>`<div><b>${esc(l.what)}</b> · ${esc(l.by)} · <span class="note">${new Date(l.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('');
   drawTable();
   if(!$('ins').hidden)drawInsights();
@@ -492,7 +492,7 @@ function drawTable(){
   const l=filtered(),gs=grouped(l),P=40,pages=Math.max(1,Math.ceil(gs.length/P));S.page=Math.min(S.page,pages-1);
   $('cnt').textContent=fmt(l.length)+' SKUs in '+fmt(gs.length)+' DVs';
   const ro=locked()||!can('input'),lt=+$('lt').value||0;
-  const row=(i,one)=>`<tr class="${one?'':'size'}"><td>${one?pic(i.dv):''}</td><td class="l cl" data-d="${esc(i.sku)}" title="Details">${esc(i.sku)}</td><td class="name" title="${esc(i.name)}">${esc(i.name)||'<span class="note">not in the master</span>'}</td><td class="l">${esc(i.cat)}</td><td>${fmt(i.soh)}${i.neg?` <span class="bad" style="font-size:11px" title="ERP shows ${i.neg} (negative stock: a sale posted before the receipt or transfer). Counted as 0. Fix it in ERP.">(${i.neg})</span>`:''}</td><td>${fmt(i.pipe)}</td><td>${fmt(i.sell)}</td><td>${spark(i.soldBy)}</td><td>${fmt(i.bought)}</td><td>${m1(i.mon)}</td><td>${Math.round(i.st*100)}%</td>
+  const row=(i,one)=>`<tr class="${one?'':'size'}"><td>${pic(i.dv)}</td><td class="l cl" data-d="${esc(i.sku)}" title="Details">${esc(i.sku)}</td><td class="name" title="${esc(i.name)}">${esc(i.name)||'<span class="note">not in the master</span>'}</td><td class="l">${esc(i.cat)}</td><td>${fmt(i.soh)}${i.neg?` <span class="bad" style="font-size:11px" title="ERP shows ${i.neg} (negative stock: a sale posted before the receipt or transfer). Counted as 0. Fix it in ERP.">(${i.neg})</span>`:''}</td><td>${fmt(i.pipe)}</td><td>${fmt(i.sell)}</td><td>${spark(i.soldBy)}</td><td>${fmt(i.bought)}</td><td>${m1(i.mon)}</td><td>${Math.round(i.st*100)}%</td>
     <td>${pill(i.coverNow,lt)}</td><td>${i.prop||''}${i.flag==='stop'&&i.would?`<span class="note"> (${i.would})</span>`:''}</td>
     <td><input type="number" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}></td><td><input class="nt" data-n="${esc(i.sku)}" value="${esc(i.note)}" placeholder="comment" ${ro?'disabled':''}></td><td><select data-r="${esc(i.sku)}" ${ro?'disabled':''}>${REASONS.map(x=>`<option${x===i.reason?' selected':''}>${esc(x)}</option>`).join('')}${i.reason&&!REASONS.includes(i.reason)?`<option selected>${esc(i.reason)}</option>`:''}</select></td>
     <td>${pill(i.coverAfter,lt)}</td><td>${i.fob}</td><td>${fmt(i.fin*i.fob)}</td><td class="l">${i.abc?`<span class="tag t-abc">${i.abc}</span> `:''}${i.isNew?'<span class="tag t-new">new</span> ':''}${i.inMaster?'':'<span class="tag t-nm">no master</span> '}${TAG[i.flag]||''}</td></tr>`;
@@ -601,7 +601,7 @@ function drawInsights(){
     <div class="note">Each box = (stock + pipeline + this order) ÷ monthly sales, for that category and collection. Columns are the ERP item group collections. Click a box for its SKUs.</div>`;
   // 6. lost sales: out of stock today, monthly sales × lead time
   const lost=items.filter(i=>i.soh<=0&&i.mon>0).map(i=>({i,p:i.mon*lt,e:i.mon*lt*(i.rrp||0)})).sort((a,b)=>b.e-a.e||b.p-a.p);
-  $('iLost').innerHTML=lost.length?`<div class="note"><b>${fmt(lost.length)}</b> SKUs out of stock · about <b>${pcs(lost.reduce((a,x)=>a+x.p,0))}</b> · <b>EGP ${fmt(lost.reduce((a,x)=>a+x.e,0))}</b> at RP until the shipment arrives (${lt} months).</div><table><tr><th class="l">SKU</th><th class="l">Item</th><th>Sold/mo</th><th>Pipeline</th><th>Lost pcs</th><th>Lost EGP</th><th>Order</th></tr>${lost.slice(0,60).map(({i,p,e})=>`<tr><td class="l cl" data-d="${esc(i.sku)}">${esc(i.sku)}</td><td class="name">${esc(i.name)}</td><td>${m1(i.mon)}</td><td>${fmt(i.pipe)}</td><td>${fmt(p)}</td><td>${fmt(e)}</td><td>${fmt(i.fin)}</td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
+  $('iLost').innerHTML=lost.length?`<div class="note"><b>${fmt(lost.length)}</b> SKUs out of stock · about <b>${pcs(lost.reduce((a,x)=>a+x.p,0))}</b> · <b>EGP ${fmt(lost.reduce((a,x)=>a+x.e,0))}</b> at RP until the shipment arrives (${lt} months).</div><table><tr><th></th><th class="l">SKU</th><th class="l">Item</th><th>Sold/mo</th><th>Pipeline</th><th>Lost pcs</th><th>Lost EGP</th><th>Order</th></tr>${lost.slice(0,60).map(({i,p,e})=>`<tr><td>${pic(i.dv)}</td><td class="l cl" data-d="${esc(i.sku)}">${esc(i.sku)}</td><td class="name">${esc(i.name)}</td><td>${m1(i.mon)}</td><td>${fmt(i.pipe)}</td><td>${fmt(p)}</td><td>${fmt(e)}</td><td>${fmt(i.fin)}</td></tr>`).join('')}</table>`:'<div class="note">None.</div>';
   // 7. new vs carry-over
   const oldAvg={};CATS.forEach(c=>{const l=items.filter(i=>i.cat===c&&!i.isNew&&i.mon>0);oldAvg[c]=l.length?l.reduce((a,i)=>a+i.mon,0)/l.length:0});
   const nw=items.filter(i=>i.isNew&&i.mon>0).map(i=>({i,r:oldAvg[i.cat]?i.mon/oldAvg[i.cat]:0})).sort((a,b)=>b.r-a.r);
@@ -760,6 +760,9 @@ function applyTips(){
 }
 new MutationObserver(()=>{clearTimeout(window.__tt);window.__tt=setTimeout(applyTips,50)}).observe(document.body,{childList:true,subtree:true});
 applyTips();
+try{$('showPics').checked=localStorage.getItem('rf.pics')!=='0'}catch(_){}
+const applyPics=()=>{document.body.classList.toggle('nopic',!$('showPics').checked);if($('showPics').checked)fillPics()};applyPics();
+$('showPics').onchange=()=>{try{localStorage.setItem('rf.pics',$('showPics').checked?'1':'0')}catch(_){}applyPics()};
 boot();
 </script>
 <script>document.addEventListener("click",e=>{const z=document.getElementById("zoom");if(z){z.remove();return}const im=e.target.closest&&e.target.closest(".img img");if(!im)return;e.stopPropagation();e.preventDefault();const d=document.createElement("div");d.id="zoom";d.innerHTML="<img alt=\"\">";d.firstChild.src=im.src;document.body.appendChild(d)},true);</script></body></html>
