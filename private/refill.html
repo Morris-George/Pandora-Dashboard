@@ -762,7 +762,13 @@ new MutationObserver(()=>{clearTimeout(window.__tt);window.__tt=setTimeout(apply
 applyTips();
 try{$('showPics').checked=localStorage.getItem('rf.pics')!=='0'}catch(_){}
 const applyPics=()=>{document.body.classList.toggle('nopic',!$('showPics').checked);if($('showPics').checked)fillPics()};applyPics();
-$('showPics').onchange=()=>{try{localStorage.setItem('rf.pics',$('showPics').checked?'1':'0')}catch(_){}applyPics()};
+$('showPics').onchange=()=>{try{localStorage.setItem('rf.pics',$('showPics').checked?'1':'0')}catch(_){}applyPics();syncPics()};
+// the same switch on every card that lists SKUs (all of them move together)
+['tbl','pri','nl','iLost','iNew','iSize'].forEach(id=>{const el=$(id),c=el&&el.closest('.card');if(!c||c.querySelector('.picSw'))return;
+  const l=document.createElement('label');l.className='note picSw';l.style.cssText='float:right;font-weight:600;cursor:pointer;margin-left:8px';l.innerHTML='<input type="checkbox"> Pictures';
+  c.insertBefore(l,c.firstChild)});
+function syncPics(){document.querySelectorAll('.picSw input').forEach(i=>i.checked=$('showPics').checked)}syncPics();
+document.addEventListener('change',e=>{const i=e.target.closest&&e.target.closest('.picSw input');if(!i)return;$('showPics').checked=i.checked;$('showPics').onchange()});
 boot();
 </script>
 <script>document.addEventListener("click",e=>{const z=document.getElementById("zoom");if(z){z.remove();return}const im=e.target.closest&&e.target.closest(".img img");if(!im)return;e.stopPropagation();e.preventDefault();const d=document.createElement("div");d.id="zoom";d.innerHTML="<img alt=\"\">";d.firstChild.src=im.src;document.body.appendChild(d)},true);</script></body></html>
