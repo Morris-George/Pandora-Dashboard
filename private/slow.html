@@ -88,7 +88,7 @@ const AGES=['Under 3 months','3 to 6 months','6 to 12 months','Over a year'];
 // which report column is which, by its name
 function findCols(cols){const f=(re)=>cols.findIndex(c=>re.test(c.fieldname+' '+c.label));
   return {sku:J.skuCol>=0?J.skuCol:f(/\b(sku|item[_ ]?code)\b/i),name:f(/item[_ ]?name|description/i),grp:f(/item[_ ]?group|category/i),
-    qty:f(/(bal(ance)?[_ ]?qty|stock[_ ]?qty|actual[_ ]?qty|\bqty\b|quantity|balance)/i),val:f(/(value|amount|valuation|cost)/i),age:f(/(age|days|aging|ageing)/i),last:f(/(last|latest).*(sale|sold|out|transaction|move|date)/i)}}
+    qty:f(/(bal(ance)?[_ ]?qty|stock[_ ]?qty|actual[_ ]?qty|\bqty\b|quantity|balance)/i),val:f(/(value|amount|valuation|cost)/i),age:f(/(age|days|aging|ageing)/i),last:f(/(last|latest).*(sale|sold|out|transaction|move|date)/i),idle:f(/idle[_ ]?since/i)}}
 
 async function load(){showErr('');
   try{J=await api('/api/slow');const mg=J.level==='manage';$('run').hidden=!mg;
@@ -109,17 +109,20 @@ $('sync').onclick=async()=>{const ws=[...$('whs').querySelectorAll('input:checke
   const b=$('sync');b.disabled=true;showErr('');const bad=[];
   // the report filters on one warehouse at a time, so it runs once per store
   await api('/api/slow?op=clear',{}).catch(()=>{});
-  for(let k=0;k<ws.length;k++){$('msg').textContent=`Running ${k+1}/${ws.length}: ${ws[k]}…`;try{await api('/api/slow?op=sync',{warehouse:ws[k],months:m})}catch(e){bad.push(ws[k]+': '+e.message)}}
+  for(let k=0;k<ws.length;k++){$('msg').textContent=`Running ${k+1}/${ws.length}: ${ws[k]}…`;try{let j=await api('/api/slow?op=sync',{warehouse:ws[k],months:m}),t=0;
+    // a prepared report: ERP builds it in the background; ask again until it is ready
+    while(j.pending&&t++<15){$('msg').textContent=`ERP is building the report for ${ws[k]}… (${k+1}/${ws.length})`;j=await api('/api/slow?op=sync',{warehouse:ws[k],months:m,pr:j.pending})}
+    if(j.pending)bad.push(ws[k]+': ERP is still building the report, run again in a few minutes')}catch(e){bad.push(ws[k]+': '+e.message)}}
   $('msg').textContent=bad.length?'Done with problems.':'Done.';if(bad.length)showErr(bad.join(' · '));b.disabled=false;await load()};
 $('clear').onclick=async()=>{if(!confirm('Forget the report results?'))return;await api('/api/slow?op=clear',{});await load()};
 
 function build(){
-  const today=Date.now(),cols=J.snaps.find(s=>s.cols.length)?.cols||[];J.C=findCols(cols);const C=J.C;
+  const today=Date.now(),cols=J.snaps.find(s=>s.cols.length)?.cols||[];J.C=findCols(cols);const C=J.C;C.sku=0;
   ITEMS=J.snaps.flatMap(s=>s.rows.map(r=>{const sku=C.sku>=0?U(r[C.sku]):'',inf=(J.info||{})[sku]||{};
-    let age=C.age>=0&&r[C.age]!==''?n(r[C.age]):null;if(age==null&&C.last>=0&&r[C.last]){const t=Date.parse(r[C.last]);if(t)age=Math.round((today-t)/864e5)}
+    let age=C.age>=0&&r[C.age]!==''?n(r[C.age]):null;const dt=(C.last>=0&&r[C.last])||(C.idle>=0&&r[C.idle])||'';if(age==null&&dt){const t=Date.parse(dt);if(t)age=Math.round((today-t)/864e5)}
     const grp=C.grp>=0?r[C.grp]:inf.grp,sold=inf.stores||{},elsewhere=Object.entries(sold).filter(([k,v])=>k!==s.store&&v>0).sort((a,b)=>b[1]-a[1]);
     const tags=[];if(inf.order>0)tags.push('ord');if(elsewhere.length)tags.push('move');if(!(inf.sold>0))tags.push('dead');
-    return {sku,name:C.name>=0?r[C.name]:'',grp,cat:catOf(grp),store:s.store,wh:s.warehouse,qty:C.qty>=0?n(r[C.qty]):1,val:C.val>=0?n(r[C.val]):0,age,ab:ageBucket(age),sold:inf.sold||0,byMonth:inf.byMonth||[],soh:inf.soh||0,order:inf.order||0,elsewhere,soldHere:sold[s.store]||0,tags}})).filter(i=>i.sku&&i.qty>0);
+    return {sku,ean:r[1]||'',name:C.name>=0?String(r[C.name]).replace(/^\s*[0-9A-Z]+(-[0-9A-Z]{1,4})?-\d{8,14}\s*-?\s*/i,'')||r[C.name]:'',grp,cat:catOf(grp),store:s.store,wh:s.warehouse,qty:C.qty>=0?n(r[C.qty]):1,val:C.val>=0?n(r[C.val]):0,age,ab:ageBucket(age),sold:inf.sold||0,byMonth:inf.byMonth||[],soh:inf.soh||0,order:inf.order||0,elsewhere,soldHere:sold[s.store]||0,tags}})).filter(i=>i.sku&&i.qty>0);
   // transfers: the slow pieces of store Y go to the stores where the SKU sold, best seller first, at most what that store sold in the period
   TR=[];const given={};
   for(const i of ITEMS){let left=i.qty;for(const [to,q] of i.elsewhere){if(left<=0)break;const k=i.sku+'|'+to,room=Math.max(0,Math.ceil(q)-(given[k]||0));const m=Math.min(left,room);if(m<=0)continue;given[k]=(given[k]||0)+m;left-=m;TR.push({i,from:i.store,to,qty:m,soldTo:q})}i.move=i.qty-left}

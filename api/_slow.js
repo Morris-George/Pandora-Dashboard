@@ -40,16 +40,52 @@ async function warehouses() {
     .sort((a, b) => (!!b.store - !!a.store) || a.name.localeCompare(b.name));
 }
 
-async function runOne(warehouse, months) {
-  const { runReportRaw } = require('./erp');
-  const out = await runReportRaw(REPORT, { warehouse, months, company: process.env.ERP_COMPANY || undefined });
-  const cols = (out.columns || []).map(c => typeof c === 'string' ? { label: c.split(':')[0], fieldname: c.split(':')[0].toLowerCase().replace(/\W+/g, '_'), fieldtype: c.split(':')[1] || 'Data' } : { label: str(c.label || c.fieldname, 60), fieldname: str(c.fieldname || c.label, 60), fieldtype: str(c.fieldtype || 'Data', 20) });
-  const rows = [];
-  for (const r of out.rows || []) {
-    if (Array.isArray(r)) { if (r.length === cols.length && !/total/i.test(String(r[0] || ''))) rows.push(r.map(v => typeof v === 'number' ? v : str(v, 140))); }
-    else if (r && typeof r === 'object') rows.push(cols.map(c => { const v = r[c.fieldname]; return typeof v === 'number' ? v : str(v, 140); }));
-    if (rows.length >= 20000) break;
+// "Pandora Slow Moving" is a prepared report: ERP builds it in the background ("Generate New Report").
+// Ask for it directly first; if ERP insists on preparing it, start the build and wait for it (or say it is still running).
+async function erpCall(method, body) {
+  const r = await fetch(erpBase() + '/api/method/' + method, { method: 'POST', headers: { ...erpAuth(), 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(50000) });
+  const txt = await r.text();
+  if (!r.ok) { let why = ''; try { const e = JSON.parse(txt); why = e._server_messages ? JSON.parse(e._server_messages).map(x => { try { return JSON.parse(x).message; } catch (_) { return x; } }).join(' ') : (e.exception || ''); } catch (_) {} throw new Error('ERP answered ' + r.status + (why ? ': ' + String(why).replace(/<[^>]+>/g, ' ').slice(0, 200) : '')); }
+  return (JSON.parse(txt).message) || {};
+}
+async function fetchReport(filters, pr) {
+  const hasRows = m => Array.isArray(m.result) && m.result.length;
+  if (!pr) {
+    const m = await erpCall('frappe.desk.query_report.run', { report_name: REPORT, filters, ignore_prepared_report: true, are_default_filters: false });
+    if (hasRows(m) || !m.prepared_report) return { columns: m.columns || [], rows: m.result || [] };
+    if (m.doc && m.doc.status === 'Completed' && m.doc.name) pr = m.doc.name;
+    else { const q = await erpCall('frappe.desk.query_report.background_enqueue_run', { report_name: REPORT, filters: JSON.stringify(filters) }); pr = q.name || (q.doc && q.doc.name) || q; }
   }
+  // wait for the build (up to ~40 seconds here; the page asks again if it takes longer)
+  for (let t = 0; t < 20; t++) {
+    const r = await fetch(erpBase() + '/api/resource/Prepared%20Report/' + encodeURIComponent(pr), { headers: erpAuth(), signal: AbortSignal.timeout(10000) });
+    const st = r.ok ? ((await r.json()).data || {}).status : '';
+    if (st === 'Completed') break;
+    if (st === 'Error' || st === 'Failed') throw new Error('ERP could not build the report.');
+    if (t === 19) return { pending: pr };
+    await new Promise(z => setTimeout(z, 2000));
+  }
+  const m = await erpCall('frappe.desk.query_report.run', { report_name: REPORT, filters, prepared_report_name: pr, are_default_filters: false });
+  return { columns: m.columns || [], rows: m.result || [] };
+}
+// the SKU is the start of the item name: "583050C00-18-5700303xxxxxx …" -> 583050C00-18 (the item code is ERP's own number)
+const skuFromName = v => { const m = /^\s*([0-9]{5,6}[A-Z0-9]{0,6}(?:-[A-Z0-9]{1,4})?)(?=-\d{8,14}\b|\s|$)/i.exec(String(v || '')); return m ? m[1].toUpperCase() : ''; };
+const eanFromName = v => { const m = /-(\d{8,14})\b/.exec(String(v || '')); return m ? m[1] : ''; };
+
+async function runOne(warehouse, months, pr) {
+  const out = await fetchReport({ warehouse, months }, pr);
+  if (out.pending) return { warehouse, pending: out.pending };
+  const cols0 = (out.columns || []).map(c => typeof c === 'string' ? { label: c.split(':')[0], fieldname: c.split(':')[0].toLowerCase().replace(/\W+/g, '_'), fieldtype: c.split(':')[1] || 'Data' } : { label: str(c.label || c.fieldname, 60), fieldname: str(c.fieldname || c.label, 60), fieldtype: str(c.fieldtype || 'Data', 20) });
+  const rows0 = [];
+  for (const r of out.rows || []) {
+    if (Array.isArray(r)) { if (r.length === cols0.length && !/total/i.test(String(r[0] || ''))) rows0.push(r.map(v => typeof v === 'number' ? v : str(v, 140))); }
+    else if (r && typeof r === 'object') rows0.push(cols0.map(c => { const v = r[c.fieldname]; return typeof v === 'number' ? v : str(v, 140); }));
+    if (rows0.length >= 20000) break;
+  }
+  // two columns in front: the SKU and the EAN, read from the item name (or the item code when it already is a SKU)
+  const ni = cols0.findIndex(c => /item[_ ]?name/i.test(c.fieldname + ' ' + c.label)), ci = cols0.findIndex(c => /item[_ ]?code|^item$/i.test(c.fieldname + ' ' + c.label));
+  const cols = [{ label: 'SKU', fieldname: '_sku', fieldtype: 'Data' }, { label: 'EAN', fieldname: '_ean', fieldtype: 'Data' }, ...cols0];
+  const rows = rows0.map(r => { const nm = ni >= 0 ? r[ni] : '', code = ci >= 0 ? String(r[ci]) : ''; return [skuFromName(nm) || (/^\d{5,6}[A-Z]/i.test(code) ? code.toUpperCase() : ''), eanFromName(nm), ...r]; });
   const at = new Date().toISOString(), k = keyOfWh(warehouse);
   await store.putJSON('slow/w/' + k + '.json', { at, warehouse, months, cols, rows });
   const idx = (await store.getJSON(INDEX)) || {};
@@ -96,7 +132,7 @@ module.exports = async function handler(req, res) {
     for (const [w, v] of Object.entries(idx)) { const s = await store.getJSON('slow/w/' + v.k + '.json'); if (s) snaps.push({ ...s, store: storeOf(w, st.stores) || w }); }
     if (!snaps.length) return send(res, 200, { ok: true, level: lvl, snaps: [] });
     // the SKU column, by name
-    const c0 = snaps.find(s => s.cols.length).cols, skuCol = c0 ? c0.findIndex(c => /^(sku|item_code|item|sku_item|sku-item)$/i.test(c.fieldname) || /^sku|item code/i.test(c.label)) : -1;
+    const c0 = snaps.find(s => s.cols.length).cols, skuCol = c0 ? c0.findIndex(c => c.fieldname === '_sku') : -1;
     const skus = skuCol < 0 ? [] : [...new Set(snaps.flatMap(s => s.rows.map(r => skuOf(r[skuCol]))).filter(Boolean))];
     const months = Math.max(...snaps.map(s => Number(s.months) || 6));
     return send(res, 200, { ok: true, level: lvl, snaps, skuCol, months, ...(await enrich(skus, months)) });
@@ -114,6 +150,6 @@ module.exports = async function handler(req, res) {
   if (!erpOn) return send(res, 503, { ok: false, error: 'ERP is not connected.' });
   const wh = str(b.warehouse, 140), months = Math.max(1, Math.min(36, Math.round(Number(b.months) || 6)));
   if (!wh) return send(res, 400, { ok: false, error: 'Pick a store.' });
-  try { return send(res, 200, { ok: true, ...(await runOne(wh, months)) }); }
+  try { return send(res, 200, { ok: true, ...(await runOne(wh, months, str(b.pr, 140))) }); }
   catch (e) { return send(res, 502, { ok: false, error: String(e && e.message || e).slice(0, 400) }); }
 };
