@@ -48,7 +48,7 @@ video{width:100%;max-width:420px;border-radius:12px;background:#000}
 <header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Orders Distribution</h1><div class="sub">Split a new shipment to the stores by stock on hand, sell out and store priority, then scan it in the warehouse.</div></div><div class="actions"></div></header>
 <div class="err" id="err" hidden></div>
 <div class="row" style="justify-content:space-between">
-  <div class="tabs"><button class="btn tab on" data-tab="ship">Shipments</button><button class="btn tab" data-tab="scan">Scan</button><button class="btn tab" data-tab="stores" id="tStores" hidden>Stores &amp; priority</button></div>
+  <div class="tabs"><button class="btn tab on" data-tab="ship" id="tShip">Shipments</button><button class="btn tab" data-tab="scan">Scan</button><button class="btn tab" data-tab="stores" id="tStores" hidden>Stores &amp; priority</button></div>
   <label class="note"><input type="checkbox" id="pics" checked> Show pictures</label>
 </div>
 
@@ -72,7 +72,7 @@ video{width:100%;max-width:420px;border-radius:12px;background:#000}
 
 <div id="pScan" hidden>
 <div class="card">
-  <div class="row" style="justify-content:space-between"><h2 style="margin:0">Scan a piece</h2><span class="note" id="scanShip"></span></div>
+  <div class="row" style="justify-content:space-between"><h2 style="margin:0">Scan a piece</h2><span class="row"><select id="sel2" aria-label="Shipment" style="min-width:220px"></select><span class="note" id="scanShip"></span><button class="btn sm" id="xlsx2">Download Excel</button></span></div>
   <div class="scanbox" style="margin-top:8px"><input id="scanIn" placeholder="Scan or type the barcode (EAN) or SKU" autocomplete="off" inputmode="numeric"><button class="btn" id="cam">Use the camera</button><button class="btn" id="undo" disabled>Undo last</button></div>
   <video id="vid" playsinline muted hidden></video>
   <div class="note" id="scanMsg" style="margin-top:6px">Each scan counts one piece received. The numbers show how many pieces of this SKU go to each store.</div>
@@ -128,14 +128,16 @@ $('pics').onchange=()=>{try{localStorage.setItem('ds.pics',$('pics').checked?'1'
 /* ---------- load ---------- */
 async function boot(keep){
   try{H=await api('/api/dist');LVL=H.level;ST=H.settings.stores;
-    ['upBtn','alloc','del','tStores'].forEach(id=>$(id).hidden=!mg());
-    if(!mg()&&!keep)tab('scan');
+    ['upBtn','alloc','del','tStores','tShip'].forEach(id=>$(id).hidden=!mg());document.querySelector('.tabs').hidden=!mg();
+    if(!mg())tab('scan');
     $('sel').innerHTML=H.shipments.length?H.shipments.map(s=>`<option value="${s.id}">${esc(s.name)}${s.invoice?' · '+esc(s.invoice):''} · ${s.status} · ${fmt(s.pcs)} pcs</option>`).join(''):'<option value="">No shipments yet</option>';
     const id=keep&&H.shipments.some(s=>s.id===keep)?keep:(H.shipments[0]||{}).id;
-    if(id){$('sel').value=id;await open(id)}else{O=null;draw()}
+    $('sel2').innerHTML=$('sel').innerHTML;
+    if(id){$('sel').value=id;$('sel2').value=id;await open(id)}else{O=null;draw()}
     drawStores();
   }catch(e){showErr(e.message)}}
 $('sel').onchange=()=>open($('sel').value);
+$('sel2').onchange=()=>{$('sel').value=$('sel2').value;open($('sel2').value)};
 async function open(id){try{const j=await api('/api/dist?id='+id);O=j.shipment;ST=j.settings.stores;draw()}catch(e){showErr(e.message)}}
 const stores=()=>ST.filter(s=>s.on!==false);
 const lineAlloc=l=>O.alloc[l[1]]||{};
@@ -171,12 +173,14 @@ $('q').oninput=drawTable;
 
 /* ---------- upload the invoice ---------- */
 const H_=r=>r.map(c=>String(c??'').replace(/\s+/g,' ').trim().toLowerCase());
+const findH=(h,re)=>h.findIndex(c=>re.test(c));
+const SKU_H=/^(sku|sku ?#|sku ?no\.?|sku ?number|item ?code|item ?id|item ?no\.?|article|article ?no\.?|material)$/,QTY_H=/^(qty\.?|quantity|qty ?\(?pcs\)?|pcs|pieces|units|qty ?shipped|shipped ?qty|invoice ?qty)$/;
 const col=(h,...names)=>{for(const n of names){const i=h.indexOf(n);if(i>=0)return i}for(const n of names){const i=h.findIndex(c=>c.startsWith(n));if(i>=0)return i}return -1};
 $('upFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;showErr('');$('msg').textContent='Reading '+f.name+'…';
   try{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});let rows=null,hi=-1;
-    for(const n of wb.SheetNames){const r=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:'',raw:true});const i=r.slice(0,30).findIndex(x=>{const h=H_(x);return h.includes('sku')&&(h.includes('quantity')||h.includes('qty'))});if(i>=0){rows=r;hi=i;break}}
-    if(!rows)throw new Error('No sheet with "SKU" and "Quantity" columns.');
-    const h=H_(rows[hi]),c={ean:col(h,'ean','barcode'),sku:col(h,'sku','sku#'),qty:col(h,'quantity','qty'),desc:col(h,'description','item name'),cost:col(h,'per unit','unit price','price'),rp:col(h,'rp','rrp'),cat:col(h,'category'),hint:col(h,'store'),inv:col(h,'invoice#','invoice')};
+    for(const n of wb.SheetNames){const r=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:'',raw:true});const i=r.slice(0,30).findIndex(x=>{const h=H_(x);return findH(h,SKU_H)>=0&&findH(h,QTY_H)>=0});if(i>=0){rows=r;hi=i;break}}
+    if(!rows)throw new Error('The file needs a SKU column and a quantity column (for example "SKU" and "Qty"). DV, EAN, description and price are optional.');
+    const h=H_(rows[hi]),c={ean:col(h,'ean','barcode'),sku:findH(h,SKU_H),qty:findH(h,QTY_H),dv:col(h,'dv','design variation'),desc:col(h,'description','item name'),cost:col(h,'per unit','unit price','price'),rp:col(h,'rp','rrp'),cat:col(h,'category'),hint:col(h,'store'),inv:col(h,'invoice#','invoice')};
     // the stores' columns, if the file already has a split (the first column with each store code)
     const sc={};ST.forEach(s=>{const i=h.indexOf(String(s.code).toLowerCase());if(i>=0)sc[s.code]=i});
     const lines=[],manual={};let inv='';
@@ -200,6 +204,7 @@ $('del').onclick=async()=>{if(!O)return;const t=prompt(`Delete the shipment "${O
   try{await api('/api/dist?op=delete',{id:O.id});await boot()}catch(e){showErr(e.message)}};
 
 /* ---------- Excel: the full split, one sheet per store (SKU and pieces), and the scan check ---------- */
+$('xlsx2').onclick=()=>$('xlsx').onclick();
 $('xlsx').onclick=()=>{if(!O)return;const S=stores(),wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(O.lines.map(l=>{const a=lineAlloc(l),r={'EAN':l[0],'SKU':l[1],'Description':l[3],'Category':l[6],'Quantity':l[2]};S.forEach(s=>r[s.code]=a[s.code]||0);r['Given']=S.reduce((t,s)=>t+(a[s.code]||0),0);r['Scanned']=(O.scans||{})[l[1]]||0;return r})),'Distribution');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.map(s=>({Store:s.code,Name:s.name,SKUs:O.lines.filter(l=>(lineAlloc(l)[s.code]||0)>0).length,Pieces:O.lines.reduce((t,l)=>t+(lineAlloc(l)[s.code]||0),0)}))),'By store');
@@ -248,7 +253,7 @@ function drawStores(){const s=H.settings;$('months').value=s.months;$('target').
   $('stAdd').onclick=()=>{ST.push({code:'New',name:'',match:'',on:true});drawStores()}}
 $('stSave').onclick=async()=>{try{await api('/api/dist?op=settings',{stores:ST,months:+$('months').value,target:+$('target').value,maxPer:+$('maxPer').value});$('stMsg').textContent='Saved. Press "Refresh stock & sell out" on a shipment to split it again.';await boot(O&&O.id)}catch(e){showErr(e.message)}};
 
-function tab(t){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));$('pShip').hidden=t!=='ship';$('pScan').hidden=t!=='scan';$('pStores').hidden=t!=='stores';if(t==='scan')setTimeout(()=>$('scanIn').focus(),50)}
+function tab(t){if(!mg()&&t!=='scan')t='scan';document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));$('pShip').hidden=t!=='ship';$('pScan').hidden=t!=='scan';$('pStores').hidden=t!=='stores';if(t==='scan')setTimeout(()=>$('scanIn').focus(),50)}
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 boot();
 </script>
