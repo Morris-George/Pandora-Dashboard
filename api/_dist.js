@@ -235,3 +235,5 @@ module.exports.levelFor = levelFor;
 module.exports.LEVELS = LEVELS;
 module.exports.ACCESS = ACCESS;
 module.exports.split = split;
+module.exports.storeOf = storeOf;
+module.exports.settings = settings;
