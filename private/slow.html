@@ -43,7 +43,7 @@ tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr[data-f
   <div id="run" hidden>
     <div class="row"><label class="note">No sale in the last <input type="number" id="months" min="1" max="36" value="6" style="width:64px"> months</label><button class="btn sm" id="allSt">All stores</button><button class="btn sm" id="noSt">None</button></div>
     <div class="chips" id="whs" style="margin:8px 0"></div>
-    <div class="row"><button class="btn go" id="sync">Run the report for the ticked stores</button><button class="btn" id="clear">Clear</button><span class="note" id="msg"></span></div>
+    <div class="row"><button class="btn go" id="sync">Run the report</button><button class="btn" id="clear">Clear</button><span class="note" id="msg"></span></div>
   </div>
 </div>
 <div id="main" hidden>
@@ -107,12 +107,11 @@ $('allSt').onclick=()=>{$('whs').querySelectorAll('input').forEach(i=>{i.checked
 $('noSt').onclick=()=>{$('whs').querySelectorAll('input').forEach(i=>{i.checked=false;i.parentNode.classList.remove('on')})};
 $('sync').onclick=async()=>{const ws=[...$('whs').querySelectorAll('input:checked')].map(i=>i.value),m=+$('months').value||6;if(!ws.length){showErr('Tick at least one store.');return}
   const b=$('sync');b.disabled=true;showErr('');const bad=[];
-  // the report filters on one warehouse at a time, so it runs once per store
-  await api('/api/slow?op=clear',{}).catch(()=>{});
-  for(let k=0;k<ws.length;k++){$('msg').textContent=`Running ${k+1}/${ws.length}: ${ws[k]}…`;try{let j=await api('/api/slow?op=sync',{warehouse:ws[k],months:m}),t=0;
-    // a prepared report: ERP builds it in the background; ask again until it is ready
-    while(j.pending&&t++<15){$('msg').textContent=`ERP is building the report for ${ws[k]}… (${k+1}/${ws.length})`;j=await api('/api/slow?op=sync',{warehouse:ws[k],months:m,pr:j.pending})}
-    if(j.pending)bad.push(ws[k]+': ERP is still building the report, run again in a few minutes')}catch(e){bad.push(ws[k]+': '+e.message)}}
+  // one report for every store (it has a Warehouse column); ERP builds it in the background, so ask again until it is ready
+  $('msg').textContent='Running the report for all stores…';
+  try{let j=await api('/api/slow?op=syncall',{months:m,warehouses:ws}),t=0;
+    while(j.pending&&t++<15){$('msg').textContent='ERP is building the report…';j=await api('/api/slow?op=syncall',{months:m,warehouses:ws,pr:j.pending})}
+    if(j.pending)bad.push('ERP is still building the report, run again in a few minutes')}catch(e){bad.push(e.message)}
   $('msg').textContent=bad.length?'Done with problems.':'Done.';if(bad.length)showErr(bad.join(' · '));b.disabled=false;await load()};
 $('clear').onclick=async()=>{if(!confirm('Forget the report results?'))return;await api('/api/slow?op=clear',{});await load()};
 

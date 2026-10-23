@@ -11,6 +11,9 @@ const { whoami } = require('./_auth');
 
 const INDEX = 'slow/index.json';
 const REPORT = process.env.ERP_SLOW_REPORT || 'Pandora Slow Moving by SKU';
+// the same report without the warehouse filter: one row per item and store (a Warehouse column), one run for every store
+const REPORT_ALL = process.env.ERP_SLOW_REPORT_ALL || 'Pandora Slow Moving by SKU-No Warehouse Filter';
+const NOT_A_STORE = /sample|main|transit|damage|defect|reject|return/i;
 
 function send(res, code, obj) {
   res.setHeader('Cache-Control', 'no-store');
@@ -48,7 +51,8 @@ async function erpCall(method, body) {
   if (!r.ok) { let why = ''; try { const e = JSON.parse(txt); why = e._server_messages ? JSON.parse(e._server_messages).map(x => { try { return JSON.parse(x).message; } catch (_) { return x; } }).join(' ') : (e.exception || ''); } catch (_) {} throw new Error('ERP answered ' + r.status + (why ? ': ' + String(why).replace(/<[^>]+>/g, ' ').slice(0, 200) : '')); }
   return (JSON.parse(txt).message) || {};
 }
-async function fetchReport(filters, pr) {
+async function fetchReport(filters, pr, report = REPORT) {
+  const REPORT = report;
   const hasRows = m => Array.isArray(m.result) && m.result.length;
   if (!pr) {
     const m = await erpCall('frappe.desk.query_report.run', { report_name: REPORT, filters, ignore_prepared_report: true, are_default_filters: false });
@@ -72,9 +76,7 @@ async function fetchReport(filters, pr) {
 const skuFromName = v => { const m = /^\s*([0-9]{5,6}[A-Z0-9]{0,6}(?:-[A-Z0-9]{1,4})?)(?=-\d{8,14}\b|\s|$)/i.exec(String(v || '')); return m ? m[1].toUpperCase() : ''; };
 const eanFromName = v => { const m = /-(\d{8,14})\b/.exec(String(v || '')); return m ? m[1] : ''; };
 
-async function runOne(warehouse, months, pr) {
-  const out = await fetchReport({ warehouse, months }, pr);
-  if (out.pending) return { warehouse, pending: out.pending };
+function parse(out) {
   const cols0 = (out.columns || []).map(c => typeof c === 'string' ? { label: c.split(':')[0], fieldname: c.split(':')[0].toLowerCase().replace(/\W+/g, '_'), fieldtype: c.split(':')[1] || 'Data' } : { label: str(c.label || c.fieldname, 60), fieldname: str(c.fieldname || c.label, 60), fieldtype: str(c.fieldtype || 'Data', 20) });
   const rows0 = [];
   for (const r of out.rows || []) {
@@ -86,12 +88,39 @@ async function runOne(warehouse, months, pr) {
   const ni = cols0.findIndex(c => /item[_ ]?name/i.test(c.fieldname + ' ' + c.label)), si = cols0.findIndex(c => /^sku$/i.test(c.fieldname) || /^sku$/i.test(String(c.label || '').trim())), ci = cols0.findIndex(c => /item[_ ]?code|^item$/i.test(c.fieldname + ' ' + c.label));
   const cols = [{ label: 'SKU', fieldname: '_sku', fieldtype: 'Data' }, { label: 'EAN', fieldname: '_ean', fieldtype: 'Data' }, ...cols0];
   const rows = rows0.map(r => { const nm = ni >= 0 ? r[ni] : '', code = ci >= 0 ? String(r[ci]) : ''; return [(si >= 0 && String(r[si] || '').trim().toUpperCase()) || skuFromName(nm) || (/^\d{5,6}[A-Z]/i.test(code) ? code.toUpperCase() : ''), eanFromName(nm), ...r]; });
+  return { cols, rows };
+}
+async function save(warehouse, months, cols, rows, idx) {
+  const at = new Date().toISOString(), k = keyOfWh(warehouse);
+  await store.putJSON('slow/w/' + k + '.json', { at, warehouse, months, cols, rows });
+  idx[warehouse] = { k, at, months, rows: rows.length };
+}
+async function runOne(warehouse, months, pr) {
+  const out = await fetchReport({ warehouse, months }, pr);
+  if (out.pending) return { warehouse, pending: out.pending };
+  const { cols, rows } = parse(out);
   const at = new Date().toISOString(), k = keyOfWh(warehouse);
   await store.putJSON('slow/w/' + k + '.json', { at, warehouse, months, cols, rows });
   const idx = (await store.getJSON(INDEX)) || {};
   idx[warehouse] = { k, at, months, rows: rows.length };
   await store.putJSON(INDEX, idx);
   return { warehouse, rows: rows.length };
+}
+// one run for every store: split the rows by the Warehouse column; keep the ticked stores (or every store when none is given)
+async function runAll(months, only, pr) {
+  const out = await fetchReport({ months }, pr, REPORT_ALL);
+  if (out.pending) return { pending: out.pending };
+  const { cols, rows } = parse(out);
+  const wi = cols.findIndex(c => /warehouse/i.test(c.fieldname + ' ' + c.label));
+  if (wi < 0) throw new Error('The report has no Warehouse column.');
+  const keep = new Set(only || []), by = {};
+  for (const r of rows) { const w = String(r[wi] || '').trim(); if (!w || (keep.size ? !keep.has(w) : NOT_A_STORE.test(w))) continue; (by[w] = by[w] || []).push(r); }
+  const old = (await store.getJSON(INDEX)) || {};
+  for (const v of Object.values(old)) await store.del('slow/w/' + v.k + '.json').catch(() => {});
+  const idx = {};
+  for (const [w, l] of Object.entries(by)) await save(w, months, cols, l, idx);
+  await store.putJSON(INDEX, idx);
+  return { stores: Object.keys(by).length, rows: Object.values(by).reduce((a, l) => a + l.length, 0) };
 }
 
 // per SKU: sold in each store over the last `months` (nightly ERP sales), all-store totals per month, stock, refill order
@@ -145,6 +174,12 @@ module.exports = async function handler(req, res) {
     for (const v of Object.values(idx)) await store.del('slow/w/' + v.k + '.json').catch(() => {});
     await store.putJSON(INDEX, {});
     return send(res, 200, { ok: true });
+  }
+  if (op === 'syncall') {
+    if (!erpOn) return send(res, 503, { ok: false, error: 'ERP is not connected.' });
+    const months = Math.max(1, Math.min(36, Math.round(Number(b.months) || 6))), only = Array.isArray(b.warehouses) ? b.warehouses.map(w => str(w, 140)).filter(Boolean) : [];
+    try { return send(res, 200, { ok: true, ...(await runAll(months, only, str(b.pr, 140))) }); }
+    catch (e) { return send(res, 502, { ok: false, error: String(e && e.message || e).slice(0, 400) }); }
   }
   if (op !== 'sync') return send(res, 400, { ok: false, error: 'Unknown action.' });
   if (!erpOn) return send(res, 503, { ok: false, error: 'ERP is not connected.' });
