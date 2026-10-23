@@ -55,8 +55,9 @@ async function fetchReport(filters, pr, report = REPORT) {
   const REPORT = report;
   const hasRows = m => Array.isArray(m.result) && m.result.length;
   if (!pr) {
-    const m = await erpCall('frappe.desk.query_report.run', { report_name: REPORT, filters, ignore_prepared_report: true, are_default_filters: false });
-    if (hasRows(m) || !m.prepared_report) return { columns: m.columns || [], rows: m.result || [] };
+    // the all-stores report is too big to run while we wait: always let ERP prepare it
+    const m = report === REPORT_ALL ? {} : await erpCall('frappe.desk.query_report.run', { report_name: REPORT, filters, ignore_prepared_report: true, are_default_filters: false });
+    if (report !== REPORT_ALL && (hasRows(m) || !m.prepared_report)) return { columns: m.columns || [], rows: m.result || [] };
     if (m.doc && m.doc.status === 'Completed' && m.doc.name) pr = m.doc.name;
     else { const q = await erpCall('frappe.desk.query_report.background_enqueue_run', { report_name: REPORT, filters: JSON.stringify(filters) }); pr = q.name || (q.doc && q.doc.name) || q; }
   }

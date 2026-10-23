@@ -41,8 +41,8 @@ tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr[data-f
 <div class="card" id="setup"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Stores and Months</h2><label class="note"><input type="checkbox" id="pics" checked> Show pictures</label></div>
   <div class="note" id="meta" style="margin:4px 0 8px"></div>
   <div id="run" hidden>
-    <div class="row"><label class="note">No sale in the last <input type="number" id="months" min="1" max="36" value="6" style="width:64px"> months</label><button class="btn sm" id="allSt">All stores</button><button class="btn sm" id="noSt">None</button></div>
-    <div class="chips" id="whs" style="margin:8px 0"></div>
+    <div class="row"><label class="note"><b>No Sales For (Months)</b> <input type="number" id="months" min="1" max="36" value="6" style="width:64px"></label><span class="note">Every store, as in ERP's report. Samples, main warehouse and transit are left out.</span><button class="btn sm" id="allSt" hidden>All stores</button><button class="btn sm" id="noSt" hidden>None</button></div>
+    <div class="chips" id="whs" style="margin:8px 0" hidden></div>
     <div class="row"><button class="btn go" id="sync">Run the report</button><button class="btn" id="clear">Clear</button><span class="note" id="msg"></span></div>
   </div>
 </div>
@@ -92,8 +92,8 @@ function findCols(cols){const f=(re)=>cols.findIndex(c=>re.test(c.fieldname+' '+
 
 async function load(){showErr('');
   try{J=await api('/api/slow');const mg=J.level==='manage';$('run').hidden=!mg;
-    if(mg&&!WH.length){try{WH=(await api('/api/slow?warehouses=1')).warehouses}catch(e){showErr('Warehouse list: '+e.message)}drawWh()}
-    if(!J.snaps.length){$('main').hidden=true;$('meta').innerHTML=mg?'Tick the stores, set the months, and press <b>Run the report</b>.':'No report yet. Ask a Refill Order manager to run it.';return}
+    if(mg&&J.months)$('months').value=J.months;
+    if(!J.snaps.length){$('main').hidden=true;$('meta').innerHTML=mg?'Set the months and press <b>Run the report</b>.':'No report yet. Ask a Refill Order manager to run it.';return}
     build();
     const runs=J.snaps.map(s=>`${esc(s.store)} ${s.rows.length} rows`).join(' · ');
     $('meta').innerHTML=`No sale in the last <b>${J.months}</b> months · run ${new Date(Math.max(...J.snaps.map(s=>Date.parse(s.at)))).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · ${runs}${J.order?` · refill order <b>${esc(J.order.name)}</b>`:''}`+(J.C.sku<0&&ITEMS.length?' · <b class="bad">No SKU column found in the report.</b>':'');
@@ -105,12 +105,12 @@ function drawWh(){const pre=new Set(Object.keys(J&&J.snaps?Object.fromEntries(J.
   if(J&&J.months)$('months').value=J.months}
 $('allSt').onclick=()=>{$('whs').querySelectorAll('input').forEach(i=>{i.checked=true;i.parentNode.classList.add('on')})};
 $('noSt').onclick=()=>{$('whs').querySelectorAll('input').forEach(i=>{i.checked=false;i.parentNode.classList.remove('on')})};
-$('sync').onclick=async()=>{const ws=[...$('whs').querySelectorAll('input:checked')].map(i=>i.value),m=+$('months').value||6;if(!ws.length){showErr('Tick at least one store.');return}
+$('sync').onclick=async()=>{const ws=[],m=+$('months').value||6;
   const b=$('sync');b.disabled=true;showErr('');const bad=[];
   // one report for every store (it has a Warehouse column); ERP builds it in the background, so ask again until it is ready
   $('msg').textContent='Running the report for all stores…';
   try{let j=await api('/api/slow?op=syncall',{months:m,warehouses:ws}),t=0;
-    while(j.pending&&t++<15){$('msg').textContent='ERP is building the report…';j=await api('/api/slow?op=syncall',{months:m,warehouses:ws,pr:j.pending})}
+    while(j.pending&&t++<30){$('msg').textContent=`ERP is building the report… (${t*40} s)`;j=await api('/api/slow?op=syncall',{months:m,warehouses:ws,pr:j.pending})}
     if(j.pending)bad.push('ERP is still building the report, run again in a few minutes')}catch(e){bad.push(e.message)}
   $('msg').textContent=bad.length?'Done with problems.':'Done.';if(bad.length)showErr(bad.join(' · '));b.disabled=false;await load()};
 $('clear').onclick=async()=>{if(!confirm('Forget the report results?'))return;await api('/api/slow?op=clear',{});await load()};
