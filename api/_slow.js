@@ -10,7 +10,7 @@ const store = require('./_store');
 const { whoami } = require('./_auth');
 
 const INDEX = 'slow/index.json';
-const REPORT = process.env.ERP_SLOW_REPORT || 'Pandora Slow Moving';
+const REPORT = process.env.ERP_SLOW_REPORT || 'Pandora Slow Moving by SKU';
 
 function send(res, code, obj) {
   res.setHeader('Cache-Control', 'no-store');
@@ -83,9 +83,9 @@ async function runOne(warehouse, months, pr) {
     if (rows0.length >= 20000) break;
   }
   // two columns in front: the SKU and the EAN, read from the item name (or the item code when it already is a SKU)
-  const ni = cols0.findIndex(c => /item[_ ]?name/i.test(c.fieldname + ' ' + c.label)), ci = cols0.findIndex(c => /item[_ ]?code|^item$/i.test(c.fieldname + ' ' + c.label));
+  const ni = cols0.findIndex(c => /item[_ ]?name/i.test(c.fieldname + ' ' + c.label)), si = cols0.findIndex(c => /^sku$/i.test(c.fieldname) || /^sku$/i.test(String(c.label || '').trim())), ci = cols0.findIndex(c => /item[_ ]?code|^item$/i.test(c.fieldname + ' ' + c.label));
   const cols = [{ label: 'SKU', fieldname: '_sku', fieldtype: 'Data' }, { label: 'EAN', fieldname: '_ean', fieldtype: 'Data' }, ...cols0];
-  const rows = rows0.map(r => { const nm = ni >= 0 ? r[ni] : '', code = ci >= 0 ? String(r[ci]) : ''; return [skuFromName(nm) || (/^\d{5,6}[A-Z]/i.test(code) ? code.toUpperCase() : ''), eanFromName(nm), ...r]; });
+  const rows = rows0.map(r => { const nm = ni >= 0 ? r[ni] : '', code = ci >= 0 ? String(r[ci]) : ''; return [(si >= 0 && String(r[si] || '').trim().toUpperCase()) || skuFromName(nm) || (/^\d{5,6}[A-Z]/i.test(code) ? code.toUpperCase() : ''), eanFromName(nm), ...r]; });
   const at = new Date().toISOString(), k = keyOfWh(warehouse);
   await store.putJSON('slow/w/' + k + '.json', { at, warehouse, months, cols, rows });
   const idx = (await store.getJSON(INDEX)) || {};
