@@ -49,7 +49,7 @@ async function build() {
   let min = '9999-99-99', max = '0000-00-00', revenue = 0, units = 0;
   const inv = new Set(), byDay = new Map(), byCat = new Map(), byBr = new Map();
   for (const r of rows) {
-    const d = iso(r[0]); if (!d) continue;
+    const d = iso(r[0]); if (!d || !r[1]) continue; // the dashboards drop lines without a date or an invoice
     const net = Number(r[3]) || 0, qty = Number(r[2]) || 0;
     if (d < min) min = d; if (d > max) max = d;
     revenue += net; units += qty;
