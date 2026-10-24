@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { compressImage } from "@/lib/compress-image";
+import { BarcodeScan } from "@/components/barcode-scan";
 import { createClient } from "@/lib/supabase/client";
 import { checkWarranty } from "@/lib/warranty";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
@@ -11,6 +12,7 @@ import { createDraft, findCustomer, findPreviousRepairs, lookupInvoice, lookupIt
 type Branch = { id: string; name: string };
 type Category = { name: string; label: string; requiresComment: boolean };
 
+const DRAFT_KEY = "intake-draft";
 const MIN_PHOTOS = 2;
 const MAX_PHOTOS = 6;
 const input = "rounded-lg border border-stone-300 px-3 py-2.5 font-normal focus:outline-2 focus:outline-stone-900";
@@ -57,6 +59,39 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
   const [photos, setPhotos] = useState<File[]>([]);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [step, setStep] = useState(0);
+  const [restored, setRestored] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  // Saved draft: the typed fields survive a closed tab or reload on this device (photos are not kept)
+  const fields = { branchId, mobile, fullName, email, itemName, itemCode, itemDescription, itemBarcode, itemImage, invoiceNo, purchaseDate, noInvoice, fault, notes, agreed, accessories, step };
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      const v = raw ? JSON.parse(raw) : null;
+      if (v && Date.now() - v.savedAt < 24 * 3600_000 && (v.mobile || v.itemCode || v.itemName)) {
+        if (branches.some((b) => b.id === v.branchId)) setBranchId(v.branchId);
+        setMobile(v.mobile ?? ""); setFullName(v.fullName ?? ""); setEmail(v.email ?? "");
+        setItemName(v.itemName ?? ""); setItemCode(v.itemCode ?? ""); setItemDescription(v.itemDescription ?? "");
+        setItemBarcode(v.itemBarcode ?? ""); setItemImage(v.itemImage ?? ""); setInvoiceNo(v.invoiceNo ?? "");
+        setPurchaseDate(v.purchaseDate ?? ""); setNoInvoice(!!v.noInvoice); setFault(v.fault ?? ""); setNotes(v.notes ?? "");
+        setAgreed(v.agreed ?? ""); setAccessories(v.accessories ?? ""); setStep(Number(v.step) || 0);
+        setRestored(true);
+      }
+    } catch { /* storage blocked: no draft */ }
+    setLoaded(true);
+  }, [branches]);
+  const draftJson = JSON.stringify(fields);
+  useEffect(() => {
+    if (!loaded) return;
+    const id = setTimeout(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...JSON.parse(draftJson), savedAt: Date.now() })); } catch { /* ignore */ } }, 500);
+    return () => clearTimeout(id);
+  }, [draftJson, loaded]);
+  const clearDraft = () => { try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ } };
+  function startOver() {
+    clearDraft();
+    window.location.reload();
+  }
 
   const previews = useMemo(() => photos.map((f) => URL.createObjectURL(f)), [photos]);
   const category = categories.find((c) => c.name === fault);
@@ -75,13 +110,16 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
     : w.result === "out_of_warranty" ? { cls: "bg-amber-50 border-amber-300 text-amber-900", text: t.wOut(fmt(w.expires!)) }
     : { cls: "bg-stone-50 border-stone-200 text-stone-700", text: t.wPending };
 
-  const missing: string[] = [];
-  if (!/^[0-9+]{8,15}$/.test(mobile)) missing.push(t.need.mobile);
-  if (fullName.trim().length < 2) missing.push(t.need.name);
-  if (itemName.trim().length < 2) missing.push(t.need.item);
-  if (!fault) missing.push(t.need.fault);
-  if (category?.requiresComment && !notes.trim()) missing.push(t.need.comment);
-  if (photos.length < MIN_PHOTOS) missing.push(t.need.photos(MIN_PHOTOS - photos.length));
+  const stepMissing: string[][] = [[], [], [], []];
+  if (!/^[0-9+]{8,15}$/.test(mobile)) stepMissing[0].push(t.need.mobile);
+  if (fullName.trim().length < 2) stepMissing[0].push(t.need.name);
+  if (itemName.trim().length < 2) stepMissing[1].push(t.need.item);
+  if (!fault) stepMissing[2].push(t.need.fault);
+  if (category?.requiresComment && !notes.trim()) stepMissing[2].push(t.need.comment);
+  if (photos.length < MIN_PHOTOS) stepMissing[3].push(t.need.photos(MIN_PHOTOS - photos.length));
+  const missing = stepMissing.flat();
+  const STEPS = [t.steps.customer, t.steps.item, t.steps.fault, t.steps.photos];
+  const show = (n: number) => (step === n ? "" : "hidden ");
 
   async function lookupCustomer() {
     const c = await findCustomer(mobile);
@@ -89,10 +127,10 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
     if (c) { setFullName(c.full_name); setEmail(c.email ?? ""); }
   }
 
-  async function lookup() {
-    if (!itemCode.trim() || lookupState === "busy") return;
+  async function lookup(code = itemCode) {
+    if (!code.trim() || lookupState === "busy") return;
     setLookupState("busy");
-    const r = await lookupItem(itemCode);
+    const r = await lookupItem(code);
     if (r.status === "found") {
       setItemCode(r.itemCode);
       setItemName(r.itemName);
@@ -137,6 +175,7 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
     setBusy(t.finalising);
     const done = await submitTicket(draft.ticketId);
     if (done.error) { setBusy(""); setError(done.error); return; }
+    clearDraft();
     router.push(`/tickets/${draft.ticketId}?created=1`);
   }
 
@@ -147,15 +186,38 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
         <p className="text-sm text-stone-600 mt-1">{t.stage}</p>
       </div>
 
+      {restored && (
+        <p role="status" className="rounded-lg bg-sky-50 border border-sky-200 text-sky-900 text-sm p-3 flex flex-wrap items-center gap-3">
+          {t.draftRestored}
+          <button type="button" onClick={startOver} className="underline font-semibold">{t.startOver}</button>
+        </p>
+      )}
+
+      <ol className="grid grid-cols-4 gap-2" aria-label={t.stepsLabel}>
+        {STEPS.map((label, n) => {
+          const done = !stepMissing[n].length;
+          return (
+            <li key={n}>
+              <button type="button" onClick={() => setStep(n)} aria-current={step === n ? "step" : undefined}
+                className={`w-full rounded-xl border px-2 py-2.5 text-xs sm:text-sm font-semibold flex flex-col sm:flex-row items-center justify-center gap-1.5 transition
+                  ${step === n ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--on-accent)] shadow-sm" : done ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-stone-200 bg-white text-stone-600"}`}>
+                <span className={`grid place-items-center w-6 h-6 rounded-full text-xs ${step === n ? "bg-white/30" : done ? "bg-emerald-600 text-white" : "bg-stone-100"}`}>{done && step !== n ? "✓" : n + 1}</span>
+                {label}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+
       {branches.length > 1 && (
-        <label className={label}>{t.branch}
+        <label className={`${show(0)}${label}`}>{t.branch}
           <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className={input}>
             {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         </label>
       )}
 
-      <fieldset className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <fieldset className={`${show(0)}grid grid-cols-1 sm:grid-cols-3 gap-4`}>
         <legend className="text-sm font-semibold mb-2">{t.customer}</legend>
         <label className={label}>{t.mobile}
           <input value={mobile} onChange={(e) => setMobile(e.target.value.trim())} onBlur={lookupCustomer}
@@ -170,7 +232,7 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
         {known && <p className="sm:col-span-3 text-sm text-emerald-800">{t.known}</p>}
       </fieldset>
 
-      <fieldset className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <fieldset className={`${show(1)}grid grid-cols-1 sm:grid-cols-2 gap-4`}>
         <legend className="text-sm font-semibold mb-2">{t.itemSection}</legend>
         <div className="sm:col-span-2 flex flex-col gap-1.5">
           <label htmlFor="sku" className="text-sm font-medium">{t.itemCode}</label>
@@ -179,7 +241,9 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
               onChange={(e) => { setItemCode(e.target.value); setLookupState(""); }}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); lookup(); } }}
               onBlur={() => { if (itemCode.trim() && !lookupState) lookup(); }} />
-            <button type="button" onClick={lookup} disabled={!itemCode.trim() || lookupState === "busy"}
+            <BarcodeScan label={t.scan} title={t.scanTitle} cancel={t.scanCancel} denied={t.scanDenied}
+              onResult={(code) => { setItemCode(code); setLookupState(""); lookup(code); }} />
+            <button type="button" onClick={() => lookup()} disabled={!itemCode.trim() || lookupState === "busy"}
               className="rounded-lg border border-stone-900 px-4 text-sm font-medium disabled:opacity-40">
               {lookupState === "busy" ? t.lookingUp : t.lookup}
             </button>
@@ -240,7 +304,7 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
         </div>
       </fieldset>
 
-      <fieldset className="flex flex-col gap-3">
+      <fieldset className={`${show(2)}flex flex-col gap-3`}>
         <legend className="text-sm font-semibold mb-2">{t.fault}</legend>
         <div className="flex flex-wrap gap-2">
           {categories.map((c) => (
@@ -268,7 +332,7 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
         </label>
       </fieldset>
 
-      <fieldset className="flex flex-col gap-3">
+      <fieldset className={`${show(3)}flex flex-col gap-3`}>
         <legend className="text-sm font-semibold mb-2">{t.photos} <span className="font-normal text-stone-600">{t.photosHint(MIN_PHOTOS, MAX_PHOTOS)}</span></legend>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {previews.map((src, i) => (
@@ -299,11 +363,23 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
       {error && <p role="alert" className="text-sm text-red-800 bg-red-50 rounded-lg p-3">{error}</p>}
 
       <div className="sticky bottom-0 z-10 -mx-6 -mb-6 px-6 py-4 rounded-b-2xl bg-white/95 backdrop-blur flex flex-wrap items-center gap-3 border-t border-stone-200">
-        <button type="button" onClick={submit} disabled={missing.length > 0 || !!busy}
-          className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-5 py-3 font-semibold disabled:opacity-40">
-          {busy || t.create}
-        </button>
-        <span className="text-sm text-stone-600">{missing.length ? `${t.stillNeeded} ${missing.join(locale === "ar" ? "، " : ", ")}` : t.ready}</span>
+        {step > 0 && (
+          <button type="button" onClick={() => setStep(step - 1)} className="rounded-lg border border-stone-900 px-4 py-3 font-semibold">{t.back}</button>
+        )}
+        {step < 3 ? (
+          <button type="button" onClick={() => { setStep(step + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-5 py-3 font-semibold">{t.next}</button>
+        ) : (
+          <button type="button" onClick={submit} disabled={missing.length > 0 || !!busy}
+            className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-5 py-3 font-semibold disabled:opacity-40">
+            {busy || t.create}
+          </button>
+        )}
+        <span className="text-sm text-stone-600">
+          {(step < 3 ? stepMissing[step] : missing).length
+            ? `${t.stillNeeded} ${(step < 3 ? stepMissing[step] : missing).join(locale === "ar" ? "، " : ", ")}`
+            : step < 3 ? t.stepDone : t.ready}
+        </span>
       </div>
     </section>
   );

@@ -8,6 +8,7 @@ import { Brand } from "@/components/brand";
 import { NavLinks } from "@/components/nav-links";
 import { PageTitle } from "@/components/page-title";
 import { ViewAs } from "./view-as";
+import { Toaster } from "@/components/toast";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
@@ -57,6 +58,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </nav>
         <main className="app-main flex-[999_1_560px] min-w-0">{children}</main>
       </div>
+      <Toaster fallback={t.shell.done} />
     </div>
   );
 }

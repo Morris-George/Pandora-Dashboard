@@ -5,6 +5,7 @@ import { Brand } from "@/components/brand";
 import { requireSession } from "@/lib/auth";
 import { getI18n } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Warranty } from "@/lib/warranty";
 import { PrintButton } from "./print-button";
 import { ExceptionActions } from "./exception-actions";
@@ -56,6 +57,24 @@ export default async function TicketPage({ params, searchParams }: {
     .filter((r) => !(r.to_status === "closed" && tk.status !== "lost_in_transit"))
     .map((r) => ({ to: r.to_status as ExceptionTarget, needsReason: r.requires_reason }));
   const branch = (tk.branches as unknown as { name: string } | null)?.name ?? "";
+
+  // Timeline: every status change, who made it and how long the ticket stayed there
+  const { data: hist } = await supabase.from("status_history").select("to_status, user_id, role, reason, at").eq("ticket_id", tk.id).order("at");
+  const uids = [...new Set((hist ?? []).map((h) => h.user_id).filter(Boolean))] as string[];
+  const { data: people } = uids.length ? await createAdminClient().from("profiles").select("id, full_name").in("id", uids) : { data: [] };
+  const who = new Map((people ?? []).map((p) => [p.id, p.full_name]));
+  const span = (ms: number) => {
+    const h = Math.round(ms / 3600_000);
+    return h < 1 ? t.timeline.lessHour : h < 48 ? t.timeline.hours(h) : t.timeline.days(Math.round(h / 24));
+  };
+  const timeline = (hist ?? []).map((h, i, all) => ({
+    status: d.status[h.to_status as keyof typeof d.status] ?? h.to_status,
+    by: h.user_id ? `${who.get(h.user_id) ?? "—"}${h.role ? ` · ${d.roles[h.role as keyof typeof d.roles] ?? h.role}` : ""}` : null,
+    at: new Date(h.at).toLocaleString(locale === "ar" ? "ar-EG" : "en-GB", { dateStyle: "medium", timeStyle: "short" }),
+    took: span((i + 1 < all.length ? new Date(all[i + 1].at).getTime() : Date.now()) - new Date(h.at).getTime()),
+    current: i === all.length - 1,
+    reason: h.reason,
+  }));
   const when = new Date(tk.created_at).toLocaleString(locale === "ar" ? "ar-EG" : "en-GB");
 
   return (
@@ -138,6 +157,28 @@ export default async function TicketPage({ params, searchParams }: {
 
         <p className="text-xs text-stone-500 border-t border-stone-200 pt-3">{t.footer(d.status[tk.status] ?? tk.status)}</p>
       </section>
+
+      {!!timeline.length && (
+        <section className="no-print bg-white rounded-2xl border border-stone-200 p-6">
+          <h2 className="text-lg font-semibold mb-4">{t.timeline.title}</h2>
+          <ol className="relative border-s-2 border-stone-200 ms-2 flex flex-col gap-5">
+            {timeline.map((e, i) => (
+              <li key={i} className="ps-5 relative">
+                <span className={`absolute -start-[9px] top-1 w-4 h-4 rounded-full border-2 border-white ${e.current ? "bg-[var(--accent)] ring-4 ring-[var(--accent)]/20" : "bg-stone-400"}`} />
+                <div className="flex flex-wrap items-baseline gap-x-3">
+                  <span className="font-semibold">{e.status}</span>
+                  <span className="text-xs text-stone-500">{e.at}</span>
+                  <span className={`text-xs rounded-full px-2 py-0.5 ${e.current ? "bg-amber-50 text-amber-900" : "bg-stone-100 text-stone-600"}`}>
+                    {e.current ? t.timeline.since(e.took) : t.timeline.took(e.took)}
+                  </span>
+                </div>
+                {e.by && <div className="text-sm text-stone-600">{e.by}</div>}
+                {e.reason && <div className="text-sm text-stone-700 mt-0.5">“{e.reason}”</div>}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       <ExceptionActions locale={locale} ticketId={tk.id} moves={moves} />
     </div>

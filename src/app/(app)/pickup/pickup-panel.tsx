@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "@/components/toast";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
 import { collect, findRepairInvoice, markUncollected, type RepairInvoice } from "./actions";
@@ -31,6 +32,7 @@ export function PickupPanel({ locale, role, jobs }: { locale: Locale; role: AppR
       setError(""); setNotice("");
       const r = await fn();
       if (r.error) { setError(t.errors[r.error] ?? t.errors.failed); return; }
+      toast();
       after?.(r.outcome);
     });
 

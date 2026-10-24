@@ -36,6 +36,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
     const rows = (open ?? []).filter((r) => q.statuses.includes(r.status));
     return { ...q, count: rows.length, late: rows.filter((r) => overdueDays(sla, r.status, r.status_since, now) > 0).length };
   });
+  cards.sort((a, b) => b.late - a.late || b.count - a.count);
   const lateTotal = (open ?? []).filter((r) => overdueDays(sla, r.status, r.status_since, now) > 0).length;
 
   return (
@@ -51,9 +52,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
         {!cards.length ? <p className="text-stone-600">{t.nothing}</p> : (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
             {cards.map((c) => (
-              <Link key={c.key} href={c.href} className={`rounded-xl border p-4 flex flex-col gap-1 hover:shadow-sm transition ${c.late ? "border-red-300 bg-red-50/40" : "border-stone-200"}`}>
+              <Link key={c.key} href={c.href} className={`rounded-xl border p-4 flex flex-col gap-1 hover:shadow-md hover:-translate-y-0.5 transition ${c.late ? "border-red-300 bg-red-50/40" : c.count ? "border-stone-200" : "border-stone-100 opacity-60"}`}>
                 <span className="kpi-label">{t.queues[c.key]}</span>
-                <span className="text-3xl font-extrabold">{c.count}</span>
+                <span className="text-4xl font-extrabold">{c.count}</span>
                 <span className={`text-xs font-semibold ${c.late ? "text-red-800" : "text-stone-500"}`}>{c.late ? t.late(c.late) : t.onTime}</span>
               </Link>
             ))}

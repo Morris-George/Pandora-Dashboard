@@ -16,7 +16,7 @@ const en = {
     inactive: "Your account is deactivated. Contact your administrator.",
     help: "Accounts are created by the administrator. Forgot your password? Ask your administrator to reset it.",
   },
-  shell: { fullAccess: "Full access · all stores", search: "Search ticket no., mobile or name…", viewAs: "View as", viewingAs: (r: string) => `Super Admin viewing as ${r}`, useAs: "Use this screen as:",
+  shell: { done: "Done ✓", fullAccess: "Full access · all stores", search: "Search ticket no., mobile or name…", viewAs: "View as", viewingAs: (r: string) => `Super Admin viewing as ${r}`, useAs: "Use this screen as:",
     signOut: "Sign out", allBranches: "All branches", adminScope: "Users & settings", soon: "Coming soon" },
   mfa: {
     title: "Two-step login",
@@ -64,6 +64,10 @@ const en = {
     under_warranty: "Under warranty", out_of_warranty: "Out of warranty", pending_assessment: "Pending technician assessment",
   } as Record<Warranty, string>,
   intake: {
+    steps: { customer: "Customer", item: "Item", fault: "Fault", photos: "Photos" },
+    stepsLabel: "Steps", next: "Next", back: "Back", stepDone: "This step is complete.",
+    draftRestored: "Your unfinished ticket was restored (photos need to be added again).", startOver: "Start over",
+    scan: "📷 Scan", scanTitle: "Scan the barcode", scanCancel: "Cancel", scanDenied: "Camera not available. Allow camera access or type the code.",
     inv: {
       check: "Check in ERPNext", find: "Find by mobile + SKU", checking: "Checking…",
       found: (no: string, date: string, store: string) => `Invoice ${no} found — bought ${date}${store ? ` at ${store}` : ""}. Purchase date filled from ERPNext.`,
@@ -291,6 +295,10 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     signReceived: "Received by (signature)",
   },
   ticket: {
+    timeline: {
+      title: "Timeline", lessHour: "under 1 hour", hours: (h: number) => `${h} h`, days: (n: number) => `${n} days`,
+      took: (x: string) => `took ${x}`, since: (x: string) => `here for ${x}`,
+    },
     agreed: "Repair cost agreed by the customer", egp: "EGP", noAgreed: "Not agreed — the customer is asked after diagnosis",
     qr: "QR code to track the ticket", qrNote: "Scan to follow the repair. Enter the ticket number and mobile number if asked.",
     signCustomer: "Customer signature", signStaff: "Store staff signature",
@@ -679,7 +687,7 @@ const ar: Dict = {
     inactive: "حسابك موقوف. تواصل مع مسؤول النظام.",
     help: "الحسابات يُنشئها مسؤول النظام. نسيت كلمة المرور؟ اطلب من المسؤول إعادة تعيينها.",
   },
-  shell: { fullAccess: "صلاحية كاملة · كل الفروع", search: "دوّر برقم التيكيت أو الموبايل أو الاسم…", viewAs: "عرض كـ", viewingAs: (r: string) => `مدير النظام بيشوف كـ ${r}`, useAs: "استخدم الشاشة كـ:",
+  shell: { done: "تم ✓", fullAccess: "صلاحية كاملة · كل الفروع", search: "دوّر برقم التيكيت أو الموبايل أو الاسم…", viewAs: "عرض كـ", viewingAs: (r: string) => `مدير النظام بيشوف كـ ${r}`, useAs: "استخدم الشاشة كـ:",
     signOut: "تسجيل الخروج", allBranches: "كل الفروع", adminScope: "المستخدمون والإعدادات", soon: "قريبًا" },
   mfa: {
     title: "التحقق بخطوتين",
@@ -727,6 +735,10 @@ const ar: Dict = {
     under_warranty: "داخل الضمان", out_of_warranty: "خارج الضمان", pending_assessment: "في انتظار تقييم الفني",
   },
   intake: {
+    steps: { customer: "العميل", item: "القطعة", fault: "العطل", photos: "الصور" },
+    stepsLabel: "الخطوات", next: "التالي", back: "رجوع", stepDone: "الخطوة دي خلصت.",
+    draftRestored: "رجعنالك التيكيت اللي ماكملتهوش (الصور محتاجة تتضاف تاني).", startOver: "ابدأ من الأول",
+    scan: "📷 امسح", scanTitle: "امسح الباركود", scanCancel: "إلغاء", scanDenied: "الكاميرا مش متاحة. اسمح بالكاميرا أو اكتب الكود.",
     inv: {
       check: "تحقق في ERPNext", find: "بحث بالموبايل + SKU", checking: "جاري التحقق…",
       found: (no: string, date: string, store: string) => `الفاتورة ${no} موجودة — اتشترت ${date}${store ? ` من ${store}` : ""}. تاريخ الشراء اتملى من ERPNext.`,
@@ -955,6 +967,10 @@ const ar: Dict = {
     signReceived: "توقيع المستلم",
   },
   ticket: {
+    timeline: {
+      title: "مسار التيكيت", lessHour: "أقل من ساعة", hours: (h: number) => `${h} ساعة`, days: (n: number) => `${n} يوم`,
+      took: (x: string) => `خدت ${x}`, since: (x: string) => `بقالها ${x}`,
+    },
     agreed: "تكلفة الصيانة اللي العميل وافق عليها", egp: "جنيه", noAgreed: "مفيش اتفاق — العميل هيتسأل بعد الفحص",
     qr: "كود QR لمتابعة التيكيت", qrNote: "امسح الكود عشان تتابع الصيانة. اكتب رقم التيكيت ورقم الموبايل لو اتطلب.",
     signCustomer: "توقيع العميل", signStaff: "توقيع موظف الفرع",

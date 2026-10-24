@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "@/components/toast";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import { respondQuote, returnUnrepaired } from "./actions";
 
@@ -29,6 +30,7 @@ export function QuotesPanel({ locale, jobs }: { locale: Locale; jobs: QuoteJob[]
       setError(""); setNotice("");
       const r = await fn();
       if (r.error) { setError(t.errors[r.error] ?? t.errors.failed); return; }
+      toast();
       after?.();
     });
 

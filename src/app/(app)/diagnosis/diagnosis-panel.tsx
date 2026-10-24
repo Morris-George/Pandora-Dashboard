@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "@/components/toast";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
 import { completeRepair, decideOverride, moveTicket, startDiagnosis, submitDiagnosis } from "./actions";
@@ -35,6 +36,7 @@ export function DiagnosisPanel({ locale, role, jobs, technicians, costs }: {
       setError(""); setNotice("");
       const r = await fn();
       if (r.error) { setError(t.errors[r.error] ?? t.errors.failed); return; }
+      toast();
       if (r.outcome === "override_pending") setNotice(t.sentForOverride);
       after?.();
     });

@@ -131,3 +131,6 @@ thead th { font-size: 11px !important; text-transform: uppercase; letter-spacing
 /* Phone nav strip: no visible scrollbar */
 nav[aria-label="Main"] { scrollbar-width: none; }
 nav[aria-label="Main"]::-webkit-scrollbar { display: none; }
+
+@keyframes toastin { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: none; } }
+.toast-in { animation: toastin .25s ease-out both; }

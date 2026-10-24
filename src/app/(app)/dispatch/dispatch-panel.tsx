@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "@/components/toast";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
 import { approveBatch, courierPickup, createOutbound, createReturn, receiveBatch } from "./actions";
@@ -39,6 +40,7 @@ export function DispatchPanel({ locale, role, myBranches, packable, returnable, 
       setError(""); setNotice("");
       const r = await fn();
       if (r.error) { setError(t.errors[r.error] ?? t.errors.failed); return; }
+      toast();
       if (r.batchNo) setNotice(t.created(r.batchNo));
       after?.();
     });
