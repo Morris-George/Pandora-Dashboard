@@ -90,8 +90,97 @@ body.leaving .wrap{opacity:0;transform:translateY(-30px) scale(.97)}
 body.leaving #sweep{transform:scale(130);transition:transform .7s cubic-bezier(.6,.05,.3,1)}
 @media (max-width:480px){.card{padding:62px 22px 24px;border-radius:28px}.title{font-size:26px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.in,.card,.badge{opacity:1;transform:none}.ring,.spark{display:none}}
+/* ---- 4-second intro ---- */
+#intro{position:fixed;inset:0;z-index:100;overflow:hidden;background:transparent;cursor:pointer;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-weight:800}
+#intro .pda{position:absolute}
+#intro .pdw{position:absolute;text-align:center;white-space:nowrap;line-height:1;letter-spacing:-.035em;word-spacing:0}
+#intro .pdc{display:inline-block;overflow:hidden;vertical-align:top;padding:.04em 0 .24em;margin:-.04em 0 -.24em 0}
+#intro .pdc>span{display:inline-block}
+#intro svg.pdlg{position:absolute;overflow:visible;transform-origin:50.04% 64.75%;display:none;pointer-events:none}
+body.introing .card,body.introing .badge,body.introing .in{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){#intro{display:none}}
 </style></head>
-<body data-nopw>
+<body data-nopw class="introing">
+<div id="intro" aria-hidden="true"></div>
+<script>
+/* Pandora sign-in intro: 4 seconds, 120 BPM (1 beat = 0.5s). The ring pushes through, "Sign in to your world" lands on the beat
+   with the Pandora logo as every dot, then the last ring opens onto the real sign-in card. Click, tap or Esc skips it. */
+(function(){
+  var body=document.body,root=document.getElementById('intro');
+  function done(){body.classList.remove('introing');if(root&&root.parentNode)root.parentNode.removeChild(root);window.__introDone=1;}
+  try{
+  if(!root||matchMedia('(prefers-reduced-motion: reduce)').matches){done();return;}
+  var INK='#2A1F24',PINK='#FF93A0',ROSE='#B03A4F',BLUSH='#FFE9EC',WHITE='#FFFFFF',NS='http://www.w3.org/2000/svg';
+  var clamp=function(x,a,b){return x<a?a:x>b?b:x},seg=function(t,a,b){return clamp((t-a)/(b-a),0,1)},lerp=function(a,b,k){return a+(b-a)*k};
+  var eo=function(k){return k>=1?1:1-Math.pow(2,-10*k)},ei=function(k){return k<=0?0:Math.pow(2,10*(k-1))};
+  function spr(s,w){if(s<=0)return 0;var z=.82,wd=w*Math.sqrt(1-z*z);return 1-Math.exp(-z*w*s)*(Math.cos(wd*s)+(z*w/wd)*Math.sin(wd*s));}
+  var VW=innerWidth,VH=innerHeight,CX=VW/2,CY=VH/2;
+  function el(css,cls,parent){var d=document.createElement('div');d.style.cssText=css||'';if(cls)d.className=cls;(parent||root).appendChild(d);return d;}
+  function logo(parent,z){var s=document.createElementNS(NS,'svg');s.setAttribute('viewBox','0 0 1433 2000');s.setAttribute('class','pdlg');
+    s.innerHTML='<g><polygon points="462,62 474,56 603,349 520,370"/><polygon points="709,0 721,0 757,346 673,346"/><polygon points="968,62 956,56 828,349 910,369"/></g><circle cx="581" cy="452" r="47"/><circle cx="716" cy="440" r="47"/><circle cx="849" cy="452" r="47"/><path fill-rule="evenodd" d="M0 1285a716 715 0 1 0 1432 0a716 715 0 1 0 -1432 0zM255 1295a462 500 0 1 1 924 0a462 500 0 1 1 -924 0z"/>';
+    s.style.zIndex=z;parent.appendChild(s);return s;}
+  function place(s,hx,hy,H,c){s.style.left=(hx-.3585*H)+'px';s.style.top=(hy-.6475*H)+'px';s.style.width=(.7165*H)+'px';s.style.height=H+'px';s.style.display='block';if(c)s.style.fill=c;}
+  function hide(e){if(e.style.display!=='none')e.style.display='none';}
+  function needH(hx,hy){var m=0;[[0,0],[VW,0],[0,VH],[VW,VH]].forEach(function(c){var dx=c[0]-hx,dy=c[1]-hy;m=Math.max(m,Math.sqrt(Math.pow(dx/.231,2)+Math.pow(dy/.25,2)));});return m*1.08;}
+  // layers
+  var L1=el('inset:0;background:'+WHITE+';z-index:1','pda');
+  var L2=el('inset:0;background:'+INK+';z-index:2;display:none','pda');
+  var hero=logo(root,50),ring=logo(root,51);
+  // words: Sign / in / to your / world
+  var FS=Math.min(VW*.88/3.45,VH*.42),TOP=CY-FS*.5;
+  var defs=[['Sign',PINK],['ın',INK],['to your',WHITE],['world',ROSE]],PAN=[null,PINK,ROSE,BLUSH],BT=[1,1.5,2,2.5],pans=[],W=[];
+  defs.forEach(function(d,k){
+    if(k)pans[k]=el('inset:0;background:'+PAN[k]+';z-index:'+(10*k),'pda',L2);
+    var w=el('left:0;width:'+VW+'px;top:'+TOP+'px;font-size:'+FS+'px;color:'+d[1]+';z-index:'+(10*k+1),'pdw',L2),sp=[];
+    for(var i=0;i<d[0].length;i++){var o=document.createElement('span');o.className='pdc';var s=document.createElement('span');s.textContent=d[0][i]===' '?' ':d[0][i];o.appendChild(s);w.appendChild(o);sp.push({o:o,s:s});}
+    var probe=document.createElement('span');probe.style.cssText='display:inline-block;width:0;height:0';w.appendChild(probe);
+    W.push({w:w,sp:sp,probe:probe});
+  });
+  var dotI=[logo(L2,2),logo(L2,12)],dotP=logo(L2,32);
+  var tH=FS*.34;
+  function tittle(k,idx){var r=W[k].sp[idx].o.getBoundingClientRect(),b=W[k].probe.getBoundingClientRect().bottom;return{x:(r.left+r.right)/2+.0175*FS,y:b-.72*FS};}
+  function period(){var r=W[3].sp[4].o.getBoundingClientRect(),b=W[3].probe.getBoundingClientRect().bottom;return{x:r.right+.15*FS,y:b-.09*FS};}
+  var started=null,fin=false,released=false;
+  function frame(t){
+    // A: logo on white, then the ring pushes at the camera and the ink scene lives inside the hole
+    var H0=Math.min(VH*.6,VW*1.05);
+    var hcy=CY+.1475*H0; // the hole centre sits .1475H below the logo's centre
+    if(t<.5){place(hero,CX,hcy,H0*(1+.05*seg(t,0,.5)),PINK);L1.style.display='block';hide(L2);}
+    else if(t<1.1){var H1=needH(CX,hcy),H=H0*1.05*Math.pow(H1/(H0*1.05),eo(seg(t,.5,1.1)));place(hero,CX,hcy,H,PINK);L2.style.display='block';L2.style.clipPath='ellipse('+(.231*H-1.5)+'px '+(.25*H-1.5)+'px at '+CX+'px '+hcy+'px)';}
+    else{hide(hero);hide(L1);L2.style.display='block';L2.style.clipPath='none';}
+    // B: type on the beat; every dot is the Pandora logo
+    if(t>=.5){
+      for(var k=0;k<4;k++){
+        if(pans[k])pans[k].style.clipPath='inset(0 '+(100*(1-eo(seg(t,BT[k],BT[k]+.22))))+'% 0 0)';
+        var tn=k<3?BT[k+1]:99;
+        W[k].sp.forEach(function(l,i){var p=eo(seg(t,BT[k]+.02*i,BT[k]+.02*i+.3)),ex=ei(seg(t,tn,tn+.14));l.s.style.transform='translateY('+((1-p)*130-ex*130)+'%)';});
+      }
+      var a=tittle(0,1),b=tittle(1,0),pp=period();
+      if(t>=1.15)place(dotI[0],a.x,a.y,tH*spr(t-1.15,26),PINK);else hide(dotI[0]);
+      if(t>=1.65)place(dotI[1],b.x,b.y,tH*spr(t-1.65,26),INK);else hide(dotI[1]);
+      if(t>=2.7&&t<2.9)place(dotP,pp.x,pp.y,tH*spr(t-2.7,26),ROSE);else hide(dotP);
+      // C: the full stop becomes a ring and the camera goes through it into the sign-in page
+      if(t>=2.9){
+        var H1b=needH(pp.x,pp.y),Hb=tH*Math.pow(H1b/tH,eo(seg(t,2.9,3.6)));
+        if(t<3.6){place(ring,pp.x,pp.y,Hb,ROSE);
+          var rx=.231*Hb-1.5,ry=.25*Hb-1.5,x=pp.x,y=pp.y;
+          root.style.clipPath='path(evenodd,"M0 0H'+VW+'V'+VH+'H0Z M'+(x-rx)+' '+y+'a'+rx+' '+ry+' 0 1 0 '+(2*rx)+' 0a'+rx+' '+ry+' 0 1 0 '+(-2*rx)+' 0Z")';}
+        else{finish();return;}
+        if(!released){released=true;body.classList.remove('introing');}
+      }
+    }
+  }
+  function finish(){if(fin)return;fin=true;done();}
+  window.introFrame=frame;
+  if(location.hash==='#manual')return;
+  function tick(now){if(fin)return;if(started===null)started=now;var t=(now-started)/1000;if(t>=4){finish();return;}frame(t);requestAnimationFrame(tick);}
+  requestAnimationFrame(tick);
+  root.addEventListener('pointerdown',finish);addEventListener('keydown',function(e){if(e.key==='Escape')finish();});
+  setTimeout(finish,5000);
+  }catch(e){done();}
+})();
+
+</script>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><filter id="venomGoo" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceGraphic" stdDeviation="3.2" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 34 -14"/></filter></defs></svg>
 <div class="bg" id="bg" aria-hidden="true"><div class="par"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i><div id="fx"></div></div></div>
 <div id="sweep"></div>
