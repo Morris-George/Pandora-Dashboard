@@ -37,6 +37,7 @@ async function readJSON(req) {
 }
 const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
 const key = st => 'vmz/' + slug(st) + '.json';
+const CAT_OPTIONS = ['Earrings', 'Rings']; // product categories offered next to the collections when placing
 const isDay = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
 const pad = n => String(n).padStart(2, '0');
 const today = () => { const d = new Date(Date.now() + 2 * 3600 * 1000); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
@@ -71,6 +72,9 @@ async function storeDaily(st) {
   const rows = await dashRows();
   const colBySku = new Map();
   for (const r of rows) if (r[10] && r[5] && !colBySku.has(r[5])) colBySku.set(r[5], r[10]);
+  // Earrings and Rings are product categories (not ERP collections): they work as extra options next to the collections
+  const catBySku = new Map();
+  for (const r of rows) if (r[5] && CAT_OPTIONS.includes(r[8])) catBySku.set(String(r[5]).trim().toUpperCase(), r[8]);
   const days = new Map(), cols = new Set(), branches = new Set(), names = new Map();
   let maxDay = '';
   const cell = () => ({ net: 0, qty: 0, inv: new Set() });
@@ -91,14 +95,15 @@ async function storeDaily(st) {
     let c = d.c.get(col); if (!c) d.c.set(col, c = cell());
     add(c, net, qty, inv);
   }
-  return { days, maxDay, names, colOf: sku => colBySku.get(sku), collections: [...cols].sort(), branches: [...branches].filter(Boolean).sort() };
+  return { days, maxDay, names, colOf: sku => colBySku.get(sku), catOf: sku => catBySku.get(sku),
+    collections: [...new Set([...cols, ...CAT_OPTIONS])].sort(), branches: [...branches].filter(Boolean).sort() };
 }
 
 // "395078C01-45" -> "395078C01": the design (DV) of a sized SKU
 const dvOf = sku => sku.replace(/-[^-]+$/, '');
 // Which sales lines belong to a placement: a whole collection, or the SKUs / DVs of an uploaded list.
 function matcher(p, sd) {
-  if (!p.list) return sku => sd.colOf(sku) === p.col;
+  if (!p.list) return CAT_OPTIONS.includes(p.col) ? sku => sd.catOf(sku) === p.col : sku => sd.colOf(sku) === p.col;
   const skus = new Set(p.list.skus || []), dvs = new Set(p.list.dvs || []);
   return sku => skus.has(sku) || dvs.has(sku) || dvs.has(dvOf(sku));
 }
