@@ -75,7 +75,15 @@ export async function getItemPrice(code: string): Promise<number | null> {
 }
 
 // Fetches an ERPNext file (images can be private), only from /files or /private/files.
+// Many Pandora items point at the product photo on the Shopify CDN instead; those are public and fetched without ERP credentials.
+const IMAGE_HOSTS = ["cdn.shopify.com"];
 export async function fetchErpFile(path: string): Promise<Response | null> {
+  if (/^https:\/\//.test(path)) {
+    const url = new URL(path);
+    if (!IMAGE_HOSTS.includes(url.hostname)) return null;
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    return res.ok ? res : null;
+  }
   if (!/^\/(private\/)?files\/[^?#]+$/.test(path) || path.includes("..")) return null;
   const res = await fetch(`${BASE}${path}`, { headers: { Authorization: headers().Authorization }, signal: AbortSignal.timeout(8000) });
   return res.ok ? res : null;
