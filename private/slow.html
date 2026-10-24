@@ -186,7 +186,7 @@ function drawTable(){const hasV=J.C.val>=0,hasA=ITEMS.some(i=>i.age!=null);
 }
 function drawRaw(){const s=J.snaps.find(x=>x.rows.length)||J.snaps[0];$('raw').innerHTML=s?`<div class="note">${esc(s.warehouse)}</div><table><tr>${s.cols.map(c=>`<th class="l">${esc(c.label)}</th>`).join('')}</tr>${s.rows.slice(0,200).map(r=>`<tr>${r.map(v=>`<td class="l">${esc(v)}</td>`).join('')}</tr>`).join('')}</table>`:''}
 document.addEventListener('click',e=>{const f=e.target.closest('[data-f]');if(f){const k=f.dataset.f;F[k]=F[k]===f.dataset.v?'':f.dataset.v;draw();return}
-  const t=e.target.closest('[data-tag]');if(t){F.tag=t.dataset.tag;F.cat=F.store=F.ab='';draw();if(t.dataset.go).closest('.card').scrollIntoView({behavior:'smooth',block:'start'});return}
+  const t=e.target.closest('[data-tag]');if(t){F.tag=t.dataset.tag;F.cat=F.store=F.ab='';draw();if(t.dataset.go)$('q').closest('.card').scrollIntoView({behavior:'smooth',block:'start'});return}
   if(e.target.closest('[data-clear]')){F.cat=F.store=F.ab='';draw();return}
   const s=e.target.closest('th[data-sort]');if(s){const k=s.dataset.sort;SORT=SORT.k===k?{k,d:-SORT.d}:{k,d:typeof ITEMS[0][k]==='string'?1:-1};drawTable()}});
 $('q').oninput=drawTable;
