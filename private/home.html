@@ -16,6 +16,7 @@ body.go .logo{width:84px}
 body.go .greet{animation:rise .6s cubic-bezier(.2,.8,.2,1) .45s forwards}
 .title{font-size:24px;letter-spacing:-.03em;margin:0 0 4px;font-weight:800}.sub{font-size:13.5px;color:var(--muted);margin:0}
 .apps{display:grid;gap:10px;width:min(100%,430px)}
+@media (min-width:640px){.apps{grid-template-columns:1fr 1fr;width:min(100%,780px)}}
 .app{display:flex;gap:13px;align-items:center;padding:11px 16px 11px 12px;border:1px solid var(--line);border-radius:22px;background:var(--surface);color:var(--text);text-decoration:none;opacity:0;transform:translateY(16px) scale(.98);transition:border-color .2s,box-shadow .2s,transform .2s}
 body.go .app{animation:rise .6s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(.75s + var(--i) * .11s)}
 .app:hover{border-color:var(--accent);box-shadow:0 6px 22px #FF93A033;transform:translateY(-2px)!important}
