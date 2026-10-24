@@ -38,7 +38,7 @@ const en = {
     failed: "Could not change the password. Choose a different one.",
   },
   nav: {
-    "/intake": "New Maintenance Ticket", "/tickets": "Tickets", "/tracking": "Ticket Tracking", "/dispatch": "Dispatches & Returns", "/diagnosis": "Diagnosis",
+    "/": "My work", "/intake": "New Maintenance Ticket", "/tickets": "Tickets", "/tracking": "Ticket Tracking", "/dispatch": "Dispatches & Returns", "/diagnosis": "Diagnosis",
     "/quotes": "Quote approval", "/pickup": "Pickup", "/reports": "Reports", "/admin": "Admin",
   } as Record<string, string>,
   home: {
@@ -46,6 +46,14 @@ const en = {
     denied: (role: string) => `The role ${role} has no permission for that screen.`,
     welcome: (name: string) => `Welcome, ${name}`,
     building: (role: string) => `The screens for ${role} are being built. Branch intake is available now for branch roles.`,
+    nothing: "Nothing is waiting for your role.",
+    lateTotal: (n: number) => `${n} overdue — see them`, allOnTime: "Everything is on time",
+    late: (n: number) => `${n} overdue`, onTime: "On time",
+    queues: {
+      toSend: "To pack & send to HQ", toApprove: "Batches to approve", toPickup: "Ready for the customer",
+      inTransit: "In transit", toDiagnose: "To receive & diagnose", inRepair: "In repair / parts / QC",
+      toReturn: "To send back to stores", quotes: "Quotes waiting for customers", lost: "Lost in transit",
+    } as Record<string, string>,
   },
   roles: {
     associate: "Branch Associate", manager: "Branch Manager", courier: "Courier", hq: "HQ Receiving",
@@ -129,6 +137,20 @@ const en = {
     errRecord: (n: number, m: string) => `Photo ${n} could not be recorded: ${m}`,
   },
   admin: {
+    receipt: {
+      title: "Receipt (80 mm printer)",
+      note: "Layout of the intake and delivery receipts. Changes apply to the next print in every store.",
+      previewIntake: "Preview intake receipt", previewDelivery: "Preview delivery receipt",
+      logo: "Logo", logoOptions: { pandora: "Official Pandora logo", custom: "Our own logo (upload)", none: "No logo" } as Record<string, string>,
+      logoTooBig: "The logo file is too big. Use a PNG or JPG under 300 KB (black on white prints best).",
+      storeLine: "Line under the logo (e.g. company name, tax number)", phone: "Phone / WhatsApp", website: "Website",
+      fields: "Show on the receipt",
+      fieldNames: { showMobile: "Customer mobile (partly hidden)", showItemCode: "Item code", showQr: "QR code to track the repair", showAgreed: "Agreed cost (intake)" } as Record<string, string>,
+      termsIntake: "Terms & conditions — intake receipt", termsDelivery: "Terms & conditions — delivery receipt", footer: "Footer (thank-you line)",
+      arabic: "Arabic", english: "English",
+      emptyNote: "Leave a text empty to use the standard wording. Receipts print in the language the staff member is using.",
+      save: "Save receipt", saved: "Saved. The next receipt uses it.", failed: "Could not save. Check the fields and try again.",
+    },
     security: {
       title: "Security: two-step login for Super Admins",
       note: "When on, Super Admins enter a code from an authenticator app after their password. Strongly recommended: these accounts can do everything.",
@@ -240,6 +262,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     } as Record<string, string>,
   },
   list: {
+    overdueOnly: "Overdue only", lateBy: (n: number) => `${n}d late`,
     title: "Tickets",
     count: (n: number) => `${n} ticket(s) in your scope`,
     search: "Search by ticket no., customer, item or SKU",
@@ -297,6 +320,9 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     footer: (s: string) => `Please keep this memo and bring it when collecting your item. Status: ${s}.`,
   },
   dispatch: {
+    collectTitle: "Batches to collect", collectNote: "Check the bag is sealed, type the seal number written on it, then confirm. This records you as the carrier.",
+    noneToCollect: "No sealed batches are waiting for collection.", sealOnBag: "Seal number on the bag", collect: "Confirm collected",
+    collected: (at: string) => `Collected by courier · ${at}`,
     title: "Dispatches & Returns",
     packTitle: "Pack a batch for HQ",
     packNote: "Select the received items, seal the bag and enter the seal number. A branch manager other than you must approve before the courier leaves.",
@@ -327,6 +353,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     batchStatus: { awaiting_approval: "Awaiting approval", in_transit: "In transit", received: "Received", incident: "Incident" } as Record<string, string>,
     cols: { batch: "Batch", direction: "Direction", branch: "Branch", seal: "Seal", items: "Items", created: "Created", status: "Status" },
     errors: {
+      sealMismatch: "The seal number does not match this batch. Do not take it; tell the supervisor.", 
       sod: "Separation of duties: the person who packed or sent this batch can't approve or receive it.",
       seal: "Enter the seal number.",
       empty: "Select at least one item.",
@@ -652,7 +679,7 @@ const ar: Dict = {
     failed: "تعذر تغيير كلمة المرور. اختر كلمة مختلفة.",
   },
   nav: {
-    "/intake": "تيكيت صيانة جديد", "/tickets": "التيكيتات", "/tracking": "تتبع التيكيت", "/dispatch": "الشحن والمرتجعات", "/diagnosis": "التشخيص",
+    "/": "شغلي", "/intake": "تيكيت صيانة جديد", "/tickets": "التيكيتات", "/tracking": "تتبع التيكيت", "/dispatch": "الشحن والمرتجعات", "/diagnosis": "التشخيص",
     "/quotes": "موافقة العرض", "/pickup": "التسليم للعميل", "/reports": "التقارير", "/admin": "الإدارة",
   },
   home: {
@@ -660,6 +687,14 @@ const ar: Dict = {
     denied: (role) => `دور ${role} ليس له صلاحية على هذه الشاشة.`,
     welcome: (name) => `أهلاً، ${name}`,
     building: (role) => `شاشات ${role} قيد البناء. شاشة الاستلام متاحة الآن لأدوار الفروع.`,
+    nothing: "مفيش حاجة مستنية دورك.",
+    lateTotal: (n) => `${n} متأخر — اعرضهم`, allOnTime: "كل حاجة في معادها",
+    late: (n) => `${n} متأخر`, onTime: "في المعاد",
+    queues: {
+      toSend: "للتجهيز والشحن للمركز", toApprove: "شحنات محتاجة موافقة", toPickup: "جاهزة للعميل",
+      inTransit: "في الطريق", toDiagnose: "للاستلام والتشخيص", inRepair: "في الصيانة / قطع غيار / جودة",
+      toReturn: "للرجوع للفروع", quotes: "عروض أسعار مستنية العميل", lost: "مفقود أثناء النقل",
+    } as Record<string, string>,
   },
   roles: {
     associate: "موظف الفرع", manager: "مدير الفرع", courier: "المندوب", hq: "استلام المركز الرئيسي",
@@ -743,6 +778,20 @@ const ar: Dict = {
     errRecord: (n, m) => `تعذر تسجيل الصورة ${n}: ${m}`,
   },
   admin: {
+    receipt: {
+      title: "الإيصال (طابعة 80 مم)",
+      note: "شكل إيصال الاستلام وإيصال التسليم. التغيير بيتطبق على أول طباعة جاية في كل الفروع.",
+      previewIntake: "معاينة إيصال الاستلام", previewDelivery: "معاينة إيصال التسليم",
+      logo: "اللوجو", logoOptions: { pandora: "لوجو باندورا الرسمي", custom: "لوجو خاص بينا (رفع ملف)", none: "من غير لوجو" } as Record<string, string>,
+      logoTooBig: "ملف اللوجو كبير. استخدم PNG أو JPG أقل من 300 كيلوبايت (الأسود على أبيض بيطبع أحسن).",
+      storeLine: "سطر تحت اللوجو (مثلاً اسم الشركة، الرقم الضريبي)", phone: "تليفون / واتساب", website: "الموقع",
+      fields: "يظهر في الإيصال",
+      fieldNames: { showMobile: "موبايل العميل (جزء مخفي)", showItemCode: "كود القطعة", showQr: "كود QR لمتابعة الصيانة", showAgreed: "التكلفة المتفق عليها (الاستلام)" } as Record<string, string>,
+      termsIntake: "الشروط والأحكام — إيصال الاستلام", termsDelivery: "الشروط والأحكام — إيصال التسليم", footer: "سطر الختام (الشكر)",
+      arabic: "عربي", english: "إنجليزي",
+      emptyNote: "سيب النص فاضي عشان يستخدم الصيغة الأساسية. الإيصال بيتطبع باللغة اللي الموظف شغال بيها.",
+      save: "حفظ الإيصال", saved: "اتحفظ. أول إيصال جاي هيستخدمه.", failed: "مقدرناش نحفظ. راجع البيانات وحاول تاني.",
+    },
     security: {
       title: "الأمان: التحقق بخطوتين لمديري النظام",
       note: "لما يكون شغال، مدير النظام بيكتب كود من تطبيق التحقق بعد كلمة المرور. مُوصى بيه جداً لأن الحسابات دي تقدر تعمل كل حاجة.",
@@ -855,6 +904,7 @@ const ar: Dict = {
     },
   },
   list: {
+    overdueOnly: "المتأخر بس", lateBy: (n: number) => `متأخر ${n} يوم`,
     title: "التيكيتات",
     count: (n) => `${n} تيكيت في نطاق صلاحيتك`,
     search: "ابحث برقم التيكيت أو العميل أو القطعة أو الكود",
@@ -912,6 +962,9 @@ const ar: Dict = {
     footer: (s) => `برجاء الاحتفاظ بهذا الإيصال وإحضاره عند استلام القطعة. الحالة: ${s}.`,
   },
   dispatch: {
+    collectTitle: "شحنات للاستلام", collectNote: "اتأكد إن الشنطة مقفولة بالسيل، اكتب رقم السيل اللي عليها وأكّد. كده هتتسجل إنك اللي نقلتها.",
+    noneToCollect: "مفيش شحنات مقفولة مستنية الاستلام.", sealOnBag: "رقم السيل على الشنطة", collect: "تأكيد الاستلام",
+    collected: (at: string) => `استلمها المندوب · ${at}`,
     title: "الشحن والمرتجعات",
     packTitle: "تجهيز شحنة للمركز الرئيسي",
     packNote: "اختر القطع المستلمة، اقفل الكيس وأدخل رقم السيل. لازم مدير فرع غيرك يوافق قبل ما المندوب يتحرك.",
@@ -942,6 +995,7 @@ const ar: Dict = {
     batchStatus: { awaiting_approval: "في انتظار الموافقة", in_transit: "في الطريق", received: "تم الاستلام", incident: "مشكلة" } as Record<string, string>,
     cols: { batch: "الشحنة", direction: "الاتجاه", branch: "الفرع", seal: "السيل", items: "القطع", created: "التاريخ", status: "الحالة" },
     errors: {
+      sealMismatch: "رقم السيل مش مطابق للشحنة دي. متستلمهاش وبلّغ المشرف.", 
       sod: "فصل المهام: اللي جهز أو أرسل الشحنة مايقدرش يوافق عليها أو يستلمها.",
       seal: "أدخل رقم السيل.",
       empty: "اختر قطعة واحدة على الأقل.",

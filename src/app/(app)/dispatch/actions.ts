@@ -12,6 +12,8 @@ type Result = { error?: string; batchNo?: string };
 // Map database exceptions to dictionary error keys
 function errorKey(message: string): string {
   if (message.includes("SoD")) return "sod";
+  if (message.includes("does not match")) return "sealMismatch";
+  if (message.includes("already collected")) return "stale";
   if (message.includes("seal")) return "seal";
   if (message.includes("at least one")) return "empty";
   if (message.includes("every ticket")) return "stale";
@@ -59,6 +61,15 @@ export async function approveBatch(batchId: string): Promise<Result> {
   await requireRole("manager");
   const supabase = await createClient();
   const { error } = await supabase.rpc("approve_batch", { p_batch: z.string().uuid().parse(batchId) });
+  if (error) return { error: errorKey(error.message) };
+  return done();
+}
+
+// Courier confirms collecting a sealed batch (seal number must match)
+export async function courierPickup(batchId: string, seal: string): Promise<Result> {
+  await requireRole("courier");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("courier_pickup", { p_batch: z.string().uuid().parse(batchId), p_seal: seal.trim().slice(0, 40) });
   if (error) return { error: errorKey(error.message) };
   return done();
 }

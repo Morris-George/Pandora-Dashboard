@@ -6,6 +6,8 @@ import { CategoriesPanel } from "./categories-panel";
 import { ReportsPanel } from "./reports-panel";
 import { ErpPanel } from "./erp-panel";
 import { SecurityPanel } from "./security-panel";
+import { ReceiptPanel } from "./receipt-panel";
+import { withDefaults } from "@/lib/receipt-settings";
 import { StaffPanel, type StaffRow } from "./staff-panel";
 import { erpConfigured } from "@/lib/erpnext";
 
@@ -16,7 +18,7 @@ export default async function AdminPage() {
   const { locale } = await getI18n();
   const supabase = await createClient();
 
-  const [{ data: profiles }, { data: links }, { data: branches }, { data: pending }, { data: cats }, { data: reports }, { data: access }, { data: runs }, { data: excl }, { data: sps }, { data: twoStep }] = await Promise.all([
+  const [{ data: profiles }, { data: links }, { data: branches }, { data: pending }, { data: cats }, { data: reports }, { data: access }, { data: runs }, { data: excl }, { data: sps }, { data: twoStep }, { data: receipt }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email, role, active, source, must_change_password, erp_created_run").order("full_name"),
     supabase.from("user_branches").select("user_id, branch_id"),
     supabase.from("branches").select("id, name, is_hq").eq("active", true).order("name"),
@@ -28,6 +30,7 @@ export default async function AdminPage() {
     supabase.from("erp_sync_exclusions").select("email, reason").order("email"),
     supabase.from("sales_persons").select("erp_name, erp_group, branch_id, branch_override, profile_id, enabled, ignored, created_run, sync_paused").order("erp_name"),
     supabase.from("app_settings").select("value").eq("key", "admin_two_step").maybeSingle(),
+    supabase.from("app_settings").select("value").eq("key", "receipt").maybeSingle(),
   ]);
 
   // "New" = added by the latest full sync (nightly or Sync now)
@@ -45,6 +48,7 @@ export default async function AdminPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <ReceiptPanel locale={locale} initial={withDefaults(receipt?.value)} />
       <SecurityPanel locale={locale} twoStep={twoStep?.value !== false} />
       <ErpPanel locale={locale} configured={erpConfigured()} excluded={excl ?? []}
         lastRun={runs?.[0] ? { at: runs[0].started_at, trigger: runs[0].trigger, ok: runs[0].ok, summary: runs[0].summary } : null} />

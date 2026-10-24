@@ -3,12 +3,12 @@
 import { useState, useTransition } from "react";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
-import { approveBatch, createOutbound, createReturn, receiveBatch } from "./actions";
+import { approveBatch, courierPickup, createOutbound, createReturn, receiveBatch } from "./actions";
 
 export type ItemRow = { id: string; ticketNo: string; itemName: string; branchId: string; branchName: string };
 export type BatchRow = {
   id: string; batchNo: string; direction: "outbound" | "return"; branchName: string; seal: string;
-  status: string; mine: boolean; createdAt: string;
+  status: string; mine: boolean; createdAt: string; pickedAt: string | null;
   items: { ticketNo: string; itemName: string; scanned: boolean }[];
 };
 type T = (typeof dictionaries)["en"]["dispatch"];
@@ -90,6 +90,17 @@ export function DispatchPanel({ locale, role, myBranches, packable, returnable, 
               <ItemList items={b.items} />
             </div>
           ))}
+        </section>
+      )}
+
+      {role === "courier" && (
+        <section className={card}>
+          <div>
+            <h2 className="text-lg font-semibold">{t.collectTitle}</h2>
+            <p className="text-sm text-stone-600 mt-1">{t.collectNote}</p>
+          </div>
+          {!batches.some((b) => b.status === "in_transit" && !b.pickedAt) && <p className="text-sm text-stone-600">{t.noneToCollect}</p>}
+          {batches.filter((b) => b.status === "in_transit" && !b.pickedAt).map((b) => <CollectCard key={b.id} t={t} b={b} busy={busy} run={run} />)}
         </section>
       )}
 
@@ -240,6 +251,7 @@ function BatchHead({ t, b }: { t: T; b: BatchRow }) {
       <strong dir="ltr">{b.batchNo}</strong>
       <span className="text-sm text-stone-600">{b.direction === "outbound" ? t.outbound : t.return} · {b.branchName}</span>
       <span className="text-xs text-stone-500">{t.seal}: <span dir="ltr">{b.seal}</span> · {t.items}: {b.items.length}</span>
+      {b.pickedAt && <span className="text-xs text-emerald-800">{t.collected(new Date(b.pickedAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" }))}</span>}
     </div>
   );
 }
@@ -249,5 +261,22 @@ function ItemList({ items }: { items: BatchRow["items"] }) {
     <ul className="w-full text-sm text-stone-700 flex flex-wrap gap-x-4 gap-y-1">
       {items.map((i) => <li key={i.ticketNo}><span dir="ltr" className="font-medium">{i.ticketNo}</span> {i.itemName}</li>)}
     </ul>
+  );
+}
+
+// Courier: type the seal number written on the bag to confirm collecting it
+function CollectCard({ t, b, busy, run }: { t: T; b: BatchRow; busy: boolean; run: Run }) {
+  const [seal, setSeal] = useState("");
+  return (
+    <div className="border-t border-stone-100 pt-3 flex flex-wrap items-end gap-3">
+      <div className="flex-1 min-w-56">
+        <strong dir="ltr">{b.batchNo}</strong>
+        <div className="text-sm text-stone-600">{b.direction === "outbound" ? t.outbound : t.return} · {b.branchName} · {t.items}: {b.items.length}</div>
+      </div>
+      <label className="flex flex-col gap-1 text-sm font-medium">{t.sealOnBag}
+        <input value={seal} onChange={(e) => setSeal(e.target.value)} dir="ltr" className={`${input} w-40`} />
+      </label>
+      <button disabled={busy || !seal.trim()} className={primary} onClick={() => run(() => courierPickup(b.id, seal))}>{t.collect}</button>
+    </div>
   );
 }

@@ -26,7 +26,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
       ? supabase.from("tickets").select("id, ticket_no, item_name, branch_id").eq("status", "ready_to_return").order("created_at")
       : Promise.resolve({ data: [] }),
     supabase.from("dispatch_batches")
-      .select("id, batch_no, direction, branch_id, seal_no, status, sent_by, created_at, branches(name), batch_items(scanned_in, tickets(ticket_no, item_name))")
+      .select("id, batch_no, direction, branch_id, seal_no, status, sent_by, created_at, courier_id, picked_up_at, branches(name), batch_items(scanned_in, tickets(ticket_no, item_name))")
       .order("created_at", { ascending: false }).limit(50),
   ]);
 
@@ -40,7 +40,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
 
   const rows: BatchRow[] = (batches ?? []).map((b) => ({
     id: b.id, batchNo: b.batch_no, direction: b.direction, branchName: (b.branches as unknown as Joined<{ name: string }>)?.name ?? "—",
-    seal: b.seal_no, status: b.status, mine: b.sent_by === me.userId, createdAt: b.created_at,
+    seal: b.seal_no, status: b.status, mine: b.sent_by === me.userId, createdAt: b.created_at, pickedAt: b.picked_up_at,
     items: ((b.batch_items ?? []) as unknown as { scanned_in: boolean; tickets: Joined<{ ticket_no: string; item_name: string }> }[])
       .map((i) => ({ ticketNo: i.tickets?.ticket_no ?? "—", itemName: i.tickets?.item_name ?? "", scanned: i.scanned_in })),
   }));

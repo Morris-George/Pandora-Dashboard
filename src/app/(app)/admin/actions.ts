@@ -102,6 +102,27 @@ export async function changeEmail(userId: string, email: string): Promise<Result
   return {};
 }
 
+const bi = z.object({ ar: z.string().max(600), en: z.string().max(600) });
+const ReceiptInput = z.object({
+  logo: z.enum(["pandora", "custom", "none"]),
+  customLogo: z.string().max(420_000).refine((v) => !v || /^data:image\/(png|jpeg);base64,/.test(v)),
+  storeLine: z.string().max(120), phone: z.string().max(40), website: z.string().max(80),
+  showMobile: z.boolean(), showItemCode: z.boolean(), showQr: z.boolean(), showAgreed: z.boolean(),
+  termsIntake: bi, termsDelivery: bi, footer: bi,
+});
+
+// Admin → Receipt layout
+export async function saveReceiptSettings(input: unknown): Promise<Result> {
+  const me = await requireRole("admin");
+  const v = ReceiptInput.safeParse(input);
+  if (!v.success) return { error: "invalid" };
+  const supabase = await createClient();
+  const { error } = await supabase.from("app_settings").update({ value: v.data, updated_by: me.userId, updated_at: new Date().toISOString() }).eq("key", "receipt");
+  if (error) return { error: "failed" };
+  revalidatePath("/admin");
+  return {};
+}
+
 // Two-step login for Super Admins on / off (on by default)
 export async function setTwoStep(on: boolean): Promise<Result> {
   const me = await requireRole("admin");
