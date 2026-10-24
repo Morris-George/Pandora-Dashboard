@@ -63,6 +63,8 @@ export default async function DiagnosisPage({ searchParams }: { searchParams: Pr
     id: r.id, itemCode: r.item_code, costCode: r.cost_item_code, costName: r.cost_item_name,
     price: r.price === null ? null : Number(r.price), source: r.price_source, syncedAt: r.price_synced_at,
   }));
+  const { data: catCosts } = await supabase.from("fault_categories").select("name, erp_item_name, cost").not("cost", "is", null);
+  const categoryCosts = Object.fromEntries((catCosts ?? []).map((c) => [c.name, { name: c.erp_item_name || c.name, price: Number(c.cost) }]));
   const costs: Record<string, { name: string; price: number }[]> = {};
   for (const l of links) if (l.price !== null && codes.includes(l.itemCode)) (costs[l.itemCode] ??= []).push({ name: l.costName, price: l.price });
 
@@ -70,7 +72,7 @@ export default async function DiagnosisPage({ searchParams }: { searchParams: Pr
     <>
       {tabs}
     <DiagnosisPanel locale={locale} role={me.role} jobs={jobs}
-      technicians={(techs ?? []).map((t) => ({ id: t.id, name: t.full_name }))} costs={costs} />
+      technicians={(techs ?? []).map((t) => ({ id: t.id, name: t.full_name }))} costs={costs} categoryCosts={categoryCosts} />
       {user.isAdmin && <div className="mt-6"><CostLinksPanel locale={locale} links={links} /></div>}
     </>
   );

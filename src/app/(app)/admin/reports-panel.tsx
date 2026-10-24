@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
 import { setReportAccess } from "./actions";
+import { toast } from "@/components/toast";
 
 type Level = "none" | "view" | "export";
 type Report = { key: string; financial: boolean };
@@ -20,11 +21,19 @@ export function ReportsPanel({ locale, reports, grants }: {
   const [busy, start] = useTransition();
   const [error, setError] = useState("");
 
-  const change = (reportKey: string, role: Exclude<AppRole, "admin">, level: Level) =>
+  // Changes are collected here and applied together with Save
+  const [draft, setDraft] = useState<Record<string, Level>>({});
+  const changed = Object.entries(draft).filter(([k, v]) => (grants[k] ?? "none") !== v);
+  const save = () =>
     start(async () => {
       setError("");
-      const r = await setReportAccess({ reportKey, role, level });
-      if (r.error) setError(t.errors[r.error] ?? t.errors.failed);
+      for (const [k, level] of changed) {
+        const [reportKey, role] = k.split(":") as [string, Exclude<AppRole, "admin">];
+        const r = await setReportAccess({ reportKey, role, level }).catch(() => ({ error: "failed" }));
+        if (r.error) { setError(t.errors[r.error] ?? t.errors.failed); return; }
+      }
+      setDraft({});
+      toast(t.repSaved(changed.length));
     });
 
   return (
@@ -50,12 +59,14 @@ export function ReportsPanel({ locale, reports, grants }: {
                   {rep.financial && <span className="text-xs text-amber-800">{t.repFinancial}</span>}
                 </td>
                 {ROLES.map((role) => {
-                  const level = grants[`${rep.key}:${role}`] ?? "none";
+                  const key = `${rep.key}:${role}`;
+                  const level = draft[key] ?? grants[key] ?? "none";
+                  const dirty = (grants[key] ?? "none") !== level;
                   return (
                     <td key={role} className="p-2">
                       <select value={level} disabled={busy} aria-label={`${t.repNames[rep.key] ?? rep.key} — ${d.roles[role]}`}
-                        onChange={(e) => change(rep.key, role, e.target.value as Level)}
-                        className={`rounded-lg border px-2 py-1.5 text-xs ${level === "none" ? "border-stone-200 text-stone-400" : level === "export" ? "border-emerald-700 text-emerald-800 font-semibold" : "border-stone-900"}`}>
+                        onChange={(e) => setDraft({ ...draft, [key]: e.target.value as Level })}
+                        className={`rounded-lg border px-2 py-1.5 text-xs ${dirty ? "ring-2 ring-amber-400 " : ""}${level === "none" ? "border-stone-200 text-stone-400" : level === "export" ? "border-emerald-700 text-emerald-800 font-semibold" : "border-stone-900"}`}>
                         {LEVELS.map((l) => <option key={l} value={l}>{t.repLevel[l]}</option>)}
                       </select>
                     </td>
@@ -65,6 +76,13 @@ export function ReportsPanel({ locale, reports, grants }: {
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="sticky bottom-0 -mx-6 -mb-6 px-6 py-4 rounded-b-2xl bg-white/95 backdrop-blur border-t border-stone-200 flex flex-wrap items-center gap-3">
+        <button disabled={busy || !changed.length} onClick={save}
+          className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-5 py-2.5 text-sm font-bold disabled:opacity-40">{t.save}</button>
+        <button disabled={busy || !changed.length} onClick={() => setDraft({})}
+          className="rounded-lg border border-stone-300 px-4 py-2.5 text-sm disabled:opacity-40">{t.repDiscard}</button>
+        <span className="text-sm text-stone-600">{changed.length ? t.repUnsaved(changed.length) : t.repNoChanges}</span>
       </div>
     </section>
   );

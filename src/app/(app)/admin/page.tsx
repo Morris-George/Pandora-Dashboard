@@ -24,7 +24,7 @@ export default async function AdminPage() {
     supabase.from("user_branches").select("user_id, branch_id"),
     supabase.from("branches").select("id, name, is_hq, whatsapp").eq("active", true).order("name"),
     supabase.from("role_change_requests").select("id, user_id, new_role, requested_by").eq("status", "pending"),
-    supabase.from("fault_categories").select("name, name_ar, requires_comment, active, is_system").order("sort_order"),
+    supabase.from("fault_categories").select("name, name_ar, requires_comment, active, is_system, erp_item_code, erp_item_name, cost, cost_source").order("sort_order"),
     supabase.from("reports").select("key, is_financial"),
     supabase.from("report_access").select("report_key, role, level"),
     supabase.from("erp_sync_runs").select("id, started_at, trigger, ok, summary").neq("trigger", "login").order("started_at", { ascending: false }).limit(1),
@@ -65,6 +65,7 @@ export default async function AdminPage() {
         branches={(branches ?? []).filter((b) => !b.is_hq).map((b) => ({ id: b.id, name: b.name }))} />
       <CategoriesPanel locale={locale} categories={(cats ?? []).map((c) => ({
         name: c.name, nameAr: c.name_ar ?? "", requiresComment: c.requires_comment, active: c.active, system: c.is_system,
+        erpCode: c.erp_item_code, erpName: c.erp_item_name, cost: c.cost === null ? null : Number(c.cost), costSource: c.cost_source,
       }))} />
       <ReportsPanel locale={locale} reports={(reports ?? []).map((r) => ({ key: r.key, financial: r.is_financial }))}
         grants={Object.fromEntries((access ?? []).map((a) => [`${a.report_key}:${a.role}`, a.level]))} />

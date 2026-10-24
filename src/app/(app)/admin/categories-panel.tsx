@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
-import { addCategory, updateCategory } from "./actions";
+import { addCategory, setCategoryCost, syncCategoryCosts, updateCategory } from "./actions";
+import { toast } from "@/components/toast";
 
-type Cat = { name: string; nameAr: string; requiresComment: boolean; active: boolean; system: boolean };
+type Cat = { name: string; nameAr: string; requiresComment: boolean; active: boolean; system: boolean; erpCode: string | null; erpName: string | null; cost: number | null; costSource: string | null };
 const input = "rounded-lg border border-stone-300 px-3 py-2 text-sm font-normal focus:outline-2 focus:outline-stone-900";
 const small = "rounded-lg border px-2.5 py-1.5 text-xs disabled:opacity-40";
 
@@ -16,13 +17,14 @@ export function CategoriesPanel({ locale, categories }: { locale: Locale; catego
   const [name, setName] = useState("");
   const [nameAr, setNameAr] = useState("");
   const [req, setReq] = useState(false);
+  const [costDraft, setCostDraft] = useState<Record<string, { code: string; cost: string }>>({});
 
   const run = (fn: () => Promise<{ error?: string }>, after?: () => void) =>
     start(async () => {
       setError("");
       const r = await fn();
-      if (r.error) setError(t.errors[r.error] ?? t.errors.failed);
-      else after?.();
+      if (r.error) setError(t.errors[r.error] ?? t.catCost.errors[r.error as keyof typeof t.catCost.errors] ?? t.errors.failed);
+      else { toast(); after?.(); }
     });
 
   return (
@@ -30,14 +32,19 @@ export function CategoriesPanel({ locale, categories }: { locale: Locale; catego
       <div>
         <h2 className="text-lg font-semibold">{t.catTitle}</h2>
         <p className="text-sm text-stone-600 mt-1">{t.catNote}</p>
+        <p className="text-sm text-stone-600 mt-1">{t.catCost.note}</p>
+        <button disabled={busy} className={`${small} border-stone-900 mt-2`} onClick={() => run(() => syncCategoryCosts())}>{t.catCost.sync}</button>
       </div>
       {error && <p role="alert" className="rounded-lg bg-red-50 text-red-800 text-sm p-3">{error}</p>}
 
       <div className="flex flex-col">
         {categories.map((c) => {
           const ar = arDraft[c.name] ?? c.nameAr;
+          const cd = costDraft[c.name] ?? { code: c.erpCode ?? "", cost: c.cost === null ? "" : String(c.cost) };
+          const costChanged = cd.code !== (c.erpCode ?? "") || cd.cost !== (c.cost === null ? "" : String(c.cost));
           return (
-            <div key={c.name} className="flex flex-wrap items-center gap-3 border-t border-stone-100 py-2.5">
+            <div key={c.name} className="flex flex-col gap-2 border-t border-stone-100 py-2.5">
+            <div className="flex flex-wrap items-center gap-3">
               <strong className="flex-[1_1_160px]" dir="ltr">{c.name}</strong>
               <input value={ar} onChange={(e) => setArDraft({ ...arDraft, [c.name]: e.target.value })} dir="rtl"
                 aria-label={`${t.catNameAr} — ${c.name}`} className={`${input} w-48`} />
@@ -62,6 +69,24 @@ export function CategoriesPanel({ locale, categories }: { locale: Locale; catego
                   </button>
                 </>
               )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 ps-0 sm:ps-4">
+              <span className="text-xs text-stone-500 w-24">{t.catCost.label}</span>
+              <input value={cd.code} onChange={(e) => setCostDraft({ ...costDraft, [c.name]: { ...cd, code: e.target.value } })} dir="ltr"
+                placeholder={t.catCost.codePh} aria-label={`${t.catCost.code} — ${c.name}`} className={`${input} w-44`} />
+              <input value={cd.cost} onChange={(e) => setCostDraft({ ...costDraft, [c.name]: { ...cd, cost: e.target.value.replace(/[^\d.]/g, "") } })} dir="ltr" inputMode="decimal"
+                placeholder={t.catCost.costPh} aria-label={`${t.catCost.cost} — ${c.name}`} className={`${input} w-32`} />
+              {costChanged && (
+                <button disabled={busy} className={`${small} border-stone-900`}
+                  onClick={() => run(() => setCategoryCost(c.name, cd.code, cd.cost), () => { const n = { ...costDraft }; delete n[c.name]; setCostDraft(n); })}>
+                  {t.save}
+                </button>
+              )}
+              <span className="text-xs text-stone-600">
+                {c.erpName && <span>{c.erpName} · </span>}
+                {c.cost !== null ? `${c.cost.toFixed(2)} ${t.catCost.beforeVat} (${t.catCost.source[c.costSource as "erp" | "manual"] ?? ""})` : c.erpCode ? t.catCost.noPrice : ""}
+              </span>
+            </div>
             </div>
           );
         })}

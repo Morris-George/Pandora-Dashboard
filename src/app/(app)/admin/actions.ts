@@ -7,6 +7,7 @@ import { requireRole, type AppRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runErpSync } from "@/lib/erp-sync";
+import { erpConfigured, findItem, getItemPrice } from "@/lib/erpnext";
 
 const ROLES = ["associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin"] as const;
 const BRANCH_ROLES: AppRole[] = ["associate", "manager"];
@@ -426,4 +427,50 @@ export async function setBranchWhatsapp(branchId: string, number: string): Promi
   await audit(me.userId, "store_whatsapp", branchId, { whatsapp: value });
   revalidatePath("/admin");
   return { value };
+}
+
+// Fault category cost: link an ERPNext service item; its price is used unless the admin types one
+export async function setCategoryCost(name: string, itemCode: string, cost: string): Promise<Result & { price?: number | null }> {
+  await requireRole("admin");
+  const code = itemCode.trim().slice(0, 60);
+  const typed = cost.trim() ? Number(cost.trim()) : null;
+  if (typed !== null && (!Number.isFinite(typed) || typed < 0 || typed > 1_000_000)) return { error: "invalid" };
+  const row: Record<string, unknown> = { erp_item_code: null, erp_item_name: null, cost: typed, cost_source: typed === null ? null : "manual" };
+  if (code) {
+    if (!erpConfigured()) return { error: "erp" };
+    const item = await findItem(code).catch(() => null);
+    if (!item) return { error: "erpNotFound" };
+    row.erp_item_code = item.itemCode;
+    row.erp_item_name = item.itemName;
+    if (typed === null) {
+      const price = await getItemPrice(item.itemCode);
+      row.cost = price;
+      row.cost_source = price === null ? null : "erp";
+    }
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("fault_categories").update(row).eq("name", name);
+  if (error) return { error: "failed" };
+  revalidatePath("/admin");
+  revalidatePath("/intake");
+  revalidatePath("/diagnosis");
+  return { price: row.cost as number | null };
+}
+
+// Refresh every ERPNext-priced category cost (typed costs stay)
+export async function syncCategoryCosts(): Promise<Result & { synced?: number }> {
+  await requireRole("admin");
+  if (!erpConfigured()) return { error: "erp" };
+  const supabase = await createClient();
+  const { data } = await supabase.from("fault_categories").select("name, erp_item_code, cost_source").not("erp_item_code", "is", null);
+  let synced = 0;
+  for (const c of data ?? []) {
+    if (c.cost_source === "manual") continue;
+    const price = await getItemPrice(c.erp_item_code!);
+    if (price === null) continue;
+    await supabase.from("fault_categories").update({ cost: price, cost_source: "erp" }).eq("name", c.name);
+    synced++;
+  }
+  revalidatePath("/admin");
+  return { synced };
 }

@@ -22,8 +22,8 @@ const ghost = "rounded-lg border border-stone-900 px-4 py-2 text-sm disabled:opa
 const danger = "rounded-lg border border-red-800 text-red-800 px-4 py-2 text-sm disabled:opacity-40";
 const VAT = 0.14;
 
-export function DiagnosisPanel({ locale, role, jobs, technicians, costs }: {
-  locale: Locale; role: AppRole; jobs: Job[]; technicians: { id: string; name: string }[]; costs: Record<string, { name: string; price: number }[]>;
+export function DiagnosisPanel({ locale, role, jobs, technicians, costs, categoryCosts }: {
+  locale: Locale; role: AppRole; jobs: Job[]; technicians: { id: string; name: string }[]; costs: Record<string, { name: string; price: number }[]>; categoryCosts: Record<string, { name: string; price: number }>;
 }) {
   const d = dictionaries[locale];
   const t = d.diag;
@@ -82,7 +82,7 @@ export function DiagnosisPanel({ locale, role, jobs, technicians, costs }: {
 
       {(sup || tech) && (
         <Section title={t.diagnoseTitle} empty={t.noneDiagnose} count={toDiagnose.length}>
-          {toDiagnose.map((j) => <DiagnoseForm key={j.id} {...p} j={j} supervisor={sup} costs={(j.itemCode && costs[j.itemCode]) || []} />)}
+          {toDiagnose.map((j) => <DiagnoseForm key={j.id} {...p} j={j} supervisor={sup} costs={[...(categoryCosts[j.fault] ? [categoryCosts[j.fault]] : []), ...((j.itemCode && costs[j.itemCode]) || [])]} />)}
           {tech && overrides.map((j) => (
             <div key={j.id} className="border-t border-stone-100 pt-3"><JobHead d={d} j={j} /><p className="text-sm text-amber-800 mt-1">{t.waitingOverride}</p></div>
           ))}

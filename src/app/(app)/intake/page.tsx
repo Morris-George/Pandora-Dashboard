@@ -11,7 +11,7 @@ export default async function IntakePage() {
   const supabase = await createClient();
   const { data: categories } = await supabase
     .from("fault_categories")
-    .select("name, name_ar, requires_comment")
+    .select("name, name_ar, requires_comment, cost")
     .eq("active", true)
     .order("sort_order");
 
@@ -32,6 +32,7 @@ export default async function IntakePage() {
         name: c.name,
         label: locale === "ar" && c.name_ar ? c.name_ar : c.name,
         requiresComment: c.requires_comment,
+        cost: c.cost === null ? null : Math.round(Number(c.cost) * 1.14 * 100) / 100, // incl. VAT
       }))}
     />
   );
