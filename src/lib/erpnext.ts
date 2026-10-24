@@ -59,6 +59,21 @@ export async function findItem(code: string): Promise<ErpItem | null> {
   return item ? toItem(item) : null;
 }
 
+// Selling price from the Pandora price list (ERPNext prices include 14% VAT; returned before VAT).
+// null when there is no price or the API user may not read Item Price.
+const PRICE_LIST = process.env.ERPNEXT_PRICE_LIST || "Pandora Standard Selling";
+export async function getItemPrice(code: string): Promise<number | null> {
+  const filters = encodeURIComponent(JSON.stringify([["item_code", "=", code], ["price_list", "=", PRICE_LIST]]));
+  const fields = encodeURIComponent(JSON.stringify(["price_list_rate"]));
+  try {
+    const rows = await get<{ price_list_rate: number }[]>(`/api/resource/Item Price?filters=${filters}&fields=${fields}&limit_page_length=1`);
+    const rate = rows?.[0]?.price_list_rate;
+    return typeof rate === "number" ? Math.round((rate / 1.14) * 100) / 100 : null;
+  } catch {
+    return null;
+  }
+}
+
 // Fetches an ERPNext file (images can be private), only from /files or /private/files.
 export async function fetchErpFile(path: string): Promise<Response | null> {
   if (!/^\/(private\/)?files\/[^?#]+$/.test(path) || path.includes("..")) return null;

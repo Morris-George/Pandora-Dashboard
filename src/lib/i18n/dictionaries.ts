@@ -138,6 +138,11 @@ const en = {
     errRecord: (n: number, m: string) => `Photo ${n} could not be recorded: ${m}`,
   },
   admin: {
+    stores: {
+      title: "Stores — WhatsApp number",
+      note: "Each store's WhatsApp number. It is printed on the receipts and the customer can tap it on the tracking page to chat with the store.",
+      whatsapp: "WhatsApp", save: "Save", saved: "Saved", invalid: "Not a valid number",
+    },
     dlg: { save: "Save", cancel: "Cancel", confirm: "Confirm", next: "Next", merge: "Merge (same person)", linkOnly: "Only link", mergeTitle: "Same person?", manager: "Branch Manager", associate: "Branch Associate" },
     receipt: {
       title: "Receipt (80 mm printer)",
@@ -273,6 +278,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     cols: { no: "Ticket", date: "Date", customer: "Customer", item: "Item", branch: "Branch", warranty: "Warranty", status: "Status" },
   },
   receipt: {
+    whatsapp: "WhatsApp",
     title: "Maintenance receipt", print: "Print", customer: "Customer", mobile: "Mobile", item: "Item", code: "Code",
     fault: "Fault", accessories: "With", agreed: "Agreed cost", egp: "EGP", afterDiagnosis: "After diagnosis",
     scan: "Scan to track your repair", sign: "Customer signature",
@@ -365,6 +371,18 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     } as Record<string, string>,
   },
   diag: {
+    costs: {
+      pick: "Linked cost items:",
+      title: "Repair cost items (Super Admin)",
+      note: "Link a product's item code to its ERPNext cost items (spare parts or service). The technician then adds them to the quote with one tap, at the ERPNext price.",
+      itemCode: "Product item code", costCode: "ERPNext cost item code", costItem: "Cost item", price: "Price (before VAT)",
+      manualPrice: "Price if ERPNext has none", add: "Link", sync: "Sync prices from ERPNext", search: "Search…",
+      priceNote: "Prices are read from the \"Pandora Standard Selling\" price list (VAT removed). If ERPNext gives no price, the price you type is used.",
+      remove: "Remove", cancel: "Cancel", askRemove: (name: string, item: string) => `Unlink ${name} from ${item}?`,
+      source: { erp: "ERPNext", manual: "manual" },
+      synced: (n: number, missing: number) => `${n} price(s) updated from ERPNext${missing ? `, ${missing} without an ERPNext price (kept as is)` : ""}.`,
+      errors: { invalid: "Check the codes and price.", erp: "ERPNext is not connected.", notFound: "That cost item code was not found in ERPNext.", noPrice: "ERPNext has no price for this item. Type the price.", failed: "Could not save. Reload the page and try again." },
+    },
     title: "Diagnosis & repair",
     assignTitle: "Received at HQ — assign a technician",
     assignNote: "Assigning opens the diagnosis. The technician only sees tickets assigned to them.",
@@ -574,6 +592,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     } as Record<string, string>,
   },
   track: {
+    whatsapp: "Chat with the store on WhatsApp",
     subtitle: "Track your repair",
     lookupTitle: "Track your repair",
     lookupNote: "Enter the ticket number from your receipt and the last 4 digits of your mobile number.",
@@ -781,6 +800,11 @@ const ar: Dict = {
     errRecord: (n, m) => `تعذر تسجيل الصورة ${n}: ${m}`,
   },
   admin: {
+    stores: {
+      title: "الفروع — رقم واتساب",
+      note: "رقم واتساب كل فرع. بيتطبع على الإيصالات، والعميل يقدر يدوس عليه من صفحة التتبع ويكلم الفرع.",
+      whatsapp: "واتساب", save: "حفظ", saved: "اتحفظ", invalid: "الرقم مش صحيح",
+    },
     dlg: { save: "حفظ", cancel: "إلغاء", confirm: "تأكيد", next: "التالي", merge: "دمج (نفس الشخص)", linkOnly: "ربط بس", mergeTitle: "نفس الشخص؟", manager: "مدير فرع", associate: "موظف فرع" },
     receipt: {
       title: "الإيصال (طابعة 80 مم)",
@@ -917,6 +941,7 @@ const ar: Dict = {
     cols: { no: "التيكيت", date: "التاريخ", customer: "العميل", item: "القطعة", branch: "الفرع", warranty: "الضمان", status: "الحالة" },
   },
   receipt: {
+    whatsapp: "واتساب",
     title: "إيصال صيانة", print: "طباعة", customer: "العميل", mobile: "الموبايل", item: "القطعة", code: "الكود",
     fault: "العطل", accessories: "مع", agreed: "التكلفة المتفق عليها", egp: "جنيه", afterDiagnosis: "بعد الفحص",
     scan: "امسح الكود لمتابعة الصيانة", sign: "توقيع العميل",
@@ -1009,6 +1034,18 @@ const ar: Dict = {
     } as Record<string, string>,
   },
   diag: {
+    costs: {
+      pick: "بنود التكلفة المربوطة:",
+      title: "بنود تكلفة الصيانة (سوبر أدمن)",
+      note: "اربط كود الصنف ببنود التكلفة بتاعته في ERPNext (قطع غيار أو خدمة). الفني بعدها يضيفها لعرض السعر بضغطة، بسعر ERPNext.",
+      itemCode: "كود الصنف", costCode: "كود بند التكلفة في ERPNext", costItem: "بند التكلفة", price: "السعر (قبل الضريبة)",
+      manualPrice: "السعر لو مش موجود في ERPNext", add: "ربط", sync: "تحديث الأسعار من ERPNext", search: "بحث…",
+      priceNote: "الأسعار بتتقري من قائمة \"Pandora Standard Selling\" (من غير الضريبة). لو ERPNext مفيهوش سعر، بيتاخد السعر اللي انت كاتبه.",
+      remove: "إزالة", cancel: "إلغاء", askRemove: (name: string, item: string) => `فك ربط ${name} من ${item}؟`,
+      source: { erp: "ERPNext", manual: "يدوي" },
+      synced: (n: number, missing: number) => `اتحدث ${n} سعر من ERPNext${missing ? `، و${missing} مالهمش سعر في ERPNext (فضلوا زي ما هم)` : ""}.`,
+      errors: { invalid: "راجع الأكواد والسعر.", erp: "ERPNext مش متوصل.", notFound: "كود بند التكلفة ده مش موجود في ERPNext.", noPrice: "ERPNext مفيهوش سعر للصنف ده. اكتب السعر.", failed: "مقدرناش نحفظ. اعمل تحديث للصفحة وجرب تاني." },
+    },
     title: "التشخيص والصيانة",
     assignTitle: "وصلت المركز الرئيسي — تعيين فني",
     assignNote: "التعيين بيفتح التشخيص. الفني بيشوف التيكيتات المعينة له فقط.",
@@ -1218,6 +1255,7 @@ const ar: Dict = {
     } as Record<string, string>,
   },
   track: {
+    whatsapp: "كلم الفرع على واتساب",
     subtitle: "تتبع الصيانة",
     lookupTitle: "تتبع الصيانة",
     lookupNote: "أدخل رقم التيكيت من الإيصال وآخر 4 أرقام من موبايلك.",

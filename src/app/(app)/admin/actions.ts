@@ -412,3 +412,18 @@ export async function setSalesPersonIgnored(erpName: string, ignored: boolean): 
   revalidatePath("/admin");
   return {};
 }
+
+// Store WhatsApp number; Egyptian 01xxxxxxxxx becomes +201xxxxxxxxx. Empty clears it.
+export async function setBranchWhatsapp(branchId: string, number: string): Promise<{ error?: string; value?: string | null }> {
+  const me = await requireRole("admin");
+  z.string().uuid().parse(branchId);
+  let digits = number.replace(/[^0-9]/g, "");
+  if (/^01[0-9]{9}$/.test(digits)) digits = "2" + digits;
+  const value = digits ? `+${digits}` : null;
+  if (value && !/^\+[0-9]{8,15}$/.test(value)) return { error: "invalid" };
+  const { error } = await createAdminClient().from("branches").update({ whatsapp: value }).eq("id", branchId);
+  if (error) return { error: "failed" };
+  await audit(me.userId, "store_whatsapp", branchId, { whatsapp: value });
+  revalidatePath("/admin");
+  return { value };
+}

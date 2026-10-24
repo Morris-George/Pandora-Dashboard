@@ -4,6 +4,7 @@ import { getI18n } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DiagnosisPanel, type Job } from "./diagnosis-panel";
+import { CostLinksPanel } from "./cost-links-panel";
 
 export const metadata = { title: "Pandora Maintenance" };
 
@@ -51,11 +52,26 @@ export default async function DiagnosisPage({ searchParams }: { searchParams: Pr
     };
   });
 
+  // Repair cost items linked to these products (all of them for the Super Admin's list)
+  const codes = [...new Set((tickets ?? []).map((t) => t.item_code).filter(Boolean))] as string[];
+  const { data: costRows } = user.isAdmin
+    ? await supabase.from("item_cost_links").select("id, item_code, cost_item_code, cost_item_name, price, price_source, price_synced_at").order("item_code")
+    : codes.length
+      ? await supabase.from("item_cost_links").select("id, item_code, cost_item_code, cost_item_name, price, price_source, price_synced_at").in("item_code", codes)
+      : { data: [] };
+  const links = (costRows ?? []).map((r) => ({
+    id: r.id, itemCode: r.item_code, costCode: r.cost_item_code, costName: r.cost_item_name,
+    price: r.price === null ? null : Number(r.price), source: r.price_source, syncedAt: r.price_synced_at,
+  }));
+  const costs: Record<string, { name: string; price: number }[]> = {};
+  for (const l of links) if (l.price !== null && codes.includes(l.itemCode)) (costs[l.itemCode] ??= []).push({ name: l.costName, price: l.price });
+
   return (
     <>
       {tabs}
     <DiagnosisPanel locale={locale} role={me.role} jobs={jobs}
-      technicians={(techs ?? []).map((t) => ({ id: t.id, name: t.full_name }))} />
+      technicians={(techs ?? []).map((t) => ({ id: t.id, name: t.full_name }))} costs={costs} />
+      {user.isAdmin && <div className="mt-6"><CostLinksPanel locale={locale} links={links} /></div>}
     </>
   );
 }

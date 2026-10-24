@@ -22,12 +22,12 @@ export default async function ReceiptPage({ params, searchParams }: { params: Pr
   const lang = locale === "ar" ? "ar" : "en";
   const sample = id === "sample"; // Admin preview with made-up data
   const { data: real } = sample ? { data: null } : await supabase.from("tickets")
-    .select("id, ticket_no, tracking_token, status, item_name, item_code, fault_category, accessories, agreed_amount, created_at, customer_id, warranty_final, erp_repair_invoice, branches(name)")
+    .select("id, ticket_no, tracking_token, status, item_name, item_code, fault_category, accessories, agreed_amount, created_at, customer_id, warranty_final, erp_repair_invoice, branches(name, whatsapp)")
     .eq("id", id).maybeSingle();
   const tk = sample ? {
     id: "", ticket_no: "MT-10001", tracking_token: "sample", status: "closed", item_name: "Moments Silver Bracelet", item_code: "590702HV",
     fault_category: "Broken clasp", accessories: "Box", agreed_amount: 500, created_at: new Date().toISOString(), customer_id: "",
-    warranty_final: "out_of_warranty", erp_repair_invoice: "ACC-SINV-2026-00001", branches: { name: "Mall of Egypt" },
+    warranty_final: "out_of_warranty", erp_repair_invoice: "ACC-SINV-2026-00001", branches: { name: "Mall of Egypt", whatsapp: "+201000000000" },
   } : real;
   if (!tk) notFound();
   const { data: c } = sample ? { data: { full_name: "Sara Ahmed", mobile: "01001234567" } }
@@ -69,6 +69,9 @@ export default async function ReceiptPage({ params, searchParams }: { params: Pr
         {cfg.storeLine && <div className="text-[11px]">{cfg.storeLine}</div>}
         <div>{delivery ? t.deliveryTitle : t.title}</div>
         <div className="text-[11px]">{(tk.branches as unknown as { name: string } | null)?.name} · {when}</div>
+        {(tk.branches as unknown as { whatsapp: string | null } | null)?.whatsapp && (
+          <div className="text-[11px]">{t.whatsapp}: <span dir="ltr">{(tk.branches as unknown as { whatsapp: string }).whatsapp}</span></div>
+        )}
       </div>
       <hr />
       <div className="text-center text-xl font-extrabold" dir="ltr">{tk.ticket_no}</div>

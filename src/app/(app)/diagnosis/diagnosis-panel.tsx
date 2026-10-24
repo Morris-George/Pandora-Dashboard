@@ -21,8 +21,8 @@ const ghost = "rounded-lg border border-stone-900 px-4 py-2 text-sm disabled:opa
 const danger = "rounded-lg border border-red-800 text-red-800 px-4 py-2 text-sm disabled:opacity-40";
 const VAT = 0.14;
 
-export function DiagnosisPanel({ locale, role, jobs, technicians }: {
-  locale: Locale; role: AppRole; jobs: Job[]; technicians: { id: string; name: string }[];
+export function DiagnosisPanel({ locale, role, jobs, technicians, costs }: {
+  locale: Locale; role: AppRole; jobs: Job[]; technicians: { id: string; name: string }[]; costs: Record<string, { name: string; price: number }[]>;
 }) {
   const d = dictionaries[locale];
   const t = d.diag;
@@ -80,7 +80,7 @@ export function DiagnosisPanel({ locale, role, jobs, technicians }: {
 
       {(sup || tech) && (
         <Section title={t.diagnoseTitle} empty={t.noneDiagnose} count={toDiagnose.length}>
-          {toDiagnose.map((j) => <DiagnoseForm key={j.id} {...p} j={j} supervisor={sup} />)}
+          {toDiagnose.map((j) => <DiagnoseForm key={j.id} {...p} j={j} supervisor={sup} costs={(j.itemCode && costs[j.itemCode]) || []} />)}
           {tech && overrides.map((j) => (
             <div key={j.id} className="border-t border-stone-100 pt-3"><JobHead d={d} j={j} /><p className="text-sm text-amber-800 mt-1">{t.waitingOverride}</p></div>
           ))}
@@ -159,7 +159,7 @@ function AssignRow({ d, t, busy, run, j, technicians }: RowProps & { technicians
 
 type Line = { desc: string; qty: string; price: string };
 
-function DiagnoseForm({ d, t, busy, run, j, supervisor }: RowProps & { supervisor: boolean }) {
+function DiagnoseForm({ d, t, busy, run, j, supervisor, costs }: RowProps & { supervisor: boolean; costs: { name: string; price: number }[] }) {
   const [open, setOpen] = useState(false);
   const [fault, setFault] = useState(j.finding ?? "");
   const [cause, setCause] = useState("");
@@ -225,6 +225,17 @@ function DiagnoseForm({ d, t, busy, run, j, supervisor }: RowProps & { superviso
       {out && (
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium">{t.quote}</span>
+          {!!costs.length && (
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-xs text-stone-600">{t.costs.pick}</span>
+              {costs.map((c) => (
+                <button key={c.name} type="button" className="rounded-full border border-stone-300 px-3 py-1 text-xs hover:bg-stone-50"
+                  onClick={() => setLines([...lines.filter((l) => l.desc.trim()), { desc: c.name, qty: "1", price: String(c.price) }])}>
+                  + {c.name} <span dir="ltr">({money(c.price)})</span>
+                </button>
+              ))}
+            </div>
+          )}
           {lines.map((l, i) => (
             <div key={i} className="flex flex-wrap gap-2">
               <input value={l.desc} onChange={(e) => setLine(i, "desc", e.target.value)} placeholder={t.lineDesc} aria-label={t.lineDesc} className={`${input} flex-[1_1_220px]`} />

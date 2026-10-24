@@ -7,6 +7,7 @@ import { ReportsPanel } from "./reports-panel";
 import { ErpPanel } from "./erp-panel";
 import { SecurityPanel } from "./security-panel";
 import { ReceiptPanel } from "./receipt-panel";
+import { StoresPanel } from "./stores-panel";
 import { withDefaults } from "@/lib/receipt-settings";
 import { StaffPanel, type StaffRow } from "./staff-panel";
 import { erpConfigured } from "@/lib/erpnext";
@@ -21,7 +22,7 @@ export default async function AdminPage() {
   const [{ data: profiles }, { data: links }, { data: branches }, { data: pending }, { data: cats }, { data: reports }, { data: access }, { data: runs }, { data: excl }, { data: sps }, { data: twoStep }, { data: receipt }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email, role, active, source, must_change_password, erp_created_run").order("full_name"),
     supabase.from("user_branches").select("user_id, branch_id"),
-    supabase.from("branches").select("id, name, is_hq").eq("active", true).order("name"),
+    supabase.from("branches").select("id, name, is_hq, whatsapp").eq("active", true).order("name"),
     supabase.from("role_change_requests").select("id, user_id, new_role, requested_by").eq("status", "pending"),
     supabase.from("fault_categories").select("name, name_ar, requires_comment, active, is_system").order("sort_order"),
     supabase.from("reports").select("key, is_financial"),
@@ -48,6 +49,7 @@ export default async function AdminPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <StoresPanel locale={locale} stores={(branches ?? []).map((b) => ({ id: b.id, name: b.name, whatsapp: b.whatsapp }))} />
       <ReceiptPanel locale={locale} initial={withDefaults(receipt?.value)} />
       <SecurityPanel locale={locale} twoStep={twoStep?.value !== false} />
       <ErpPanel locale={locale} configured={erpConfigured()} excluded={excl ?? []}

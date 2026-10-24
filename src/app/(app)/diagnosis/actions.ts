@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { erpConfigured, findItem, getItemPrice } from "@/lib/erpnext";
 
 type Result = { error?: string; outcome?: string };
 
@@ -101,4 +103,61 @@ export async function moveTicket(ticketId: string, step: keyof typeof STEPS, rea
   });
   if (error) return { error: errorKey(error.message) };
   return done();
+}
+
+// ---- Repair cost items (Super Admin): product item code -> ERPNext cost item with its price
+
+async function requireSuperAdmin() {
+  const me = await requireRole("admin");
+  if (!me.isAdmin) throw new Error("forbidden");
+  return me;
+}
+
+export async function addCostLink(itemCode: string, costCode: string, manualPrice: string): Promise<{ error?: string }> {
+  const me = await requireSuperAdmin();
+  const item = itemCode.trim().slice(0, 60);
+  const code = costCode.trim().slice(0, 60);
+  const manual = manualPrice.trim() ? Number(manualPrice.trim()) : null;
+  if (!item || !code || (manual !== null && (!Number.isFinite(manual) || manual < 0 || manual > 1_000_000))) return { error: "invalid" };
+  if (!erpConfigured()) return { error: "erp" };
+  const erp = await findItem(code).catch(() => null);
+  if (!erp) return { error: "notFound" };
+  const erpPrice = await getItemPrice(erp.itemCode);
+  const price = erpPrice ?? manual;
+  if (price === null) return { error: "noPrice" };
+  const { error } = await createAdminClient().from("item_cost_links").upsert({
+    item_code: item, cost_item_code: erp.itemCode, cost_item_name: erp.itemName, price,
+    price_source: erpPrice !== null ? "erp" : "manual", price_synced_at: erpPrice !== null ? new Date().toISOString() : null,
+    updated_by: me.userId, updated_at: new Date().toISOString(),
+  }, { onConflict: "item_code,cost_item_code" });
+  if (error) return { error: "failed" };
+  revalidatePath("/diagnosis");
+  return {};
+}
+
+export async function removeCostLink(linkId: string): Promise<{ error?: string }> {
+  await requireSuperAdmin();
+  const { error } = await createAdminClient().from("item_cost_links").delete().eq("id", id.parse(linkId));
+  if (error) return { error: "failed" };
+  revalidatePath("/diagnosis");
+  return {};
+}
+
+// Refresh every linked cost item's price from ERPNext; manual prices stay when ERPNext has none
+export async function syncCostPrices(): Promise<{ error?: string; synced?: number; missing?: number }> {
+  const me = await requireSuperAdmin();
+  if (!erpConfigured()) return { error: "erp" };
+  const db = createAdminClient();
+  const { data } = await db.from("item_cost_links").select("cost_item_code");
+  const codes = [...new Set((data ?? []).map((r) => r.cost_item_code))];
+  let synced = 0;
+  for (const code of codes) {
+    const price = await getItemPrice(code);
+    if (price === null) continue;
+    await db.from("item_cost_links").update({ price, price_source: "erp", price_synced_at: new Date().toISOString(), updated_by: me.userId })
+      .eq("cost_item_code", code);
+    synced++;
+  }
+  revalidatePath("/diagnosis");
+  return { synced, missing: codes.length - synced };
 }

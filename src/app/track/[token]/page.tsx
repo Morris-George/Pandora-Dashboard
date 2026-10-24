@@ -16,7 +16,7 @@ const STEP: Record<string, number> = {
 };
 
 type Tracked = {
-  ticket_no: string; item_name: string; status: string; branch: string; first_name: string; created_at: string;
+  ticket_no: string; item_name: string; status: string; branch: string; branch_whatsapp: string | null; first_name: string; created_at: string;
   warranty: string; amount_due: number; history: { status: string; at: string }[];
   quote: { status: string; lines: { desc: string; qty: number; price: number }[]; subtotal: number; tax: number; total: number } | null;
 };
@@ -67,6 +67,10 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
           <p className="text-sm text-stone-500">{t.hello(tk.first_name)}</p>
           <h1 className="text-xl font-semibold mt-1">{tk.item_name}</h1>
           <p className="text-sm text-stone-600"><span dir="ltr">{tk.ticket_no}</span> · {tk.branch}</p>
+          {tk.branch_whatsapp && (
+            <a href={`https://wa.me/${tk.branch_whatsapp.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(tk.ticket_no)}`} target="_blank" rel="noopener"
+              className="inline-flex mt-2 rounded-lg bg-emerald-700 text-white px-3 py-1.5 text-sm font-semibold">{t.whatsapp}</a>
+          )}
         </div>
         <div className={`rounded-xl p-4 border ${tone}`}>
           <div className="font-semibold">{t.status[tk.status] ?? t.status.default}</div>
