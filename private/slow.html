@@ -45,7 +45,7 @@ tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr[data-f
     <div class="row"><label class="note"><b>No Sales For (Months)</b> <input type="number" id="months" min="1" max="36" value="6" style="width:64px"></label><span class="note">Every store: today's stock in ERP and the last sale of each SKU in that store. Samples, main warehouse and transit are left out.</span><button class="btn sm" id="allSt" hidden>All stores</button><button class="btn sm" id="noSt" hidden>None</button></div>
     <div class="chips" id="whs" style="margin:8px 0" hidden></div>
     <div id="incl"></div>
-    <div class="row"><button class="btn go" id="sync">Run the report</button><button class="btn" id="clear">Clear</button><span class="note" id="msg"></span></div>
+    <div class="row"><button class="btn go" id="sync">Run the report</button><button class="btn" id="clear">Clear</button><button class="btn" id="xAll">Download Excel</button><span class="note" id="msg"></span></div>
   </div>
 </div>
 <div id="main" hidden>
@@ -194,6 +194,17 @@ $('trX').onclick=()=>{if(!TR.length)return;const wb=XLSX.utils.book_new(),routes
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(routes.map(r=>({'From store':r.from,'To store':r.to,'Pcs':r.qty,'SKUs':new Set(r.l.map(t=>t.i.sku)).size}))),'By route');
   for(const st of [...new Set(TR.map(t=>t.from))])XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(TR.filter(t=>t.from===st).map(t=>({'SKU':t.i.sku,'Item':t.i.name,'Send to':t.to,'Pcs':t.qty}))),('Send from '+st).slice(0,31));
   XLSX.writeFile(wb,'Slow Moving transfers '+new Date().toISOString().slice(0,10)+'.xlsx')};
+// one workbook: summary, every slow item, by store, by group, transfers, and one sheet per store
+$('xAll').onclick=()=>{if(!ITEMS.length){showErr('Run the report first.');return}const wb=XLSX.utils.book_new(),hasV=J.C.val>=0,L=rows(),G=i=>i.cat;
+  const one=i=>({SKU:i.sku,Item:i.name,Group:G(i),Store:i.store,Pieces:i.qty,...(hasV?{Value:i.val}:{}),'Days idle':i.age,'Sold here':i.soldHere,'Sold elsewhere':(i.elsewhere||[]).map(([k,v])=>k+' '+v).join(', '),'Can move':i.move||0,'In refill order':i.order||0});
+  const by=k=>{const m=new Map();L.forEach(i=>{const g=k(i)||'-',o=m.get(g)||{g,skus:new Set(),qty:0,val:0};o.skus.add(i.sku);o.qty+=i.qty;o.val+=i.val||0;m.set(g,o)});return [...m.values()].sort((a,b)=>b.qty-a.qty)};
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{'No sales for (months)':J.months,'Stores':new Set(L.map(i=>i.store)).size,'SKUs':new Set(L.map(i=>i.sku)).size,'Pieces':L.reduce((t,i)=>t+i.qty,0),'Excluded stores':(EX.st||[]).join(', '),'Excluded groups':(EX.gr||[]).join(', ')}]),'Summary');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(L.map(one)),'All items');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(by(i=>i.store).map(o=>({Store:o.g,SKUs:o.skus.size,Pieces:o.qty,...(hasV?{Value:o.val}:{})}))),'By store');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(by(G).map(o=>({Group:o.g,SKUs:o.skus.size,Pieces:o.qty,...(hasV?{Value:o.val}:{})}))),'By group');
+  if(TR.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(TR.map(t=>({'From store':t.from,'To store':t.to,'SKU':t.i.sku,'Item':t.i.name,'Pcs':t.qty}))),'Transfers');
+  for(const st of [...new Set(L.map(i=>i.store))].sort())XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(L.filter(i=>i.store===st).map(one)),String(st).replace(/[\/?*:[]]/g,' ').slice(0,31));
+  XLSX.writeFile(wb,'Slow Moving '+new Date().toISOString().slice(0,10)+'.xlsx')};
 $('xlsx').onclick=()=>{if(!ITEMS.length)return;const wb=XLSX.utils.book_new(),hasV=J.C.val>=0;
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows().map(i=>({SKU:i.sku,Item:i.name,Category:i.cat,Store:i.store,Pieces:i.qty,...(hasV?{Value:i.val}:{}),Days:i.age,'Sold here':i.soldHere,'Sold elsewhere':i.elsewhere.map(([k,v])=>k+' '+v).join(', '),'Can move':i.move||0,'Sold all stores':i.sold,'In refill order':i.order}))),'Items');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(group('store').map(o=>({Store:o.g,SKUs:o.skus,Pieces:o.qty,...(hasV?{Value:o.val}:{}),'Can move out':o.move,'Sold nowhere':o.dead}))),'By store');
