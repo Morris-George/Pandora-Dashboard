@@ -61,7 +61,7 @@ tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr[data-f
 <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Items</h2><span class="row"><input type="search" id="q" placeholder="Search SKU or name" style="width:220px"><span class="chips" id="flt"></span><span class="note" id="cnt"></span><button class="btn sm" id="xlsx">Download Excel</button></span></div>
   <div class="note" style="margin:4px 0 8px" id="itNote"></div>
   <div class="tw" id="tbl"></div></div>
-<details class="card"><summary class="note" style="cursor:pointer">The report as it comes from ERP (all columns)</summary><div class="tw" id="raw" style="margin-top:8px"></div></details>
+<details class="card"><summary class="note" style="cursor:pointer">The report as it comes from ERP (all columns)</summary><div class="row" style="margin-top:8px"><button class="btn sm" id="rawX">Download all columns (Excel)</button><span class="note">Every store, ticked stores and groups only.</span></div><div class="tw" id="raw" style="margin-top:8px"></div></details>
 </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -196,6 +196,12 @@ $('trX').onclick=()=>{if(!TR.length)return;const wb=XLSX.utils.book_new(),routes
   for(const st of [...new Set(TR.map(t=>t.from))])XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(TR.filter(t=>t.from===st).map(t=>({'SKU':t.i.sku,'Item':t.i.name,'Send to':t.to,'Pcs':t.qty}))),('Send from '+st).slice(0,31));
   XLSX.writeFile(wb,'Slow Moving transfers '+new Date().toISOString().slice(0,10)+'.xlsx')};
 // one workbook: summary, every slow item, by store, by group, transfers, and one sheet per store
+// the full report rows, every column, one sheet for all stores plus one per store
+$('rawX').onclick=()=>{const S=J.snaps.filter(x=>x.rows.length);if(!S.length){showErr('Run the report first.');return}
+  const cols=S[0].cols.map(c=>c.label||c.fieldname),wb=XLSX.utils.book_new(),aoa=l=>[cols,...l];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa(S.flatMap(x=>x.rows))),'All stores');
+  for(const x of S)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa(x.rows)),String(x.store||x.warehouse).replace(/[\/?*:[]]/g,' ').slice(0,31));
+  XLSX.writeFile(wb,'Slow Moving report '+new Date().toISOString().slice(0,10)+'.xlsx')};
 $('xAll').onclick=()=>{if(!ITEMS.length){showErr('Run the report first.');return}const wb=XLSX.utils.book_new(),hasV=J.C.val>=0,L=rows(),G=i=>i.cat;
   const one=i=>({SKU:i.sku,Item:i.name,Group:G(i),Store:i.store,Pieces:i.qty,...(hasV?{Value:i.val}:{}),'Days idle':i.age,'Sold here':i.soldHere,'Sold elsewhere':(i.elsewhere||[]).map(([k,v])=>k+' '+v).join(', '),'Can move':i.move||0,'In refill order':i.order||0});
   const by=k=>{const m=new Map();L.forEach(i=>{const g=k(i)||'-',o=m.get(g)||{g,skus:new Set(),qty:0,val:0};o.skus.add(i.sku);o.qty+=i.qty;o.val+=i.val||0;m.set(g,o)});return [...m.values()].sort((a,b)=>b.qty-a.qty)};
