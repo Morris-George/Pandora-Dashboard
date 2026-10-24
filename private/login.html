@@ -128,7 +128,7 @@ body.introing .card,body.introing .badge,body.introing .in{animation-play-state:
   var hero=logo(root,50),ring=logo(root,51);
   // words: Sign / in / to your / world
   var FS=Math.min(VW*.88/3.45,VH*.42),TOP=CY-FS*.5;
-  var defs=[['Sign',PINK],['ın',INK],['to your',WHITE],['world',ROSE]],PAN=[null,PINK,ROSE,BLUSH],BT=[1,1.5,2,2.5],pans=[],W=[];
+  var defs=[['Sıgn',PINK],['ın',INK],['to your',WHITE],['world',ROSE]],PAN=[null,PINK,ROSE,BLUSH],BT=[1,1.5,2,2.5],pans=[],W=[];
   defs.forEach(function(d,k){
     if(k)pans[k]=el('inset:0;background:'+PAN[k]+';z-index:'+(10*k),'pda',L2);
     var w=el('left:0;width:'+VW+'px;top:'+TOP+'px;font-size:'+FS+'px;color:'+d[1]+';z-index:'+(10*k+1),'pdw',L2),sp=[];
