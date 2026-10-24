@@ -16,7 +16,7 @@ const en = {
     inactive: "Your account is deactivated. Contact your administrator.",
     help: "Accounts are created by the administrator. Forgot your password? Ask your administrator to reset it.",
   },
-  shell: { fullAccess: "Full access · all stores", viewAs: "View as", viewingAs: (r: string) => `Super Admin viewing as ${r}`, useAs: "Use this screen as:",
+  shell: { fullAccess: "Full access · all stores", search: "Search ticket no., mobile or name…", viewAs: "View as", viewingAs: (r: string) => `Super Admin viewing as ${r}`, useAs: "Use this screen as:",
     signOut: "Sign out", allBranches: "All branches", adminScope: "Users & settings", soon: "Coming soon" },
   mfa: {
     title: "Two-step login",
@@ -108,6 +108,7 @@ const en = {
     commentRequired: (c: string) => `Fault comment * (required for “${c}”)`,
     commentOptional: "Comment (optional)",
     commentPh: "Describe the fault and any customer remarks",
+    repeatWarn: (list: string) => `This customer brought the same item before: ${list}. Check if it is the same fault (repair warranty).`,
     agreedAmount: "Repair cost the customer agreed (EGP, incl. VAT)",
     agreedHint: "If the repair is chargeable and costs up to this amount, it goes straight to repair. If it costs more, the customer is asked to approve. Leave empty to always ask.",
     accessories: "Accessories handed over",
@@ -137,6 +138,7 @@ const en = {
     errRecord: (n: number, m: string) => `Photo ${n} could not be recorded: ${m}`,
   },
   admin: {
+    dlg: { save: "Save", cancel: "Cancel", confirm: "Confirm", next: "Next", merge: "Merge (same person)", linkOnly: "Only link", mergeTitle: "Same person?", manager: "Branch Manager", associate: "Branch Associate" },
     receipt: {
       title: "Receipt (80 mm printer)",
       note: "Layout of the intake and delivery receipts. Changes apply to the next print in every store.",
@@ -657,7 +659,7 @@ const ar: Dict = {
     inactive: "حسابك موقوف. تواصل مع مسؤول النظام.",
     help: "الحسابات يُنشئها مسؤول النظام. نسيت كلمة المرور؟ اطلب من المسؤول إعادة تعيينها.",
   },
-  shell: { fullAccess: "صلاحية كاملة · كل الفروع", viewAs: "عرض كـ", viewingAs: (r: string) => `مدير النظام بيشوف كـ ${r}`, useAs: "استخدم الشاشة كـ:",
+  shell: { fullAccess: "صلاحية كاملة · كل الفروع", search: "دوّر برقم التيكيت أو الموبايل أو الاسم…", viewAs: "عرض كـ", viewingAs: (r: string) => `مدير النظام بيشوف كـ ${r}`, useAs: "استخدم الشاشة كـ:",
     signOut: "تسجيل الخروج", allBranches: "كل الفروع", adminScope: "المستخدمون والإعدادات", soon: "قريبًا" },
   mfa: {
     title: "التحقق بخطوتين",
@@ -749,6 +751,7 @@ const ar: Dict = {
     commentRequired: (c) => `وصف العطل * (مطلوب مع “${c}”)`,
     commentOptional: "ملاحظات (اختياري)",
     commentPh: "اكتب وصف العطل وأي ملاحظات من العميل",
+    repeatWarn: (list: string) => `العميل ده جاب نفس القطعة قبل كده: ${list}. اتأكد لو نفس العطل (ضمان الصيانة).`,
     agreedAmount: "تكلفة الصيانة اللي العميل وافق عليها (جنيه، شامل الضريبة)",
     agreedHint: "لو الصيانة بفلوس وتكلفتها لحد المبلغ ده، تدخل الصيانة على طول. لو أكتر، العميل يتسأل يوافق. سيبها فاضية عشان يتسأل دايماً.",
     accessories: "الملحقات المستلمة",
@@ -778,6 +781,7 @@ const ar: Dict = {
     errRecord: (n, m) => `تعذر تسجيل الصورة ${n}: ${m}`,
   },
   admin: {
+    dlg: { save: "حفظ", cancel: "إلغاء", confirm: "تأكيد", next: "التالي", merge: "دمج (نفس الشخص)", linkOnly: "ربط بس", mergeTitle: "نفس الشخص؟", manager: "مدير فرع", associate: "موظف فرع" },
     receipt: {
       title: "الإيصال (طابعة 80 مم)",
       note: "شكل إيصال الاستلام وإيصال التسليم. التغيير بيتطبق على أول طباعة جاية في كل الفروع.",

@@ -36,6 +36,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               {session.fullName} · {session.viewingAs ? t.shell.viewingAs(t.roles[session.role]) : t.roles[session.role]} · {session.fullAccess || session.isAdmin ? t.shell.fullAccess : scope}
             </p>
           </div>
+          <form action="/go" role="search" className="relative order-last w-full md:order-none md:w-auto">
+            <input name="s" placeholder={t.shell.search} aria-label={t.shell.search}
+              className="w-full md:w-64 rounded-full border border-white/70 bg-white/80 px-4 py-2 text-sm text-[#2A1018] placeholder:text-[#2A1018]/55 focus:outline-2 focus:outline-[#2A1018]" />
+          </form>
           <div className="relative flex items-center gap-2.5">
             <span aria-hidden className="hidden md:grid w-10 h-10 rounded-full bg-white/70 text-[#2A1018] place-items-center text-xs font-extrabold">{initials}</span>
             {session.isAdmin && <ViewAs current={session.viewingAs ?? "admin"} label={t.shell.viewAs} roles={t.roles} />}

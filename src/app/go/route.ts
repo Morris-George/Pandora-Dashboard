@@ -1,0 +1,12 @@
+import { NextResponse, type NextRequest } from "next/server";
+
+// Header search: sends the term to Ticket Tracking as a mobile number, a ticket / SKU, or a customer name
+export function GET(req: NextRequest) {
+  const s = (req.nextUrl.searchParams.get("s") ?? "").trim().slice(0, 80);
+  const digits = s.replace(/[\s+()-]/g, "");
+  const url = new URL("/tracking", req.url);
+  if (/^\d{9,15}$/.test(digits)) url.searchParams.set("mobile", digits);
+  else if (/\d/.test(s)) url.searchParams.set("q", s);
+  else if (s) url.searchParams.set("name", s);
+  return NextResponse.redirect(url);
+}

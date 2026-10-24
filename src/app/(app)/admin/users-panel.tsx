@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useAsk } from "@/components/ask";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
 import { changeEmail, createUser, renameUser, resetTwoStep, decideRoleChange, deleteUser, excludeFromSync, requestRoleChange, resetPassword, setActive, setBranches } from "./actions";
@@ -27,6 +28,7 @@ export function UsersPanel({ locale, meId, users, pending, branches }: {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const router = useRouter();
+  const [ask, askDialog] = useAsk();
   const [store, setStore] = useState(""); // "" = all, "none" = no store (HQ / central roles), else branch id
   const [team, setTeam] = useState<"" | AppRole>(""); // "" = every role
   const shownUsers = users.filter((u) => (!store || (store === "none" ? !u.branchIds.length : u.branchIds.includes(store))) && (!team || u.role === team));
@@ -63,6 +65,7 @@ export function UsersPanel({ locale, meId, users, pending, branches }: {
         </div>
       )}
       {error && <p role="alert" className="rounded-lg bg-red-50 text-red-800 text-sm p-3">{error}</p>}
+      {askDialog}
       {notice && <p role="status" className="rounded-lg bg-emerald-50 text-emerald-900 text-sm p-3">{notice}</p>}
 
       <section className="bg-white rounded-2xl border border-stone-200 p-6 flex flex-col gap-4">
@@ -128,13 +131,21 @@ export function UsersPanel({ locale, meId, users, pending, branches }: {
                     <td className="p-2">
                       {BRANCH_ROLES.includes(u.role) ? (
                         <div className="flex flex-col gap-1">
-                          {branches.map((b) => (
-                            <label key={b.id} className="flex items-center gap-1.5 text-xs">
-                              <input type="checkbox" checked={draftBranches.includes(b.id)} disabled={busy}
-                                onChange={() => setBranchDraft({ ...branchDraft, [u.id]: toggle(draftBranches, b.id) })} />
-                              {b.name}
-                            </label>
-                          ))}
+                          {/* Compact picker: shows the chosen stores, opens to tick more */}
+                          <details className="relative">
+                            <summary className={`cursor-pointer list-none rounded-lg border px-2.5 py-1.5 text-xs max-w-52 truncate ${draftBranches.length ? "border-stone-300" : "border-red-400 text-red-800 font-semibold"}`}>
+                              {draftBranches.length ? branches.filter((b) => draftBranches.includes(b.id)).map((b) => b.name).join(", ") : t.staff.notAllocated} ▾
+                            </summary>
+                            <div className="absolute z-10 mt-1 w-56 max-h-64 overflow-auto rounded-lg border border-stone-200 bg-white p-2 shadow-lg flex flex-col gap-1">
+                              {branches.map((b) => (
+                                <label key={b.id} className="flex items-center gap-1.5 text-xs">
+                                  <input type="checkbox" checked={draftBranches.includes(b.id)} disabled={busy}
+                                    onChange={() => setBranchDraft({ ...branchDraft, [u.id]: toggle(draftBranches, b.id) })} />
+                                  {b.name}
+                                </label>
+                              ))}
+                            </div>
+                          </details>
                           {branchDraft[u.id] && (
                             <button disabled={busy || !draftBranches.length} className={`${small} border-stone-900 self-start`}
                               onClick={() => run(() => setBranches(u.id, draftBranches), undefined, () => { const n = { ...branchDraft }; delete n[u.id]; setBranchDraft(n); })}>
@@ -149,17 +160,19 @@ export function UsersPanel({ locale, meId, users, pending, branches }: {
                     <td className="p-2">
                       <div className="flex flex-wrap gap-1.5">
                         <button disabled={busy} className={`${small} border-stone-900`} onClick={() => run(() => resetPassword(u.id), u.email)}>{t.reset}</button>
-                        <button disabled={busy} className={`${small} border-stone-400`} onClick={() => {
-                          const next = window.prompt(u.source === "erpnext" ? t.askEmailErp(u.email) : t.askEmail(u.email), u.email);
+                        <button disabled={busy} className={`${small} border-stone-400`} onClick={async () => {
+                          const next = await ask({ title: t.changeEmail, message: u.source === "erpnext" ? t.askEmailErp(u.email) : t.askEmail(u.email),
+                            input: true, defaultValue: u.email, inputDir: "ltr", confirmLabel: t.dlg.save, cancelLabel: t.dlg.cancel });
                           if (next && next.trim().toLowerCase() !== u.email.toLowerCase()) run(() => changeEmail(u.id, next));
                         }}>{t.changeEmail}</button>
-                        <button disabled={busy} className={`${small} border-stone-400`} onClick={() => {
-                          const next = window.prompt(t.askName(u.email), u.name);
+                        <button disabled={busy} className={`${small} border-stone-400`} onClick={async () => {
+                          const next = await ask({ title: t.changeName, message: t.askName(u.email), input: true, defaultValue: u.name,
+                            confirmLabel: t.dlg.save, cancelLabel: t.dlg.cancel });
                           if (next && next.trim() !== u.name) run(() => renameUser(u.id, next));
                         }}>{t.changeName}</button>
                         {u.role === "admin" && !self && (
                           <button disabled={busy} className={`${small} border-stone-400`}
-                            onClick={() => { if (window.confirm(t.askResetTwoStep(u.name))) run(() => resetTwoStep(u.id)); }}>{t.resetTwoStep}</button>
+                            onClick={async () => { if (await ask({ title: t.resetTwoStep, message: t.askResetTwoStep(u.name), confirmLabel: t.dlg.confirm, cancelLabel: t.dlg.cancel })) run(() => resetTwoStep(u.id)); }}>{t.resetTwoStep}</button>
                         )}
                         {!self && (
                           <button disabled={busy} className={`${small} border-red-800 text-red-800`} onClick={() => run(() => setActive(u.id, !u.active))}>
@@ -168,13 +181,13 @@ export function UsersPanel({ locale, meId, users, pending, branches }: {
                         )}
                         {!self && u.source === "erpnext" && (
                           <button disabled={busy} className={`${small} border-amber-700 text-amber-800`} title={t.erp.excludeHint}
-                            onClick={() => { const why = window.prompt(t.erp.excludeAsk, ""); if (why !== null) run(() => excludeFromSync(u.id, why)); }}>
+                            onClick={async () => { const why = await ask({ title: t.erp.exclude, message: t.erp.excludeAsk, input: true, optional: true, confirmLabel: t.dlg.confirm, cancelLabel: t.dlg.cancel }); if (why !== null) run(() => excludeFromSync(u.id, why)); }}>
                             {t.erp.exclude}
                           </button>
                         )}
                         {!self && (
                           <button disabled={busy} className={`${small} border-red-800 bg-red-50 text-red-800`}
-                            onClick={() => { if (window.confirm(t.erp.deleteAsk(u.email))) run(() => deleteUser(u.id), undefined, () => {}); }}>
+                            onClick={async () => { if (await ask({ title: t.erp.delete, message: t.erp.deleteAsk(u.email), danger: true, confirmLabel: t.erp.delete, cancelLabel: t.dlg.cancel })) run(() => deleteUser(u.id), undefined, () => {}); }}>
                             {t.erp.delete}
                           </button>
                         )}

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
+import { useAsk } from "@/components/ask";
 import { createAccountForSalesPerson, linkSalesPerson, mergeSalesPerson, setSalesPersonIgnored, setSalesPersonStore, setSalesPersonSyncPaused } from "./actions";
 
 export type StaffRow = {
@@ -14,6 +15,8 @@ type Opt = { id: string; name: string };
 export function StaffPanel({ locale, rows, branches, accounts }: { locale: Locale; rows: StaffRow[]; branches: Opt[]; accounts: Opt[] }) {
   const t = dictionaries[locale].admin.staff;
   const [busy, start] = useTransition();
+  const [ask, askDialog] = useAsk();
+  const dl = dictionaries[locale].admin.dlg;
   const [error, setError] = useState("");
   const [temp, setTemp] = useState<{ email: string; password: string } | null>(null);
   const [filter, setFilter] = useState<"attention" | "all" | "removed">("attention");
@@ -59,6 +62,7 @@ export function StaffPanel({ locale, rows, branches, accounts }: { locale: Local
           <button onClick={() => setTemp(null)} className="self-start rounded-lg border border-stone-300 px-4 py-2 text-sm">{dictionaries[locale].admin.dismiss}</button>
         </div>
       )}
+      {askDialog}
       {error && <p role="alert" className="rounded-lg bg-red-50 text-red-800 text-sm p-3">{error}</p>}
 
       <div className="flex flex-wrap gap-2" role="tablist">
@@ -100,10 +104,10 @@ export function StaffPanel({ locale, rows, branches, accounts }: { locale: Local
                     </td>
                     <td className="p-2">
                       <select value={r.profileId ?? ""} disabled={busy} aria-label={t.cols.account}
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const id = e.target.value;
                           // Merge: picking an account with a different name offers to use the ERPNext name
-                          if (id && aName.get(id) !== r.erpName && window.confirm(t.askMerge(aName.get(id) ?? "", r.erpName))) run(() => mergeSalesPerson(r.erpName, id));
+                          if (id && aName.get(id) !== r.erpName && await ask({ title: dl.mergeTitle, message: t.askMerge(aName.get(id) ?? "", r.erpName), confirmLabel: dl.merge, cancelLabel: dl.linkOnly })) run(() => mergeSalesPerson(r.erpName, id));
                           else run(() => linkSalesPerson(r.erpName, id || null));
                         }}
                         className={`rounded-lg border px-2 py-1.5 text-sm max-w-56 ${r.profileId ? "border-stone-300" : "border-amber-400 text-amber-800"}`}>
@@ -121,10 +125,10 @@ export function StaffPanel({ locale, rows, branches, accounts }: { locale: Local
                         {!r.profileId && r.enabled && (
                           <button disabled={busy || !sid} title={!sid ? t.allocateFirst : undefined}
                             className="rounded-lg border border-stone-900 px-2.5 py-1.5 text-xs disabled:opacity-40"
-                            onClick={() => {
-                              const email = window.prompt(t.askEmail(r.erpName), "");
+                            onClick={async () => {
+                              const email = await ask({ title: t.add, message: t.askEmail(r.erpName), input: true, inputDir: "ltr", confirmLabel: dl.next, cancelLabel: dl.cancel });
                               if (!email) return;
-                              const manager = window.confirm(t.askManager);
+                              const manager = !!(await ask({ title: t.add, message: t.askManager, confirmLabel: dl.manager, cancelLabel: dl.associate }));
                               run(() => createAccountForSalesPerson(r.erpName, email, manager ? "manager" : "associate"), email.trim().toLowerCase());
                             }}>{t.add}</button>
                         )}
@@ -134,7 +138,7 @@ export function StaffPanel({ locale, rows, branches, accounts }: { locale: Local
                           <button disabled={busy} className="rounded-lg border border-stone-400 px-2.5 py-1.5 text-xs" onClick={() => run(() => setSalesPersonIgnored(r.erpName, false))}>{t.restore}</button>
                         ) : (
                           <button disabled={busy} className="rounded-lg border border-red-800 text-red-800 px-2.5 py-1.5 text-xs"
-                            onClick={() => { if (window.confirm(t.askRemove(r.erpName))) run(() => setSalesPersonIgnored(r.erpName, true)); }}>{t.remove}</button>
+                            onClick={async () => { if (await ask({ title: t.remove, message: t.askRemove(r.erpName), danger: true, confirmLabel: t.remove, cancelLabel: dl.cancel })) run(() => setSalesPersonIgnored(r.erpName, true)); }}>{t.remove}</button>
                         )}
                       </div>
                     </td>

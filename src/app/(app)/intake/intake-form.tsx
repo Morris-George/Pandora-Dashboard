@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { checkWarranty } from "@/lib/warranty";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
-import { createDraft, findCustomer, lookupInvoice, lookupItem, submitTicket, type InvoiceLookup } from "./actions";
+import { createDraft, findCustomer, findPreviousRepairs, lookupInvoice, lookupItem, submitTicket, type InvoiceLookup } from "./actions";
 
 type Branch = { id: string; name: string };
 type Category = { name: string; label: string; requiresComment: boolean };
@@ -31,6 +31,7 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
   const [known, setKnown] = useState(false);
   const [itemName, setItemName] = useState("");
   const [itemCode, setItemCode] = useState("");
+  const [previous, setPrevious] = useState<{ ticketNo: string; date: string }[]>([]);
   const [itemDescription, setItemDescription] = useState("");
   const [itemBarcode, setItemBarcode] = useState("");
   const [itemImage, setItemImage] = useState("");
@@ -58,6 +59,13 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
 
   const previews = useMemo(() => photos.map((f) => URL.createObjectURL(f)), [photos]);
   const category = categories.find((c) => c.name === fault);
+  // Warn when this customer brought the same item before
+  useEffect(() => {
+    if (mobile.replace(/\D/g, "").length < 9 || !itemCode.trim()) { setPrevious([]); return; }
+    const id = setTimeout(() => { findPreviousRepairs(mobile, itemCode).then(setPrevious).catch(() => setPrevious([])); }, 400);
+    return () => clearTimeout(id);
+  }, [mobile, itemCode]);
+
   const w = checkWarranty(purchaseDate || null, noInvoice);
   const fmt = (dt: Date) => dt.toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB", { day: "numeric", month: "long", year: "numeric" });
   const banner =
@@ -249,6 +257,11 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
           <input value={agreed} onChange={(e) => setAgreed(e.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" dir="ltr" placeholder="0" className={`${input} max-w-48`} />
           <span className="text-xs text-stone-500 font-normal">{t.agreedHint}</span>
         </label>
+        {!!previous.length && (
+          <p role="alert" className="rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm p-3">
+            {t.repeatWarn(previous.map((x) => `${x.ticketNo} (${x.date})`).join(", "))}
+          </p>
+        )}
         <label className={label}>{t.accessories}
           <input value={accessories} onChange={(e) => setAccessories(e.target.value)} placeholder={t.accessoriesPh} className={input} />
         </label>

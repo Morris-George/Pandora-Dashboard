@@ -27,6 +27,19 @@ export async function findCustomer(mobile: string) {
   return data;
 }
 
+// Same customer + same item seen before (possible repeat fault / repair warranty)
+export async function findPreviousRepairs(mobile: string, itemCode: string): Promise<{ ticketNo: string; date: string }[]> {
+  await requireRole("associate", "manager");
+  const code = itemCode.trim().slice(0, 60);
+  if (!MOBILE.test(mobile.trim()) || !code) return [];
+  const supabase = await createClient();
+  const { data: c } = await supabase.from("customers").select("id").eq("mobile", normMobile(mobile)).maybeSingle();
+  if (!c) return [];
+  const { data } = await supabase.from("tickets").select("ticket_no, created_at").eq("customer_id", c.id).eq("item_code", code)
+    .neq("status", "draft").order("created_at", { ascending: false }).limit(3);
+  return (data ?? []).map((x) => ({ ticketNo: x.ticket_no, date: x.created_at.slice(0, 10) }));
+}
+
 export type ItemLookup =
   | { status: "found"; itemCode: string; itemName: string; description: string | null; barcode: string | null; image: string | null }
   | { status: "not_found" | "not_connected" | "error" };
