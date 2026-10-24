@@ -111,6 +111,56 @@ async function runOne(warehouse, months, pr) {
   await store.putJSON(INDEX, idx);
   return { warehouse, rows: rows.length };
 }
+// built here, the same logic as the ERP query, without waiting for ERP to prepare a report:
+// stock per store today (Branches Stock Balance) and the last sale of each SKU in that store (the nightly sales files).
+// Slow = pieces on hand in a store where the SKU did not sell in the last `months` months (or never, in the sales on file).
+async function buildFromData(months) {
+  const { runReport } = require('./erp'), { storeOf, settings } = require('./_dist'), st = await settings();
+  const num = v => { const n = Number(String(v == null ? 0 : v).replace(/,/g, '')); return isFinite(n) ? n : 0; };
+  const d = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+  let list;
+  try { list = await runReport('Branches Stock Balance', { company: process.env.ERP_COMPANY || 'All-Niche', from_date: d, to_date: d, item_group: 'Pandora', valuation_field_type: 'Currency' }); }
+  catch (_) { list = await runReport('Branches Stock Balance', { from_date: d, to_date: d }); }
+  // last sale per SKU and store, from every month on file
+  const files = (await store.list('dash/f/erp-')).filter(x => /erp-\d{4}-\d{2}\.json$/.test(x)).sort();
+  const last = {}, meta = {}; let first = '';
+  for (const f of files) {
+    const j = await store.getJSON(f); if (!j || !Array.isArray(j.rows)) continue;
+    for (const x of j.rows) {
+      const sk = skuOf(x[5]), c = storeOf(x[7], st.stores) || String(x[7] || ''); if (!sk || !c || !(Number(x[2]) > 0)) continue;
+      const k = sk + '|' + c, dt = String(x[0] || '').slice(0, 10);
+      if (!first || dt < first) first = dt;
+      if (!last[k] || dt > last[k]) last[k] = dt;
+      if (!meta[sk]) meta[sk] = { name: str(x[6], 140), cat: str(x[8], 60) };
+    }
+  }
+  const cut = new Date(Date.now() + 3 * 3600 * 1000); cut.setUTCMonth(cut.getUTCMonth() - months); const cutS = cut.toISOString().slice(0, 10);
+  const today = new Date(d + 'T00:00:00Z');
+  const cols = [{ label: 'SKU', fieldname: '_sku', fieldtype: 'Data' }, { label: 'EAN', fieldname: '_ean', fieldtype: 'Data' }, { label: 'Item Code', fieldname: 'item_code', fieldtype: 'Data' }, { label: 'Item Name', fieldname: 'item_name', fieldtype: 'Data' }, { label: 'Warehouse', fieldname: 'warehouse', fieldtype: 'Data' }, { label: 'Category', fieldname: 'category', fieldtype: 'Data' }, { label: 'Qty On Hand', fieldname: 'qty_on_hand', fieldtype: 'Float' }, { label: 'Last Sale Date', fieldname: 'last_sale_date', fieldtype: 'Date' }, { label: 'Idle Since', fieldname: 'idle_since', fieldtype: 'Data' }];
+  const agg = {};
+  for (const x of list) {
+    const sk = skuOf(x.sku || x['sku-item'] || x.item_code), w = str(x.warehouse, 140), c = storeOf(w, st.stores), q = num(x.bal_qty != null ? x.bal_qty : x.balance_qty);
+    if (!sk || !c || NOT_A_STORE.test(w)) continue;
+    const k = sk + '|' + w, a = agg[k] || (agg[k] = { sk, w, c, q: 0, code: str(x.item_code, 40), name: str(x.item_name || x.item || '', 140), cat: str(x.item_group || '', 60) });
+    a.q += q;
+  }
+  const by = {};
+  for (const a of Object.values(agg)) {
+    if (!(a.q > 0)) continue;
+    const ls = last[a.sk + '|' + a.c] || '';
+    if (ls && ls >= cutS) continue;
+    const m = meta[a.sk] || {}, nm = a.name || m.name || a.sk;
+    const idle = ls ? Math.max(0, Math.floor((today - new Date(ls + 'T00:00:00Z')) / 2629800000)) + ' m' : 'Never Sold';
+    (by[a.w] = by[a.w] || []).push([a.sk, eanFromName(nm), a.code, nm, a.w, m.cat || a.cat, Math.round(a.q * 10) / 10, ls, idle]);
+  }
+  for (const l of Object.values(by)) l.sort((x, y) => (x[7] || '0').localeCompare(y[7] || '0') || y[6] - x[6]);
+  const old = (await store.getJSON(INDEX)) || {};
+  for (const v of Object.values(old)) await store.del('slow/w/' + v.k + '.json').catch(() => {});
+  const idx = {};
+  for (const [w, l] of Object.entries(by)) await save(w, months, cols, l, idx);
+  await store.putJSON(INDEX, idx);
+  return { stores: Object.keys(by).length, rows: Object.values(by).reduce((t, l) => t + l.length, 0), salesFrom: first };
+}
 // one run for every store: split the rows by the Warehouse column; keep the ticked stores (or every store when none is given)
 async function runAll(months, only, pr) {
   const out = await fetchReport({ months }, pr, REPORT_ALL);
@@ -183,7 +233,7 @@ module.exports = async function handler(req, res) {
   if (op === 'syncall') {
     if (!erpOn) return send(res, 503, { ok: false, error: 'ERP is not connected.' });
     const months = Math.max(1, Math.min(36, Math.round(Number(b.months) || 6))), only = Array.isArray(b.warehouses) ? b.warehouses.map(w => str(w, 140)).filter(Boolean) : [];
-    try { return send(res, 200, { ok: true, ...(await runAll(months, only, str(b.pr, 140))) }); }
+    try { return send(res, 200, { ok: true, ...(await buildFromData(months)) }); }
     catch (e) { return send(res, 502, { ok: false, error: String(e && e.message || e).slice(0, 400) }); }
   }
   if (op !== 'sync') return send(res, 400, { ok: false, error: 'Unknown action.' });
@@ -193,3 +243,4 @@ module.exports = async function handler(req, res) {
   try { return send(res, 200, { ok: true, ...(await runOne(wh, months, str(b.pr, 140))) }); }
   catch (e) { return send(res, 502, { ok: false, error: String(e && e.message || e).slice(0, 400) }); }
 };
+module.exports.buildFromData = buildFromData;

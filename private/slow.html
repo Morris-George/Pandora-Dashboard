@@ -41,7 +41,7 @@ tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr[data-f
 <div class="card" id="setup"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Stores and Months</h2><label class="note"><input type="checkbox" id="pics" checked> Show pictures</label></div>
   <div class="note" id="meta" style="margin:4px 0 8px"></div>
   <div id="run" hidden>
-    <div class="row"><label class="note"><b>No Sales For (Months)</b> <input type="number" id="months" min="1" max="36" value="6" style="width:64px"></label><span class="note">Every store, as in ERP's report. Samples, main warehouse and transit are left out.</span><button class="btn sm" id="allSt" hidden>All stores</button><button class="btn sm" id="noSt" hidden>None</button></div>
+    <div class="row"><label class="note"><b>No Sales For (Months)</b> <input type="number" id="months" min="1" max="36" value="6" style="width:64px"></label><span class="note">Every store: today's stock in ERP and the last sale of each SKU in that store. Samples, main warehouse and transit are left out.</span><button class="btn sm" id="allSt" hidden>All stores</button><button class="btn sm" id="noSt" hidden>None</button></div>
     <div class="chips" id="whs" style="margin:8px 0" hidden></div>
     <div class="row"><button class="btn go" id="sync">Run the report</button><button class="btn" id="clear">Clear</button><span class="note" id="msg"></span></div>
   </div>
