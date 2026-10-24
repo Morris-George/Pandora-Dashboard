@@ -126,13 +126,14 @@ let EX={st:[],gr:null};try{EX=Object.assign(EX,JSON.parse(localStorage.getItem('
 function colIx(cols,re){return cols.findIndex(c=>re.test(c.label||c.fieldname))}
 function drawIncl(){const all=J.all.snaps,cols=(all.find(x=>x.cols.length)||{}).cols||[],qi=colIx(cols,/qty on hand/i),gi=colIx(cols,/item group/i);
   const st=new Map(),gr=new Map();
-  all.forEach(x=>{st.set(x.store,(st.get(x.store)||0)+x.rows.reduce((t,r)=>t+(+r[qi]||0),0));if(gi>=0)x.rows.forEach(r=>{const g=grpOf(r[gi]);gr.set(g,(gr.get(g)||0)+(+r[qi]||0))})});
+  if(!EX.gr||EX.gr.some(g=>!GROUPS.includes(g)))EX.gr=['Packaging & Services'];
+all.forEach(x=>{st.set(x.store,(st.get(x.store)||0)+x.rows.reduce((t,r)=>t+(gi<0||!EX.gr.includes(grpOf(r[gi]))?(+r[qi]||0):0),0));if(gi>=0)x.rows.forEach(r=>{const g=grpOf(r[gi]);gr.set(g,(gr.get(g)||0)+(+r[qi]||0))})});
   if(!EX.gr||EX.gr.some(g=>!GROUPS.includes(g)))EX.gr=['Packaging & Services'];
   const chip=(k,v,n,off)=>`<label class="incl${off?'':' on'}"><input type="checkbox" data-k="${k}" data-v="${esc(v)}"${off?'':' checked'}><span>${esc(v)}</span><b>${fmt(Math.round(n))}</b></label>`;
   $('incl').innerHTML='<div class="inclhead">Stores to include:</div><div class="inclbox">'+[...st].sort((a,b)=>b[1]-a[1]).map(([v,n])=>chip('st',v,n,EX.st.includes(v))).join('')+'</div>'+
     (gr.size?'<div class="inclhead">Item groups to include:</div><div class="inclbox">'+GROUPS.filter(g=>gr.has(g)).map(g=>[g,gr.get(g)]).map(([v,n])=>chip('gr',v,n,EX.gr.includes(v))).join('')+'</div>':'');
   $('incl').querySelectorAll('input').forEach(i=>i.onchange=()=>{const a=EX[i.dataset.k],v=i.dataset.v;if(i.checked)EX[i.dataset.k]=a.filter(x=>x!==v);else a.push(v);
-    try{localStorage.setItem('slow.ex',JSON.stringify(EX))}catch(_){}i.parentNode.classList.toggle('on',i.checked);applyIncl();build();if(ITEMS.length){$('main').hidden=false;draw()}else $('main').hidden=true})}
+    try{localStorage.setItem('slow.ex',JSON.stringify(EX))}catch(_){}i.parentNode.classList.toggle('on',i.checked);if(i.dataset.k==='gr'){drawIncl()}applyIncl();build();if(ITEMS.length){$('main').hidden=false;draw()}else $('main').hidden=true})}
 function applyIncl(){const all=J.all.snaps,cols=(all.find(x=>x.cols.length)||{}).cols||[],gi=colIx(cols,/item group/i);
   J.snaps=all.filter(x=>!EX.st.includes(x.store)).map(x=>gi<0?x:{...x,rows:x.rows.filter(r=>!EX.gr.includes(grpOf(r[gi])))})}
 function build(){
