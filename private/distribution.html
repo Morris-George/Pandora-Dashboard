@@ -257,5 +257,7 @@ function tab(t){if(!mg()&&t!=='scan')t='scan';document.querySelectorAll('.tab').
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 boot();
 </script>
+<style>#zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out}#zoom img{max-width:90vw;max-height:90vh;border-radius:10px;background:#fff}.img img,#hitPic img{cursor:zoom-in}</style>
+<script>document.addEventListener("click",e=>{const z=document.getElementById("zoom");if(z){z.remove();return}const im=e.target.closest&&e.target.closest(".img img,#hitPic img");if(!im)return;e.stopPropagation();e.preventDefault();const d=document.createElement("div");d.id="zoom";d.innerHTML="<img alt=\"\">";d.firstChild.src=im.src;document.body.appendChild(d)},true);document.addEventListener("keydown",e=>{if(e.key==="Escape"){const z=document.getElementById("zoom");if(z)z.remove()}});</script>
 </body>
 </html>
