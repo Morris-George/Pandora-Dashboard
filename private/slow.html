@@ -30,6 +30,7 @@ tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr[data-f
 .img{width:36px;height:36px;border-radius:6px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;vertical-align:middle;font-size:9px;color:var(--ink2)}.img img{width:100%;height:100%;object-fit:cover}.nopic .img{display:none}
 .hb{display:flex;height:12px;border-radius:99px;overflow:hidden;background:var(--soft);min-width:80px}.hb i{display:block;height:100%}
 .tag{font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;margin-right:3px}.t-ord{background:var(--bad);color:#fff}.t-sell{background:var(--good);color:#fff}.t-dead{background:var(--soft);color:var(--bad)}.t-move{background:#8FB8DE;color:#10202A}
+.inclhead{font-size:13px;color:var(--ink2);margin:10px 0 6px;font-weight:700}.inclbox{display:flex;flex-wrap:wrap;gap:8px}.incl{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:600;font-size:13px;cursor:pointer;opacity:.55}.incl.on{opacity:1;border-color:var(--accent)}.incl input{width:16px;height:16px;margin:0}.incl b{font-weight:500;font-size:12px;color:var(--ink2)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer}.chip.on{background:var(--accent);border-color:var(--accent);color:#2A1018}
 .qk{padding:6px 0;border-top:1px solid var(--line)}.qk:first-child{border-top:0}
 .bad{color:var(--bad)}.good{color:var(--good)}
@@ -43,6 +44,7 @@ tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr[data-f
   <div id="run" hidden>
     <div class="row"><label class="note"><b>No Sales For (Months)</b> <input type="number" id="months" min="1" max="36" value="6" style="width:64px"></label><span class="note">Every store: today's stock in ERP and the last sale of each SKU in that store. Samples, main warehouse and transit are left out.</span><button class="btn sm" id="allSt" hidden>All stores</button><button class="btn sm" id="noSt" hidden>None</button></div>
     <div class="chips" id="whs" style="margin:8px 0" hidden></div>
+    <div id="incl"></div>
     <div class="row"><button class="btn go" id="sync">Run the report</button><button class="btn" id="clear">Clear</button><span class="note" id="msg"></span></div>
   </div>
 </div>
@@ -94,6 +96,7 @@ async function load(){showErr('');
   try{J=await api('/api/slow');const mg=J.level==='manage';$('run').hidden=!mg;
     if(mg&&J.months)$('months').value=J.months;
     if(!J.snaps.length){$('main').hidden=true;$('meta').innerHTML=mg?'Set the months and press <b>Run the report</b>.':'No report yet. Ask a Refill Order manager to run it.';return}
+    J.all=J.all&&J.all.at===J.snaps.map(x=>x.at).join()?J.all:{at:J.snaps.map(x=>x.at).join(),snaps:J.snaps};drawIncl();applyIncl();
     build();
     const runs=J.snaps.map(s=>`${esc(s.store)} ${s.rows.length} rows`).join(' · ');
     $('meta').innerHTML=`No sale in the last <b>${J.months}</b> months · run ${new Date(Math.max(...J.snaps.map(s=>Date.parse(s.at)))).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · ${runs}${J.order?` · refill order <b>${esc(J.order.name)}</b>`:''}`+(J.C.sku<0&&ITEMS.length?' · <b class="bad">No SKU column found in the report.</b>':'');
@@ -115,6 +118,21 @@ $('sync').onclick=async()=>{const ws=[],m=+$('months').value||6;
   $('msg').textContent=bad.length?'Done with problems.':'Done.';b.disabled=false;await load();if(bad.length)showErr(bad.join(' · '))};
 $('clear').onclick=async()=>{if(!confirm('Forget the report results?'))return;await api('/api/slow?op=clear',{});await load()};
 
+// include: stores and item groups, ticked like the Stock Count card (packaging and maintenance off by default)
+const OFF_RE=/packag|mainten|operation|accessor|consum|stationer|bag|box|pouch|display|fixture|uniform|gift ?card|service/i;
+let EX={st:[],gr:null};try{EX=Object.assign(EX,JSON.parse(localStorage.getItem('slow.ex')||'{}'))}catch(_){}
+function colIx(cols,re){return cols.findIndex(c=>re.test(c.label||c.fieldname))}
+function drawIncl(){const all=J.all.snaps,cols=(all.find(x=>x.cols.length)||{}).cols||[],qi=colIx(cols,/qty on hand/i),gi=colIx(cols,/item group/i);
+  const st=new Map(),gr=new Map();
+  all.forEach(x=>{st.set(x.store,(st.get(x.store)||0)+x.rows.reduce((t,r)=>t+(+r[qi]||0),0));if(gi>=0)x.rows.forEach(r=>{const g=r[gi]||'No group';gr.set(g,(gr.get(g)||0)+(+r[qi]||0))})});
+  if(!EX.gr)EX.gr=[...gr.keys()].filter(g=>OFF_RE.test(g));
+  const chip=(k,v,n,off)=>`<label class="incl${off?'':' on'}"><input type="checkbox" data-k="${k}" data-v="${esc(v)}"${off?'':' checked'}><span>${esc(v)}</span><b>${fmt(Math.round(n))}</b></label>`;
+  $('incl').innerHTML='<div class="inclhead">Stores to include:</div><div class="inclbox">'+[...st].sort((a,b)=>b[1]-a[1]).map(([v,n])=>chip('st',v,n,EX.st.includes(v))).join('')+'</div>'+
+    (gr.size?'<div class="inclhead">Item groups to include:</div><div class="inclbox">'+[...gr].sort((a,b)=>b[1]-a[1]).map(([v,n])=>chip('gr',v,n,EX.gr.includes(v))).join('')+'</div>':'');
+  $('incl').querySelectorAll('input').forEach(i=>i.onchange=()=>{const a=EX[i.dataset.k],v=i.dataset.v;if(i.checked)EX[i.dataset.k]=a.filter(x=>x!==v);else a.push(v);
+    try{localStorage.setItem('slow.ex',JSON.stringify(EX))}catch(_){}i.parentNode.classList.toggle('on',i.checked);applyIncl();build();if(ITEMS.length){$('main').hidden=false;draw()}else $('main').hidden=true})}
+function applyIncl(){const all=J.all.snaps,cols=(all.find(x=>x.cols.length)||{}).cols||[],gi=colIx(cols,/item group/i);
+  J.snaps=all.filter(x=>!EX.st.includes(x.store)).map(x=>gi<0?x:{...x,rows:x.rows.filter(r=>!EX.gr.includes(r[gi]||'No group'))})}
 function build(){
   const today=Date.now(),cols=J.snaps.find(s=>s.cols.length)?.cols||[];J.C=findCols(cols);const C=J.C;C.sku=0;
   ITEMS=J.snaps.flatMap(s=>s.rows.map(r=>{const sku=C.sku>=0?U(r[C.sku]):'',inf=(J.info||{})[sku]||{};

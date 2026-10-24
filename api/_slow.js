@@ -136,12 +136,12 @@ async function buildFromData(months) {
   }
   const cut = new Date(Date.now() + 3 * 3600 * 1000); cut.setUTCMonth(cut.getUTCMonth() - months); const cutS = cut.toISOString().slice(0, 10);
   const today = new Date(d + 'T00:00:00Z');
-  const cols = [{ label: 'SKU', fieldname: '_sku', fieldtype: 'Data' }, { label: 'EAN', fieldname: '_ean', fieldtype: 'Data' }, { label: 'Item Code', fieldname: 'item_code', fieldtype: 'Data' }, { label: 'Item Name', fieldname: 'item_name', fieldtype: 'Data' }, { label: 'Warehouse', fieldname: 'warehouse', fieldtype: 'Data' }, { label: 'Category', fieldname: 'category', fieldtype: 'Data' }, { label: 'Qty On Hand', fieldname: 'qty_on_hand', fieldtype: 'Float' }, { label: 'Last Sale Date', fieldname: 'last_sale_date', fieldtype: 'Date' }, { label: 'Idle Since', fieldname: 'idle_since', fieldtype: 'Data' }];
+  const cols = [{ label: 'SKU', fieldname: '_sku', fieldtype: 'Data' }, { label: 'EAN', fieldname: '_ean', fieldtype: 'Data' }, { label: 'Item Code', fieldname: 'item_code', fieldtype: 'Data' }, { label: 'Item Name', fieldname: 'item_name', fieldtype: 'Data' }, { label: 'Warehouse', fieldname: 'warehouse', fieldtype: 'Data' }, { label: 'Category', fieldname: 'category', fieldtype: 'Data' }, { label: 'Qty On Hand', fieldname: 'qty_on_hand', fieldtype: 'Float' }, { label: 'Last Sale Date', fieldname: 'last_sale_date', fieldtype: 'Date' }, { label: 'Idle Since', fieldname: 'idle_since', fieldtype: 'Data' }, { label: 'Item Group', fieldname: 'item_group', fieldtype: 'Data' }];
   const agg = {};
   for (const x of list) {
     const sk = skuOf(x.sku || x['sku-item'] || x.item_code), w = str(x.warehouse, 140), c = storeOf(w, st.stores), q = num(x.bal_qty != null ? x.bal_qty : x.balance_qty);
-    if (!sk || !c || NOT_A_STORE.test(w) || !require('./_refill').keepRow(x)) continue;
-    const k = sk + '|' + w, a = agg[k] || (agg[k] = { sk, w, c, q: 0, code: str(x.item_code, 40), name: str(x.item_name || x.item || '', 140), cat: str(x.item_group || '', 60) });
+    if (!sk || !c || NOT_A_STORE.test(w)) continue;
+    const k = sk + '|' + w, a = agg[k] || (agg[k] = { sk, w, c, q: 0, code: str(x.item_code, 40), name: str(x.item_name || x.item || '', 140), cat: str(x.item_group || '', 60), grp: str(x.item_group || x.full_group || x.category || '', 80) });
     a.q += q;
   }
   const by = {};
@@ -151,7 +151,7 @@ async function buildFromData(months) {
     if (ls && ls >= cutS) continue;
     const m = meta[a.sk] || {}, nm = a.name || m.name || a.sk;
     const idle = ls ? Math.max(0, Math.floor((today - new Date(ls + 'T00:00:00Z')) / 2629800000)) + ' m' : 'Never Sold';
-    (by[a.w] = by[a.w] || []).push([a.sk, eanFromName(nm), a.code, nm, a.w, m.cat || a.cat, Math.round(a.q * 10) / 10, ls, idle]);
+    (by[a.w] = by[a.w] || []).push([a.sk, eanFromName(nm), a.code, nm, a.w, m.cat || a.cat, Math.round(a.q * 10) / 10, ls, idle, a.grp || m.cat || 'No group']);
   }
   for (const l of Object.values(by)) l.sort((x, y) => (x[7] || '0').localeCompare(y[7] || '0') || y[6] - x[6]);
   const old = (await store.getJSON(INDEX)) || {};
