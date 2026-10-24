@@ -183,7 +183,7 @@ module.exports = async function handler(req, res) {
     if (!(facts.staff && facts.staff.role === 'admin')) return toHome();
     if (url.searchParams.get('data')) { // the live figures the film plays with (same numbers as the Dashboards page)
       res.setHeader('Cache-Control', 'no-store');
-      try { return res.status(200).json(await require('./_film').build()); } catch (e) { return res.status(200).json({ ok: false }); }
+      try { return res.status(200).json(await require('./_film').build()); } catch (e) { return res.status(200).json({ ok: false, error: String((e && e.message) || e).slice(0, 160) }); }
     }
     return sendFile(res, 'film.html', 'text/html; charset=utf-8', withChrome('staff', multi));
   }

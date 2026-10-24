@@ -606,7 +606,7 @@ dl.addEventListener('click',async function(){
   }catch(e){recording=false;dl.disabled=false;dl.textContent='Download video';stream.getTracks().forEach(function(k){k.stop()});foot.textContent='Could not record in this browser. Try Chrome or Edge on a computer.'}
 });
 if(window.ResizeObserver)new ResizeObserver(fit).observe(frame);window.addEventListener('resize',fit);fit();
-foot.textContent=D.snapshot?'Showing saved figures (live data was not available). Store and daily figures are sample.':'Live figures · '+D.periodLabel+' · updated each time this page opens'+tgNote;
+foot.textContent=D.snapshot?'Showing saved figures (live data was not available: '+(D.why||'unknown reason')+'). Store and daily figures are sample.':'Live figures · '+D.periodLabel+' · updated each time this page opens'+tgNote;
 var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 if(reduce){t=14.5;setPlaying(false)}
 draw();
@@ -614,10 +614,12 @@ var started=false;function go(){if(started)return;started=true;requestAnimationF
 if(document.fonts&&document.fonts.ready){document.fonts.ready.then(go);setTimeout(go,1500)}else go();
 }
 var live=null;
-fetch('/film?data=1',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.ok?r.json():null}).catch(function(){return null}).then(function(j){
+var why='';
+fetch('/film?data=1',{credentials:'same-origin',cache:'no-store'}).then(function(r){if(!r.ok){why='server answered '+r.status;return null}return r.json().catch(function(){why='the answer was not data (are you logged in as Super admin?)';return null})}).catch(function(e){why='request failed';return null}).then(function(j){
+  if(j&&!j.ok)why=j.error||'server could not read the sales';else if(j&&j.empty)why='no sales saved yet';
   var D=j&&j.ok&&!j.empty&&j.series&&j.series.length>1&&j.cats&&j.cats.length&&j.stores&&j.stores.length?j:SNAP;
   if(!D.zones)D.zones=[];
-  start(D);
+  D.why=why;start(D);
 });
 })();
 </script>
