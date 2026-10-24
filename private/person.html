@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Sales Person</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800&display=swap">
 <style>
 /* Layout: header + hero, coaching cards, then chart cards in a two-column grid. One brand hue (pink) with a muted rose-gray for everything that is not the point. */
 :root{
@@ -58,7 +58,7 @@ header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-start;just
 @media (max-width:820px){.hero{grid-template-columns:1fr}}
 .heroleft{background:var(--fill-soft);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:6px;justify-content:center}
 .heroleft .big{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1.05;white-space:nowrap;min-width:0}
-.heroleft .big small{font-size:16px;font-weight:700;color:var(--ink2);margin-right:4px}
+.heroleft .big small{font-size:16px;font-weight:700;color:var(--ink2);margin-inline-end:4px}
 .ranks{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .pill{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:var(--accent);color:#2A1018}
 :root[data-theme="dark"] .pill{color:#2A1018}
@@ -101,7 +101,7 @@ header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-start;just
 .brow .track{height:14px;position:relative}
 .brow .fill{display:block;height:100%;background:var(--mute);border-radius:0 5px 5px 0;min-width:2px}
 .brow.top .fill,.brow.me .fill{background:var(--accent)}
-.brow .val{text-align:right;font-weight:700;white-space:nowrap;min-width:0}
+.brow .val{text-align:end;font-weight:700;white-space:nowrap;min-width:0}
 .brow .val small{display:block;font-weight:500;color:var(--ink2);font-size:11px;margin-top:-2px}
 .brow.me .n{color:var(--accent-text);font-weight:800}
 .colbars .brow{grid-template-columns:minmax(90px,150px) 1fr minmax(128px,auto)}
@@ -119,7 +119,7 @@ header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-start;just
 .stack span:first-child{border-left:0}
 .srow{display:grid;grid-template-columns:70px 1fr 110px;gap:10px;align-items:center;padding:6px}
 .srow .n{font-weight:700}
-.srow .val{text-align:right;font-weight:700;white-space:nowrap;min-width:0}
+.srow .val{text-align:end;font-weight:700;white-space:nowrap;min-width:0}
 .srow .val small{display:block;font-weight:500;color:var(--ink2);font-size:11px}
 
 svg.chart{width:100%;height:auto;display:block;overflow:visible}
@@ -150,7 +150,7 @@ details.tbl summary{cursor:pointer;color:var(--ink2);font-weight:600}
 
 body.solo .nav, body.solo #prev, body.solo #next{display:none}
 body.clean .nav, body.clean .hideclean, body.clean .hint, body.clean details.tbl, body.clean .chips.sw{display:none}
-.exit{display:none;position:fixed;right:max(12px,env(safe-area-inset-right,0px));top:calc(10px + env(safe-area-inset-top,0px));z-index:5;opacity:.55}
+.exit{display:none;position:fixed;inset-inline-end:max(12px,env(safe-area-inset-right,0px));top:calc(10px + env(safe-area-inset-top,0px));z-index:5;opacity:.55}
 body.clean .exit{display:block}
 @media (max-width:620px){.brow{grid-template-columns:96px 1fr 88px}.heroleft .big{font-size:32px}}
 @media (prefers-reduced-motion:no-preference){.brow .fill{transition:width .3s ease}}
@@ -161,29 +161,38 @@ body.clean .exit{display:block}
 .datebar input[type=date]{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:6px 10px;font:inherit}
 .datebar .dmsg{color:var(--ink2);font-size:12.5px;font-weight:600}
 body.clean .datebar{display:none}
+
+/* Arabic: right-to-left, an Arabic font, and no letter-spacing or capitals (they break joined Arabic letters) */
+html[lang="ar"]{--font:'Cairo','Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+html[lang="ar"] body{word-spacing:normal}
+html[lang="ar"] *{letter-spacing:0!important;text-transform:none!important}
+html[dir="rtl"] .brow .fill{border-radius:5px 0 0 5px}
+html[dir="rtl"] .bullet .track{border-radius:5px 0 0 5px}
+html[dir="rtl"] .brow .n{unicode-bidi:plaintext;text-align:right}
 </style>
 </head>
 <body>
 <div class="wrap" id="app">
   <header class="top">
     <div class="brand">
-      <a class="crumb nav" href="/staff">&larr; Staff Performance</a>
+      <a class="crumb nav" id="crumb" href="/staff">&larr; Staff Performance</a>
       <h1 id="pname">Sales person</h1>
       <div class="sub" id="psub"></div>
     </div>
     <div class="actions">
-      <a class="btn hideclean" id="prev" href="#" aria-label="Previous sales person in this store">&larr; Prev</a>
-      <a class="btn hideclean" id="next" href="#" aria-label="Next sales person in this store">Next &rarr;</a>
-      <button class="btn hideclean" id="cleanBtn" type="button">Screenshot view</button>
+      <button class="btn hideclean" id="langBtn" type="button" lang="ar" aria-label="Show this page in Arabic">العربية</button>
+      <a class="btn hideclean" id="prev" href="#" data-i18n="prev" data-i18n-aria="prevAria" aria-label="Previous sales person in this store">&larr; Prev</a>
+      <a class="btn hideclean" id="next" href="#" data-i18n="next" data-i18n-aria="nextAria" aria-label="Next sales person in this store">Next &rarr;</a>
+      <button class="btn hideclean" id="cleanBtn" type="button" data-i18n="clean">Screenshot view</button>
     </div>
   </header>
-  <section class="datebar hideclean" id="dateRow" hidden aria-label="Dates">
-    <span class="dlbl">Dates</span>
-    <label class="dlab">From <input type="date" id="dFrom"></label><label class="dlab">To <input type="date" id="dTo"></label>
-    <button class="btn" type="button" id="dLast7">Last 7 days</button><button class="btn" type="button" id="dAll">Whole period</button>
+  <section class="datebar hideclean" id="dateRow" hidden aria-label="Dates" data-i18n-aria="dates">
+    <span class="dlbl" data-i18n="dates">Dates</span>
+    <label class="dlab"><span data-i18n="from">From</span> <input type="date" id="dFrom"></label><label class="dlab"><span data-i18n="to">To</span> <input type="date" id="dTo"></label>
+    <button class="btn" type="button" id="dLast7" data-i18n="last7">Last 7 days</button><button class="btn" type="button" id="dAll" data-i18n="whole">Whole period</button>
     <span class="dmsg" id="dMsg" role="status"></span>
   </section>
-  <button class="btn exit" id="exitClean" type="button">Exit screenshot view</button>
+  <button class="btn exit" id="exitClean" type="button" data-i18n="exitClean">Exit screenshot view</button>
   <main id="out" style="display:flex;flex-direction:column;gap:16px;width:100%"></main>
 </div>
 <div id="tip" role="tooltip"></div>
@@ -209,6 +218,49 @@ const nf0=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
 const nf1=new Intl.NumberFormat('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
 const nf2=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- language: English / Arabic (saved in this browser) ----------
+   Item names, card titles (TITLES_EN) and category / collection names always stay in English; everything else follows the language.
+   To translate the card titles too, set TITLES_EN to false. */
+const LKEY='pandora.lang', TITLES_EN=true;
+let LANG='en'; try{const v=localStorage.getItem(LKEY); if(v==='ar'||v==='en')LANG=v}catch(_){}
+const AR=()=>LANG==='ar';
+const TX={
+  prev:['← Prev','→ السابق'], next:['Next →','التالي ←'],
+  prevAria:['Previous sales person in this store','موظف المبيعات السابق في هذا الفرع'], nextAria:['Next sales person in this store','موظف المبيعات التالي في هذا الفرع'],
+  clean:['Screenshot view','وضع لقطة الشاشة'], exitClean:['Exit screenshot view','إغلاق وضع لقطة الشاشة'],
+  dates:['Dates','التواريخ'], from:['From','من'], to:['To','إلى'], last7:['Last 7 days','آخر 7 أيام'], whole:['Whole period','الفترة كاملة'], loading:['Loading…','جارٍ التحميل…'],
+  person:['Sales person','موظف المبيعات'], vat:['all amounts include VAT','كل المبالغ شاملة الضريبة'],
+  E_sign:['Signing you in…','جارٍ تسجيل دخولك…'], E_nopub:['No sales have been published yet','لم يتم نشر أي مبيعات بعد'],
+  E_nofile:['No sales file is loaded in this browser','لا يوجد ملف مبيعات محمّل في هذا المتصفح'],
+  E_myRange:['No sales found for you between these dates','لا توجد مبيعات لك بين هذين التاريخين'],
+  E_myFile:['No sales found for you in this month’s file yet','لا توجد مبيعات لك في ملف هذا الشهر حتى الآن'],
+  E_myMonth:['No sales found for you this month yet','لا توجد مبيعات لك هذا الشهر حتى الآن'],
+  E_notfound:['That sales person was not found in the loaded file','لم يتم العثور على هذا الموظف في الملف المحمّل'],
+  E_pRange:['No sales for this person between these dates','لا توجد مبيعات لهذا الموظف بين هذين التاريخين'],
+  E_pMonth:['No sales for this person this month','لا توجد مبيعات لهذا الموظف هذا الشهر'],
+  tailStaff:['Please check again later, or ask your manager.','من فضلك حاول مرة أخرى لاحقًا، أو اسأل مديرك.']
+};
+const t=k=>{const x=TX[k];return x?x[AR()?1:0]:k};
+const H=(en,ar)=>(AR()&&!TITLES_EN)?ar:en; // card titles
+const AR_WD=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+const AR_MON={Jan:'يناير',Feb:'فبراير',Mar:'مارس',Apr:'أبريل',May:'مايو',Jun:'يونيو',Jul:'يوليو',Aug:'أغسطس',Sep:'سبتمبر',Oct:'أكتوبر',Nov:'نوفمبر',Dec:'ديسمبر'};
+const trPeriod=p=>{p=String(p||''); return AR()?p.replace(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b/g,(m,a)=>AR_MON[a]||m):p};
+const LBL={'the store average':'متوسط الفرع','your store':'فرعك','all stores':'كل الفروع'};
+const lb=s=>AR()?(LBL[s]||s):s;
+const pcs=()=>AR()?'قطعة':'pieces';
+const iso=s=>AR()?String(s).replace(/EGP\s[\d,.]+|\d[\d,.]*%/g,m=>'\u2066'+m+'\u2069'):s; // keeps amounts and percentages in order inside Arabic text
+function applyLang(){
+  const de=document.documentElement; de.lang=LANG; de.dir=AR()?'rtl':'ltr';
+  document.querySelectorAll('[data-i18n]').forEach(e=>{e.textContent=t(e.dataset.i18n)});
+  document.querySelectorAll('[data-i18n-aria]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nAria)));
+  const b=$('langBtn'); if(b){b.textContent=AR()?'English':'العربية'; b.lang=AR()?'en':'ar'; b.setAttribute('aria-label',AR()?'عرض الصفحة بالإنجليزية':'Show this page in Arabic')}
+}
+function setLang(l){
+  LANG=l; try{localStorage.setItem(LKEY,l)}catch(_){}
+  applyLang();
+  if(CTX){setHead();render()} else if(LASTERR) noData(LASTERR);
+}
 
 /* long numbers never wrap: they get a little smaller until they fit */
 function fitNums(){
@@ -264,9 +316,9 @@ function pool(P,S){
 const arrow=up=>`<svg viewBox="0 0 10 10" aria-hidden="true"><path d="${up?'M5 1 9 8H1z':'M5 9 1 2h8z'}" fill="currentColor"/></svg>`;
 function delta(v,bench,label){
   if(!bench||!isFinite(bench)) return '';
-  const r=(v-bench)/Math.abs(bench);
-  if(Math.abs(r)<0.03) return `<div class="delta">About the same as ${label}</div>`;
-  return `<div class="delta ${r>0?'up':'down'}">${arrow(r>0)}${nf0.format(Math.abs(r)*100)}% ${r>0?'more':'less'} than ${label}</div>`;
+  const r=(v-bench)/Math.abs(bench), l=lb(label), p=nf0.format(Math.abs(r)*100);
+  if(Math.abs(r)<0.03) return `<div class="delta">${AR()?'قريب من '+l:'About the same as '+l}</div>`;
+  return `<div class="delta ${r>0?'up':'down'}">${arrow(r>0)}${AR()?`${p}% ${r>0?'أكثر':'أقل'} من ${l}`:`${p}% ${r>0?'more':'less'} than ${l}`}</div>`;
 }
 function bars(rows){ // rows: {name,val,txt,sub,tip,top}
   const max=Math.max(...rows.map(r=>r.val),0)||1;
@@ -287,10 +339,21 @@ const dateQs=()=>[wantMonth?'month='+wantMonth:'',wantFrom?'from='+encodeURIComp
 let SERVER=false;
 let CTX=null;
 
-function noData(msg){
-  $('pname').textContent='Sales person';
-  const tail=ROLE.role==='staff'?'Please check again later, or ask your manager.':'Open <a href="/staff" style="color:var(--accent-text);font-weight:700">Staff Performance</a> first'+(ROLE.role==='admin'?', load this month\'s file, then click a name.':' and pick a name from the table.');
-  $('out').innerHTML=`<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">${esc(msg)}</h2>${tail}</section>`;
+let LASTERR=null;
+function noData(key){ // key: one of the E_ messages in TX
+  LASTERR=key; CTX=null;
+  $('pname').textContent=t('person'); $('psub').textContent='';
+  const link='<a href="/staff" style="color:var(--accent-text);font-weight:700">Staff Performance</a>', adm=ROLE.role==='admin';
+  const tail=ROLE.role==='staff'?t('tailStaff'):AR()?
+    `افتح ${link} أولًا`+(adm?'، ثم حمّل ملف هذا الشهر، وبعدها اضغط على اسم.':' واختر اسمًا من الجدول.'):
+    `Open ${link} first`+(adm?', load this month\'s file, then click a name.':' and pick a name from the table.');
+  $('out').innerHTML=`<section class="card empty"><h2 style="margin:0 0 6px;color:var(--ink)">${esc(t(key))}</h2>${tail}</section>`;
+}
+function setHead(){
+  if(!CTX) return;
+  document.title=wantName+' · Staff Performance';
+  $('pname').textContent=wantName;
+  $('psub').innerHTML=`<bdi>${esc(wantStore)}</bdi> · <bdi>${esc(trPeriod(CTX.d.period||''))}</bdi> · ${esc(t('vat'))}`;
 }
 
 function benchPool(o){
@@ -301,13 +364,13 @@ function benchPool(o){
 async function loadData(){
   try{
     const r=await fetch('/api/data?'+[ROLE.role==='staff'?'me=1':'',dateQs()].filter(Boolean).join('&'),{credentials:'same-origin',cache:'no-store'});
-    if(r.status===401){location.replace('/login.html');return{err:'Signing you in…'}}
+    if(r.status===401){location.replace('/login.html');return{err:'E_sign'}}
     if(r.ok){SERVER=true;return{d:await r.json()}}
-    if(r.status===404) return{err:'No sales have been published yet'};
+    if(r.status===404) return{err:'E_nopub'};
   }catch(e){}
   SERVER=false; // server storage not set up: the old browser-only way
   const d=safeGet(KEY);
-  return d&&d.rows&&d.people?{d}:{err:'No sales file is loaded in this browser'};
+  return d&&d.rows&&d.people?{d}:{err:'E_nofile'};
 }
 
 /* ---- dates: change the period of the performance shown (the server only sends rows inside the range) ---- */
@@ -326,7 +389,7 @@ async function applyDates(from,to){
   if(from&&to&&from>to){const x=from;from=to;to=x}
   wantFrom=from; wantTo=to;
   try{history.replaceState(null,'','?'+[ 'store='+encodeURIComponent(wantStore),'name='+encodeURIComponent(wantName),dateQs() ].filter(Boolean).join('&'))}catch(_){}
-  $('dMsg').textContent='Loading…';
+  $('dMsg').textContent=t('loading');
   await build();
 }
 $('dFrom').addEventListener('change',()=>{if($('dFrom').value&&$('dTo').value) applyDates($('dFrom').value,$('dTo').value)});
@@ -347,18 +410,18 @@ async function build(){
   if(ROLE.role==='staff'){
     // a sales person only receives their own rows, plus store and company totals worked out on the server
     document.body.classList.add('solo');
-    if(!d.rows.length||!d.bench) return noData(rangeOn()?'No sales found for you between these dates':'No sales found for you in this month’s file yet');
+    if(!d.rows.length||!d.bench) return noData(rangeOn()?'E_myRange':'E_myFile');
     wantStore=d.self.store; wantName=d.self.name; si=0; pi=0;
     X=prep(d); P=X.P;
-    if(!P[0].inv.size) return noData(rangeOn()?'No sales found for you between these dates':'No sales found for you this month yet');
+    if(!P[0].inv.size) return noData(rangeOn()?'E_myRange':'E_myMonth');
     M=pool(P,[0]); S=benchPool(d.bench.store); C=benchPool(d.bench.company);
     mates=[0]; storeCount=d.bench.storeCount; rankStore=d.bench.rankStore;
   } else {
     si=d.stores.indexOf(wantStore);
     pi=d.people.findIndex(p=>p[0]===wantName&&d.stores[p[1]]===wantStore);
-    if(si<0||pi<0) return noData('That sales person was not found in the loaded file');
+    if(si<0||pi<0) return noData('E_notfound');
     X=prep(d); P=X.P;
-    if(!P[pi].inv.size) return noData(rangeOn()?'No sales for this person between these dates':'No sales for this person this month');
+    if(!P[pi].inv.size) return noData(rangeOn()?'E_pRange':'E_pMonth');
     const storeIdx=d.people.map((p,i)=>i).filter(i=>d.people[i][1]===si);
     const allIdx=d.people.map((p,i)=>i);
     M=pool(P,[pi]); S=pool(P,storeIdx); C=pool(P,allIdx);
@@ -366,10 +429,8 @@ async function build(){
     storeCount=mates.length; rankStore=mates.indexOf(pi)+1;
   }
   const alone=S.n<2, B=alone?C:S, bname=alone?'all stores':'your store';
-  CTX={d,X,P,pi,si,M,S,C,B,bname,alone,mates,storeCount,rankStore};
-  document.title=wantName+' · Staff Performance';
-  $('pname').textContent=wantName;
-  $('psub').textContent=`${wantStore} · ${d.period||''} · all amounts include VAT`;
+  CTX={d,X,P,pi,si,M,S,C,B,bname,alone,mates,storeCount,rankStore}; LASTERR=null;
+  setHead();
   const k=mates.indexOf(pi), pv=mates[k-1], nx=mates[k+1];
   const setNav=(id,idx)=>{const a=$(id); if(idx==null){a.setAttribute('aria-disabled','true');a.removeAttribute('href')}else{a.removeAttribute('aria-disabled');a.href=personUrl(wantStore,d.people[idx][0])}};
   setNav('prev',pv); setNav('next',nx);
@@ -390,58 +451,75 @@ function weekdayStats(){
   return{rows:WEEK_ORDER.map(w=>({wd:w,n:acc[w].n,avg:acc[w].n?acc[w].a/acc[w].n:0})),overall:days?total/days:0,activeDays:days};
 }
 
+const wdName=i=>AR()?AR_WD[i]:WDFULL[i];
 function tips(G){
-  const {d,P,pi,M,B,bname}=CTX, out=[];
+  const {d,P,pi,M,B,bname}=CTX, out=[], ar=AR(), bn=lb(bname);
   const top=[...G].sort((a,b)=>b.a-a.a)[0];
-  if(top) out.push({cls:'win',ic:'★',h:`Your best seller is ${top.name}`,
-    p:`${top.name} brought EGP ${nf0.format(top.a)}, which is ${nf0.format(top.share*100)} out of every EGP 100 you sold. Keep showing it first.`});
+  if(top) out.push({cls:'win',ic:'★',
+    h:ar?`أكثر ما تبيعه هو ${top.name}`:`Your best seller is ${top.name}`,
+    p:ar?`${top.name} حقق EGP ${nf0.format(top.a)}، أي ${nf0.format(top.share*100)} من كل EGP 100 بعتها. استمر في عرضه أولًا.`
+        :`${top.name} brought EGP ${nf0.format(top.a)}, which is ${nf0.format(top.share*100)} out of every EGP 100 you sold. Keep showing it first.`});
   const wd=weekdayStats();
   let dayTip=null;
   if(wd&&wd.activeDays>=7){const best=wd.rows.filter(r=>r.n>0).sort((a,b)=>b.avg-a.avg)[0];
-    if(best&&wd.overall&&best.avg>wd.overall*1.1) dayTip={cls:'win',ic:'★',h:`${WDFULL[best.wd]} is your best day`,p:`On ${WDFULL[best.wd]}s you sell about EGP ${nf0.format(best.avg)}, more than your usual EGP ${nf0.format(wd.overall)} on a selling day.`};}
+    if(best&&wd.overall&&best.avg>wd.overall*1.1) dayTip={cls:'win',ic:'★',
+      h:ar?`${wdName(best.wd)} هو أفضل يوم عندك`:`${WDFULL[best.wd]} is your best day`,
+      p:ar?`في يوم ${wdName(best.wd)} تبيع في المتوسط حوالي EGP ${nf0.format(best.avg)}، أكثر من معدلك المعتاد (EGP ${nf0.format(wd.overall)}) في يوم البيع.`
+          :`On ${WDFULL[best.wd]}s you sell about EGP ${nf0.format(best.avg)}, more than your usual EGP ${nf0.format(wd.overall)} on a selling day.`};}
   // add-on
   const keys=new Set(G.map(g=>g.g)); B.pen.forEach((v,g)=>keys.add(g));
   const gaps=[...keys].map(g=>({g,name:d.groups[g],pen:(P[pi].g.get(g)?P[pi].g.get(g).inv.size:0)/M.inv,bp:B.inv?(B.pen.get(g)||0)/B.inv:0}))
     .filter(x=>x.bp>=0.05&&x.bp-x.pen>=0.05).sort((a,b)=>(b.bp-b.pen)-(a.bp-a.pen));
   if(gaps.length){const x=gaps[0], cnt=B.pen.get(x.g)||0, avg=cnt?(B.gamt.get(x.g)*VAT)/cnt:0, est=(x.bp-x.pen)/2*M.inv*avg;
-    out.push({cls:'',ic:'↗',h:`Offer ${x.name} to more customers`,
-      p:`In ${bname}, ${nf0.format(x.bp*100)} out of every 100 customers buy ${x.name}. With you it is ${nf0.format(x.pen*100)} out of 100. Try suggesting it with the main piece.`,
-      est:est>=100?`If you close half of this gap you could add about EGP ${nf0.format(est)}`:''});}
+    out.push({cls:'',ic:'↗',
+      h:ar?`اعرض ${x.name} على عملاء أكثر`:`Offer ${x.name} to more customers`,
+      p:ar?`في ${bn}، ${nf0.format(x.bp*100)} من كل 100 عميل يشترون ${x.name}. عندك الرقم ${nf0.format(x.pen*100)} من كل 100. جرّب أن تقترحه مع القطعة الأساسية.`
+          :`In ${bname}, ${nf0.format(x.bp*100)} out of every 100 customers buy ${x.name}. With you it is ${nf0.format(x.pen*100)} out of 100. Try suggesting it with the main piece.`,
+      est:est>=100?(ar?`لو سدّدت نصف هذه الفجوة يمكن أن تزيد مبيعاتك بحوالي EGP ${nf0.format(est)}`:`If you close half of this gap you could add about EGP ${nf0.format(est)}`):''});}
   // pieces per customer
   if(M.upt<B.upt*0.98&&M.bt){
     const s1=M.b[0]/M.bt, t1=B.bt?B.b[0]/B.bt:0, unit=M.qty?M.incl/M.qty:0, est=0.25*M.b[0]*unit;
-    out.push({cls:'',ic:'＋',h:'Help customers take one more piece',
-      p:`${nf0.format(s1*100)} out of 100 of your customers leave with only one piece (${bname}: ${nf0.format(t1*100)}). Before closing, ask: “Would you like something to go with it?”`,
-      est:est>=100?`If 1 in 4 of them took one more piece you could add about EGP ${nf0.format(est)}`:''});
+    out.push({cls:'',ic:'＋',
+      h:ar?'ساعد العملاء على أخذ قطعة إضافية':'Help customers take one more piece',
+      p:ar?`${nf0.format(s1*100)} من كل 100 من عملائك يخرجون بقطعة واحدة فقط (${bn}: ${nf0.format(t1*100)}). قبل إنهاء البيع اسأل: «هل تحب شيئًا يكمّل القطعة؟»`
+          :`${nf0.format(s1*100)} out of 100 of your customers leave with only one piece (${bname}: ${nf0.format(t1*100)}). Before closing, ask: “Would you like something to go with it?”`,
+      est:est>=100?(ar?`لو أخذ 1 من كل 4 منهم قطعة إضافية يمكن أن تزيد مبيعاتك بحوالي EGP ${nf0.format(est)}`:`If 1 in 4 of them took one more piece you could add about EGP ${nf0.format(est)}`):''});
   }
   // spend per customer
-  if(M.atv<B.atv*0.97) out.push({cls:'',ic:'↑',h:'Show one higher-priced choice',
-      p:`Your customer spends EGP ${nf0.format(M.atv)} on average. In ${bname} it is EGP ${nf0.format(B.atv)}. Showing a nicer option next to the first choice helps.`});
-  else if(M.atv>=B.atv*1.03) out.push({cls:'win',ic:'★',h:'Your customers spend well',p:`Your customer spends EGP ${nf0.format(M.atv)} on average, more than ${bname} (EGP ${nf0.format(B.atv)}).`});
-  if(M.upt>=B.upt*0.98 && out.filter(t=>!t.cls).length===0) out.push({cls:'win',ic:'★',h:'Good work',p:`You are at or above ${bname} on the main numbers. Keep it up.`});
+  if(M.atv<B.atv*0.97) out.push({cls:'',ic:'↑',
+      h:ar?'اعرض خيارًا أعلى سعرًا':'Show one higher-priced choice',
+      p:ar?`عميلك ينفق في المتوسط EGP ${nf0.format(M.atv)}. في ${bn} المتوسط EGP ${nf0.format(B.atv)}. عرض خيار أجمل بجانب الاختيار الأول يساعد.`
+          :`Your customer spends EGP ${nf0.format(M.atv)} on average. In ${bname} it is EGP ${nf0.format(B.atv)}. Showing a nicer option next to the first choice helps.`});
+  else if(M.atv>=B.atv*1.03) out.push({cls:'win',ic:'★',
+      h:ar?'عملاؤك ينفقون جيدًا':'Your customers spend well',
+      p:ar?`عميلك ينفق في المتوسط EGP ${nf0.format(M.atv)}، أكثر من ${bn} (EGP ${nf0.format(B.atv)}).`
+          :`Your customer spends EGP ${nf0.format(M.atv)} on average, more than ${bname} (EGP ${nf0.format(B.atv)}).`});
+  if(M.upt>=B.upt*0.98 && out.filter(t=>!t.cls).length===0) out.push({cls:'win',ic:'★',
+      h:ar?'عمل ممتاز':'Good work',
+      p:ar?`أنت في مستوى ${bn} أو أعلى في الأرقام الأساسية. استمر.`:`You are at or above ${bname} on the main numbers. Keep it up.`});
   if(dayTip) out.push(dayTip);
   return out.slice(0,4);
 }
 
 function render(){
-  const {d,X,P,pi,M,B,bname,alone,storeCount,rankStore}=CTX, me=P[pi];
-  const G=groupRows().sort((a,b)=>b.a-a.a), topG=G[0];
+  const {d,X,P,pi,M,B,bname,alone,storeCount,rankStore}=CTX, me=P[pi], ar=AR(), bn=lb(bname);
+  const G=groupRows().sort((a,b)=>b.a-a.a), topG=G[0], pc=pcs();
   let h='';
   h+=`<section class="card hero">
-    <div class="heroleft"><div class="lbl">Your sales</div>
+    <div class="heroleft"><div class="lbl">${ar?'مبيعاتك':'Your sales'}</div>
       <div class="big num"><small>EGP</small> ${nf0.format(M.incl)}</div>
-      <div class="ranks"><span class="pill">${alone?'This month':`#${rankStore} of ${CTX.storeCount} in your store`}</span></div>
-      <div style="color:var(--ink2);font-size:13px;margin-top:4px">${topG?`You sell most: <b style="color:var(--ink)">${esc(topG.name)}</b>`:''}</div></div>
+      <div class="ranks"><span class="pill">${alone?(ar?'هذا الشهر':'This month'):(ar?`رقم ${rankStore} من ${CTX.storeCount} في فرعك`:`#${rankStore} of ${CTX.storeCount} in your store`)}</span></div>
+      <div style="color:var(--ink2);font-size:13px;margin-top:4px">${topG?`${ar?'أكثر ما تبيعه:':'You sell most:'} <b style="color:var(--ink)">${esc(topG.name)}</b>`:''}</div></div>
     <div class="kpis">
-      <div class="kpi"><div class="k">Customers served</div><div class="v num">${nf0.format(M.inv)}</div>${alone?'':delta(M.inv,B.avgInv,'the store average')}</div>
-      <div class="kpi"><div class="k">Pieces sold</div><div class="v num">${nf0.format(M.qty)}</div>${alone?'':delta(M.qty,B.avgQty,'the store average')}</div>
-      <div class="kpi"><div class="k">Pieces per customer</div><div class="v num">${nf1.format(M.upt)}</div>${delta(M.upt,B.upt,bname)}</div>
-      <div class="kpi"><div class="k">Spend per customer</div><div class="v num"><small style="font-size:12px;color:var(--ink2)">EGP</small> ${nf0.format(M.atv)}</div>${delta(M.atv,B.atv,bname)}</div>
+      <div class="kpi"><div class="k">${ar?'العملاء الذين خدمتهم':'Customers served'}</div><div class="v num">${nf0.format(M.inv)}</div>${alone?'':delta(M.inv,B.avgInv,'the store average')}</div>
+      <div class="kpi"><div class="k">${ar?'القطع المباعة':'Pieces sold'}</div><div class="v num">${nf0.format(M.qty)}</div>${alone?'':delta(M.qty,B.avgQty,'the store average')}</div>
+      <div class="kpi"><div class="k">${ar?'القطع لكل عميل':'Pieces per customer'}</div><div class="v num">${nf1.format(M.upt)}</div>${delta(M.upt,B.upt,bname)}</div>
+      <div class="kpi"><div class="k">${ar?'إنفاق العميل':'Spend per customer'}</div><div class="v num"><small style="font-size:12px;color:var(--ink2)">EGP</small> ${nf0.format(M.atv)}</div>${delta(M.atv,B.atv,bname)}</div>
     </div></section>`;
 
   const T=tips(G);
-  h+=`<section class="card"><div class="cardhead"><h2>Tips for you</h2><span class="meta">Green = you do this well. Pink = a chance to grow</span></div><div class="coach">`+
-    T.map(t=>`<article class="tip ${t.cls}"><div class="tag"><span class="ic" aria-hidden="true">${t.ic}</span></div><h3>${esc(t.h)}</h3><p>${esc(t.p)}</p>${t.est?`<div class="est num">${esc(t.est)}<small>A rough guess, not a target.</small></div>`:''}</article>`).join('')+`</div></section>`;
+  h+=`<section class="card"><div class="cardhead"><h2>${H('Tips for you','نصائح لك')}</h2><span class="meta">${ar?'الأخضر = تفعله جيدًا. الوردي = فرصة للنمو':'Green = you do this well. Pink = a chance to grow'}</span></div><div class="coach">`+
+    T.map(t=>`<article class="tip ${t.cls}"><div class="tag"><span class="ic" aria-hidden="true">${t.ic}</span></div><h3>${esc(iso(t.h))}</h3><p>${esc(iso(t.p))}</p>${t.est?`<div class="est num">${esc(iso(t.est))}<small>${ar?'تقدير تقريبي وليس هدفًا.':'A rough guess, not a target.'}</small></div>`:''}</article>`).join('')+`</div></section>`;
 
   // collections (Pandora families): "Pandora Moments - Charm" -> Moments
   {
@@ -450,30 +528,31 @@ function render(){
     let myTot=0,bTot=0;
     G.forEach(x=>{const o=get(famOf(x.name));o.a+=x.a;o.q+=x.q;myTot+=x.a});
     B.gamt.forEach((v,g)=>{const o=get(famOf(d.groups[g]));o.b+=v;bTot+=v});
-    const F=[...fam.values()].filter(o=>o.a>0).sort((a,b)=>b.a-a.a);
-    if(F.length) h+=`<section class="card"><div class="cardhead"><h2>Your collections</h2><span class="meta">Share of your sales, next to your ${bname==='all stores'?'all-store':'store'} share</span></div><div class="colbars">`+
-      bars(F.slice(0,8).map((o,i)=>({name:o.name,val:o.a,txt:'EGP '+nf0.format(o.a),sub:nf0.format(o.a/myTot*100)+'%'+(bTot?' · '+(bname==='all stores'?'all':'store')+' '+nf0.format(o.b/bTot*100)+'%':''),top:i===0,tip:`${o.name} · EGP ${nf0.format(o.a)} · ${nf0.format(o.q)} pieces`})))+`</div></section>`;
+    const F=[...fam.values()].filter(o=>o.a>0).sort((a,b)=>b.a-a.a), isAll=bname==='all stores';
+    if(F.length) h+=`<section class="card"><div class="cardhead"><h2>${H('Your collections','مجموعاتك')}</h2><span class="meta">${ar?`حصة كل مجموعة من مبيعاتك، بجانب حصتها في ${isAll?'كل الفروع':'فرعك'}`:`Share of your sales, next to your ${isAll?'all-store':'store'} share`}</span></div><div class="colbars">`+
+      bars(F.slice(0,8).map((o,i)=>({name:o.name,val:o.a,txt:'EGP '+nf0.format(o.a),sub:iso(nf0.format(o.a/myTot*100)+'%'+(bTot?' · '+(ar?(isAll?'الكل':'الفرع'):(isAll?'all':'store'))+' '+nf0.format(o.b/bTot*100)+'%':'')),top:i===0,tip:`${o.name} · EGP ${nf0.format(o.a)} · ${nf0.format(o.q)} ${pc}`})))+`</div></section>`;
   }
   h+=`<div class="grid2">`;
   const shown=G.slice(0,6);
-  h+=`<section class="card"><div class="cardhead"><h2>What you sell most</h2><span class="meta">By sales</span></div>`+
-    bars(shown.map((g,i)=>({name:g.name,val:g.a,txt:'EGP '+nf0.format(g.a),sub:nf0.format(g.q)+' pieces',top:i===0,tip:`${g.name} · EGP ${nf0.format(g.a)} · ${nf0.format(g.q)} pieces`})))+`</section>`;
+  h+=`<section class="card"><div class="cardhead"><h2>${H('What you sell most','أكثر ما تبيعه')}</h2><span class="meta">${ar?'حسب المبيعات':'By sales'}</span></div>`+
+    bars(shown.map((g,i)=>({name:g.name,val:g.a,txt:'EGP '+nf0.format(g.a),sub:nf0.format(g.q)+' '+pc,top:i===0,tip:`${g.name} · EGP ${nf0.format(g.a)} · ${nf0.format(g.q)} ${pc}`})))+`</section>`;
 
   if(X.hasItem&&me.item.size){
     const items=[...me.item.entries()].map(([k,v])=>{const it=d.items&&d.items[k]; const nm=Array.isArray(it)?(it[0]||it[1]||'Item'):String(it||'Item'); return{name:nm,a:v.a*VAT,q:v.q}}).sort((a,b)=>b.a-a.a).slice(0,5);
-    h+=`<section class="card"><div class="cardhead"><h2>Your top products</h2><span class="meta">By sales</span></div>`+
-      bars(items.map((x,i)=>({name:x.name,val:x.a,txt:'EGP '+nf0.format(x.a),sub:nf0.format(x.q)+' pieces',top:i===0,tip:`${x.name} · EGP ${nf0.format(x.a)}`})))+`</section>`;
+    h+=`<section class="card"><div class="cardhead"><h2>${H('Your top products','أفضل منتجاتك')}</h2><span class="meta">${ar?'حسب المبيعات':'By sales'}</span></div>`+
+      bars(items.map((x,i)=>({name:x.name,val:x.a,txt:'EGP '+nf0.format(x.a),sub:nf0.format(x.q)+' '+pc,top:i===0,tip:`${x.name} · EGP ${nf0.format(x.a)}`})))+`</section>`;
   }
 
   if(X.hasDate){
     const wd=weekdayStats();
     if(wd&&wd.activeDays>=3){
       const mx=Math.max(...wd.rows.map(r=>r.avg),0), best=wd.rows.reduce((a,b)=>b.avg>a.avg?b:a);
-      h+=`<section class="card"><div class="cardhead"><h2>Your best days</h2><span class="meta">What you sell on an average day</span></div>`+
-        bars(wd.rows.map(r=>({name:WDFULL[r.wd],val:r.avg,txt:r.n?'EGP '+nf0.format(r.avg):'No sales',top:r===best&&mx>0,tip:`${WDFULL[r.wd]} · ${r.n?'EGP '+nf0.format(r.avg)+' on an average day':'no sales'}`})))+`</section>`;
+      h+=`<section class="card"><div class="cardhead"><h2>${H('Your best days','أفضل أيامك')}</h2><span class="meta">${ar?'ما تبيعه في اليوم العادي':'What you sell on an average day'}</span></div>`+
+        bars(wd.rows.map(r=>({name:wdName(r.wd),val:r.avg,txt:r.n?'EGP '+nf0.format(r.avg):(ar?'لا مبيعات':'No sales'),top:r===best&&mx>0,tip:`${wdName(r.wd)} · ${r.n?'EGP '+nf0.format(r.avg)+(ar?' في اليوم العادي':' on an average day'):(ar?'لا مبيعات':'no sales')}`})))+`</section>`;
     }
   } else {
-    h+=`<section class="note"><b>Want to see your best days and top products?</b> Open <a href="/staff" style="color:var(--accent-text);font-weight:700">Staff Performance</a> and load the sales file again.</section>`;
+    h+=`<section class="note">${ar?`<b>تريد رؤية أفضل أيامك وأفضل منتجاتك؟</b> افتح <a href="/staff" style="color:var(--accent-text);font-weight:700">Staff Performance</a> وحمّل ملف المبيعات مرة أخرى.`
+      :`<b>Want to see your best days and top products?</b> Open <a href="/staff" style="color:var(--accent-text);font-weight:700">Staff Performance</a> and load the sales file again.`}</section>`;
   }
   h+=`</div>`;
   $('out').innerHTML=h;fitNums();
@@ -481,6 +560,7 @@ function render(){
 
 /* ---------- events ---------- */
 document.addEventListener('click',e=>{const c=e.target.closest('[data-cat]'); if(c&&CTX){VIEW.cat=c.dataset.cat;render()}});
+$('langBtn').onclick=()=>setLang(AR()?'en':'ar');
 $('cleanBtn').onclick=()=>document.body.classList.add('clean');
 $('exitClean').onclick=()=>document.body.classList.remove('clean');
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.body.classList.remove('clean')});
@@ -491,6 +571,7 @@ document.addEventListener('mousemove',e=>{const el=e.target.closest&&e.target.cl
 document.addEventListener('focusin',e=>{const el=e.target.closest&&e.target.closest('[data-tip]'); if(el){const r=el.getBoundingClientRect(); showTip(el,r.left+Math.min(r.width,200)/2,r.top)}});
 document.addEventListener('focusout',()=>tip.classList.remove('on'));
 document.addEventListener('scroll',()=>tip.classList.remove('on'),{passive:true});
+applyLang();
 build();
 </script>
 </body>
