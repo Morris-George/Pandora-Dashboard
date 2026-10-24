@@ -342,7 +342,7 @@ tr.flash td{animation:rowfl 1.4s ease-out}
 @keyframes cscan{from{top:16%}to{top:84%}}
 @media (prefers-reduced-motion:reduce){.camreticle i{animation:none}}
 .camtop{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 8px) 10px 0;display:flex;gap:8px;align-items:center}
-.camtop input{flex:1;min-width:0;border:1px solid #ffffff55;background:#0009;color:#fff;border-radius:12px;padding:10px 12px;font:inherit;font-size:16px}
+.camtop input,.camtop select{flex:1;min-width:0;border:1px solid #ffffff55;background:#0009;color:#fff;border-radius:12px;padding:10px 12px;font:inherit;font-size:16px}
 .camtop input::placeholder{color:#ffffffa0}
 .cbtn{border:1px solid #ffffff55;background:#0009;color:#fff;border-radius:12px;padding:12px 16px;font:inherit;font-size:17px;font-weight:600;white-space:nowrap}
 .camtop .cbtn{padding:10px 13px;font-size:16px}
@@ -515,7 +515,7 @@ td .t1{max-width:360px}
           <input id="scan" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Scan a barcode, or type a SKU and press Enter" aria-label="Scan a barcode">
           <div class="ready"><i></i><span>Ready to scan</span></div>
         </div>
-        <input class="field zonein" id="zone" type="text" maxlength="24" autocomplete="off" placeholder="Zone (required, e.g. Shelf A)" required aria-label="Zone being scanned">
+        <select class="field zonein" id="zone" required aria-label="Zone being scanned"></select>
         <button class="btn primary" id="camBtn" type="button" title="Scan with this device's camera"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Camera</button>
       </div>
       <div class="result" id="result"></div>
@@ -600,7 +600,7 @@ td .t1{max-width:360px}
     <div class="camreticle"><i></i></div>
     <div class="camtop">
       <button class="cbtn" id="camClose" type="button">&#10005; Close</button>
-      <input id="camZone" type="text" maxlength="24" autocomplete="off" placeholder="Zone (required)" required aria-label="Zone being scanned">
+      <select id="camZone" required aria-label="Zone being scanned"></select>
       <button class="cbtn" id="camTorch" type="button" hidden>Light</button>
     </div>
     <div class="camhint" id="camMsg"></div>
@@ -793,8 +793,11 @@ async function flushBlock(b){
 }
 function pendingBlocks(){let n=0;blocks.forEach(b=>{if(b.dirty||b.busy)n++;});return n;}
 
+/* zones are picked from a fixed list, nobody types them */
+const ZONES=[...Array.from({length:100},(_,k)=>"Tray "+(k+1)),"Defected items",...Array.from({length:6},(_,k)=>"Service tray "+(k+1)),"Reserved Items","Maintenance","Transfered Items"];
+(function(){const h='<option value="">Choose zone (required)</option>'+ZONES.map(z=>`<option value="${z}">${z}</option>`).join("");$("#zone").innerHTML=h;$("#camZone").innerHTML=h;})();
 function zoneOk(){return !!($("#zone").value||"").trim();}
-function zoneNeeded(){const el=$("#zone");el.classList.add("need");try{el.focus();}catch(e){}beep("bad");toast("Enter the zone first, then scan");}
+function zoneNeeded(){const el=$("#zone");el.classList.add("need");try{el.focus();}catch(e){}beep("bad");toast("Choose the zone first, then scan");}
 ["#zone","#camZone"].forEach(q=>$(q).addEventListener("input",e=>e.target.classList.remove("need")));
 let warnOpen=false;
 function warnCode(raw){
@@ -1825,8 +1828,8 @@ $("#hzDel").addEventListener("click",async()=>{
 });
 $("#hzone").addEventListener("change",e=>{ui.hz=e.target.value;ui.hlim=100;renderHist();});
 $("#hmore").addEventListener("click",()=>{ui.hlim+=100;renderHist();});
-$("#zone").value=lsGet("pandora-stock-zone")||"";
-$("#zone").addEventListener("input",e=>lsSet("pandora-stock-zone",e.target.value));
+{const z=lsGet("pandora-stock-zone")||"";$("#zone").value=ZONES.includes(z)?z:"";}
+$("#zone").addEventListener("change",e=>{lsSet("pandora-stock-zone",e.target.value);setTimeout(()=>scanEl.focus(),30);});
 $("#zone").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();scanEl.focus();}});
 $("#htbl").addEventListener("click",e=>{
   const th=e.target.closest(".thumb");if(th){openPic(+th.dataset.i,false);return;}
@@ -1898,7 +1901,7 @@ async function camLoop(g){
   if(!cam.on||g!==cam.gen)return;
   if(warnOpen){cam.timer=setTimeout(()=>camLoop(g),200);return;}
   const v=$("#camVideo");let raw="";
-  if(!($("#camZone").value||"").trim()){camSay("Enter a zone to start scanning");$("#camZone").classList.add("need");cam.waiting=true;cam.timer=setTimeout(()=>camLoop(g),200);return;}
+  if(!($("#camZone").value||"").trim()){camSay("Choose a zone to start scanning");$("#camZone").classList.add("need");cam.waiting=true;cam.timer=setTimeout(()=>camLoop(g),200);return;}
   const left=CAM_GAP-(Date.now()-cam.scanAt);
   if(left>0){camSay("Next scan in "+Math.ceil(left/1000)+"s");cam.waiting=true;cam.timer=setTimeout(()=>camLoop(g),150);return;}
   if(cam.waiting){camSay("Point the camera at a barcode. It scans by itself.");cam.waiting=false;}
@@ -2007,7 +2010,7 @@ function camAdjust(d){
 $("#camPlus").addEventListener("click",()=>camAdjust(1));
 $("#camMinus").addEventListener("click",()=>camAdjust(-1));
 $("#camTorch").addEventListener("click",async()=>{try{cam.torch=!cam.torch;await cam.track.applyConstraints({advanced:[{torch:cam.torch}]});}catch(e){}});
-$("#camZone").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur();}});
+$("#camZone").addEventListener("change",e=>e.target.blur());
 $("#cam").addEventListener("touchstart",()=>{try{if(actx&&actx.state==="suspended")actx.resume();}catch(e){}},{passive:true});
 $("#phoneBtn").addEventListener("click",openPhoneModal);
 $("#phClose").addEventListener("click",()=>{$("#phoneModal").hidden=true;});
