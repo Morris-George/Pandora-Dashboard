@@ -67,6 +67,14 @@ body{margin:0;color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFon
 .submit:disabled{cursor:wait;opacity:.9}
 .submit:disabled::before{content:"";display:inline-block;width:15px;height:15px;margin-right:10px;border-radius:50%;border:2.5px solid rgba(42,16,24,.3);border-top-color:#2A1018;vertical-align:-2px;animation:spin .7s linear infinite}
 @keyframes shine{to{left:130%}}
+/* venom: a gooey pink liquid hugs the button outline and stretches out toward the cursor */
+.venom{position:relative}
+.venom .submit{z-index:1}
+.goo{position:absolute;inset:-120px;pointer-events:none;visibility:hidden;filter:url(#venomGoo) drop-shadow(0 6px 10px rgba(255,127,146,.4))}
+.goo.on{visibility:visible}
+.goo i{position:absolute;left:50%;top:50%;border-radius:50%;background:#FF7F92;will-change:transform}
+.goo i.rim{border-radius:999px}
+body.leaving .goo{opacity:0!important;transition:opacity .25s}
 .hint{text-align:center;font-size:13px;margin:20px 0 0}.foot{text-align:center;font-size:11px;color:var(--ink2);margin:18px 0 0;letter-spacing:.08em}
 :focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
 /* signing in: the card lifts away and a pink wave opens the next page */
@@ -77,6 +85,7 @@ body.leaving #sweep{transform:scale(130);transition:transform .7s cubic-bezier(.
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.in,.card,.badge{opacity:1;transform:none}.ring,.spark{display:none}}
 </style></head>
 <body data-nopw>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><filter id="venomGoo" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"/></filter></defs></svg>
 <div class="bg" id="bg" aria-hidden="true"><div class="par"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i><div id="fx"></div></div></div>
 <div id="sweep"></div>
 <main class="wrap"><section class="card" id="card">
@@ -86,7 +95,7 @@ body.leaving #sweep{transform:scale(130);transition:transform .7s cubic-bezier(.
     <div class="field in" style="--n:2"><input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder=" " required autofocus><label for="username">Username</label></div>
     <div class="field password-wrap in" style="--n:3"><input id="password" name="password" type="password" autocomplete="current-password" placeholder=" " required><label for="password">Password</label><button class="toggle" id="toggle" type="button">Show</button></div>
     <p class="forgot in" style="--n:4"><a href="/forgot.html">Forgot your password?</a></p>
-    <button class="submit in" id="submit" type="submit" style="--n:5">Sign in</button>
+    <div class="venom in" id="venom" style="--n:5"><div class="goo" id="goo" aria-hidden="true"><i class="rim"></i></div><button class="submit" id="submit" type="submit">Sign in</button></div>
   </form>
   <p class="hint in" id="signupHint" style="--n:6"><a href="/signup.html">Sales person? Create your account</a></p><p class="foot in" style="--n:7">RESTRICTED ACCESS · PANDORA</p>
 </section></main>
@@ -98,6 +107,52 @@ body.leaving #sweep{transform:scale(130);transition:transform .7s cubic-bezier(.
  fx.innerHTML=h;
  const bg=document.getElementById('bg');
  addEventListener('pointermove',e=>{bg.style.setProperty('--px',(e.clientX/innerWidth-.5).toFixed(3));bg.style.setProperty('--py',(e.clientY/innerHeight-.5).toFixed(3))},{passive:true});
+})();
+// venom liquid around the Sign in button: crawls along the outline and reaches toward the cursor
+(function(){
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ const goo=document.getElementById('goo'),btn=document.getElementById('submit'),rim=goo.querySelector('.rim');
+ const mk=r=>{const e=document.createElement('i');e.style.width=e.style.height=(r*2)+'px';goo.appendChild(e);return e};
+ const drops=[];for(let i=0;i<9;i++){const r=5+Math.random()*3.5;drops.push({el:mk(r),r,s:Math.random()*1000,v:(18+Math.random()*26)*(i%2?1:-1),ph:Math.random()*6.28})}
+ const chain=[8,6.5,5.5,5,5.5,8.5].map(r=>({el:mk(r),r,x:0,y:0}));
+ let mx=-9999,my=-9999,seen=false,amp=0,pull=0,last=0,run=false;
+ function pointAt(s,L,r,P){s=((s%P)+P)%P;
+  if(s<L)return{x:-L/2+s,y:-r,nx:0,ny:-1};
+  s-=L;const arc=Math.PI*r;
+  if(s<arc){const th=-Math.PI/2+s/r;return{x:L/2+r*Math.cos(th),y:r*Math.sin(th),nx:Math.cos(th),ny:Math.sin(th)}}
+  s-=arc;
+  if(s<L)return{x:L/2-s,y:r,nx:0,ny:1};
+  s-=L;const th=Math.PI/2+s/r;return{x:-L/2+r*Math.cos(th),y:r*Math.sin(th),nx:Math.cos(th),ny:Math.sin(th)}}
+ function frame(now){
+  const dt=Math.min(.05,(now-last)/1000||.016);last=now;const tm=now/1000;
+  const w=btn.offsetWidth,h=btn.offsetHeight,r=h/2,L=Math.max(0,w-h),P=2*L+2*Math.PI*r;
+  const b=btn.getBoundingClientRect(),px=mx-(b.left+b.width/2),py=my-(b.top+b.height/2);
+  const qx=Math.max(-L/2,Math.min(L/2,px)),dx=px-qx,dist=Math.hypot(dx,py);
+  const nx=dist<.001?0:dx/dist,ny=dist<.001?-1:py/dist,dOut=dist-r;
+  const near=seen&&!btn.disabled&&dOut<130;
+  const target=near?(dOut<=0?1:Math.pow(1-dOut/130,.8)):0;
+  amp+=(target-amp)*(1-Math.exp(-9*dt));
+  const pt=(near&&dOut>12)?Math.min(1,(1-dOut/130)*1.6):0;
+  pull+=(pt-pull)*(1-Math.exp(-10*dt));
+  goo.style.opacity=Math.min(1,amp*5);
+  // the liquid rim that outlines the button
+  const T=1.5+5.5*amp+.8*amp*Math.sin(tm*3);
+  rim.style.width=(w+2*T)+'px';rim.style.height=(h+2*T)+'px';rim.style.transform='translate('+(-(w/2+T))+'px,'+(-(h/2+T))+'px)';
+  // blobs crawling around the outline
+  for(const d of drops){d.s+=d.v*(1+3.5*amp)*dt;const p=pointAt(d.s,L,r,P);
+   const off=T*.55+(2+5*amp)*(.5+.5*Math.sin(tm*2.2+d.ph)),sc=Math.max(.001,amp*(.85+.3*Math.sin(tm*3+d.ph*2)));
+   d.el.style.transform='translate('+(p.x+p.nx*off-d.r)+'px,'+(p.y+p.ny*off-d.r)+'px) scale('+sc+')'}
+  // the strand that stretches out toward the cursor
+  const ax=qx+nx*r,ay=ny*r,tip=Math.max(0,Math.min(dOut-16,24+60*pull)),n=chain.length;
+  chain.forEach((c,i)=>{const f=(i+1)/n,sway=Math.sin(tm*6+i)*2*pull*f;
+   const tx=ax+nx*tip*f-ny*sway,ty=ay+ny*tip*f+nx*sway;
+   if(pull<.02){c.x=ax;c.y=ay}else{const k=1-Math.exp(-(20-i*2.2)*dt);c.x+=(tx-c.x)*k;c.y+=(ty-c.y)*k}
+   c.el.style.transform='translate('+(c.x-c.r)+'px,'+(c.y-c.r)+'px) scale('+Math.max(.001,pull)+')'});
+  if(!near&&amp<.004&&pull<.004){run=false;goo.classList.remove('on');return}
+  requestAnimationFrame(frame)}
+ function start(){if(run)return;run=true;goo.classList.add('on');last=performance.now();requestAnimationFrame(frame)}
+ addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;mx=e.clientX;my=e.clientY;seen=true;start()},{passive:true});
+ document.documentElement.addEventListener('mouseleave',()=>{seen=false});
 })();
 const form=document.getElementById('loginForm'),err=document.getElementById('error'),btn=document.getElementById('submit'),pass=document.getElementById('password'),card=document.getElementById('card');
 document.getElementById('toggle').addEventListener('click',()=>{const reveal=pass.type==='password';pass.type=reveal?'text':'password';document.getElementById('toggle').textContent=reveal?'Hide':'Show';});
