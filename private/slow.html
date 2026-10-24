@@ -119,20 +119,22 @@ $('sync').onclick=async()=>{const ws=[],m=+$('months').value||6;
 $('clear').onclick=async()=>{if(!confirm('Forget the report results?'))return;await api('/api/slow?op=clear',{});await load()};
 
 // include: stores and item groups, ticked like the Stock Count card (packaging and maintenance off by default)
-const OFF_RE=/packag|mainten|operation|accessor|consum|stationer|bag|box|pouch|display|fixture|uniform|gift ?card|service/i;
+// the ERP item groups, folded into six: the five jewellery groups and everything else
+const GROUPS=['Rings','Bracelets','Earrings','Charms','Necklaces & Pendants','Packaging & Services'];
+const grpOf=g=>{g=String(g||'');return /ring/i.test(g)&&!/ear/i.test(g)?'Rings':/bracelet|bangle/i.test(g)?'Bracelets':/earring/i.test(g)?'Earrings':/charm|clip|spacer|dangle|safety ?chain/i.test(g)?'Charms':/necklace|pendant|chain|collier/i.test(g)?'Necklaces & Pendants':'Packaging & Services'};
 let EX={st:[],gr:null};try{EX=Object.assign(EX,JSON.parse(localStorage.getItem('slow.ex')||'{}'))}catch(_){}
 function colIx(cols,re){return cols.findIndex(c=>re.test(c.label||c.fieldname))}
 function drawIncl(){const all=J.all.snaps,cols=(all.find(x=>x.cols.length)||{}).cols||[],qi=colIx(cols,/qty on hand/i),gi=colIx(cols,/item group/i);
   const st=new Map(),gr=new Map();
-  all.forEach(x=>{st.set(x.store,(st.get(x.store)||0)+x.rows.reduce((t,r)=>t+(+r[qi]||0),0));if(gi>=0)x.rows.forEach(r=>{const g=r[gi]||'No group';gr.set(g,(gr.get(g)||0)+(+r[qi]||0))})});
-  if(!EX.gr)EX.gr=[...gr.keys()].filter(g=>OFF_RE.test(g));
+  all.forEach(x=>{st.set(x.store,(st.get(x.store)||0)+x.rows.reduce((t,r)=>t+(+r[qi]||0),0));if(gi>=0)x.rows.forEach(r=>{const g=grpOf(r[gi]);gr.set(g,(gr.get(g)||0)+(+r[qi]||0))})});
+  if(!EX.gr||EX.gr.some(g=>!GROUPS.includes(g)))EX.gr=['Packaging & Services'];
   const chip=(k,v,n,off)=>`<label class="incl${off?'':' on'}"><input type="checkbox" data-k="${k}" data-v="${esc(v)}"${off?'':' checked'}><span>${esc(v)}</span><b>${fmt(Math.round(n))}</b></label>`;
   $('incl').innerHTML='<div class="inclhead">Stores to include:</div><div class="inclbox">'+[...st].sort((a,b)=>b[1]-a[1]).map(([v,n])=>chip('st',v,n,EX.st.includes(v))).join('')+'</div>'+
-    (gr.size?'<div class="inclhead">Item groups to include:</div><div class="inclbox">'+[...gr].sort((a,b)=>b[1]-a[1]).map(([v,n])=>chip('gr',v,n,EX.gr.includes(v))).join('')+'</div>':'');
+    (gr.size?'<div class="inclhead">Item groups to include:</div><div class="inclbox">'+GROUPS.filter(g=>gr.has(g)).map(g=>[g,gr.get(g)]).map(([v,n])=>chip('gr',v,n,EX.gr.includes(v))).join('')+'</div>':'');
   $('incl').querySelectorAll('input').forEach(i=>i.onchange=()=>{const a=EX[i.dataset.k],v=i.dataset.v;if(i.checked)EX[i.dataset.k]=a.filter(x=>x!==v);else a.push(v);
     try{localStorage.setItem('slow.ex',JSON.stringify(EX))}catch(_){}i.parentNode.classList.toggle('on',i.checked);applyIncl();build();if(ITEMS.length){$('main').hidden=false;draw()}else $('main').hidden=true})}
 function applyIncl(){const all=J.all.snaps,cols=(all.find(x=>x.cols.length)||{}).cols||[],gi=colIx(cols,/item group/i);
-  J.snaps=all.filter(x=>!EX.st.includes(x.store)).map(x=>gi<0?x:{...x,rows:x.rows.filter(r=>!EX.gr.includes(r[gi]||'No group'))})}
+  J.snaps=all.filter(x=>!EX.st.includes(x.store)).map(x=>gi<0?x:{...x,rows:x.rows.filter(r=>!EX.gr.includes(grpOf(r[gi])))})}
 function build(){
   const today=Date.now(),cols=J.snaps.find(s=>s.cols.length)?.cols||[];J.C=findCols(cols);const C=J.C;C.sku=0;
   ITEMS=J.snaps.flatMap(s=>s.rows.map(r=>{const sku=C.sku>=0?U(r[C.sku]):'',inf=(J.info||{})[sku]||{};
