@@ -52,11 +52,23 @@ export async function findItem(code: string): Promise<ErpItem | null> {
   const byCode = await get<RawItem>(`/api/resource/Item/${encodeURIComponent(c)}`);
   if (byCode) return toItem(byCode);
 
-  const filters = encodeURIComponent(JSON.stringify([["Item Barcode", "barcode", "=", c]]));
-  const hits = await get<{ name: string }[]>(`/api/resource/Item?filters=${filters}&limit_page_length=1`);
-  if (!hits?.length) return null;
-  const item = await get<RawItem>(`/api/resource/Item/${encodeURIComponent(hits[0].name)}`);
-  return item ? toItem(item) : null;
+  // Barcode table, then the Pandora SKU (e.g. 288307 or 580719-20), then the item name, which for
+  // Pandora items is "<sku>-<EAN>" so a scanned EAN barcode matches its ending
+  const tries = [
+    [["Item Barcode", "barcode", "=", c]],
+    [["sku", "=", c], ["has_variants", "=", 0]],
+    [["sku", "=", c]],
+    [["item_name", "like", `${c}-%`], ["has_variants", "=", 0]],
+    [["item_name", "like", `%-${c}`]],
+    [["item_name", "=", c]],
+  ];
+  for (const f of tries) {
+    const hits = await get<{ name: string }[]>(`/api/resource/Item?filters=${encodeURIComponent(JSON.stringify(f))}&limit_page_length=1`).catch(() => null);
+    if (!hits?.length) continue;
+    const item = await get<RawItem>(`/api/resource/Item/${encodeURIComponent(hits[0].name)}`);
+    if (item) return toItem(item);
+  }
+  return null;
 }
 
 // Selling price from the Pandora price list (ERPNext prices include 14% VAT; returned before VAT).
