@@ -4,34 +4,25 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><title>Pandora — Sign in</title>
 <style>
-:root{color-scheme:light dark;--ink:#2A1F24;--ink2:#6B5A61;--glass:rgba(255,255,255,.96);--glass-line:#F6E1E4;--field:rgba(255,255,255,.9);--field-line:#EBD5D9;--accent:#FF93A0;--accent-text:#B03A4F;--bgbase:#FF93A0;--shadow:0 24px 70px rgba(176,58,79,.28)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#F6EBEE;--ink2:#C2AEB5;--glass:rgba(38,26,31,.7);--glass-line:rgba(255,147,160,.22);--field:rgba(23,16,19,.7);--field-line:#4a343b;--accent-text:#FF93A0;--bgbase:#170f13;--shadow:0 30px 80px rgba(0,0,0,.55)}}
-:root[data-theme="dark"]{--ink:#F6EBEE;--ink2:#C2AEB5;--glass:rgba(38,26,31,.7);--glass-line:rgba(255,147,160,.22);--field:rgba(23,16,19,.7);--field-line:#4a343b;--accent-text:#FF93A0;--bgbase:#170f13;--shadow:0 30px 80px rgba(0,0,0,.55)}
+:root{color-scheme:light;--ink:#2A1F24;--ink2:#6B5A61;--glass:rgba(255,255,255,.96);--glass-line:#F6E1E4;--field:rgba(255,255,255,.9);--field-line:#EBD5D9;--accent:#FF93A0;--accent-text:#B03A4F;--bgbase:#FF93A0;--shadow:0 24px 70px rgba(176,58,79,.28)}
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bgbase);overflow:hidden;word-spacing:.09em}
 /* ---- moving background ---- */
 .bg{position:fixed;inset:0;overflow:hidden;background:#FF93A0}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bg{background:radial-gradient(ellipse at 20% 10%,#3a1823 0%,#170f13 60%)}}
-:root[data-theme="dark"] .bg{background:radial-gradient(ellipse at 20% 10%,#3a1823 0%,#170f13 60%)}
 .par{position:absolute;inset:-40px;transform:translate3d(calc(var(--px,0)*26px),calc(var(--py,0)*26px),0);transition:transform .5s ease-out}
 .blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.85;will-change:transform}
 .b1{width:46vmax;height:46vmax;left:-12vmax;top:-14vmax;background:#FFB3BC;opacity:.7;animation:drift1 22s ease-in-out infinite alternate}
 .b2{width:42vmax;height:42vmax;right:-12vmax;bottom:-16vmax;background:#FF7F92;opacity:.45;animation:drift2 26s ease-in-out infinite alternate}
 .b3{width:30vmax;height:30vmax;left:38%;top:30%;background:#FFA3AE;opacity:.6;animation:drift3 30s ease-in-out infinite alternate}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .b1{background:#5b2238;opacity:.7}:root:not([data-theme="light"]) .b2{background:#FF93A0;opacity:.28}:root:not([data-theme="light"]) .b3{background:#8a3350;opacity:.5}}
-:root[data-theme="dark"] .b1{background:#5b2238;opacity:.7}:root[data-theme="dark"] .b2{background:#FF93A0;opacity:.28}:root[data-theme="dark"] .b3{background:#8a3350;opacity:.5}
 @keyframes drift1{to{transform:translate3d(12vmax,10vmax,0) scale(1.15)}}
 @keyframes drift2{to{transform:translate3d(-14vmax,-8vmax,0) scale(1.1)}}
 @keyframes drift3{to{transform:translate3d(-10vmax,8vmax,0) scale(1.3)}}
 /* floating charms: little rings and sparkles */
 .ring{position:absolute;bottom:-12vh;left:var(--x);width:var(--s);height:calc(var(--s)*1.396);background:rgba(255,255,255,.6);-webkit-mask:url(/pandora-logo.png) center/contain no-repeat;mask:url(/pandora-logo.png) center/contain no-repeat;filter:drop-shadow(0 0 10px rgba(255,255,255,.25));animation:rise var(--d) linear var(--t) infinite;opacity:0}
 
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ring{background:rgba(255,147,160,.5)}}
-:root[data-theme="dark"] .ring{background:rgba(255,147,160,.5)}
 @keyframes rise{0%{transform:translate3d(0,0,0) rotate(0);opacity:0}10%{opacity:1}85%{opacity:.9}100%{transform:translate3d(var(--dx),-118vh,0) rotate(var(--r));opacity:0}}
 .spark{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);background:#FFFFFF;clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);animation:twinkle var(--d) ease-in-out var(--t) infinite;opacity:0}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .spark{background:#FF93A0}}:root[data-theme="dark"] .spark{background:#FF93A0}
 @keyframes twinkle{0%,100%{opacity:0;transform:scale(.3) rotate(0)}50%{opacity:.95;transform:scale(1) rotate(90deg)}}
 /* ---- card ---- */
 .wrap{position:relative;z-index:2;min-height:100%;display:grid;place-items:center;padding:78px 20px 32px;transition:opacity .45s,transform .55s cubic-bezier(.5,0,.2,1)}
@@ -63,7 +54,6 @@ body{margin:0;color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFon
 .password-wrap:not(.revealed) .pwlogos{display:block}
 .pwlogos div{display:flex;width:max-content;will-change:transform}
 .pwlogos i{flex:none;width:12px;height:17px;margin-right:4px;background:var(--logo-black,#000);-webkit-mask:url(/pandora-logo.png) center/contain no-repeat;mask:url(/pandora-logo.png) center/contain no-repeat;animation:pwpop .22s cubic-bezier(.3,1.6,.5,1)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--logo-black:#F6EBEE}}:root[data-theme="dark"]{--logo-black:#F6EBEE}
 @keyframes pwpop{from{transform:scale(.2) rotate(-25deg);opacity:0}to{transform:none;opacity:1}}
 .toggle{position:absolute;right:8px;top:9px;height:38px;padding:0 14px;border:0;border-radius:12px;background:rgba(255,147,160,.18);color:var(--accent-text);font:inherit;font-size:12.5px;font-weight:800;cursor:pointer;transition:background .2s}.toggle:hover{background:rgba(255,147,160,.34)}
 .forgot{text-align:right;margin:-6px 4px 16px;font-size:12.5px}.forgot a,.hint a{color:var(--accent-text);font-weight:700;text-decoration:none}.forgot a:hover,.hint a:hover{text-decoration:underline}
