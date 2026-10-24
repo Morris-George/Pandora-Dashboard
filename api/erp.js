@@ -166,13 +166,18 @@ async function sync(m) {
   const names = new Map();
   for (const r of salesList) if (r.item_code && r.item_name && !names.has(r.item_code)) names.set(r.item_code, String(r.item_name));
   const sd = ex.filterStaff(staffData(staffList, fmtPeriod(from, to), names, 'ERP ' + key));
+  let updatedCurrent = false;
   if (sd.rows.length) {
     const prev = await store.getJSON('data/current.json');
-    await store.putJSON('data/current.json', { ...sd, ex: (prev && prev.ex) || undefined, uploadedAt });
+    // every month is kept on its own so older months can be opened on Staff Performance
+    await store.putJSON('data/m/' + key + '.json', { ...sd, ex: (prev && prev.ex) || undefined, uploadedAt });
+    // an older month fetched on request must not replace the month that is shown by default
+    const pk = ex.monthKey(prev);
+    if (!prev || !pk || key >= pk) { await store.putJSON('data/current.json', { ...sd, ex: (prev && prev.ex) || undefined, uploadedAt }); updatedCurrent = true; }
   }
 
   const status = { month: key, company, at: uploadedAt, seconds: Math.round((Date.now() - t0) / 100) / 10, sales: rows.length, staff: sd.rows.length };
-  await store.putJSON(STATUS, status);
+  if (updatedCurrent || !m) await store.putJSON(STATUS, status); // an older month fetched on request does not change the "last sync" shown
   return status;
 }
 

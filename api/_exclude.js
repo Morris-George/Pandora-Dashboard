@@ -37,4 +37,12 @@ function filterStaff(d) {
 // VM report rows (arrays of cells): drop any row that mentions Laderach in any cell
 const filterTable = rows => rows.filter(r => !r.some(hit));
 
-module.exports = { hit, anyHit, filterSales, filterStaff, filterTable };
+// "2026-10": the month of the latest sales day in a Staff Performance file (rows carry the day number in column 5)
+function monthKey(d) {
+  if (!d || !Array.isArray(d.rows)) return null;
+  let mx = null;
+  for (const r of d.rows) if (r[5] != null && (mx === null || r[5] > mx)) mx = r[5];
+  return mx === null ? null : new Date(mx * 86400000).toISOString().slice(0, 7);
+}
+
+module.exports = { hit, anyHit, filterSales, filterStaff, filterTable, monthKey };

@@ -136,6 +136,8 @@ body.clean .exit{display:block}
 
   <section class="controls" aria-label="Filters">
     <div class="row"><span class="lbl">Store</span><div class="chips" id="storeChips"></div></div>
+    <div class="row" id="monthRow" hidden><span class="lbl">Month</span><div class="chips" id="monthChips"></div>
+      <button class="chip" type="button" id="getOlder" hidden>Get earlier months from ERP</button><span class="dmsg" id="mMsg" role="status"></span></div>
     <div class="row" id="dateRow" hidden><span class="lbl">Dates</span>
       <label class="dlab">From <input type="date" id="dFrom"></label><label class="dlab">To <input type="date" id="dTo"></label>
       <div class="chips"><button class="chip" type="button" id="dLast7">Last 7 days</button><button class="chip" type="button" id="dAll">Whole period</button></div>
@@ -175,9 +177,9 @@ const METRICS=[
  {id:'upt',label:'UPT',f:p=>p.upt},
  {id:'atv',label:'ATV',f:p=>p.atv}];
 const DEFAULT_EX=/packaging|services|jewellery boxes/i;
-const st={data:null,store:'ALL',metric:'incl',q:'',ex:new Set(),from:'',to:'',fam:''};
-{const u=new URLSearchParams(location.search);st.from=/^\d{4}-\d{2}-\d{2}$/.test(u.get('from')||'')?u.get('from'):'';st.to=/^\d{4}-\d{2}-\d{2}$/.test(u.get('to')||'')?u.get('to'):''}
-const dateQs=()=>[st.from?'from='+encodeURIComponent(st.from):'',st.to?'to='+encodeURIComponent(st.to):''].filter(Boolean).join('&');
+const st={data:null,store:'ALL',metric:'incl',q:'',ex:new Set(),from:'',to:'',fam:'',month:'',months:[],cur:null};
+{const u=new URLSearchParams(location.search);st.from=/^\d{4}-\d{2}-\d{2}$/.test(u.get('from')||'')?u.get('from'):'';st.to=/^\d{4}-\d{2}-\d{2}$/.test(u.get('to')||'')?u.get('to'):'';st.month=/^\d{4}-\d{2}$/.test(u.get('month')||'')?u.get('month'):''}
+const dateQs=()=>[st.month?'month='+st.month:'',st.from?'from='+encodeURIComponent(st.from):'',st.to?'to='+encodeURIComponent(st.to):''].filter(Boolean).join('&');
 let SERVER=null; // true: the sales data lives on the server; false: this browser only (old way)
 const $=id=>document.getElementById(id);
 const nf0=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
@@ -461,7 +463,7 @@ async function applyDates(from,to){
   const msg=$('dMsg'); if(!st.dayMin) return;
   if(from&&to&&from>to){const x=from;from=to;to=x}
   if(from<=st.dayMin) from=''; if(to>=st.dayMax) to='';
-  const qs=[from?'from='+encodeURIComponent(from):'',to?'to='+encodeURIComponent(to):''].filter(Boolean).join('&');
+  const qs=[st.month?'month='+st.month:'',from?'from='+encodeURIComponent(from):'',to?'to='+encodeURIComponent(to):''].filter(Boolean).join('&');
   msg.textContent='Loading…';
   try{
     const r=await fetch('/api/data'+(qs?'?'+qs:''),{credentials:'same-origin',cache:'no-store'});
@@ -481,12 +483,61 @@ $('dLast7').addEventListener('click',()=>{
   const t=new Date(st.dayMax+'T00:00:00Z'); t.setUTCDate(t.getUTCDate()-6);
   applyDates(t.toISOString().slice(0,10),st.dayMax);
 });
+/* ---- months: every month is saved on the server, so older months can be opened any time ---- */
+const monthLabel=k=>new Date(k+'-01T00:00:00Z').toLocaleDateString('en-GB',{month:'short',year:'numeric',timeZone:'UTC'});
+function drawMonths(){
+  const row=$('monthRow'); if(!row) return;
+  const admin=ROLE.role==='admin';
+  $('getOlder').hidden=!admin;
+  row.hidden=!(st.months.length>1||admin);
+  const on=st.month||st.cur;
+  $('monthChips').innerHTML=st.months.map(k=>`<button class="chip" type="button" aria-pressed="${k===on}" data-m="${k}">${monthLabel(k)}</button>`).join('');
+}
+async function loadMonths(){
+  try{const r=await fetch('/api/data?months=1',{credentials:'same-origin',cache:'no-store'});
+    if(r.ok){const j=await r.json();st.months=j.months||[];st.cur=j.current||null}}catch(_){}
+  if(st.month&&st.month===st.cur)st.month='';
+  drawMonths();
+}
+async function openMonth(k){
+  const msg=$('mMsg'); msg.textContent='Loading…';
+  try{
+    const m=(k===st.cur)?'':k;
+    const r=await fetch('/api/data'+(m?'?month='+m:''),{credentials:'same-origin',cache:'no-store'});
+    if(r.status===401){location.replace('/login.html');return}
+    if(!r.ok){msg.textContent='Could not load '+monthLabel(k)+'.';return}
+    const j=await r.json();
+    if(!scopeData(j).rows.length){msg.textContent='No sales for '+monthLabel(k)+'.';return}
+    st.month=m; st.from=''; st.to=''; setData(j); drawMonths(); msg.textContent='';
+    try{history.replaceState(null,'',location.pathname+(m?'?month='+m:''))}catch(_){}
+  }catch(e){msg.textContent='No connection.'}
+}
+$('monthChips').addEventListener('click',e=>{const b=e.target.closest('[data-m]'); if(b) openMonth(b.dataset.m)});
+$('getOlder').addEventListener('click',async()=>{
+  const msg=$('mMsg'),btn=$('getOlder'); btn.disabled=true;
+  const have=new Set(st.months), todo=[]; let [y,m]=(st.cur||new Date().toISOString().slice(0,7)).split('-').map(Number);
+  for(let i=0;i<6;i++){m--; if(m<1){m=12;y--} const k=y+'-'+String(m).padStart(2,'0'); if(!have.has(k)) todo.push(k)}
+  if(!todo.length){msg.textContent='The last 6 months are already saved.';btn.disabled=false;return}
+  let got=0,stopped=false;
+  for(let i=0;i<todo.length&&!stopped;i++){
+    msg.textContent='Getting '+monthLabel(todo[i])+' from ERP ('+(i+1)+' of '+todo.length+'). Please keep this page open.';
+    try{
+      const r=await fetch('/api/erp?month='+todo[i],{method:'POST',credentials:'same-origin'}), j=await r.json().catch(()=>({}));
+      if(!r.ok||!j.ok){msg.textContent='Stopped at '+monthLabel(todo[i])+': '+(j.error||'ERP did not answer.');stopped=true}
+      else if(j.staff>0) got++;
+    }catch(e){msg.textContent='No connection while getting '+monthLabel(todo[i])+'.';stopped=true}
+  }
+  await loadMonths();
+  if(!stopped) msg.textContent=got?'Added '+got+' earlier month'+(got>1?'s':'')+'.':'ERP had no staff sales for those months.';
+  btn.disabled=false;
+});
 async function boot(){
   applyRoleUI();
   try{
     const r=await fetch('/api/data'+(dateQs()?'?'+dateQs():''),{credentials:'same-origin',cache:'no-store'});
     if(r.status===401){location.replace('/login.html');return}
-    if(r.ok){SERVER=true; applyRoleUI(); setData(await r.json()); return}
+    if(r.ok){SERVER=true; applyRoleUI(); setData(await r.json()); loadMonths(); return}
+    if(r.status===404&&st.month){st.month=''; return boot()}
     if(r.status===404){SERVER=true; applyRoleUI(); showEmpty(); return}
   }catch(e){}
   SERVER=false; // server storage not set up: keep the old browser-only way

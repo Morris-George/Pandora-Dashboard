@@ -282,7 +282,8 @@ let wantStore=q.get('store')||'', wantName=q.get('name')||'';
 const ISOD=/^\d{4}-\d{2}-\d{2}$/;
 let wantFrom=ISOD.test(q.get('from')||'')?q.get('from'):'', wantTo=ISOD.test(q.get('to')||'')?q.get('to'):'';
 let DAYMIN='',DAYMAX='';
-const dateQs=()=>[wantFrom?'from='+encodeURIComponent(wantFrom):'',wantTo?'to='+encodeURIComponent(wantTo):''].filter(Boolean).join('&');
+const wantMonth=/^\d{4}-\d{2}$/.test(q.get('month')||'')?q.get('month'):'';
+const dateQs=()=>[wantMonth?'month='+wantMonth:'',wantFrom?'from='+encodeURIComponent(wantFrom):'',wantTo?'to='+encodeURIComponent(wantTo):''].filter(Boolean).join('&');
 let SERVER=false;
 let CTX=null;
 

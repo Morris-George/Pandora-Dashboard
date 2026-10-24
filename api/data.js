@@ -79,7 +79,21 @@ module.exports = async function handler(req, res) {
 
   if (req.method === 'GET') {
     const q = new URL(req.url, 'https://x.invalid').searchParams;
-    const d0 = ex.filterStaff(await store.getJSON(FILE));
+    const cur = await store.getJSON(FILE);
+    if (q.get('months')) { // which months can be opened (one saved file per month, plus the current one)
+      const keys = (await store.list('data/m/')).map(p => (/^data\/m\/(\d{4}-\d{2})\.json$/.exec(p) || [])[1]).filter(Boolean);
+      const ck = ex.monthKey(cur);
+      if (ck && !keys.includes(ck)) keys.push(ck);
+      keys.sort().reverse();
+      return send(res, 200, { ok: true, months: keys, current: ck || null });
+    }
+    let raw = cur;
+    const mk = q.get('month');
+    if (/^\d{4}-\d{2}$/.test(mk || '') && ex.monthKey(cur) !== mk) {
+      raw = await store.getJSON('data/m/' + mk + '.json');
+      if (raw && cur && cur.ex) raw = { ...raw, ex: cur.ex }; // the hidden item groups are the same for every month
+    }
+    const d0 = ex.filterStaff(raw);
     if (!d0) return send(res, 404, { ok: false, error: 'no-data' });
     const d = byDate(d0, q.get('from'), q.get('to'));
     const wantMe = q.get('me');
@@ -121,6 +135,8 @@ module.exports = async function handler(req, res) {
     };
     const clean = ex.filterStaff(clean0);
     await store.putJSON(FILE, clean);
+    const mkey = ex.monthKey(clean);
+    if (mkey) await store.putJSON('data/m/' + mkey + '.json', clean); // keep every month so older months can be opened later
     return send(res, 200, { ok: true, rows: clean.rows.length });
   }
 
