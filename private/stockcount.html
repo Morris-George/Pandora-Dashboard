@@ -1072,7 +1072,7 @@ function renderTable(){
   for(const it of list.slice(0,room)){
     const key="i:"+it.i;const sc=scanned(it);const z=sc?zonesFor(x=>x.i===it.i):[];
     const cls=sc?(it.d===0?"rok":"rwarn"):"";
-    rows.push(`<tr class="${cls} ${it.i===ui.lastKey?"flash":""}"><td class="item">${(()=>{const tx=`<div class="t1">${esc(it.title)}</div><div class="t2">${esc(it.group)} · <span class="mono">${esc(it.barcode)}</span></div>`+(it.cnt1>0?zbtn(key,z.length):"");return RC&&sc?`<div class="itemrow">${thumbBtn(it)}<div class="itxt">${tx}</div></div>`:tx;})()}</td><td class="r num mono">${fmt(it.bal)}</td><td class="r num mono"><b>${fmt(it.cnt1)}</b></td><td class="r">${(()=>{const d=it.d1;return d===0?`<span class="pill zero">0</span>`:`<span class="pill ${d<0?"neg":"pos"}">${signed(d)}</span>`;})()}</td>${RC?`<td class="r">${it.d1!==0||it.re!==null?inp(key,it.re):""}</td><td class="r">${it.d1!==0||it.re!==null?finalCell(it.re,it.d):""}</td>`:""}</tr>`+(it.cnt1>0?zrow(key,z):""));
+    rows.push(`<tr class="${cls} ${it.i===ui.lastKey?"flash":""}"><td class="item">${(()=>{const tx=`<div class="t1">${esc(it.title)}</div><div class="t2">${esc(it.group)} · <span class="mono">${esc(it.barcode)}</span></div>`+(it.cnt1>0?zbtn(key,z.length):"");return RC?`<div class="itemrow">${thumbBtn(it)}<div class="itxt">${tx}</div></div>`:tx;})()}</td><td class="r num mono">${fmt(it.bal)}</td><td class="r num mono"><b>${fmt(it.cnt1)}</b></td><td class="r">${(()=>{const d=it.d1;return d===0?`<span class="pill zero">0</span>`:`<span class="pill ${d<0?"neg":"pos"}">${signed(d)}</span>`;})()}</td>${RC?`<td class="r">${it.d1!==0||it.re!==null?inp(key,it.re):""}</td><td class="r">${it.d1!==0||it.re!==null?finalCell(it.re,it.d):""}</td>`:""}</tr>`+(it.cnt1>0?zrow(key,z):""));
   }
   ui.lastKey=-1;
   const head=`<thead><tr><th>Item</th><th class="r">ERP</th><th class="r">Actual</th><th class="r">Difference</th>${RC?`<th class="r">Actual 2.0<small class="hint">recount</small></th><th class="r">Final</th>`:""}</tr></thead>`;
@@ -1089,6 +1089,7 @@ function renderTable(){
   for(const u of unk){tA+=u.units1;tD1+=u.units1;if(u.re!==null)tRe+=u.re;tF+=u.units;}
   const foot=`<tfoot><tr class="trow"><td>Total${ui.cat||q?" (filtered)":""}</td><td class="r num mono">${fmt(tE)}</td><td class="r num mono">${fmt(tA)}</td><td class="r"><span class="pill ${tD1<0?"neg":tD1>0?"pos":"zero"}">${signed(tD1)}</span></td>${RC?`<td class="r num mono">${fmt(tRe)}</td><td class="r"><span class="pill ${tF<0?"neg":tF>0?"pos":"zero"}">${signed(tF)}</span></td>`:""}</tr><tr><td colspan="${RC?6:4}"><div class="fsum"><span class="pill neg">Short ${fmt(sh)} units · ${fmt(shN)} items</span><span class="pill pos">Extra ${fmt(ex)} units · ${fmt(exN)} items</span>${RC?`<span class="dim">Recounted ${fmt(rcN)} of ${fmt(rcAll)}</span>`:""}</div></td></tr></tfoot>`;
   $("#tbl").innerHTML=head+(rows.length?`<tbody>${rows.join("")}</tbody>`:`<tbody><tr><td colspan="${RC?6:4}" class="empty">${empty}</td></tr></tbody>`)+foot;
+  if(RC)fillThumbs($("#tbl"),25);
   if(wasRin&&ui.focusKey){const el=[...document.querySelectorAll("#tbl .rin")].find(e=>e.dataset.k===ui.focusKey);if(el)el.focus();}
   const more=total-ui.limit;const mb=$("#tmore");mb.hidden=more<=0;if(more>0)mb.textContent="Show 150 more ("+fmt(more)+" hidden)";
 }
