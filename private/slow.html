@@ -112,7 +112,7 @@ $('sync').onclick=async()=>{const ws=[],m=+$('months').value||6;
   try{let j=await api('/api/slow?op=syncall',{months:m,warehouses:ws}),t=0;
     while(j.pending&&t++<30){$('msg').textContent=`ERP is building the report… (${t*40} s)`;j=await api('/api/slow?op=syncall',{months:m,warehouses:ws,pr:j.pending})}
     if(j.pending)bad.push('ERP is still building the report, run again in a few minutes')}catch(e){bad.push(e.message)}
-  $('msg').textContent=bad.length?'Done with problems.':'Done.';if(bad.length)showErr(bad.join(' · '));b.disabled=false;await load()};
+  $('msg').textContent=bad.length?'Done with problems.':'Done.';b.disabled=false;await load();if(bad.length)showErr(bad.join(' · '))};
 $('clear').onclick=async()=>{if(!confirm('Forget the report results?'))return;await api('/api/slow?op=clear',{});await load()};
 
 function build(){

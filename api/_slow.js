@@ -70,7 +70,9 @@ async function fetchReport(filters, pr, report = REPORT) {
     if (t === 19) return { pending: pr };
     await new Promise(z => setTimeout(z, 2000));
   }
-  const m = await erpCall('frappe.desk.query_report.run', { report_name: REPORT, filters, prepared_report_name: pr, are_default_filters: false });
+  // ERP's run() has no prepared_report_name: with the same filters it returns the latest finished build
+  const m = await erpCall('frappe.desk.query_report.run', { report_name: REPORT, filters, are_default_filters: false });
+  if (!Array.isArray(m.result) && m.prepared_report && !(m.doc && m.doc.status === 'Completed')) return { pending: pr };
   return { columns: m.columns || [], rows: m.result || [] };
 }
 // the SKU is the start of the item name: "583050C00-18-5700303xxxxxx …" -> 583050C00-18 (the item code is ERP's own number)
