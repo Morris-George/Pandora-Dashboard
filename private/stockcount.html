@@ -418,6 +418,21 @@ td .t1{max-width:360px}
 .dialog p{color:var(--muted);margin:0 0 18px}
 .dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 
+/* item pictures: history (only while searching an item) and differences */
+.thumb{flex:none;width:56px;height:56px;border-radius:10px;border:1px solid var(--line);background:#fff;padding:0;display:grid;place-items:center;overflow:hidden;color:var(--muted);font:11px var(--font-body);text-align:center;cursor:zoom-in}
+.thumb img{width:100%;height:100%;object-fit:contain;display:block}
+.itemrow{display:flex;align-items:center;gap:10px;min-width:0}
+.itemrow .itxt{min-width:0;flex:1}
+#picModal{z-index:210}
+.pdlg{background:var(--surface);border-radius:20px;padding:18px;width:min(560px,100%);max-height:calc(100vh - 40px);overflow:auto;box-shadow:var(--shadow);border:1px solid var(--line);display:grid;gap:12px}
+.pdlg .big{background:#fff;border-radius:14px;border:1px solid var(--line);height:min(60vh,520px);display:grid;place-items:center;overflow:hidden;color:var(--muted)}
+.pdlg .big img{width:100%;height:100%;object-fit:contain}
+.pdlg h3{font:700 20px var(--font-display);margin:0;overflow-wrap:anywhere}
+.pdlg .pinfo{color:var(--muted);font-size:14px}
+.pdlg .prc{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pdlg .prc .rin{width:110px}
+.pdlg .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+
 @media (max-width:980px){
   .grid{grid-template-columns:minmax(0,1fr)}
   .side{position:static;order:-1}
@@ -602,6 +617,7 @@ td .t1{max-width:360px}
   </div>
 </div>
 <div class="modal" id="warnModal" hidden style="z-index:200"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="wTitle"><h3 id="wTitle">Check this barcode</h3><p id="wBody"></p><div class="acts"><button class="btn primary" id="wOk" type="button">OK</button></div></div></div>
+<div class="modal" id="picModal" hidden><div class="pdlg" role="dialog" aria-modal="true" aria-labelledby="pTitle"><div class="big" id="pBig"></div><h3 id="pTitle"></h3><div class="pinfo" id="pInfo"></div><div class="prc" id="pRc" hidden><label for="pIn"><b>Recount</b></label><input class="rin" id="pIn" type="number" inputmode="numeric" min="0" step="1" placeholder="Count"><button class="btn primary" id="pSave" type="button">Save recount</button></div><div class="acts"><button class="btn" id="pClose" type="button">Close</button></div></div></div>
 <div class="modal" id="modal" hidden><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="mTitle"><h3 id="mTitle"></h3><p id="mBody"></p><div class="acts"><button class="btn" id="mNo" type="button">Cancel</button><button class="btn primary" id="mYes" type="button"></button></div></div></div>
 
 <script>
@@ -874,6 +890,47 @@ function fillPic(it,scanT){
   if(bi)set(bi);else if(pics[k])set(pics[k]);else if(pics[baseOf(it.sku)])set(pics[baseOf(it.sku)]);else findPic(it).then(set);
 }
 
+function picNow(it){const bi=builtinPic(it.sku);return bi||pics[skuKey(it.sku)]||pics[baseOf(it.sku)]||"";}
+function thumbBtn(it){
+  const u=picNow(it);
+  return `<button type="button" class="thumb" data-i="${it.i}" title="Click to enlarge" aria-label="Enlarge picture of ${esc(it.title)}">${u?`<img src="${esc(picSmall(u))}" alt="" referrerpolicy="no-referrer" loading="lazy">`:"Photo"}</button>`;
+}
+function fillThumbs(root,max){
+  let n=0;
+  for(const b of root.querySelectorAll(".thumb:not(:has(img))")){
+    if(n++>=max)break;
+    const it=S.items[+b.dataset.i];if(!it)continue;
+    findPic(it).then(u=>{if(!u||b.querySelector("img"))return;const im=new Image();im.alt="";im.referrerPolicy="no-referrer";im.src=picSmall(u);b.textContent="";b.appendChild(im);});
+  }
+}
+let picOpen=-1;
+async function openPic(i,withRecount){
+  const it=S.items[i];if(!it)return;picOpen=i;
+  const big=$("#pBig");big.textContent="Loading picture…";
+  $("#pTitle").textContent=it.title;
+  $("#pInfo").innerHTML=`<span class="mono">${esc(it.barcode||it.sku||"")}</span> · ERP <b>${fmt(it.bal)}</b> · Actual <b>${fmt(it.cnt1)}</b>`;
+  const rc=$("#pRc");rc.hidden=!withRecount||locked();
+  const inp=$("#pIn");inp.value=it.re===null||it.re===undefined?"":it.re;
+  $("#picModal").hidden=false;
+  const u=picNow(it)||await findPic(it);
+  if(picOpen!==i)return;
+  if(!u){big.textContent="No picture for this item";}
+  else{big.textContent="";const im=new Image();im.alt=it.title;im.referrerPolicy="no-referrer";im.onerror=()=>{big.textContent="No picture for this item";};im.src=picSmall(u);big.appendChild(im);}
+  if(!rc.hidden)setTimeout(()=>inp.focus(),30);
+}
+function closePic(){picOpen=-1;$("#picModal").hidden=true;}
+$("#pClose").addEventListener("click",closePic);
+$("#picModal").addEventListener("click",e=>{if(e.target===$("#picModal"))closePic();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#picModal").hidden)closePic();});
+function savePicRecount(){
+  if(picOpen<0||locked())return;
+  const v=$("#pIn").value;if(v===""){toast("Type a number");return;}
+  const n=parseInt(v,10);if(isNaN(n)||n<0){toast("Type a number");return;}
+  const i=picOpen;closePic();processRecount("i:"+i,n);
+}
+$("#pSave").addEventListener("click",savePicRecount);
+$("#pIn").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();savePicRecount();}});
+
 /* ---------- last scan result ---------- */
 function showResult(kind,scan){
   const r=$("#result");const it=scan.i>=0?S.items[scan.i]:null;
@@ -929,11 +986,14 @@ function renderHist(){
   all.sort((a,b)=>b.last-a.last);
   $("#hSub").textContent=fmt(all.length)+(all.length===1?" item":" items");
   const can=!locked();
+  const showPic=!!q;
   const rows=all.slice(0,ui.hlim).map(g=>{
     const it=g.i>=0?S.items[g.i]:null;
-    return `<tr class="${g.units===0?"hzero":""}"><td class="mono">${clock(g.last)}</td><td class="item"><div class="t1">${it?esc(it.title):`<span class="mono">${esc(g.raw)}</span><span class="tag">Not in ERP</span>`}${g.rc?'<span class="tag">Recount</span>':""}</div><div class="t2">${it?`<span class="mono">${esc(it.barcode||g.raw)}</span> · `:""}${esc(g.by||"")}</div></td><td>${esc(g.z||"–")}</td><td class="r num mono"><b>${fmt(g.units)}</b></td><td class="r">${can?`<span class="pm"><button class="hrm" type="button" data-act="-1" data-key="${esc(g.key)}" title="Take one away" aria-label="Take one away"${g.units<=0?" disabled":""}>−</button><button class="hrm" type="button" data-act="1" data-key="${esc(g.key)}" title="Add one" aria-label="Add one">+</button></span>`:""}</td></tr>`;
+    const tx=`<div class="t1">${it?esc(it.title):`<span class="mono">${esc(g.raw)}</span><span class="tag">Not in ERP</span>`}${g.rc?'<span class="tag">Recount</span>':""}</div><div class="t2">${it?`<span class="mono">${esc(it.barcode||g.raw)}</span> · `:""}${esc(g.by||"")}</div>`;
+    return `<tr class="${g.units===0?"hzero":""}"><td class="mono">${clock(g.last)}</td><td class="item">${showPic&&it?`<div class="itemrow">${thumbBtn(it)}<div class="itxt">${tx}</div></div>`:tx}</td><td>${esc(g.z||"–")}</td><td class="r num mono"><b>${fmt(g.units)}</b></td><td class="r">${can?`<span class="pm"><button class="hrm" type="button" data-act="-1" data-key="${esc(g.key)}" title="Take one away" aria-label="Take one away"${g.units<=0?" disabled":""}>−</button><button class="hrm" type="button" data-act="1" data-key="${esc(g.key)}" title="Add one" aria-label="Add one">+</button></span>`:""}</td></tr>`;
   });
   $("#htbl").innerHTML='<thead><tr><th>Last scanned</th><th>Item</th><th>Zone</th><th class="r">Units</th><th></th></tr></thead>'+(rows.length?`<tbody>${rows.join("")}</tbody>`:'<tbody><tr><td colspan="5" class="empty">No scans yet.</td></tr></tbody>');
+  if(showPic)fillThumbs($("#htbl"),12);
   const more=all.length-ui.hlim;const mb=$("#hmore");mb.hidden=more<=0;if(more>0)mb.textContent="Show 100 more ("+fmt(more)+" hidden)";
 }
 
@@ -1012,7 +1072,7 @@ function renderTable(){
   for(const it of list.slice(0,room)){
     const key="i:"+it.i;const sc=scanned(it);const z=sc?zonesFor(x=>x.i===it.i):[];
     const cls=sc?(it.d===0?"rok":"rwarn"):"";
-    rows.push(`<tr class="${cls} ${it.i===ui.lastKey?"flash":""}"><td class="item"><div class="t1">${esc(it.title)}</div><div class="t2">${esc(it.group)} · <span class="mono">${esc(it.barcode)}</span></div>${it.cnt1>0?zbtn(key,z.length):""}</td><td class="r num mono">${fmt(it.bal)}</td><td class="r num mono"><b>${fmt(it.cnt1)}</b></td><td class="r">${(()=>{const d=it.d1;return d===0?`<span class="pill zero">0</span>`:`<span class="pill ${d<0?"neg":"pos"}">${signed(d)}</span>`;})()}</td>${RC?`<td class="r">${it.d1!==0||it.re!==null?inp(key,it.re):""}</td><td class="r">${it.d1!==0||it.re!==null?finalCell(it.re,it.d):""}</td>`:""}</tr>`+(it.cnt1>0?zrow(key,z):""));
+    rows.push(`<tr class="${cls} ${it.i===ui.lastKey?"flash":""}"><td class="item">${(()=>{const tx=`<div class="t1">${esc(it.title)}</div><div class="t2">${esc(it.group)} · <span class="mono">${esc(it.barcode)}</span></div>`+(it.cnt1>0?zbtn(key,z.length):"");return RC&&sc?`<div class="itemrow">${thumbBtn(it)}<div class="itxt">${tx}</div></div>`:tx;})()}</td><td class="r num mono">${fmt(it.bal)}</td><td class="r num mono"><b>${fmt(it.cnt1)}</b></td><td class="r">${(()=>{const d=it.d1;return d===0?`<span class="pill zero">0</span>`:`<span class="pill ${d<0?"neg":"pos"}">${signed(d)}</span>`;})()}</td>${RC?`<td class="r">${it.d1!==0||it.re!==null?inp(key,it.re):""}</td><td class="r">${it.d1!==0||it.re!==null?finalCell(it.re,it.d):""}</td>`:""}</tr>`+(it.cnt1>0?zrow(key,z):""));
   }
   ui.lastKey=-1;
   const head=`<thead><tr><th>Item</th><th class="r">ERP</th><th class="r">Actual</th><th class="r">Difference</th>${RC?`<th class="r">Actual 2.0<small class="hint">recount</small></th><th class="r">Final</th>`:""}</tr></thead>`;
@@ -1702,6 +1762,7 @@ $("#newBtn").addEventListener("click",async()=>{
 });
 $("#tseg").addEventListener("click",e=>{const b=e.target.closest("button[data-t]");if(!b)return;ui.tab=b.dataset.t;ui.limit=150;renderTable();});
 $("#tbl").addEventListener("click",e=>{
+  const th=e.target.closest(".thumb");if(th){openPic(+th.dataset.i,ui.tab==="diff");return;}
   const b=e.target.closest(".zbtn");if(!b)return;
   const k=b.dataset.z;ui.open.has(k)?ui.open.delete(k):ui.open.add(k);renderTable();
 });
@@ -1745,6 +1806,7 @@ $("#zone").value=lsGet("pandora-stock-zone")||"";
 $("#zone").addEventListener("input",e=>lsSet("pandora-stock-zone",e.target.value));
 $("#zone").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();scanEl.focus();}});
 $("#htbl").addEventListener("click",e=>{
+  const th=e.target.closest(".thumb");if(th){openPic(+th.dataset.i,false);return;}
   const bt=e.target.closest(".hrm");if(!bt||locked())return;
   const g=histGroups().find(x=>x.key===bt.dataset.key);if(!g)return;
   const d=+bt.dataset.act;
