@@ -140,7 +140,7 @@ body.clean .exit{display:block}
       <button class="chip" type="button" id="getOlder" hidden>Get earlier months from ERP</button><span class="dmsg" id="mMsg" role="status"></span></div>
     <div class="row" id="dateRow" hidden><span class="lbl">Dates</span>
       <label class="dlab">From <input type="date" id="dFrom"></label><label class="dlab">To <input type="date" id="dTo"></label>
-      <div class="chips"><button class="chip" type="button" id="dLast7">Last 7 days</button><button class="chip" type="button" id="dAll">Whole period</button></div>
+      <div class="chips"><button class="chip" type="button" id="dLast7">Last 7 days</button><button class="chip" type="button" id="dAll">Latest month</button></div>
       <span class="dmsg" id="dMsg" role="status"></span></div>
     <div class="row"><span class="lbl">Rank by</span><div class="chips" id="metricChips"></div>
       <input class="search" id="q" type="search" placeholder="Search sales person or store" aria-label="Search sales person or store"></div>
@@ -177,7 +177,7 @@ const METRICS=[
  {id:'upt',label:'UPT',f:p=>p.upt},
  {id:'atv',label:'ATV',f:p=>p.atv}];
 const DEFAULT_EX=/packaging|services|jewellery boxes/i;
-const st={data:null,store:'ALL',metric:'incl',q:'',ex:new Set(),from:'',to:'',fam:'',month:'',months:[],cur:null};
+const st={span:false,data:null,store:'ALL',metric:'incl',q:'',ex:new Set(),from:'',to:'',fam:'',month:'',months:[],cur:null};
 {const u=new URLSearchParams(location.search);st.from=/^\d{4}-\d{2}-\d{2}$/.test(u.get('from')||'')?u.get('from'):'';st.to=/^\d{4}-\d{2}-\d{2}$/.test(u.get('to')||'')?u.get('to'):'';st.month=/^\d{4}-\d{2}$/.test(u.get('month')||'')?u.get('month'):''}
 const dateQs=()=>[st.month?'month='+st.month:'',st.from?'from='+encodeURIComponent(st.from):'',st.to?'to='+encodeURIComponent(st.to):''].filter(Boolean).join('&');
 let SERVER=null; // true: the sales data lives on the server; false: this browser only (old way)
@@ -467,8 +467,7 @@ function syncDates(d){
 async function applyDates(from,to){
   const msg=$('dMsg'); if(!st.dayMin) return;
   if(from&&to&&from>to){const x=from;from=to;to=x}
-  if(from<=st.dayMin) from=''; if(to>=st.dayMax) to='';
-  const qs=[st.month?'month='+st.month:'',from?'from='+encodeURIComponent(from):'',to?'to='+encodeURIComponent(to):''].filter(Boolean).join('&');
+  const qs=[from?'from='+encodeURIComponent(from):'',to?'to='+encodeURIComponent(to):''].filter(Boolean).join('&');
   msg.textContent='Loading…';
   try{
     const r=await fetch('/api/data'+(qs?'?'+qs:''),{credentials:'same-origin',cache:'no-store'});
@@ -476,17 +475,15 @@ async function applyDates(from,to){
     if(!r.ok){msg.textContent='Could not load those dates.';return}
     const j=await r.json();
     if(!scopeData(j).rows.length){msg.textContent='No sales between these dates. Pick other dates.';return}
-    st.from=from; st.to=to; setData(j);
+    const fm=(from||st.dayMin||'').slice(0,7), tm=(to||st.dayMax||'').slice(0,7);
+    st.span=!!(fm&&tm&&fm!==tm); st.month=(!st.span&&fm&&fm!==st.cur)?fm:'';
+    st.from=from; st.to=to; setData(j); drawMonths();
     try{history.replaceState(null,'',location.pathname+(qs?'?'+qs:''))}catch(_){}
   }catch(e){msg.textContent='No connection.'}
 }
-$('dFrom').addEventListener('change',()=>{const f=$('dFrom').value; if(!f) return;
-  const k=f.slice(0,7); if(k!==(st.month||st.cur)&&st.months.includes(k)) return openMonth(k,f,'');
-  if($('dTo').value) applyDates(f,$('dTo').value)});
-$('dTo').addEventListener('change',()=>{const t=$('dTo').value; if(!t) return;
-  const k=t.slice(0,7); if(k!==(st.month||st.cur)&&st.months.includes(k)) return openMonth(k,'',t);
-  if($('dFrom').value) applyDates($('dFrom').value,t)});
-$('dAll').addEventListener('click',()=>applyDates('',''));
+$('dFrom').addEventListener('change',()=>{if($('dFrom').value&&$('dTo').value) applyDates($('dFrom').value,$('dTo').value)});
+$('dTo').addEventListener('change',()=>{if($('dFrom').value&&$('dTo').value) applyDates($('dFrom').value,$('dTo').value)});
+$('dAll').addEventListener('click',()=>openMonth(st.cur||st.month));
 $('dLast7').addEventListener('click',()=>{
   if(!st.dayMax) return;
   const t=new Date(st.dayMax+'T00:00:00Z'); t.setUTCDate(t.getUTCDate()-6);
@@ -499,7 +496,7 @@ function drawMonths(){
   const admin=ROLE.role==='admin';
   $('getOlder').hidden=!admin;
   row.hidden=!(st.months.length>1||admin);
-  const on=st.month||st.cur;
+  const on=st.span?'':(st.month||st.cur);
   $('monthChips').innerHTML=st.months.map(k=>`<button class="chip" type="button" aria-pressed="${k===on}" data-m="${k}">${monthLabel(k)}</button>`).join('');
 }
 async function loadMonths(){
@@ -520,7 +517,7 @@ async function openMonth(k,from,to){
     if(!r.ok){msg.textContent=r.status===404?monthLabel(k)+' is not saved yet.':'Could not load '+monthLabel(k)+'.';return}
     const j=await r.json();
     if(!scopeData(j).rows.length){msg.textContent='No sales for '+monthLabel(k)+'.';return}
-    st.month=m; st.from=from||''; st.to=to||''; setData(j); drawMonths(); msg.textContent='';
+    st.span=false; st.month=m; st.from=from||''; st.to=to||''; setData(j); drawMonths(); msg.textContent='';
     try{history.replaceState(null,'',location.pathname+(qs?'?'+qs:''))}catch(_){}
   }catch(e){msg.textContent='No connection.'}
 }

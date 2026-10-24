@@ -324,7 +324,6 @@ function syncDates(d){
 async function applyDates(from,to){
   if(!DAYMIN) return;
   if(from&&to&&from>to){const x=from;from=to;to=x}
-  if(from<=DAYMIN) from=''; if(to>=DAYMAX) to='';
   wantFrom=from; wantTo=to;
   try{history.replaceState(null,'','?'+[ 'store='+encodeURIComponent(wantStore),'name='+encodeURIComponent(wantName),dateQs() ].filter(Boolean).join('&'))}catch(_){}
   $('dMsg').textContent='Loading…';

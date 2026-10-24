@@ -57,6 +57,30 @@ function byDate(d, from, to) {
   return { ...d, rows, period, ...meta, from: f === null ? null : dayToIso(f), to: t === null ? null : dayToIso(t) };
 }
 
+// Several months in one: stores, people, groups and items are matched by name, invoice numbers are shifted so two months never share one.
+function mergeMonths(list) {
+  const stores = [], people = [], groups = [], items = [], sI = new Map(), pI = new Map(), gI = new Map(), tI = new Map(), rows = [];
+  const idx = (m, arr, k) => { if (!m.has(k)) { m.set(k, arr.length); arr.push(k); } return m.get(k); };
+  let invOff = 0;
+  for (const d of list) {
+    const sm = d.stores.map(s => idx(sI, stores, s));
+    const pm = d.people.map(p => { const k = sm[p[1]] + '|' + p[0]; if (!pI.has(k)) { pI.set(k, people.length); people.push([p[0], sm[p[1]]]); } return pI.get(k); });
+    const gm = d.groups.map(g => idx(gI, groups, g));
+    const tm = (Array.isArray(d.items) ? d.items : []).map(i => { const k = JSON.stringify(i); if (!tI.has(k)) { tI.set(k, items.length); items.push(i); } return tI.get(k); });
+    let mx = -1;
+    for (const r of d.rows) {
+      const c = r.slice(); c[0] = pm[r[0]]; c[1] = gm[r[1]];
+      if (typeof c[2] === 'number') { if (c[2] > mx) mx = c[2]; c[2] += invOff; }
+      if (c.length > 6 && c[6] != null) c[6] = tm[c[6]];
+      rows.push(c);
+    }
+    invOff += mx + 1;
+  }
+  const last = list[list.length - 1] || {};
+  return { file: last.file, period: last.period, stores, people, groups, items, rows, ex: last.ex, uploadedAt: last.uploadedAt };
+}
+const monthsBetween = (a, b) => { const out = []; let [y, m] = a.split('-').map(Number); const [y2, m2] = b.split('-').map(Number); while (y < y2 || (y === y2 && m <= m2)) { out.push(y + '-' + String(m).padStart(2, '0')); if (++m > 12) { m = 1; y++; } } return out; };
+
 function validate(d) {
   if (!d || typeof d !== 'object') return 'The file is not valid.';
   for (const k of ['stores', 'people', 'groups', 'rows']) if (!Array.isArray(d[k])) return 'The file is missing ' + k + '.';
@@ -88,10 +112,27 @@ module.exports = async function handler(req, res) {
       return send(res, 200, { ok: true, months: keys, current: ck || null });
     }
     let raw = cur;
-    const mk = q.get('month');
-    if (/^\d{4}-\d{2}$/.test(mk || '') && ex.monthKey(cur) !== mk) {
-      raw = await store.getJSON('data/m/' + mk + '.json');
-      if (raw && cur && cur.ex) raw = { ...raw, ex: cur.ex }; // the hidden item groups are the same for every month
+    const mk = q.get('month'), ck = ex.monthKey(cur);
+    const loadMonth = async k => {
+      if (k === ck) return cur;
+      const m = await store.getJSON('data/m/' + k + '.json');
+      return m && cur && cur.ex ? { ...m, ex: cur.ex } : m; // the hidden item groups are the same for every month
+    };
+    if (/^\d{4}-\d{2}$/.test(mk || '')) {
+      if (ck !== mk) raw = await loadMonth(mk);
+    } else if (ISO.test(q.get('from') || '') || ISO.test(q.get('to') || '')) {
+      // free dates: pick any start and end day, even in different months
+      const saved = (await store.list('data/m/')).map(p => (/^data\/m\/(\d{4}-\d{2})\.json$/.exec(p) || [])[1]).filter(Boolean);
+      if (ck && !saved.includes(ck)) saved.push(ck);
+      saved.sort();
+      const fk = ISO.test(q.get('from') || '') ? q.get('from').slice(0, 7) : saved[0], tk = ISO.test(q.get('to') || '') ? q.get('to').slice(0, 7) : saved[saved.length - 1];
+      if (saved.length && fk && tk && (fk !== ck || tk !== ck)) {
+        const lo = fk < tk ? fk : tk, hi = fk < tk ? tk : fk;
+        const want = monthsBetween(lo, hi).filter(k => saved.includes(k));
+        const parts = [];
+        for (const k of want) { const m = await loadMonth(k); if (m) parts.push(ex.filterStaff(m)); }
+        if (parts.length === 1) raw = parts[0]; else if (parts.length > 1) raw = mergeMonths(parts);
+      }
     }
     const d0 = ex.filterStaff(raw);
     if (!d0) return send(res, 404, { ok: false, error: 'no-data' });
