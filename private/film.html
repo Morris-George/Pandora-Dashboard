@@ -348,6 +348,8 @@ var SNAP=(function(){
     series:ser,stores:st,zones:[{label:'Cairo zone',stores:st.slice(0,2).concat(st.slice(3,5))},{label:'October & Alexandria zone',stores:[st[2],st[5]]}],dailyReport:{date:'2026-10-24',morning:276000,night:216000,target:600000,pct:82,stores:0,sample:true}};
 })();
 function start(D){
+var tgNote='';
+try{var lt=Number(localStorage.getItem('pandoraDailyTarget'));if(lt>0&&D.days){D.dailyTarget=lt;D.target=lt*D.days;D.pct=Math.round(D.revenue/D.target*1000)/10;tgNote=' · daily target EGP '+num(lt)}}catch(e){}
 var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function monLabel(d){return MON[(+d.slice(5,7))-1]+' '+d.slice(0,4)}
 function dayLabel(d){return (+d.slice(8,10))+' '+MON[(+d.slice(5,7))-1]+' '+d.slice(0,4)}
@@ -604,7 +606,7 @@ dl.addEventListener('click',async function(){
   }catch(e){recording=false;dl.disabled=false;dl.textContent='Download video';stream.getTracks().forEach(function(k){k.stop()});foot.textContent='Could not record in this browser. Try Chrome or Edge on a computer.'}
 });
 if(window.ResizeObserver)new ResizeObserver(fit).observe(frame);window.addEventListener('resize',fit);fit();
-foot.textContent=D.snapshot?'Showing saved figures (live data was not available). Store and daily figures are sample.':'Live figures · '+D.periodLabel+' · updated each time this page opens';
+foot.textContent=D.snapshot?'Showing saved figures (live data was not available). Store and daily figures are sample.':'Live figures · '+D.periodLabel+' · updated each time this page opens'+tgNote;
 var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 if(reduce){t=14.5;setPlaying(false)}
 draw();
