@@ -199,6 +199,7 @@ tr.hzero td{opacity:.55}
 .hrm:disabled{opacity:.35;cursor:default}
 .pm{display:inline-flex;gap:4px}
 .urm{margin-top:6px;color:var(--bad)}
+.zdel{color:var(--bad);border-color:var(--bad)}
 .zonein.need,#camZone.need{border-color:var(--bad)!important;box-shadow:0 0 0 3px var(--bad-glow)}
 .hrm{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:18px;padding:2px 8px;border-radius:8px}.hrm:hover{color:var(--bad,#c33)}
 .tablecard td.item{max-width:0;width:100%}
@@ -556,6 +557,7 @@ td .t1{max-width:360px}
         <select class="field" id="hcat" aria-label="Category"></select>
         <select class="field" id="hwho" aria-label="Person"></select>
         <select class="field" id="hzone" aria-label="Zone"></select>
+        <button class="btn sm zdel" id="hzDel" type="button" hidden>Delete this zone</button>
       </div>
       <div class="tablewrap"><table id="htbl"></table></div>
       <button class="btn more" id="hmore" type="button" hidden></button>
@@ -684,6 +686,10 @@ function mergeScans(){
     for(let k=0;k<b.scans.length;k++){const a=b.scans[k];if(cutSet.size&&cutSet.has(a[0]+"|"+a[1]+"|"+b.dev))continue;out.push({t:a[0],raw:a[1],i:a[2],n:a[3],z:a[4]||"",m:a[5]||0,by:a[6]||b.by,dev:b.dev,k,c:0,bid:b.id});}
   }
   out.sort((x,y)=>x.t-y.t||(x.dev<y.dev?-1:x.dev>y.dev?1:0)||x.k-y.k);
+  /* m:4 = "delete this zone so it can be scanned again": drops every scan made in that zone before the marker, on every device (recounts are kept) */
+  const zc=new Map();
+  for(const s of out)if(s.m===4)zc.set(s.z,Math.max(zc.get(s.z)||0,s.t));
+  if(zc.size){const keep=out.filter(s=>s.m!==4&&!(s.m!==2&&s.m!==3&&zc.has(s.z)&&s.t<=zc.get(s.z)));out.length=0;out.push(...keep);}
   /* m:3 = "remove this not-in-ERP barcode": drops every earlier scan and recount of it, on every device */
   const rm=new Map();
   for(const s of out)if(s.m===3&&s.i<0)rm.set(s.raw,Math.max(rm.get(s.raw)||0,s.t));
@@ -993,6 +999,7 @@ function renderHist(){
     return `<tr class="${g.units===0?"hzero":""}"><td class="mono">${clock(g.last)}</td><td class="item">${showPic&&it?`<div class="itemrow">${thumbBtn(it)}<div class="itxt">${tx}</div></div>`:tx}</td><td>${esc(g.z||"–")}</td><td class="r num mono"><b>${fmt(g.units)}</b></td><td class="r">${can?`<span class="pm"><button class="hrm" type="button" data-act="-1" data-key="${esc(g.key)}" title="Take one away" aria-label="Take one away"${g.units<=0?" disabled":""}>−</button><button class="hrm" type="button" data-act="1" data-key="${esc(g.key)}" title="Add one" aria-label="Add one">+</button></span>`:""}</td></tr>`;
   });
   $("#htbl").innerHTML='<thead><tr><th>Last scanned</th><th>Item</th><th>Zone</th><th class="r">Units</th><th></th></tr></thead>'+(rows.length?`<tbody>${rows.join("")}</tbody>`:'<tbody><tr><td colspan="5" class="empty">No scans yet.</td></tr></tbody>');
+  $("#hzDel").hidden=!(ui.hz&&can);
   if(showPic)fillThumbs($("#htbl"),12);
   const more=all.length-ui.hlim;const mb=$("#hmore");mb.hidden=more<=0;if(more>0)mb.textContent="Show 100 more ("+fmt(more)+" hidden)";
 }
@@ -1802,6 +1809,20 @@ document.addEventListener("visibilitychange",()=>{if(document.hidden&&S)autoSave
 $("#hq").addEventListener("input",e=>{ui.hq=e.target.value;ui.hlim=100;renderHist();});
 $("#hwho").addEventListener("change",e=>{ui.hw=e.target.value;ui.hlim=100;renderHist();});
 $("#hcat").addEventListener("change",e=>{ui.hc=e.target.value;ui.hlim=100;renderHist();});
+$("#hzDel").addEventListener("click",async()=>{
+  const z=ui.hz;if(!z||locked())return;
+  const sc=S.scans.filter(x=>x.z===z&&x.m!==2);
+  const units=sc.reduce((a,x)=>a+x.n,0);
+  const who=[...new Set(sc.map(x=>x.by||"Unknown"))];
+  if(!sc.length){toast("Nothing scanned in zone "+z);return;}
+  const ok1=await askConfirm("Delete zone "+z+"?","This removes all "+fmt(sc.length)+" scans ("+fmt(units)+" units) made in this zone by "+who.join(", ")+". Recounts you typed in Differences are kept.","Continue");
+  if(!ok1)return;
+  const ok2=await askConfirm("Are you sure?","Last check: zone "+z+" will be emptied for everyone on every device so it can be scanned again. You can bring it back right away with Undo, but not after more scans are made.","Yes, delete zone "+z);
+  if(!ok2)return;
+  const b=getBlock();b.scans.push([Date.now(),z,-1,0,z,4,myName||""]);markDirty(b);
+  mergeScans();rebuildCounts();ui.hz="";scheduleRender();
+  toast("Zone "+z+" deleted. Scan it again.");
+});
 $("#hzone").addEventListener("change",e=>{ui.hz=e.target.value;ui.hlim=100;renderHist();});
 $("#hmore").addEventListener("click",()=>{ui.hlim+=100;renderHist();});
 $("#zone").value=lsGet("pandora-stock-zone")||"";
