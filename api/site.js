@@ -181,6 +181,10 @@ module.exports = async function handler(req, res) {
   // Launch Film: a 15-second motion film of the dashboards (super admin and overseer)
   if (requestedPath === '/film' || requestedPath === '/film/' || requestedPath === '/film.html') {
     if (!(facts.staff && facts.staff.role === 'admin')) return toHome();
+    if (url.searchParams.get('data')) { // the live figures the film plays with (same numbers as the Dashboards page)
+      res.setHeader('Cache-Control', 'no-store');
+      try { return res.status(200).json(await require('./_film').build()); } catch (e) { return res.status(200).json({ ok: false }); }
+    }
     return sendFile(res, 'film.html', 'text/html; charset=utf-8', withChrome('staff', multi));
   }
 

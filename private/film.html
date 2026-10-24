@@ -109,7 +109,7 @@ h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(
 .prow .nm span{font-size:15px;color:var(--f-mute);font-weight:600}
 .prow .bar{flex:1;height:20px;border-radius:10px;background:var(--f-line);position:relative;min-width:0}
 .prow .bar s{position:absolute;left:0;top:0;bottom:0;border-radius:10px;width:0}
-.prow .bar u{position:absolute;left:76.9%;top:-8px;bottom:-8px;width:4px;border-radius:2px;background:var(--f-ink)}
+.prow .sb{font-size:15px;color:var(--f-mute);font-weight:600}
 .prow .rv{width:130px;text-align:right;font-family:var(--disp);font-weight:800;font-stretch:88%;font-size:42px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .pFoot{position:absolute;left:0;right:0;bottom:0;height:116px;border-top:2px solid var(--f-line);display:flex;align-items:center;justify-content:space-between;padding:0 36px;background:#FBF6F7}
 .pFoot small{display:block;font-size:19px;color:var(--f-mute);font-weight:600}
@@ -203,11 +203,11 @@ h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(
               <div id="dashWrap">
                 <div id="dash">
                   <div class="dBand"><span class="badge"><img src="/pandora-logo.png" alt=""></span><div><i class="eyb">RETAIL INTELLIGENCE</i><b>Pandora · Sales Performance<em>✦</em></b></div><div class="pills"><span>↓ Export to Excel</span><span>Home</span><span class="tg"><i></i></span><span>Log out</span></div></div>
-                  <div class="dT"><h4>Sales, at a glance</h4><span>2025-12-01 — 2026-10-24 · All branches</span></div>
+                  <div class="dT"><h4>Sales, at a glance</h4><span id="dRange">2025-12-01 — 2026-10-24 · All branches</span></div>
                   <div class="tile" id="tile0" style="left:36px"><div class="tl">Total revenue</div><div class="tv" id="tv0" style="font-size:38px;margin-top:22px">EGP 0</div><div class="ts">Net, excluding VAT</div></div>
                   <div class="tile" id="tile1" style="left:399px"><div class="tl">Units sold</div><div class="tv" id="tv1" style="font-size:58px;margin-top:12px">0</div><div class="ts">Pieces, all stores</div></div>
-                  <div class="tile" id="tile2" style="left:762px"><div class="tl">Average order value</div><div class="tv" id="tv2" style="font-size:48px;margin-top:16px">EGP 0</div><div class="ts">30,758 invoices</div></div>
-                  <div class="tile" id="tile3" style="left:1125px"><div class="tl">Target achievement</div><div class="tv" id="tv3" style="font-size:58px;margin-top:12px">0%</div><div class="ts" style="margin-top:2px">EGP 196,800,000 period target</div><div class="pbar"><s id="tp"></s></div></div>
+                  <div class="tile" id="tile2" style="left:762px"><div class="tl">Average order value</div><div class="tv" id="tv2" style="font-size:48px;margin-top:16px">EGP 0</div><div class="ts" id="tsOrders">30,758 invoices</div></div>
+                  <div class="tile" id="tile3" style="left:1125px"><div class="tl">Target achievement</div><div class="tv" id="tv3" style="font-size:58px;margin-top:12px">0%</div><div class="ts" id="tsTarget" style="margin-top:2px">EGP 196,800,000 period target</div><div class="pbar"><s id="tp"></s></div></div>
                   <div class="pc" id="chartCard" style="left:36px;top:364px;width:880px;height:460px">
                     <div class="cT">Revenue trend</div><div class="cS">Daily revenue across the selected period</div>
                     <svg id="cs" viewBox="0 0 880 380" width="880" height="380" style="position:absolute;left:0;top:80px"><g id="grid"></g><g id="stems"></g><g id="pins"></g><line id="sl" y1="20" y2="320" stroke="#2A1018" stroke-opacity=".3" stroke-width="2" stroke-dasharray="5 6" opacity="0"/></svg>
@@ -242,15 +242,15 @@ h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(
               </div>
               <div class="mc" id="mc1" style="left:700px">
                 <div class="mcH"><h3>Staff Performance</h3><code>/staff</code></div>
-                <div class="zn">Cairo zone</div><div id="z1"></div>
-                <div class="zn">October &amp; Alexandria zone</div><div id="z2"></div>
+                <div class="zn" id="zn1">Cairo zone</div><div id="z1"></div>
+                <div class="zn" id="zn2">October &amp; Alexandria zone</div><div id="z2"></div>
               </div>
               <div class="mc" id="mc2" style="left:1300px">
                 <div class="mcH"><h3>Daily Store Report</h3><code>/daily</code></div>
                 <div class="ring2"><svg viewBox="0 0 200 200" width="200" height="200"><circle cx="100" cy="100" r="82" fill="none" stroke="#fff" stroke-width="26"/><circle id="rg" cx="100" cy="100" r="82" fill="none" stroke="#FF93A0" stroke-width="26" stroke-linecap="round" transform="rotate(-90 100 100)" stroke-dasharray="0 600"/></svg><b id="rgT">0%</b></div>
-                <div style="text-align:center;font-size:17px;color:var(--f-mute);font-weight:600;margin-bottom:12px">of today's target</div>
+                <div id="rgSub" style="text-align:center;font-size:17px;color:var(--f-mute);font-weight:600;margin-bottom:12px">of the day's target</div>
                 <div class="shift"><div>Morning<span class="pb"><s id="sh0" style="background:#FFC9CF"></s></span><em id="shv0">0</em></div><div>Night<span class="pb"><s id="sh1" style="background:#D85B83"></s></span><em id="shv1">0</em></div></div>
-                <div class="chip">Filled twice a day</div>
+                <div class="chip" id="chipD">Filled twice a day</div>
               </div>
             </div></div>
           </section>
@@ -259,7 +259,7 @@ h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(
             <div class="dLeft disp" id="dLeft">
               <div class="line"><span class="w"><b>Every</b></span></div>
               <div class="line"><span class="w"><b>store,</b></span></div>
-              <div class="line"><span class="w"><b>on&nbsp;target.</b></span></div>
+              <div class="line"><span class="w"><b>ranked.</b></span></div>
             </div>
             <div class="dCap" id="dCap">
               <div><i>✓</i>Sales, UPT and ATV per store</div>
@@ -267,7 +267,7 @@ h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(
               <div><i>✓</i>Reports ready to send</div>
             </div>
             <div class="pCard" id="pCard">
-              <div class="pHead"><b>Stores vs daily target</b><span>Sample figures</span></div>
+              <div class="pHead"><b>Stores by revenue</b><span id="dTag">Live figures</span></div>
               <div id="prows"></div>
               <div class="pFoot"><div><small>Daily target</small><strong>EGP 600,000</strong></div><div class="payBtn" id="payBtn"><span id="payTxt">Send store reports</span></div></div>
             </div>
@@ -285,7 +285,7 @@ h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(
             <div class="fRing"></div><div class="fRing"></div><div class="fRing"></div>
             <div id="spokes"></div>
             <svg id="cursorF" viewBox="0 0 44 44"><path d="M5 3 L5 31 L12.5 24 L17.5 36 L22.5 33.8 L17.6 22.2 L27.5 21.6 Z" fill="#FFF6F3" stroke="#2A1018" stroke-width="2.4" stroke-linejoin="round"/></svg>
-            <div class="fCred">Launch film · Motion design by Claude · Figures as of 24 Oct 2026 · Store rankings are sample</div>
+            <div class="fCred" id="fCred">Launch film · Motion design by Claude</div>
           </section>
 
           <div id="swishB" class="swishB" hidden></div>
@@ -301,8 +301,9 @@ h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(
       <button id="rp" type="button" class="btn">Replay</button>
       <input id="scrub" type="range" min="0" max="15000" step="1" value="0" aria-label="Timeline">
       <span id="time">0:00 / 0:15</span>
+      <button id="dl" type="button" class="btn">Download video</button>
     </div>
-    <div class="meta"><span>15 seconds · 16:9 · plays in the browser</span><span>Figures from the Dec 2025 – Oct 2026 dashboard. Store rankings and zone bars are sample.</span></div>
+    <div class="meta"><span>15 seconds · 16:9 · plays in the browser</span><span id="foot">Loading the latest figures…</span></div>
   </section>
 </div>
 
@@ -336,13 +337,31 @@ function smooth(pts){var d='M'+pts[0][0].toFixed(1)+' '+pts[0][1].toFixed(1);for
 function svgEl(n,a){var e=document.createElementNS('http://www.w3.org/2000/svg',n);for(var k in a)e.setAttribute(k,a[k]);return e}
 function kfmt(v){return v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?Math.round(v/1e3)+'K':Math.round(v)+''}
 
+
+var SNAP=(function(){
+  var r=rng(12),ser=[],i;
+  for(i=0;i<60;i++)ser.push({d:'',v:Math.round(120000+300000*Math.pow(r(),1.9))});
+  ser[9].v=826000;ser[10].v=380000;ser[23].v=1100000;ser[24].v=801000;ser[25].v=520000;ser[42].v=537000;ser[43].v=330000;ser[51].v=501000;
+  var st=[['City Stars',24100000,5210],['CC Almaza',19800000,4310],['Mall of Egypt',16200000,3520],['CFC',13900000,3010],['Point 90',11000000,2380],['Alexandria',8700000,1920]].map(function(a){return{name:a[0],rev:a[1],units:a[2]}});
+  return{snapshot:true,period:['2025-12-01','2026-10-24'],days:328,revenue:118107806,units:38785,orders:28522,aov:4141,dailyTarget:600000,target:196800000,pct:60,catCount:8,
+    cats:[{name:'Charms',share:33.8,units:16310,rev:39867591},{name:'Bracelets',share:30.2,units:8636,rev:35724158},{name:'Rings',share:12.2,units:4186,rev:14366636},{name:'The rest',share:23.8,units:9653,rev:28149421}],
+    series:ser,stores:st,zones:[{label:'Cairo zone',stores:st.slice(0,2).concat(st.slice(3,5))},{label:'October & Alexandria zone',stores:[st[2],st[5]]}],dailyReport:{date:'2026-10-24',morning:276000,night:216000,target:600000,pct:82,stores:0,sample:true}};
+})();
+function start(D){
+var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function monLabel(d){return MON[(+d.slice(5,7))-1]+' '+d.slice(0,4)}
+function dayLabel(d){return (+d.slice(8,10))+' '+MON[(+d.slice(5,7))-1]+' '+d.slice(0,4)}
+function niceMax(m){var raw=m*1.08||1,mag=Math.pow(10,Math.floor(Math.log10(raw))),c=[1,1.2,1.5,2,2.5,3,4,5,6,8,10];for(var i=0;i<c.length;i++)if(c[i]*mag>=raw)return c[i]*mag;return 10*mag}
+var COLS=['#FF93A0','#FFC9CF','#C9A46B','#8E93B5'];
+D.periodLabel=monLabel(D.period[0])+' to '+monLabel(D.period[1]);
+
 var R=[];
 
 /* A: three slams */
 (function(){
   var sA=$('sA'),aw=$('aWords'),aNum=$('aNum'),aCap=$('aCap'),aBars=$('aBars');
-  var WORDS=['Sales','Units','Target'],CAP=['Revenue · Dec 2025 to Oct 2026','Pieces sold','Of the period target'];
-  var FMT=[function(c){return 'EGP '+(118.1*c).toFixed(1)+'M'},function(c){return num(38785*c)},function(c){return (60*c).toFixed(1)+'%'}];
+  var WORDS=['Sales','Units','Target'],CAP=['Revenue · '+D.periodLabel,'Pieces sold','Of the period target'];
+  var FMT=[function(c){return 'EGP '+(D.revenue/1e6*c).toFixed(1)+'M'},function(c){return num(D.units*c)},function(c){return (D.pct*c).toFixed(1)+'%'}];
   var BG=['#FFF6F3','#FF93A0','#2A1018'],FG=['#2A1018','#2A1018','#FF93A0'];
   var W=WORDS.map(function(w){var d=document.createElement('div');d.className='aWord disp';aw.appendChild(d);return{el:d,L:word(d,w)}});
   var r=rng(7),H=[],bars=[];
@@ -377,23 +396,29 @@ var R=[];
 /* C: the dashboard */
 (function(){
   var sC=$('sC'),wrap=$('dashWrap'),ghost=$('ghost');
-  var N=60,x0=104,x1=850,y0=20,y1=320,MAXV=1200000,i;
-  var r=rng(12),v=[];
-  for(i=0;i<N;i++)v.push(120000+300000*Math.pow(r(),1.9));
-  v[9]=826000;v[10]=380000;v[23]=1100000;v[24]=801000;v[25]=520000;v[42]=537000;v[43]=330000;v[51]=501000;
-  var X=function(k){return x0+(x1-x0)*k/(N-1)},Y=function(val){return y1-(y1-y0)*val/MAXV};
+  var SER=D.series,N=SER.length,x0=104,x1=850,y0=20,y1=320,i;
+  var v=SER.map(function(s){return Math.max(0,s.v)}),mx=Math.max.apply(null,v),MAXV=niceMax(mx);
+  var X=function(k){return x0+(x1-x0)*k/Math.max(1,N-1)},Y=function(val){return y1-(y1-y0)*val/MAXV};
   var grid=$('grid'),stems=$('stems'),pins=$('pins');
+  function short(d,k){return d?(+d.slice(8,10))+' '+MON[(+d.slice(5,7))-1]:'Day '+(k+1)}
   for(i=0;i<5;i++){var yy=y1-(y1-y0)*i/4;grid.appendChild(svgEl('line',{x1:x0,x2:x1,y1:yy,y2:yy,stroke:'#EADCDF','stroke-width':2,'stroke-dasharray':'3 6'}));
-    var tl=svgEl('text',{x:x0-14,y:yy+6,'text-anchor':'end','font-size':16,fill:'#7A6168','font-family':'Plus Jakarta Sans'});tl.textContent=i===0?'0':'EGP '+kfmt(i*300000);grid.appendChild(tl)}
+    var tl=svgEl('text',{x:x0-14,y:yy+6,'text-anchor':'end','font-size':16,fill:'#7A6168','font-family':'Plus Jakarta Sans'});tl.textContent=i===0?'0':'EGP '+kfmt(i*MAXV/4);grid.appendChild(tl);
+    var k2=Math.round(i*(N-1)/4),xl=svgEl('text',{x:X(k2),y:y1+34,'text-anchor':'middle','font-size':15,fill:'#7A6168','font-family':'Plus Jakarta Sans'});xl.textContent=short(SER[k2].d,k2);grid.appendChild(xl)}
   var st=[],pn=[];
-  for(i=0;i<N;i++){var l=svgEl('line',{x1:X(i),x2:X(i),y1:y1,y2:y1,stroke:'#FF93A0','stroke-width':3,'stroke-linecap':'round'});stems.appendChild(l);st.push(l);
-    var c=svgEl('circle',{cx:X(i),cy:y1,r:6,fill:'#fff',stroke:'#FF93A0','stroke-width':3});pins.appendChild(c);pn.push(c)}
-  var labels=[[23,'EGP 1.1M'],[9,'EGP 826K'],[24,'EGP 801K'],[42,'EGP 537K']].map(function(a){var tx=svgEl('text',{x:X(a[0]),y:Y(v[a[0]])-18,'text-anchor':'middle','font-size':16,'font-weight':800,fill:'#2A1018','font-family':'Plus Jakarta Sans',opacity:0});tx.textContent=a[1];pins.appendChild(tx);return tx});
+  for(i=0;i<N;i++){var l=svgEl('line',{x1:X(i),x2:X(i),y1:y1,y2:y1,stroke:'#FF93A0','stroke-width':N>45?3:4,'stroke-linecap':'round'});stems.appendChild(l);st.push(l);
+    var c=svgEl('circle',{cx:X(i),cy:y1,r:N>45?6:7,fill:'#fff',stroke:'#FF93A0','stroke-width':3});pins.appendChild(c);pn.push(c)}
+  var order=v.map(function(x,k){return k}).sort(function(a,b){return v[b]-v[a]}),peaks=[];
+  order.forEach(function(k){if(peaks.length<4&&v[k]>0&&peaks.every(function(p){return Math.abs(p-k)>=3}))peaks.push(k)});
+  var labels=peaks.map(function(k){var tx=svgEl('text',{x:clamp(X(k),x0+30,x1-30),y:Y(v[k])-18,'text-anchor':'middle','font-size':16,'font-weight':800,fill:'#2A1018','font-family':'Plus Jakarta Sans',opacity:0});tx.textContent='EGP '+kfmt(v[k]);pins.appendChild(tx);return tx});
+  // header, tiles, chips
+  $('dRange').textContent=D.period[0]+' — '+D.period[1]+' · All branches';
+  $('tsOrders').textContent=num(D.orders)+' orders';$('tsTarget').textContent='EGP '+num(D.target)+' period target';
+  $('fl1').querySelector('b').textContent='Target '+D.pct.toFixed(1)+'%';
+  var top=D.cats[0];$('fl2').querySelector('b').textContent=top.name+' lead · '+top.share.toFixed(1)+'%';
   // donut + legend
-  var CAT=[['Charms',33.8,'#FF93A0','16,310 units · EGP 39,867,591'],['Bracelets',30.2,'#FFC9CF','8,636 units · EGP 35,724,158'],['Rings',12.2,'#C9A46B','4,186 units · EGP 14,366,636'],['The rest',23.8,'#8E93B5','9,653 units · EGP 28,149,421']];
   var CIR=2*Math.PI*80,start=0,arcs=[],legend=$('legend'),legs=[];
-  CAT.forEach(function(c,k){var a=svgEl('circle',{cx:110,cy:110,r:80,fill:'none',stroke:c[2],'stroke-width':34,'stroke-dasharray':'0 '+CIR,'stroke-dashoffset':-start*CIR/100});$('donut').appendChild(a);arcs.push({el:a,len:c[1]/100*CIR});start+=c[1];
-    var d=document.createElement('div');d.className='lg';d.style.top=(120+k*76)+'px';d.innerHTML='<i style="background:'+c[2]+'"></i><b>'+c[0]+'</b><em>'+c[1].toFixed(1)+'%</em><span>'+c[3]+'</span>';legend.appendChild(d);legs.push(d)});
+  D.cats.forEach(function(c,k){var a=svgEl('circle',{cx:110,cy:110,r:80,fill:'none',stroke:COLS[k],'stroke-width':34,'stroke-dasharray':'0 '+CIR,'stroke-dashoffset':-start*CIR/100});$('donut').appendChild(a);arcs.push({el:a,len:c.share/100*CIR});start+=c.share;
+    var d=document.createElement('div');d.className='lg';d.style.top=(120+k*76)+'px';d.innerHTML='<i style="background:'+COLS[k]+'"></i><b>'+c.name+'</b><em>'+c.share.toFixed(1)+'%</em><span>'+num(c.units)+' units · EGP '+num(c.rev)+'</span>';legend.appendChild(d);legs.push(d)});
   var tiles=[$('tile0'),$('tile1'),$('tile2'),$('tile3')],tv=[$('tv0'),$('tv1'),$('tv2'),$('tv3')],tp=$('tp'),sl=$('sl'),tip=$('tip'),cur=$('cursorC'),rip=$('ripC'),fl1=$('fl1'),fl2=$('fl2'),ctr=$('dctrT');
   var CK=[[4.5,1580,-60],[5.5,1250,250],[5.82,1256,254],[6.1,320,560],[6.9,560,520],[7.3,740,500],[7.72,1126,602],[8.3,1180,660]];
   R.push(function(t){
@@ -404,31 +429,32 @@ var R=[];
     wrap.style.transform='translate3d(0,'+lerp(320,0,p)+'px,'+(lerp(-1200,0,p)+60*d)+'px) rotateX('+(lerp(18,5,p)-3*d)+'deg) rotateY('+(lerp(-28,-7,p)+11*d)+'deg) scale('+(1+.07*d)+')';
     tiles.forEach(function(el,k){var q=E.outExpo(seg(t,4.95+k*.08,5.5+k*.08));el.style.opacity=q;el.style.transform='translateY('+((1-q)*40)+'px)';el.classList.toggle('on',k===(t>=5.76&&t<6.5?3:-1))});
     var cp=E.outCubic(seg(t,5.0,5.95));
-    tv[0].textContent='EGP '+num(118107806*cp);tv[1].textContent=num(38785*cp);tv[2].textContent='EGP '+num(4141*cp);tv[3].textContent=(60*cp).toFixed(1)+'%';tp.style.width=(60*cp)+'%';
+    tv[0].textContent='EGP '+num(D.revenue*cp);tv[1].textContent=num(D.units*cp);tv[2].textContent='EGP '+num(D.aov*cp);tv[3].textContent=(D.pct*cp).toFixed(1)+'%';tp.style.width=Math.min(100,D.pct*cp)+'%';
     $('chartCard').style.opacity=E.outExpo(seg(t,4.8,5.3));$('catCard').style.opacity=E.outExpo(seg(t,5.0,5.5));
-    for(var k=0;k<N;k++){var q=E.outExpo(seg(t,5.0+k*.011,5.6+k*.011)),yy=Y(v[k]*q);st[k].setAttribute('y2',yy);pn[k].setAttribute('cy',yy);pn[k].setAttribute('opacity',q>.02?1:0)}
+    for(var k=0;k<N;k++){var q=E.outExpo(seg(t,5.0+k*.011*60/N,5.6+k*.011*60/N)),yy=Y(v[k]*q);st[k].setAttribute('y2',yy);pn[k].setAttribute('cy',yy);pn[k].setAttribute('opacity',q>.02?1:0)}
     labels.forEach(function(tx){tx.setAttribute('opacity',seg(t,5.8,6.1))});
     var hi=E.outCubic(seg(t,7.8,8.15));
     arcs.forEach(function(a,k){var q=E.outExpo(seg(t,5.3+k*.15,6.2+k*.15));a.el.setAttribute('stroke-dasharray',(a.len*q)+' '+CIR);a.el.setAttribute('stroke-width',k===0?34+14*hi:34);a.el.setAttribute('opacity',k===0?1:1-.65*hi)});
     legs.forEach(function(l,k){var q=E.outExpo(seg(t,5.5+k*.1,6.1+k*.1));l.style.opacity=q*(k===0?1:1-.55*hi);l.style.transform='translateX('+((1-q)*40)+'px)'});
-    ctr.innerHTML=hi>.5?'33.8%<br><span style="font:700 17px Plus Jakarta Sans">Charms</span>':'8 cats';
+    ctr.innerHTML=hi>.5?top.share.toFixed(1)+'%<br><span style="font:700 17px Plus Jakarta Sans">'+top.name+'</span>':D.catCount+' cats';
     var cp2=path(CK,t),pr=press(t,5.76);
     cur.style.transform='translate('+cp2.x+'px,'+cp2.y+'px) scale('+(1-.16*Math.max(pr,press(t,7.78)))+')';cur.style.opacity=seg(t,4.5,4.8);
     var rp=seg(t,7.8,8.35);rip.style.opacity=rp>0&&rp<1?(1-rp)*.9:0;rip.style.transform='scale('+(1+E.outCubic(rp)*4)+')';
-    var tx=clamp(cp2.x-36,x0,x1),idx=Math.round((tx-x0)/(x1-x0)*(N-1)),o=t>=6.15&&t<7.6?E.outCubic(seg(t,6.15,6.35))*(1-seg(t,7.4,7.6)):0;
+    var tx=clamp(cp2.x-36,x0,x1),idx=clamp(Math.round((tx-x0)/(x1-x0)*(N-1)),0,N-1),o=t>=6.15&&t<7.6?E.outCubic(seg(t,6.15,6.35))*(1-seg(t,7.4,7.6)):0;
     sl.setAttribute('x1',X(idx));sl.setAttribute('x2',X(idx));sl.setAttribute('opacity',o);
     tip.style.opacity=o;tip.style.left=clamp(X(idx)+22,20,880-220)+'px';
-    $('tipD').textContent='Day '+(idx+1);$('tipV').textContent='EGP '+num(v[idx]);
+    $('tipD').textContent=SER[idx].d?dayLabel(SER[idx].d):'Day '+(idx+1);$('tipV').textContent='EGP '+num(v[idx]);
     var f1=E.outBack(seg(t,5.95,6.45));fl1.style.opacity=seg(t,5.95,6.07);fl1.style.transform='translateZ(150px) translateY('+((1-f1)*-50)+'px) scale('+(.6+.4*f1)+') rotate('+((1-f1)*6)+'deg)';
     var f2=E.outBack(seg(t,7.0,7.5));fl2.style.opacity=seg(t,7.0,7.12);fl2.style.transform='translateZ(110px) translateX('+((1-f2)*-60)+'px) scale('+(.6+.4*f2)+')';
   });
 })();
 
-/* D: stores vs target */
+/* D: stores by revenue */
 (function(){
   var sD=$('sD'),bs=[].slice.call(sD.querySelectorAll('.dLeft .w b')),cap=[].slice.call($('dCap').children),card=$('pCard');
-  var P=[['City Stars','Cairo zone',112],['CC Almaza','Cairo zone',104],['Mall of Egypt','October & Alexandria',96],['CFC','Cairo zone',89],['Point 90','Cairo zone',78],['Alexandria','October & Alexandria',66]];
-  var pr=$('prows'),el=P.map(function(p){var d=document.createElement('div');d.className='prow';d.innerHTML='<span class="rk">1</span><span class="av">'+p[0][0]+'</span><div class="nm"><b>'+p[0]+'</b><span>'+p[1]+'</span></div><div class="bar"><s></s><u></u></div><span class="rv">0%</span>';pr.appendChild(d);return{d:d,rk:d.querySelector('.rk'),bar:d.querySelector('.bar s'),rv:d.querySelector('.rv')}});
+  var P=D.stores.slice(0,6),n=P.length,top=P[0].rev||1;
+  $('dTag').textContent=D.snapshot?'Sample figures':'Live figures';
+  var pr=$('prows'),el=P.map(function(p){var d=document.createElement('div');d.className='prow';d.innerHTML='<span class="rk">1</span><span class="av">'+(p.name[0]||'?').toUpperCase()+'</span><div class="nm"><b>'+p.name+'</b><span>'+num(p.units)+' units</span></div><div class="bar"><s></s></div><span class="rv">0</span>';pr.appendChild(d);return{d:d,rk:d.querySelector('.rk'),bar:d.querySelector('.bar s'),rv:d.querySelector('.rv')}});
   var rg=rng(21),conf=$('conf'),pieces=[],CC=['#2A1018','#FFF6F3','#FFFFFF','#D85B83'];
   for(var i=0;i<54;i++){var d=document.createElement('i');var sz=12+rg()*16;d.style.cssText='position:absolute;left:0;top:0;width:'+sz+'px;height:'+sz*(.4+rg()*.6)+'px;background:'+CC[i%4]+';border-radius:2px;opacity:0';conf.appendChild(d);pieces.push({d:d,a:-Math.PI*(.12+.76*rg()),v:520+rg()*820,s:(rg()-.5)*1100})}
   var cur=$('cursorD'),rip=$('ripD'),btn=$('payBtn'),CK=[[9.1,1830,1060],[9.82,1670,848],[10.0,1674,852],[10.4,1760,1010]];
@@ -439,10 +465,10 @@ var R=[];
     cap.forEach(function(c,k){var p=E.outExpo(seg(t,9.0+k*.16,9.4+k*.16));c.style.opacity=p;c.style.transform='translateX('+((1-p)*-50)+'px)'});
     var cp=E.outBack(seg(t,8.5,9.1));card.style.transform='translateX('+((1-cp)*1000)+'px) rotate('+((1-cp)*6)+'deg)';
     var cnt=E.outCubic(seg(t,8.8,9.5));
-    P.forEach(function(p,k){var e=el[k],q=E.inOutCubic(seg(t,9.25+k*.07,9.8+k*.07));var pos=lerp(5-k,k,q);
+    P.forEach(function(p,k){var e=el[k],q=E.inOutCubic(seg(t,9.25+k*.07,9.8+k*.07));var pos=lerp(n-1-k,k,q);
       e.d.style.top=(100+pos*92)+'px';e.rk.textContent=Math.round(pos)+1;
-      e.bar.style.width=(Math.min(p[2],130)/130*cnt*100)+'%';e.bar.style.background=p[2]>=100?'#FF93A0':'#D85B83';e.rv.textContent=Math.round(p[2]*cnt)+'%'});
-    var sent=t>=9.9;btn.style.background=sent?'#FF93A0':'#2A1018';btn.style.color=sent?'#2A1018':'#fff';$('payTxt').textContent=sent?'Sent to 6 stores ✓':'Send store reports';
+      e.bar.style.width=(p.rev/top*cnt*100)+'%';e.bar.style.background=k===0?'#FF93A0':'#FFB3BC';e.rv.textContent=kfmt(p.rev*cnt)});
+    var sent=t>=9.9;btn.style.background=sent?'#FF93A0':'#2A1018';btn.style.color=sent?'#2A1018':'#fff';$('payTxt').textContent=sent?'Sent to '+n+' stores ✓':'Send store reports';
     btn.style.transform='scale('+(1-.07*press(t,9.88))+')';
     var cp2=path(CK,t);cur.style.transform='translate('+cp2.x+'px,'+cp2.y+'px) scale('+(1-.16*press(t,9.88))+')';cur.style.opacity=seg(t,9.1,9.3);
     rip.style.left='1670px';rip.style.top='848px';var rp=seg(t,9.9,10.45);rip.style.opacity=rp>0&&rp<1?(1-rp)*.9:0;rip.style.transform='scale('+(1+E.outCubic(rp)*6)+')';
@@ -454,13 +480,22 @@ var R=[];
 /* E: one site */
 (function(){
   var sE=$('sE'),rig=$('eRig'),bs=[].slice.call(sE.querySelectorAll('.eTitle .w b')),mc=[$('mc0'),$('mc1'),$('mc2')];
-  var pts=[],r2=rng(9);for(var i=0;i<14;i++)pts.push([8+i*(440/13),250-(30+i*11+22*Math.sin(i*1.2)+8*r2())]);
+  // mini trend from the daily series (14 steps)
+  var SER=D.series.map(function(s){return s.v}),m=14,pts=[],avg=[],i,j;
+  for(i=0;i<m;i++){var a=Math.floor(i*SER.length/m),b=Math.max(a+1,Math.floor((i+1)*SER.length/m)),sum=0;for(j=a;j<b&&j<SER.length;j++)sum+=SER[j];avg.push(sum/Math.max(1,b-a))}
+  var lo=Math.min.apply(null,avg),hi=Math.max.apply(null,avg)||1;
+  for(i=0;i<m;i++)pts.push([8+i*(440/(m-1)),235-(avg[i]-lo)/Math.max(1,hi-lo)*190]);
   var d1=smooth(pts);$('eL1').setAttribute('d',d1);$('eArea').setAttribute('d',d1+' L448 250 L8 250 Z');
   var g=$('eGrid');for(i=0;i<4;i++)g.appendChild(svgEl('line',{x1:8,x2:448,y1:250-i*70,y2:250-i*70,stroke:'#EADCDF','stroke-width':2}));
-  var Z1=[['CC Almaza',84],['City Stars',100],['CFC',76],['Point 90',68]],Z2=[['Mall of Egypt',92],['Mall of Arabia',71],['Alexandria',63]],bars=[];
-  function fill(host,rows){rows.forEach(function(p){var d=document.createElement('div');d.className='sr';d.innerHTML='<div class="n">'+p[0]+'</div><div class="pb"><s></s></div><em>'+p[1]+'%</em>';host.appendChild(d);bars.push({s:d.querySelector('s'),e:d.querySelector('em'),v:p[1]})})}
-  fill($('z1'),Z1);fill($('z2'),Z2);
-  var S=[{x:-1000,y:40,rx:0,ry:62},{x:0,y:900,rx:-40,ry:0},{x:1000,y:40,rx:0,ry:-62}],CIR=2*Math.PI*82;
+  // zones
+  var bars=[],zmax=1;D.zones.forEach(function(z){z.stores.forEach(function(s){if(s.rev>zmax)zmax=s.rev})});
+  function fill(host,label,z){label.textContent=z.label;z.stores.forEach(function(p){var d=document.createElement('div');d.className='sr';d.innerHTML='<div class="n">'+p.name+'</div><div class="pb"><s></s></div><em>'+kfmt(p.rev)+'</em>';host.appendChild(d);bars.push({s:d.querySelector('s'),e:d.querySelector('em'),v:p.rev})})}
+  if(D.zones[0])fill($('z1'),$('zn1'),D.zones[0]);else $('zn1').hidden=true;
+  if(D.zones[1])fill($('z2'),$('zn2'),D.zones[1]);else $('zn2').hidden=true;
+  var dr=D.dailyReport,S=[{x:-1000,y:40,rx:0,ry:62},{x:0,y:900,rx:-40,ry:0},{x:1000,y:40,rx:0,ry:-62}],CIR=2*Math.PI*82;
+  if(dr){$('rgSub').textContent=dr.pct!=null?(dr.sample?"of the day's target":'of the target on '+dayLabel(dr.date).replace(/ \d{4}$/,'')):'sales on '+dayLabel(dr.date).replace(/ \d{4}$/,'');}
+  else{$('rgSub').textContent='No daily sheet added yet';$('chipD').textContent='Add the numbers twice a day'}
+  var mxS=dr?Math.max(dr.morning,dr.night,1):1;
   R.push(function(t){
     var vis=t>=10.4&&t<12.9;show(sE,vis);if(!vis)return;
     var sp=E.outExpo(seg(t,10.4,11.1));sE.style.transform='scale('+lerp(.6,1,sp)+')';sE.style.opacity=clamp(seg(t,10.4,10.6));
@@ -471,16 +506,19 @@ var R=[];
       m.style.transform='translate3d('+(S[k].x*o)+'px,'+(S[k].y*o+fl*7*p)+'px,'+(-900*o)+'px) rotateX('+(S[k].rx*o)+'deg) rotateY('+(S[k].ry*o+fl*2.5*p)+'deg)'});
     var pa=E.outCubic(seg(t,11.0,11.9));
     $('eL1').setAttribute('stroke-dashoffset',(1-pa).toFixed(4));$('clEr').setAttribute('width',456*pa);
-    $('e0').textContent=(118.1*pa).toFixed(1)+'M';$('e1').textContent=num(38785*pa);$('e2').textContent=(60*pa).toFixed(0)+'%';
-    bars.forEach(function(b,k){var q=E.outExpo(seg(t,11.1+k*.06,11.9+k*.06));b.s.style.width=(b.v*q)+'%';b.e.textContent=Math.round(b.v*q)+'%'});
-    var rq=E.outCubic(seg(t,11.3,12.2));$('rg').setAttribute('stroke-dasharray',(CIR*.82*rq)+' 600');$('rgT').textContent=Math.round(82*rq)+'%';
-    var sq=E.outExpo(seg(t,11.5,12.3));$('sh0').style.width=(46*sq)+'%';$('sh1').style.width=(36*sq)+'%';$('shv0').textContent='EGP '+kfmt(276000*sq);$('shv1').textContent='EGP '+kfmt(216000*sq);
+    $('e0').textContent=(D.revenue/1e6*pa).toFixed(1)+'M';$('e1').textContent=num(D.units*pa);$('e2').textContent=(D.pct*pa).toFixed(0)+'%';
+    bars.forEach(function(b,k){var q=E.outExpo(seg(t,11.1+k*.06,11.9+k*.06));b.s.style.width=(b.v/zmax*100*q)+'%';b.e.textContent=kfmt(b.v*q)});
+    var rq=E.outCubic(seg(t,11.3,12.2)),sq=E.outExpo(seg(t,11.5,12.3));
+    if(dr){var pc=dr.pct!=null?dr.pct:0;$('rg').setAttribute('stroke-dasharray',(CIR*Math.min(1,pc/100)*rq)+' 600');$('rgT').textContent=dr.pct!=null?Math.round(pc*rq)+'%':kfmt((dr.morning+dr.night)*rq);
+      $('sh0').style.width=(80*dr.morning/mxS*sq)+'%';$('sh1').style.width=(80*dr.night/mxS*sq)+'%';$('shv0').textContent='EGP '+kfmt(dr.morning*sq);$('shv1').textContent='EGP '+kfmt(dr.night*sq)}
+    else{$('rgT').textContent='—';$('shv0').textContent='—';$('shv1').textContent='—'}
   });
 })();
 
 /* F: end card */
 (function(){
-  var sF=$('sF'),mark=$('fMark'),L=word(mark,'Pandora Dashboards'),sub=$('fSub'),btn=$('fBtn'),cur=$('cursorF'),grid=$('fGrid'),logo=$('fLogo'),cred=sF.querySelector('.fCred'),rings=[].slice.call(sF.querySelectorAll('.fRing')),spokes=[];
+  var sF=$('sF'),mark=$('fMark'),L=word(mark,'Pandora Dashboards'),sub=$('fSub'),btn=$('fBtn'),cur=$('cursorF'),grid=$('fGrid'),logo=$('fLogo'),cred=$('fCred'),rings=[].slice.call(sF.querySelectorAll('.fRing')),spokes=[];
+  cred.textContent='Launch film · Motion design by Claude · Figures as of '+dayLabel(D.period[1])+(D.snapshot?' · Store figures are sample':'');
   var sp=$('spokes');for(var i=0;i<16;i++){var d=document.createElement('i');d.className='sp';sp.appendChild(d);spokes.push(d)}
   var CK=[[13.0,1500,1140],[13.95,992,842],[14.5,992,842]];
   R.push(function(t){
@@ -515,8 +553,8 @@ var R=[];
 })();
 
 /* engine */
-var DUR=15,t=0,playing=true,last=0,drag=false;
-var stage=$('stage'),frame=$('frame'),world=$('world'),grain=$('grain'),pp=$('pp'),rp=$('rp'),sc=$('scrub'),tm=$('time'),tc=$('tc'),barF=$('barF');
+var DUR=15,t=0,playing=true,last=0,drag=false,recording=false;
+var stage=$('stage'),frame=$('frame'),world=$('world'),grain=$('grain'),pp=$('pp'),rp=$('rp'),sc=$('scrub'),tm=$('time'),tc=$('tc'),barF=$('barF'),dl=$('dl'),foot=$('foot');
 var SHAKE=[[0.0,16],[.8,16],[1.6,16],[2.3,10],[4.3,22],[8.36,18],[10.4,12],[12.85,18],[14.04,12]];
 function shake(t){var x=0,y=0;SHAKE.forEach(function(s){var d=t-s[0];if(d>=0&&d<.5){var a=s[1]*Math.exp(-d*10);x+=a*Math.sin(d*85);y+=a*Math.cos(d*70)}});return[x,y]}
 function fit(){stage.style.transform='scale('+(frame.clientWidth/1920)+')'}
@@ -545,12 +583,40 @@ document.addEventListener('keydown',function(e){
   if(e.code==='Space'){e.preventDefault();setPlaying(!playing)}
   else if(e.code==='ArrowRight'){t=Math.min(DUR-.01,t+.5)}else if(e.code==='ArrowLeft'){t=Math.max(0,t-.5)}
 });
+// Download: record this tab's film frame for 15 seconds and save it as a video file (Chrome or Edge on a computer)
+dl.addEventListener('click',async function(){
+  if(recording)return;
+  var md=navigator.mediaDevices;
+  if(!md||!md.getDisplayMedia||!window.MediaRecorder){foot.textContent='This browser cannot record the film. Open this page in Chrome or Edge on a computer.';return}
+  var stream;
+  try{stream=await md.getDisplayMedia({video:{frameRate:30},audio:false,preferCurrentTab:true,selfBrowserSurface:'include'})}catch(e){foot.textContent='Recording was cancelled. Press Download video again and choose "This tab".';return}
+  try{
+    var track=stream.getVideoTracks()[0];
+    if(window.CropTarget&&track.cropTo){try{await track.cropTo(await CropTarget.fromElement(frame))}catch(_){}}
+    var mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].filter(function(m){return MediaRecorder.isTypeSupported(m)})[0]||'';
+    var rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:8000000}:{videoBitsPerSecond:8000000}),chunks=[];
+    rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data)};
+    rec.onstop=function(){stream.getTracks().forEach(function(k){k.stop()});recording=false;dl.disabled=false;dl.textContent='Download video';
+      var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(chunks,{type:'video/webm'}));a.download='pandora-launch-film.webm';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},4000);
+      foot.textContent='Saved pandora-launch-film.webm to your downloads.'};
+    recording=true;dl.disabled=true;dl.textContent='Recording…';foot.textContent='Recording 15 seconds. Keep this tab open.';
+    t=0;setPlaying(true);rec.start(250);setTimeout(function(){if(rec.state!=='inactive')rec.stop()},DUR*1000+300);
+  }catch(e){recording=false;dl.disabled=false;dl.textContent='Download video';stream.getTracks().forEach(function(k){k.stop()});foot.textContent='Could not record in this browser. Try Chrome or Edge on a computer.'}
+});
 if(window.ResizeObserver)new ResizeObserver(fit).observe(frame);window.addEventListener('resize',fit);fit();
+foot.textContent=D.snapshot?'Showing saved figures (live data was not available). Store and daily figures are sample.':'Live figures · '+D.periodLabel+' · updated each time this page opens';
 var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 if(reduce){t=14.5;setPlaying(false)}
 draw();
 var started=false;function go(){if(started)return;started=true;requestAnimationFrame(tick)}
 if(document.fonts&&document.fonts.ready){document.fonts.ready.then(go);setTimeout(go,1500)}else go();
+}
+var live=null;
+fetch('/film?data=1',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.ok?r.json():null}).catch(function(){return null}).then(function(j){
+  var D=j&&j.ok&&!j.empty&&j.series&&j.series.length>1&&j.cats&&j.cats.length&&j.stores&&j.stores.length?j:SNAP;
+  if(!D.zones)D.zones=[];
+  start(D);
+});
 })();
 </script>
 </body></html>
