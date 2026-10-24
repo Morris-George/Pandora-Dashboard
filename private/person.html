@@ -161,6 +161,7 @@ body.clean .exit{display:block}
 .datebar input[type=date]{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:6px 10px;font:inherit}
 .datebar .dmsg{color:var(--ink2);font-size:12.5px;font-weight:600}
 body.clean .datebar{display:none}
+.datebar .mrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex-basis:100%}
 
 /* Arabic: right-to-left, an Arabic font, and no letter-spacing or capitals (they break joined Arabic letters) */
 html[lang="ar"]{--font:'Cairo','Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
@@ -187,6 +188,7 @@ html[dir="rtl"] .brow .n{unicode-bidi:plaintext;text-align:right}
     </div>
   </header>
   <section class="datebar hideclean" id="dateRow" hidden aria-label="Dates" data-i18n-aria="dates">
+    <div class="mrow" id="monthRow" hidden><span class="dlbl" data-i18n="month">Month</span><div class="chips" id="monthChips"></div></div>
     <span class="dlbl" data-i18n="dates">Dates</span>
     <label class="dlab"><span data-i18n="from">From</span> <input type="date" id="dFrom"></label><label class="dlab"><span data-i18n="to">To</span> <input type="date" id="dTo"></label>
     <button class="btn" type="button" id="dLast7" data-i18n="last7">Last 7 days</button><button class="btn" type="button" id="dAll" data-i18n="whole">Whole period</button>
@@ -229,7 +231,7 @@ const TX={
   prev:['← Prev','→ السابق'], next:['Next →','التالي ←'],
   prevAria:['Previous sales person in this store','موظف المبيعات السابق في هذا الفرع'], nextAria:['Next sales person in this store','موظف المبيعات التالي في هذا الفرع'],
   clean:['Screenshot view','وضع لقطة الشاشة'], exitClean:['Exit screenshot view','إغلاق وضع لقطة الشاشة'],
-  dates:['Dates','التواريخ'], from:['From','من'], to:['To','إلى'], last7:['Last 7 days','آخر 7 أيام'], whole:['Whole period','الفترة كاملة'], loading:['Loading…','جارٍ التحميل…'],
+  dates:['Dates','التواريخ'], month:['Month','الشهر'], from:['From','من'], to:['To','إلى'], last7:['Last 7 days','آخر 7 أيام'], whole:['Whole period','الفترة كاملة'], loading:['Loading…','جارٍ التحميل…'],
   person:['Sales person','موظف المبيعات'], vat:['all amounts include VAT','كل المبالغ شاملة الضريبة'],
   E_sign:['Signing you in…','جارٍ تسجيل دخولك…'], E_nopub:['No sales have been published yet','لم يتم نشر أي مبيعات بعد'],
   E_nofile:['No sales file is loaded in this browser','لا يوجد ملف مبيعات محمّل في هذا المتصفح'],
@@ -259,6 +261,7 @@ function applyLang(){
 function setLang(l){
   LANG=l; try{localStorage.setItem(LKEY,l)}catch(_){}
   applyLang();
+  drawMonths();
   if(CTX){setHead();render()} else if(LASTERR) noData(LASTERR);
 }
 
@@ -334,10 +337,11 @@ let wantStore=q.get('store')||'', wantName=q.get('name')||'';
 const ISOD=/^\d{4}-\d{2}-\d{2}$/;
 let wantFrom=ISOD.test(q.get('from')||'')?q.get('from'):'', wantTo=ISOD.test(q.get('to')||'')?q.get('to'):'';
 let DAYMIN='',DAYMAX='';
-const wantMonth=/^\d{4}-\d{2}$/.test(q.get('month')||'')?q.get('month'):'';
+let wantMonth=/^\d{4}-\d{2}$/.test(q.get('month')||'')?q.get('month'):'';
 const dateQs=()=>[wantMonth?'month='+wantMonth:'',wantFrom?'from='+encodeURIComponent(wantFrom):'',wantTo?'to='+encodeURIComponent(wantTo):''].filter(Boolean).join('&');
 let SERVER=false;
 let CTX=null;
+let MONTHS=[],CURM=null,MLOADED=false;
 
 let LASTERR=null;
 function noData(key){ // key: one of the E_ messages in TX
@@ -375,11 +379,35 @@ async function loadData(){
 
 /* ---- dates: change the period of the performance shown (the server only sends rows inside the range) ---- */
 const rangeOn=()=>!!(wantFrom||wantTo);
+const monthLabel=k=>{const [y,m]=k.split('-').map(Number); return (AR()?AR_MON[MON[m-1]]:MON[m-1])+' '+y};
+function drawMonths(){
+  const row=$('monthRow'); if(!row) return;
+  row.hidden=!(SERVER&&MONTHS.length>1);
+  const fm=(wantFrom||'').slice(0,7), tm=(wantTo||'').slice(0,7), span=!!(fm&&tm&&fm!==tm);
+  const on=span?'':(wantMonth||CURM);
+  $('monthChips').innerHTML=MONTHS.map(k=>`<button class="chip" type="button" aria-pressed="${k===on}" data-m="${k}">${monthLabel(k)}</button>`).join('');
+}
+async function loadMonths(){
+  MLOADED=true;
+  try{const r=await fetch('/api/data?months=1',{credentials:'same-origin',cache:'no-store'});
+    if(r.ok){const j=await r.json();MONTHS=j.months||[];CURM=j.current||null}}catch(_){}
+}
+$('monthChips').addEventListener('click',e=>{const b=e.target.closest('[data-m]'); if(!b) return;
+  wantMonth=b.dataset.m===CURM?'':b.dataset.m; wantFrom=''; wantTo='';
+  try{history.replaceState(null,'','?'+[ 'store='+encodeURIComponent(wantStore),'name='+encodeURIComponent(wantName),dateQs() ].filter(Boolean).join('&'))}catch(_){}
+  $('dMsg').textContent=t('loading'); build();
+});
 function syncDates(d){
   const row=$('dateRow'); if(!row) return;
   if(!SERVER||!d.dayMin||!d.dayMax){row.hidden=true;return}
   row.hidden=false; DAYMIN=d.dayMin; DAYMAX=d.dayMax;
-  $('dFrom').min=$('dTo').min=d.dayMin; $('dFrom').max=$('dTo').max=d.dayMax;
+  let lo=d.dayMin, hi=d.dayMax;
+  if(MONTHS.length>1){ // every saved month can be reached from the date boxes
+    const old=MONTHS[MONTHS.length-1], nw=MONTHS[0].split('-').map(Number);
+    lo=old+'-01'; hi=new Date(Date.UTC(nw[0],nw[1],0)).toISOString().slice(0,10);
+  }
+  $('dFrom').min=$('dTo').min=lo; $('dFrom').max=$('dTo').max=hi;
+  drawMonths();
   $('dFrom').value=d.from||d.dayMin; $('dTo').value=d.to||d.dayMax;
   $('dMsg').textContent='';
   const back=document.querySelector('a.nav'); if(back) back.href='/staff'+(dateQs()?'?'+dateQs():'');
@@ -388,6 +416,7 @@ async function applyDates(from,to){
   if(!DAYMIN) return;
   if(from&&to&&from>to){const x=from;from=to;to=x}
   wantFrom=from; wantTo=to;
+  {const fm=(from||DAYMIN||'').slice(0,7), tm=(to||DAYMAX||'').slice(0,7); wantMonth=(fm&&fm===tm&&fm!==CURM)?fm:''}
   try{history.replaceState(null,'','?'+[ 'store='+encodeURIComponent(wantStore),'name='+encodeURIComponent(wantName),dateQs() ].filter(Boolean).join('&'))}catch(_){}
   $('dMsg').textContent=t('loading');
   await build();
@@ -404,16 +433,17 @@ $('dLast7').addEventListener('click',()=>{
 async function build(){
   const L=await loadData();
   if(L.err) return noData(L.err);
+  if(!MLOADED&&SERVER) await loadMonths();
   syncDates(L.d);
   const d=scopeData(L.d);
   let si,pi,M,S,C,P,X,mates,storeCount,rankStore;
   if(ROLE.role==='staff'){
     // a sales person only receives their own rows, plus store and company totals worked out on the server
     document.body.classList.add('solo');
-    if(!d.rows.length||!d.bench) return noData(rangeOn()?'E_myRange':'E_myFile');
+    if(!d.rows.length||!d.bench) return noData(rangeOn()||wantMonth?'E_myRange':'E_myFile');
     wantStore=d.self.store; wantName=d.self.name; si=0; pi=0;
     X=prep(d); P=X.P;
-    if(!P[0].inv.size) return noData(rangeOn()?'E_myRange':'E_myMonth');
+    if(!P[0].inv.size) return noData(rangeOn()||wantMonth?'E_myRange':'E_myMonth');
     M=pool(P,[0]); S=benchPool(d.bench.store); C=benchPool(d.bench.company);
     mates=[0]; storeCount=d.bench.storeCount; rankStore=d.bench.rankStore;
   } else {
@@ -421,7 +451,7 @@ async function build(){
     pi=d.people.findIndex(p=>p[0]===wantName&&d.stores[p[1]]===wantStore);
     if(si<0||pi<0) return noData('E_notfound');
     X=prep(d); P=X.P;
-    if(!P[pi].inv.size) return noData(rangeOn()?'E_pRange':'E_pMonth');
+    if(!P[pi].inv.size) return noData(rangeOn()||wantMonth?'E_pRange':'E_pMonth');
     const storeIdx=d.people.map((p,i)=>i).filter(i=>d.people[i][1]===si);
     const allIdx=d.people.map((p,i)=>i);
     M=pool(P,[pi]); S=pool(P,storeIdx); C=pool(P,allIdx);
