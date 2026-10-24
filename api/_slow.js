@@ -140,7 +140,7 @@ async function buildFromData(months) {
   const agg = {};
   for (const x of list) {
     const sk = skuOf(x.sku || x['sku-item'] || x.item_code), w = str(x.warehouse, 140), c = storeOf(w, st.stores), q = num(x.bal_qty != null ? x.bal_qty : x.balance_qty);
-    if (!sk || !c || NOT_A_STORE.test(w)) continue;
+    if (!sk || !c || NOT_A_STORE.test(w) || !require('./_refill').keepRow(x)) continue;
     const k = sk + '|' + w, a = agg[k] || (agg[k] = { sk, w, c, q: 0, code: str(x.item_code, 40), name: str(x.item_name || x.item || '', 140), cat: str(x.item_group || '', 60) });
     a.q += q;
   }
