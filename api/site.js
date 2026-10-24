@@ -178,6 +178,12 @@ module.exports = async function handler(req, res) {
     });
   }
 
+  // Launch Film: a 15-second motion film of the dashboards (super admin and overseer)
+  if (requestedPath === '/film' || requestedPath === '/film/' || requestedPath === '/film.html') {
+    if (!(facts.staff && facts.staff.role === 'admin')) return toHome();
+    return sendFile(res, 'film.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+  }
+
   // All Uploads (super admin only) and the file readers it shares with the Dashboards page
   if (requestedPath === '/uploads' || requestedPath === '/uploads/' || requestedPath === '/uploads.html') {
     if (!(facts.staff && facts.staff.role === 'admin')) return toHome();

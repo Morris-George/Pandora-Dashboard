@@ -8,6 +8,7 @@ const APPS = [
   { id: 'dashboards', title: 'Pandora Dashboards', desc: 'Sales dashboards for the whole business.', href: '/dashboards', allow: f => f.dash },
   { id: 'staff', title: 'Staff Performance', desc: 'How each store and each sales person is doing.', href: '/staff', allow: f => !!f.staff && f.staff.role !== 'staff' && f.staff.role !== 'store' },
   { id: 'uploads', title: 'All Uploads', desc: 'Add, see and remove every document, grouped by where it is used.', href: '/uploads', allow: f => !!f.staff && f.staff.role === 'admin' },
+  { id: 'film', title: 'Launch Film', desc: 'A 15-second motion film of the dashboards, to play in a meeting.', href: '/film', allow: f => !!f.staff && f.staff.role === 'admin' },
   { id: 'approvals', title: 'Staff approvals', desc: 'Approve new sales people, reset passwords and manage accounts.', href: '/staff/accounts', allow: f => !!f.staff && f.staff.role === 'admin' && !f.staff.overseer },
   { id: 'mysales', title: 'My sales', desc: 'What you sold, what sells best for you, and tips to improve.', href: '/staff', allow: f => !!f.staff && f.staff.role === 'staff' },
   { id: 'storeteam', title: 'My store team', desc: 'How each sales person in your store is doing.', href: '/staff', allow: f => !!f.staff && f.staff.role === 'store' },
