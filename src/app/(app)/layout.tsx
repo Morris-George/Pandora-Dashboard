@@ -52,7 +52,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 flex flex-wrap gap-6">
-        <nav aria-label="Main" className="no-print flex-[1_1_200px] max-w-60 flex flex-col gap-2 sm:sticky sm:top-4 self-start">
+        <nav aria-label="Main" className="no-print w-full sm:w-auto sm:flex-[1_1_200px] sm:max-w-60 flex sm:flex-col gap-2 overflow-x-auto sm:overflow-visible -mx-1 px-1 pb-1 sm:m-0 sm:p-0 sm:sticky sm:top-4 self-start">
           <NavLinks items={nav.map((n) => ({ href: n.href, label: t.nav[n.href], ready: n.ready, soon: t.shell.soon }))} />
         </nav>
         <main className="app-main flex-[999_1_560px] min-w-0">{children}</main>

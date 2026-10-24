@@ -280,18 +280,25 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
             </div>
           ))}
           {photos.length < MAX_PHOTOS && (
-            <label className="h-28 rounded-lg border border-dashed border-stone-400 flex items-center justify-center text-sm text-stone-600 cursor-pointer bg-stone-50">
-              {t.addPhoto}
-              <input type="file" accept="image/*" multiple className="sr-only"
-                onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
-            </label>
+            <div className="h-28 grid grid-rows-2 gap-2">
+              <label className="rounded-lg border border-dashed border-stone-400 flex items-center justify-center text-sm font-medium text-stone-700 cursor-pointer bg-stone-50 hover:bg-stone-100">
+                {t.takePhoto}
+                <input type="file" accept="image/*" capture="environment" className="sr-only"
+                  onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
+              </label>
+              <label className="rounded-lg border border-dashed border-stone-300 flex items-center justify-center text-xs text-stone-600 cursor-pointer bg-white hover:bg-stone-50">
+                {t.addPhoto}
+                <input type="file" accept="image/*" multiple className="sr-only"
+                  onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
+              </label>
+            </div>
           )}
         </div>
       </fieldset>
 
       {error && <p role="alert" className="text-sm text-red-800 bg-red-50 rounded-lg p-3">{error}</p>}
 
-      <div className="flex flex-wrap items-center gap-3 border-t border-stone-200 pt-4">
+      <div className="sticky bottom-0 z-10 -mx-6 -mb-6 px-6 py-4 rounded-b-2xl bg-white/95 backdrop-blur flex flex-wrap items-center gap-3 border-t border-stone-200">
         <button type="button" onClick={submit} disabled={missing.length > 0 || !!busy}
           className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-5 py-3 font-semibold disabled:opacity-40">
           {busy || t.create}

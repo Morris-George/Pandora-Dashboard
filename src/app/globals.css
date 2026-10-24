@@ -125,3 +125,9 @@ thead th { font-size: 11px !important; text-transform: uppercase; letter-spacing
 @keyframes sheen { 0% { transform: translateX(-120%); } 35%, 100% { transform: translateX(120%); } }
 .sparkle { display: inline-block; color: #fff; filter: drop-shadow(0 0 6px rgb(255 255 255 / .9)); animation: twinkle 2.4s ease-in-out infinite; }
 @keyframes twinkle { 0%, 100% { opacity: .55; transform: scale(.8) rotate(0deg); } 50% { opacity: 1; transform: scale(1.15) rotate(20deg); } }
+
+/* Touch screens: 16px fields stop the browser zooming in on focus */
+@media (pointer: coarse) { input, select, textarea { font-size: 16px !important; } }
+/* Phone nav strip: no visible scrollbar */
+nav[aria-label="Main"] { scrollbar-width: none; }
+nav[aria-label="Main"]::-webkit-scrollbar { display: none; }
