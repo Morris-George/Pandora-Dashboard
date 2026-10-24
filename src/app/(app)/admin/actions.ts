@@ -102,6 +102,17 @@ export async function changeEmail(userId: string, email: string): Promise<Result
   return {};
 }
 
+// Two-step login for Super Admins on / off (on by default)
+export async function setTwoStep(on: boolean): Promise<Result> {
+  const me = await requireRole("admin");
+  const supabase = await createClient();
+  const { error } = await supabase.from("app_settings").update({ value: on, updated_by: me.userId, updated_at: new Date().toISOString() }).eq("key", "admin_two_step");
+  if (error) return { error: "failed" };
+  await audit(me.userId, on ? "two_step_on" : "two_step_off", "admin_two_step", {});
+  revalidatePath("/admin");
+  return {};
+}
+
 // Lost phone: another Super Admin clears the person's authenticator; they set it up again at next sign-in
 export async function resetTwoStep(userId: string): Promise<Result> {
   const me = await requireRole("admin");

@@ -28,9 +28,10 @@ export const requireSession = cache(async (): Promise<Session> => {
   if (!userId) redirect("/login");
   const user = { id: userId };
 
-  const [{ data: profile }, { data: links }] = await Promise.all([
+  const [{ data: profile }, { data: links }, { data: twoStep }] = await Promise.all([
     supabase.from("profiles").select("full_name, email, role, acting_role, active, must_change_password").eq("id", user.id).single(),
     supabase.from("user_branches").select("branches(id, code, name)").eq("user_id", user.id),
+    supabase.from("app_settings").select("value").eq("key", "admin_two_step").maybeSingle(),
   ]);
   if (!profile || !profile.active) {
     await supabase.auth.signOut();
@@ -39,7 +40,7 @@ export const requireSession = cache(async (): Promise<Session> => {
 
   const isAdmin = profile.role === "admin";
   // Super Admins must finish two-step login (authenticator code) before anything else
-  if (isAdmin && data?.claims?.aal !== "aal2") redirect("/mfa");
+  if (isAdmin && twoStep?.value !== false && data?.claims?.aal !== "aal2") redirect("/mfa");
   const viewingAs = isAdmin ? ((profile.acting_role as AppRole | null) ?? null) : null;
   const role = (viewingAs ?? profile.role) as AppRole;
   const fullAccess = isAdmin && !viewingAs;

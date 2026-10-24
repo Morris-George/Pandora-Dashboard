@@ -22,6 +22,7 @@ export function PickupPanel({ locale, role, jobs }: { locale: Locale; role: AppR
   const [busy, start] = useTransition();
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [doneId, setDoneId] = useState(""); // last handed-over ticket, for the delivery receipt
   const [q, setQ] = useState("");
   const money = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -40,7 +41,12 @@ export function PickupPanel({ locale, role, jobs }: { locale: Locale; role: AppR
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold">{t.title}</h1>
       {error && <p role="alert" className="rounded-lg bg-red-50 text-red-800 text-sm p-3">{error}</p>}
-      {notice && <p role="status" className="rounded-lg bg-emerald-50 text-emerald-900 text-sm p-3">{notice}</p>}
+      {notice && (
+        <div role="status" className="rounded-lg bg-emerald-50 text-emerald-900 text-sm p-3 flex flex-wrap items-center justify-between gap-2">
+          <span>{notice}</span>
+          {doneId && <a href={`/receipt/${doneId}?kind=delivery`} target="_blank" rel="noopener" className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-3 py-1.5 font-bold">{t.printDelivery}</a>}
+        </div>
+      )}
 
       <section className="bg-white rounded-2xl border border-stone-200 p-6 flex flex-col gap-4">
         <div>
@@ -51,7 +57,7 @@ export function PickupPanel({ locale, role, jobs }: { locale: Locale; role: AppR
         {!shown.length && <p className="text-sm text-stone-600">{t.none}</p>}
         {shown.map((j) => (
           <PickupCard key={j.id} d={d} j={j} role={role} busy={busy} run={run} money={money}
-            onDone={(o) => setNotice(o === "closed" ? t.closedMsg(j.ticketNo) : t.collectedMsg(j.ticketNo))} />
+            onDone={(o) => { setNotice(o === "closed" ? t.closedMsg(j.ticketNo) : t.collectedMsg(j.ticketNo)); setDoneId(j.id); }} />
         ))}
       </section>
     </div>

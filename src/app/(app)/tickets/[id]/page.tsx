@@ -1,10 +1,14 @@
 import { notFound } from "next/navigation";
+import QRCode from "qrcode";
+import Link from "next/link";
 import { Brand } from "@/components/brand";
 import { requireSession } from "@/lib/auth";
 import { getI18n } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import type { Warranty } from "@/lib/warranty";
 import { PrintButton } from "./print-button";
+import { ExceptionActions } from "./exception-actions";
+import { EXCEPTIONS, type ExceptionTarget } from "./exceptions";
 
 export const metadata = { title: "Pandora Maintenance" };
 
@@ -12,7 +16,7 @@ export default async function TicketPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ created?: string }>;
 }) {
-  await requireSession();
+  const me = await requireSession();
   const { t: d, locale } = await getI18n();
   const t = d.ticket;
   const { id } = await params;
@@ -22,7 +26,7 @@ export default async function TicketPage({ params, searchParams }: {
   // RLS returns nothing for tickets outside the user's scope
   const { data: tk } = await supabase
     .from("tickets")
-    .select("id, ticket_no, tracking_token, status, item_name, item_code, item_description, item_barcode, item_image, no_invoice, erp_sales_invoice, purchase_date, fault_category, fault_notes, accessories, warranty_provisional, created_at, customer_id, branches(name)")
+    .select("id, ticket_no, tracking_token, status, item_name, item_code, item_description, item_barcode, item_image, no_invoice, erp_sales_invoice, purchase_date, fault_category, fault_notes, accessories, warranty_provisional, created_at, customer_id, agreed_amount, branches(name)")
     .eq("id", id)
     .maybeSingle();
   if (!tk) notFound();
@@ -34,6 +38,23 @@ export default async function TicketPage({ params, searchParams }: {
     : { data: [] };
 
   const trackUrl = `${process.env.APP_BASE_URL ?? ""}/track/${tk.tracking_token}`;
+  const qr = await QRCode.toString(trackUrl, { type: "svg", margin: 0, width: 120 });
+  const money = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-GB", { minimumFractionDigits: 2 });
+
+  // Same customer + same item repaired before: warn (possible repeat fault / repair warranty)
+  const { data: earlier } = tk.item_code
+    ? await supabase.from("tickets").select("id, ticket_no, created_at, status").eq("customer_id", tk.customer_id)
+        .eq("item_code", tk.item_code).neq("id", tk.id).neq("status", "draft").order("created_at", { ascending: false }).limit(3)
+    : { data: [] };
+
+  // Exception steps this user may take from the current status
+  const { data: rules } = await supabase.from("status_transitions").select("to_status, allowed_roles, requires_reason")
+    .eq("from_status", tk.status).in("to_status", [...EXCEPTIONS]);
+  const moves = (rules ?? [])
+    .filter((r) => me.fullAccess || (r.allowed_roles as string[]).includes(me.role))
+    .filter((r) => !(r.to_status === "ready_to_return" && tk.status !== "unrepairable")) // other returns have their own screens
+    .filter((r) => !(r.to_status === "closed" && tk.status !== "lost_in_transit"))
+    .map((r) => ({ to: r.to_status as ExceptionTarget, needsReason: r.requires_reason }));
   const branch = (tk.branches as unknown as { name: string } | null)?.name ?? "";
   const when = new Date(tk.created_at).toLocaleString(locale === "ar" ? "ar-EG" : "en-GB");
 
@@ -45,6 +66,16 @@ export default async function TicketPage({ params, searchParams }: {
         </div>
       )}
 
+      {!!earlier?.length && (
+        <div role="alert" className="no-print rounded-xl bg-amber-50 border border-amber-200 text-amber-900 p-4 text-sm">
+          {t.repeat}{" "}
+          {earlier.map((e, i) => (
+            <span key={e.id}>{i ? ", " : ""}<Link href={`/tracking?id=${e.id}`} className="font-semibold underline" dir="ltr">{e.ticket_no}</Link>
+              {" "}({new Date(e.created_at).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB")})</span>
+          ))}
+        </div>
+      )}
+
       <section className="bg-white rounded-2xl border border-stone-200 p-6 flex flex-col gap-5">
         <div className="flex flex-wrap justify-between gap-3 items-start">
           <div>
@@ -52,7 +83,13 @@ export default async function TicketPage({ params, searchParams }: {
             <h1 className="text-2xl font-semibold mt-1">{t.memo} · <span dir="ltr">{tk.ticket_no}</span></h1>
             <p className="text-sm text-stone-600">{branch} · {when}</p>
           </div>
-          <PrintButton label={t.print} />
+          <div className="no-print flex flex-wrap gap-2">
+            <a href={`/receipt/${tk.id}`} target="_blank" rel="noopener" className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-4 py-2 text-sm font-bold">{t.printReceipt}</a>
+            {(tk.status === "collected" || tk.status === "closed") && (
+              <a href={`/receipt/${tk.id}?kind=delivery`} target="_blank" rel="noopener" className="rounded-lg border border-stone-900 px-4 py-2 text-sm font-bold">{t.printDelivery}</a>
+            )}
+            <PrintButton label={t.print} />
+          </div>
         </div>
 
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
@@ -74,7 +111,13 @@ export default async function TicketPage({ params, searchParams }: {
           <div><dt className="text-stone-500">{t.warranty}</dt><dd className="font-medium">{d.warranty[tk.warranty_provisional as Warranty]}</dd></div>
           {tk.fault_notes && <div className="sm:col-span-2"><dt className="text-stone-500">{t.comment}</dt><dd>{tk.fault_notes}</dd></div>}
           {tk.accessories && <div className="sm:col-span-2"><dt className="text-stone-500">{t.accessories}</dt><dd>{tk.accessories}</dd></div>}
-          <div className="sm:col-span-2"><dt className="text-stone-500">{t.track}</dt><dd className="font-mono break-all" dir="ltr">{trackUrl}</dd></div>
+          <div><dt className="text-stone-500">{t.agreed}</dt>
+            <dd className="font-medium">{tk.agreed_amount != null ? `${money(Number(tk.agreed_amount))} ${t.egp}` : t.noAgreed}</dd></div>
+          <div className="sm:col-span-2 flex items-center gap-4">
+            <span className="shrink-0 bg-white" aria-label={t.qr} dangerouslySetInnerHTML={{ __html: qr }} />
+            <div><dt className="text-stone-500">{t.track}</dt><dd className="text-xs text-stone-600">{t.qrNote}</dd>
+              <dd className="font-mono text-xs break-all" dir="ltr">{trackUrl}</dd></div>
+          </div>
         </dl>
 
         {!!signed?.length && (
@@ -86,8 +129,17 @@ export default async function TicketPage({ params, searchParams }: {
           </div>
         )}
 
+        {/* Signed on paper at the counter: the customer accepts the condition, accessories and agreed cost */}
+        <div className="grid grid-cols-2 gap-8 pt-6 text-sm">
+          <div><div className="border-b border-stone-400 h-10" /><div className="text-stone-600 mt-1">{t.signCustomer}</div></div>
+          <div><div className="border-b border-stone-400 h-10" /><div className="text-stone-600 mt-1">{t.signStaff}</div></div>
+        </div>
+        <p className="text-xs text-stone-500">{t.terms}</p>
+
         <p className="text-xs text-stone-500 border-t border-stone-200 pt-3">{t.footer(d.status[tk.status] ?? tk.status)}</p>
       </section>
+
+      <ExceptionActions locale={locale} ticketId={tk.id} moves={moves} />
     </div>
   );
 }
