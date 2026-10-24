@@ -635,7 +635,7 @@ const reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 let S=null,idx=new Map(),ST=null;
 const blocks=new Map(),people=new Map();
 const dev="d"+Math.random().toString(36).slice(2,9);
-let myName="",curBlock=null,blockNo=0,joining=null,localFail=false,watchdog=0;
+let signedName="",myName="",curBlock=null,blockNo=0,joining=null,localFail=false,watchdog=0;
 const net={db:null,mode:"boot",canWrite:true,sid:null,unsubs:[],failed:0};
 const ui={hc:"",hw:"",focusKey:"",open:new Set(),hq:"",hz:"",hlim:100,tab:"diff",cat:"",q:"",limit:150,muted:false,lastKey:-1,creating:false};
 const locked=()=>!S||(net.mode==="shared"&&!net.canWrite);
@@ -1109,7 +1109,7 @@ function renderTools(){
   const inp=$("#scan");inp.disabled=locked();
   inp.placeholder=locked()?"View only. You can watch this count but not scan.":"Scan a barcode, or type a SKU and press Enter";
   $("#mergeBtn").disabled=locked();
-  $("#meChip").title=nameLocked()?"Your name is locked while you are scanning. A password is needed to change it.":"Change your name";
+  $("#meChip").title=signedName?"Signed in as "+signedName:nameLocked()?"Your name is locked while you are scanning. A password is needed to change it.":"Change your name";
   const bn=$("#banner");
   if(net.mode==="local"){bn.hidden=false;bn.textContent="This device is not connected to a shared count, so scans stay in this browser. Use Merge scan file to bring in scans exported from other devices.";}
   else if(net.mode==="shared"&&!net.canWrite){bn.hidden=false;bn.textContent="Your access to this page is view-only. You can watch the count live but not scan. Ask the owner for editor access.";}
@@ -1719,6 +1719,7 @@ $("#homeBtn").addEventListener("click",()=>{
 });
 $("#backBtn").addEventListener("click",()=>{ui.creating=false;$("#landing").hidden=true;$("#app").hidden=false;setTimeout(()=>scanEl.focus(),30);});
 $("#meChip").addEventListener("click",async()=>{
+  if(signedName)return; /* the name is the signed-in user */
   if(nameLocked()){
     const ok=await askPassword();
     if(!ok)return;
@@ -2010,8 +2011,11 @@ async function start(){
   const ph=/[#&]phone=([^&]*)/.exec(location.hash);
   if(ph){phoneMode=true;let hn="";try{hn=decodeURIComponent(ph[1]).trim().replace(/\s+/g," ").slice(0,30);}catch(e){}if(hn)name=hn;}
   /* every device is asked who is scanning each time it opens the site (a paired phone gets the name from its link) */
+  /* signed in: the scanner is the signed-in user, nobody is asked for a name */
+  if(!name){try{const r=await fetch("/api/stockcount",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({op:"ping"})});const j=r.ok?await r.json():null;if(j&&j.me){name=String(j.me).trim().replace(/\s+/g," ").slice(0,30);signedName=name;}}catch(e){}}
   if(!name){if(last)myName=last;name=await openGate(false);}
   rememberName(name);
+  if(signedName){$("#meChip").style.cursor="default";$("#meChip").title="Signed in as "+signedName;}
   $("#boot").hidden=false;
   await connect();
   if(net.mode==="shared"){

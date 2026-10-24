@@ -94,7 +94,8 @@ module.exports = async function handler(req, res) {
   try {
     switch (b.op) {
       case 'ping':
-        return send(res, 200, { ok: true });
+        // the signed-in person's own name, so the page never has to ask who is scanning (a paired phone has none)
+        return send(res, 200, { ok: true, me: isAdmin || counter ? String((who.user && (who.user.name || who.user.username)) || (who.account && who.account.user) || '').trim().slice(0, 30) : '' });
       case 'pair': {
         if (!isAdmin) return send(res, 403, { error: 'Only the super admin can pair a phone.' });
         const secret = process.env.PANDORA_AUTH_SECRET;
