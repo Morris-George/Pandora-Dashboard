@@ -77,10 +77,25 @@ const PRICE_LIST = process.env.ERPNEXT_PRICE_LIST || "Pandora Standard Selling";
 export async function getItemPrice(code: string): Promise<number | null> {
   const filters = encodeURIComponent(JSON.stringify([["item_code", "=", code], ["price_list", "=", PRICE_LIST]]));
   const fields = encodeURIComponent(JSON.stringify(["price_list_rate"]));
+  const net = (rate: unknown) => (typeof rate === "number" && rate > 0 ? Math.round((rate / 1.14) * 100) / 100 : null);
+  // ERPNext's own item-details lookup (what the POS uses) works with Item read access
+  try {
+    const res = await fetch(`${BASE}/api/method/erpnext.stock.get_item_details.get_item_details`, {
+      method: "POST", cache: "no-store", signal: AbortSignal.timeout(8000),
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ args: {
+        item_code: code, price_list: PRICE_LIST, company: process.env.ERPNEXT_COMPANY || "All-Niche", doctype: "Sales Invoice",
+        currency: "EGP", price_list_currency: "EGP", conversion_rate: 1, plc_conversion_rate: 1, qty: 1, transaction_type: "selling",
+      } }),
+    });
+    if (res.ok) {
+      const price = net((await res.json()).message?.price_list_rate);
+      if (price !== null) return price;
+    }
+  } catch { /* fall back to Item Price */ }
   try {
     const rows = await get<{ price_list_rate: number }[]>(`/api/resource/Item Price?filters=${filters}&fields=${fields}&limit_page_length=1`);
-    const rate = rows?.[0]?.price_list_rate;
-    return typeof rate === "number" ? Math.round((rate / 1.14) * 100) / 100 : null;
+    return net(rows?.[0]?.price_list_rate);
   } catch {
     return null;
   }
