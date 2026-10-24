@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { compressImage } from "@/lib/compress-image";
 import { createClient } from "@/lib/supabase/client";
 import { checkWarranty } from "@/lib/warranty";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
@@ -124,7 +125,7 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
     const supabase = createClient();
     for (let i = 0; i < photos.length; i++) {
       setBusy(t.uploading(i + 1, photos.length));
-      const f = photos[i];
+      const f = await compressImage(photos[i]);
       const ext = (f.name.split(".").pop() || "jpg").toLowerCase();
       const path = `${draft.ticketId}/intake-${i + 1}-${Date.now()}.${ext}`;
       const up = await supabase.storage.from("ticket-media").upload(path, f, { contentType: f.type || "image/jpeg" });
