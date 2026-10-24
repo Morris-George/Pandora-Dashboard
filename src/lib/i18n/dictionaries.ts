@@ -38,8 +38,8 @@ const en = {
     failed: "Could not change the password. Choose a different one.",
   },
   nav: {
-    "/": "My work", "/intake": "New Maintenance Ticket", "/tickets": "Tickets", "/tracking": "Ticket Tracking", "/dispatch": "Dispatches & Returns", "/diagnosis": "Diagnosis",
-    "/quotes": "Quote approval", "/pickup": "Pickup", "/reports": "Reports", "/admin": "Admin",
+    "/": "My Work", "/intake": "New Maintenance Ticket", "/tickets": "Tickets", "/tracking": "Ticket Tracking", "/dispatch": "Dispatches & Returns", "/diagnosis": "Diagnosis",
+    "/quotes": "Quote Approval", "/pickup": "Pickup", "/reports": "Reports", "/admin": "Admin",
   } as Record<string, string>,
   home: {
     deniedTitle: "Access denied",
