@@ -1264,7 +1264,8 @@ function deleteProject(id){
   try{localStorage.removeItem(PROJ+id);localStorage.setItem(LIBKEY,JSON.stringify(libIndex().filter(x=>x.id!==id)));}catch(e){}
 }
 function checkResume(){
-  $("#resume").hidden=true;
+  const rs=$("#resume");rs.hidden=!live||!!S;
+  if(live&&!S){$("#resumeTitle").textContent="A count is running";$("#resumeSub").textContent=(live.by?"Started by "+live.by:"Started by a teammate")+(live.at?" · "+new Date(live.at).toLocaleString("en-GB"):"");}
   const box=$("#lib");const idx=libIndex();
   if(!idx.length){box.hidden=true;box.innerHTML="";return;}
   box.hidden=false;
@@ -1422,6 +1423,8 @@ function watchCurrent(){
     $("#boot").hidden=true;
     if(!d||!d.sid){if(!S)showLanding();return;}
     if(net.sid===d.sid||joining===d.sid)return;
+    /* nobody is dropped into the running count: upload a sheet, open a saved project, or press Continue. Only a paired phone joins by itself. */
+    if(!S&&!phoneMode&&!/[?&]pair=/.test(location.search)){live={sid:d.sid,by:d.by||"",at:d.at||0};showLanding();return;}
     joinCount(d.sid);
   },e=>{netErr(e);$("#boot").hidden=true;if(!S)showLanding();}));
 }
@@ -1445,6 +1448,7 @@ async function joinCount(sid){
   }finally{joining=null;}
 }
 let countUnsubs=[];
+let live=null;
 function detachCountWatchers(){
   blocks.forEach(b=>{if(b.dirty&&net.db)flushBlock(b);});
   countUnsubs.splice(0).forEach(u=>{try{u();}catch(e){}});
@@ -1712,6 +1716,7 @@ const drop=$("#drop");
 ["dragenter","dragover"].forEach(ev=>window.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
 ["dragleave","drop"].forEach(ev=>window.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
 window.addEventListener("drop",e=>{const f=e.dataTransfer&&e.dataTransfer.files[0];if(f&&!$("#landing").hidden)loadFile(f);});
+$("#resumeBtn").addEventListener("click",()=>{if(live){const sid=live.sid;live=null;joinCount(sid);}});
 $("#lib").addEventListener("click",async e=>{
   const o=e.target.closest("[data-open]"),d=e.target.closest("[data-del]");
   if(o)openProject(o.dataset.open);
