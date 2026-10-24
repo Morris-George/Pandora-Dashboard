@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-inter), var(--font-arabic), system-ui, sans-serif;
+}
+
+/* Pandora palette, shared with the Pandora Dashboards project. The neutral "stone" scale is
+   remapped so every screen picks up the warm-pink greys without per-component changes. */
+@theme {
+  --color-stone-50: #FFF1F3;
+  --color-stone-100: #FBF6F7;
+  --color-stone-200: #EADCDF;
+  --color-stone-300: #E2D6DA;
+  --color-stone-400: #B9A5AC;
+  --color-stone-500: #8C7A81;
+  --color-stone-600: #6B5A61;
+  --color-stone-700: #52434A;
+  --color-stone-800: #3B2E34;
+  --color-stone-900: #2A1F24;
+}
+
+:root {
+  --accent: #FF93A0;        /* Pandora pink */
+  --accent-strong: #E86F80;
+  --on-accent: #2A1018;     /* text on pink */
+  --fill-soft: #FFE4E8;
+  --good: #1F7A4D;
+  --c2: #5B7DB1;
+}
+
+body {
+  background: #FBF6F7;
+  color: #2A1F24;
+  word-spacing: .03em;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Motion ------------------------------------------------------------ */
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slide-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+/* Page sections rise in, staggered */
+main section, main > div > section, .rise { animation: rise .45s cubic-bezier(.2,.7,.2,1) both; }
+main section:nth-of-type(2) { animation-delay: .05s; }
+main section:nth-of-type(3) { animation-delay: .1s; }
+main section:nth-of-type(4) { animation-delay: .15s; }
+main section:nth-of-type(n+5) { animation-delay: .2s; }
+
+/* Cards lift gently on hover */
+main section { transition: box-shadow .25s ease, border-color .25s ease; }
+main section:hover { box-shadow: 0 6px 24px -12px rgb(28 25 23 / .18); }
+
+/* Alerts and status messages fade in */
+[role="alert"], [role="status"] { animation: fade .3s ease both; }
+
+/* Buttons and links: smooth colour, press feedback */
+button, a, select, input, textarea { transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease, transform .12s ease, opacity .18s ease; }
+button:not(:disabled):active { transform: scale(.97); }
+input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgb(255 147 160 / .35); }
+
+/* Table rows highlight */
+tbody tr { transition: background-color .15s ease; }
+tbody tr:hover { background: #fafaf9; }
+
+.nav-item { animation: slide-in .35s ease both; }
+[dir="rtl"] .nav-item { animation-name: fade; }
+
+/* Busy buttons shimmer */
+button:disabled[aria-busy="true"] {
+  background-image: linear-gradient(90deg, transparent, rgb(255 255 255 / .25), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+
+.brand-wordmark { font-feature-settings: "kern"; }
+
+/* Typography as in the Dashboards: heavy, tight headings; small uppercase labels */
+h1 { font-weight: 800 !important; letter-spacing: -.02em; }
+h2 { font-weight: 800 !important; letter-spacing: -.02em; }
+thead th { font-size: 11px !important; text-transform: uppercase; letter-spacing: .06em; font-weight: 700 !important; }
+[dir="rtl"] thead th { text-transform: none; letter-spacing: 0; }
+.kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--color-stone-600); }
+[dir="rtl"] .kpi-label { text-transform: none; letter-spacing: 0; font-size: 12px; }
+
+/* Bars grow in */
+@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.bar-fill { transform-origin: inline-start; animation: grow .7s cubic-bezier(.2,.8,.2,1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  main section { box-shadow: none !important; animation: none !important; }
+}
+
+@keyframes pop { from { opacity: 0; transform: scale(.86); } to { opacity: 1; transform: none; } }
+.logo-pop { animation: pop .9s cubic-bezier(.2,.8,.2,1) both; }
+
+/* ---- Header banner (Dashboards style) ---------------------------------- */
+.hdr { background: linear-gradient(100deg, #FF93A0 0%, #FFA6B0 55%, #FFC1BE 100%); color: #2A1018; box-shadow: 0 14px 40px -24px rgb(232 111 128 / .7); }
+.eyebrow { display: block; font-size: 9.5px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: rgb(42 16 24 / .7); margin-bottom: 2px; }
+[dir="rtl"] .eyebrow { letter-spacing: 0; font-size: 11px; }
+.hdr-btn { border-radius: 999px; background: rgb(255 255 255 / .55); border: 1px solid rgb(255 255 255 / .7); color: #2A1018; font-weight: 800; font-size: 14px; padding: 9px 20px; box-shadow: 0 4px 14px -8px rgb(42 16 24 / .35); }
+.hdr-btn:hover { background: rgb(255 255 255 / .8); }
+@keyframes hdrpop { from { opacity: 0; transform: translateY(6px) scale(.97); } to { opacity: 1; transform: none; } }
+.hdr-pop { animation: hdrpop .55s cubic-bezier(.3,1.5,.5,1) both; }
+
+/* The banner shows the screen title; page headings stay for screen readers and print */
+@media screen {
+  .app-main h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+/* Banner lighting: a soft sheen sweeps across every few seconds; the sparkle twinkles */
+.hdr::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / .45) 50%, transparent 65%);
+  transform: translateX(-120%); animation: sheen 6s ease-in-out 1s infinite;
+}
+@keyframes sheen { 0% { transform: translateX(-120%); } 35%, 100% { transform: translateX(120%); } }
+.sparkle { display: inline-block; color: #fff; filter: drop-shadow(0 0 6px rgb(255 255 255 / .9)); animation: twinkle 2.4s ease-in-out infinite; }
+@keyframes twinkle { 0%, 100% { opacity: .55; transform: scale(.8) rotate(0deg); } 50% { opacity: 1; transform: scale(1.15) rotate(20deg); } }

@@ -1,0 +1,368 @@
+"use server";
+
+import { randomBytes } from "node:crypto";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { requireRole, type AppRole } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { runErpSync } from "@/lib/erp-sync";
+
+const ROLES = ["associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin"] as const;
+const BRANCH_ROLES: AppRole[] = ["associate", "manager"];
+type Result = { error?: string; password?: string };
+
+// Readable temporary password; the user must change it at first sign-in
+const tempPassword = () => randomBytes(9).toString("base64url");
+
+async function audit(actorId: string, action: string, entityId: string, value: unknown) {
+  await createAdminClient().from("audit_log").insert({
+    user_id: actorId, role: "admin", entity: "profiles", entity_id: entityId, action, new_value: value as object,
+  });
+}
+
+const NewUser = z.object({
+  fullName: z.string().trim().min(2).max(120),
+  email: z.string().trim().toLowerCase().email().max(160),
+  role: z.enum(ROLES),
+  branchIds: z.array(z.string().uuid()).max(20),
+});
+
+export async function createUser(input: z.infer<typeof NewUser>): Promise<Result> {
+  const me = await requireRole("admin");
+  const p = NewUser.safeParse(input);
+  if (!p.success) return { error: "invalid" };
+  const u = p.data;
+  if (BRANCH_ROLES.includes(u.role) && !u.branchIds.length) return { error: "branch_required" };
+
+  const admin = createAdminClient();
+  const password = tempPassword();
+  const { data, error } = await admin.auth.admin.createUser({ email: u.email, password, email_confirm: true });
+  if (error) return { error: error.message.toLowerCase().includes("already") ? "exists" : "failed" };
+
+  const id = data.user.id;
+  const prof = await admin.from("profiles").insert({
+    id, full_name: u.fullName, email: u.email, role: u.role, source: "manual", must_change_password: true,
+  });
+  if (prof.error) { await admin.auth.admin.deleteUser(id); return { error: "failed" }; }
+  if (BRANCH_ROLES.includes(u.role)) {
+    await admin.from("user_branches").insert(u.branchIds.map((b) => ({ user_id: id, branch_id: b })));
+  }
+  await audit(me.userId, "user_created", id, { email: u.email, role: u.role, branches: u.branchIds });
+  revalidatePath("/admin");
+  return { password };
+}
+
+export async function setActive(userId: string, active: boolean): Promise<Result> {
+  const me = await requireRole("admin");
+  z.string().uuid().parse(userId);
+  if (userId === me.userId) return { error: "self" };
+  const admin = createAdminClient();
+  // A manual change is the admin's decision: the ERPNext sync will not undo it
+  await admin.from("profiles").update({ active, deactivated_by_sync: false }).eq("id", userId);
+  // A ban also ends existing sessions; ~100 years when deactivated
+  await admin.auth.admin.updateUserById(userId, { ban_duration: active ? "none" : "876000h" });
+  await audit(me.userId, active ? "user_reactivated" : "user_deactivated", userId, { active });
+  revalidatePath("/admin");
+  return {};
+}
+
+export async function resetPassword(userId: string): Promise<Result> {
+  const me = await requireRole("admin");
+  z.string().uuid().parse(userId);
+  const admin = createAdminClient();
+  const password = tempPassword();
+  const { error } = await admin.auth.admin.updateUserById(userId, { password });
+  if (error) return { error: "failed" };
+  await admin.from("profiles").update({ must_change_password: true }).eq("id", userId);
+  await audit(me.userId, "password_reset", userId, {});
+  revalidatePath("/admin");
+  return { password };
+}
+
+// Change a user's sign-in email. ERPNext accounts become manual: the sync matches by email,
+// so it would otherwise recreate the old address.
+export async function changeEmail(userId: string, email: string): Promise<Result> {
+  const me = await requireRole("admin");
+  z.string().uuid().parse(userId);
+  const e = z.string().trim().toLowerCase().email().max(160).safeParse(email);
+  if (!e.success) return { error: "invalid" };
+  const admin = createAdminClient();
+  const { data: cur } = await admin.from("profiles").select("email, source").eq("id", userId).single();
+  if (!cur) return { error: "failed" };
+  if (cur.email.toLowerCase() === e.data) return {};
+  const { data: taken } = await admin.from("profiles").select("id").ilike("email", e.data).maybeSingle();
+  if (taken) return { error: "exists" };
+  const { error } = await admin.auth.admin.updateUserById(userId, { email: e.data, email_confirm: true });
+  if (error) return { error: error.message.toLowerCase().includes("already") ? "exists" : "failed" };
+  await admin.from("profiles").update({ email: e.data, ...(cur.source === "erpnext" ? { source: "manual" } : {}) }).eq("id", userId);
+  if (cur.source === "erpnext") await admin.from("erp_sync_exclusions").upsert({ email: cur.email.toLowerCase(), reason: `Email changed to ${e.data}` });
+  await audit(me.userId, "email_changed", userId, { from: cur.email, to: e.data });
+  revalidatePath("/admin");
+  return {};
+}
+
+export async function setBranches(userId: string, branchIds: string[]): Promise<Result> {
+  const me = await requireRole("admin");
+  z.string().uuid().parse(userId);
+  const ids = z.array(z.string().uuid()).max(20).parse(branchIds);
+  const admin = createAdminClient();
+  await admin.from("user_branches").delete().eq("user_id", userId);
+  if (ids.length) await admin.from("user_branches").insert(ids.map((b) => ({ user_id: userId, branch_id: b })));
+  await audit(me.userId, "branches_changed", userId, { branches: ids });
+  revalidatePath("/admin");
+  return {};
+}
+
+// SoD-4: a role change needs a second admin to approve
+export async function requestRoleChange(userId: string, newRole: string): Promise<Result> {
+  const me = await requireRole("admin");
+  z.string().uuid().parse(userId);
+  const role = z.enum(ROLES).parse(newRole);
+  if (userId === me.userId) return { error: "self" };
+  const admin = createAdminClient();
+  const { data: cur } = await admin.from("profiles").select("role").eq("id", userId).single();
+  if (!cur) return { error: "failed" };
+  // Owner's decision: role changes apply at once; making or removing a Super Admin still needs a second admin
+  if (role !== "admin" && cur.role !== "admin") {
+    await admin.from("profiles").update({ role }).eq("id", userId);
+    if (role !== "associate" && role !== "manager") await admin.from("user_branches").delete().eq("user_id", userId); // central roles see every store
+    await admin.from("role_change_requests").update({ status: "rejected" }).eq("user_id", userId).eq("status", "pending");
+    await audit(me.userId, "role_changed", userId, { from: cur.role, to: role });
+    revalidatePath("/admin");
+    return {};
+  }
+  await admin.from("role_change_requests").update({ status: "rejected" }).eq("user_id", userId).eq("status", "pending");
+  await admin.from("role_change_requests").insert({ user_id: userId, new_role: role, requested_by: me.userId });
+  await audit(me.userId, "role_change_requested", userId, { new_role: role });
+  revalidatePath("/admin");
+  return {};
+}
+
+export async function decideRoleChange(requestId: string, approve: boolean): Promise<Result> {
+  const me = await requireRole("admin");
+  const admin = createAdminClient();
+  const { data: req } = await admin.from("role_change_requests").select("*").eq("id", requestId).eq("status", "pending").maybeSingle();
+  if (!req) return { error: "failed" };
+  if (req.requested_by === me.userId) return { error: "same_admin" };
+  await admin.from("role_change_requests").update({ status: approve ? "approved" : "rejected", approved_by: me.userId }).eq("id", requestId);
+  if (approve) await admin.from("profiles").update({ role: req.new_role }).eq("id", req.user_id);
+  await audit(me.userId, approve ? "role_change_approved" : "role_change_rejected", req.user_id, { new_role: req.new_role });
+  revalidatePath("/admin");
+  return {};
+}
+
+// Fault categories: regular client — RLS lets only admin write, and triggers audit + protect "Other"
+const Cat = z.object({
+  name: z.string().trim().min(2).max(60),
+  nameAr: z.string().trim().max(60).optional(),
+  requiresComment: z.boolean(),
+});
+
+export async function addCategory(input: z.infer<typeof Cat>): Promise<Result> {
+  await requireRole("admin");
+  const p = Cat.safeParse(input);
+  if (!p.success) return { error: "invalid" };
+  const supabase = await createClient();
+  const { data: last } = await supabase.from("fault_categories").select("sort_order").neq("name", "Other").order("sort_order", { ascending: false }).limit(1);
+  const { error } = await supabase.from("fault_categories").insert({
+    name: p.data.name, name_ar: p.data.nameAr || null, requires_comment: p.data.requiresComment,
+    sort_order: (last?.[0]?.sort_order ?? 0) + 10,
+  });
+  if (error) return { error: error.code === "23505" ? "exists" : "failed" };
+  revalidatePath("/admin");
+  revalidatePath("/intake");
+  return {};
+}
+
+export async function updateCategory(name: string, patch: { active?: boolean; requiresComment?: boolean; nameAr?: string }): Promise<Result> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  const row: Record<string, unknown> = {};
+  if (patch.active !== undefined) row.active = patch.active;
+  if (patch.requiresComment !== undefined) row.requires_comment = patch.requiresComment;
+  if (patch.nameAr !== undefined) row.name_ar = patch.nameAr.trim() || null;
+  const { error } = await supabase.from("fault_categories").update(row).eq("name", name);
+  if (error) return { error: "failed" };
+  revalidatePath("/admin");
+  revalidatePath("/intake");
+  return {};
+}
+
+const ReportGrant = z.object({
+  reportKey: z.string().min(1).max(40),
+  role: z.enum(ROLES).exclude(["admin"]),
+  level: z.enum(["none", "view", "export"]),
+});
+
+// Report access matrix (BRD 4.6); the audit trigger on report_access logs every change
+export async function setReportAccess(input: z.infer<typeof ReportGrant>): Promise<Result> {
+  await requireRole("admin");
+  const p = ReportGrant.safeParse(input);
+  if (!p.success) return { error: "invalid" };
+  const supabase = await createClient();
+  const { error } = await supabase.from("report_access").upsert(
+    { report_key: p.data.reportKey, role: p.data.role, level: p.data.level, updated_at: new Date().toISOString() },
+    { onConflict: "report_key,role" },
+  );
+  if (error) return { error: "failed" };
+  revalidatePath("/admin");
+  return {};
+}
+
+// ---- ERPNext sync -------------------------------------------------------------------------
+
+export async function syncNow(): Promise<Result & { summary?: Awaited<ReturnType<typeof runErpSync>> }> {
+  await requireRole("admin");
+  const summary = await runErpSync("manual");
+  revalidatePath("/admin");
+  return summary.errors.length ? { error: "sync", summary } : { summary };
+}
+
+// Keep someone out of the sync (e.g. senior management); their account, if any, is deactivated
+export async function excludeFromSync(userId: string, reason: string): Promise<Result> {
+  const me = await requireRole("admin");
+  z.string().uuid().parse(userId);
+  if (userId === me.userId) return { error: "self" };
+  const admin = createAdminClient();
+  const { data: p } = await admin.from("profiles").select("email").eq("id", userId).single();
+  if (!p) return { error: "failed" };
+  await admin.from("erp_sync_exclusions").upsert({ email: p.email.toLowerCase(), reason: reason.trim().slice(0, 200) || null, created_by: me.userId });
+  await admin.from("profiles").update({ active: false, deactivated_by_sync: false }).eq("id", userId);
+  await admin.auth.admin.updateUserById(userId, { ban_duration: "876000h" });
+  await audit(me.userId, "excluded_from_sync", userId, { reason });
+  revalidatePath("/admin");
+  return {};
+}
+
+export async function includeInSync(email: string): Promise<Result> {
+  const me = await requireRole("admin");
+  const e = z.string().email().parse(email.toLowerCase());
+  const admin = createAdminClient();
+  await admin.from("erp_sync_exclusions").delete().eq("email", e);
+  // Let the next sync decide whether the account should be active again
+  await admin.from("profiles").update({ deactivated_by_sync: true }).eq("email", e).eq("source", "erpnext").eq("active", false);
+  await audit(me.userId, "included_in_sync", e, { email: e });
+  revalidatePath("/admin");
+  return {};
+}
+
+// Delete an account that has no history; one that has worked on tickets is deactivated instead
+export async function deleteUser(userId: string): Promise<Result & { deactivated?: boolean }> {
+  const me = await requireRole("admin");
+  z.string().uuid().parse(userId);
+  if (userId === me.userId) return { error: "self" };
+  const admin = createAdminClient();
+  const { data: p } = await admin.from("profiles").select("email, source").eq("id", userId).single();
+  if (!p) return { error: "failed" };
+  const { error } = await admin.auth.admin.deleteUser(userId);
+  if (error) {
+    // Referenced by tickets, batches, payments… keep the record, block the account
+    await admin.from("profiles").update({ active: false, deactivated_by_sync: false }).eq("id", userId);
+    await admin.auth.admin.updateUserById(userId, { ban_duration: "876000h" });
+    await audit(me.userId, "user_deactivated", userId, { reason: "has_history" });
+    revalidatePath("/admin");
+    return { deactivated: true };
+  }
+  // An ERPNext account would come straight back on the next sync, so keep it out
+  if (p.source === "erpnext") await admin.from("erp_sync_exclusions").upsert({ email: p.email.toLowerCase(), reason: "deleted by admin", created_by: me.userId });
+  await audit(me.userId, "user_deleted", userId, { email: p.email });
+  revalidatePath("/admin");
+  return {};
+}
+
+// ---- Sales persons (from ERPNext) ---------------------------------------------------------
+
+const spName = z.string().trim().min(1).max(140);
+
+// Allocate a store when ERPNext's group doesn't give one (null = back to the ERPNext group)
+export async function setSalesPersonStore(erpName: string, branchId: string | null): Promise<Result> {
+  const me = await requireRole("admin");
+  const n = spName.parse(erpName);
+  const admin = createAdminClient();
+  await admin.from("sales_persons").update({ branch_override: branchId ? z.string().uuid().parse(branchId) : null }).eq("erp_name", n);
+  // A linked associate/manager account follows the allocation
+  const { data: sp } = await admin.from("sales_persons").select("profile_id, branch_id, branch_override").eq("erp_name", n).single();
+  const target = sp?.branch_override ?? sp?.branch_id;
+  if (sp?.profile_id && target) {
+    const { data: p } = await admin.from("profiles").select("role").eq("id", sp.profile_id).single();
+    if (p && BRANCH_ROLES.includes(p.role)) {
+      await admin.from("user_branches").delete().eq("user_id", sp.profile_id);
+      await admin.from("user_branches").insert({ user_id: sp.profile_id, branch_id: target });
+    }
+  }
+  await audit(me.userId, "sales_person_store", n, { branchId });
+  revalidatePath("/admin");
+  return {};
+}
+
+export async function linkSalesPerson(erpName: string, profileId: string | null): Promise<Result> {
+  const me = await requireRole("admin");
+  const n = spName.parse(erpName);
+  await createAdminClient().from("sales_persons").update({ profile_id: profileId ? z.string().uuid().parse(profileId) : null }).eq("erp_name", n);
+  await audit(me.userId, "sales_person_linked", n, { profileId });
+  revalidatePath("/admin");
+  return {};
+}
+
+// "Add": create a platform account for a sales person who has none (temporary password shown once)
+export async function createAccountForSalesPerson(erpName: string, email: string, role: "associate" | "manager"): Promise<Result> {
+  await requireRole("admin");
+  const n = spName.parse(erpName);
+  const admin = createAdminClient();
+  const { data: sp } = await admin.from("sales_persons").select("branch_id, branch_override").eq("erp_name", n).single();
+  const branch = sp?.branch_override ?? sp?.branch_id;
+  if (!branch) return { error: "branch_required" };
+  const r = await createUser({ fullName: n, email, role, branchIds: [branch] });
+  if (r.error) return r;
+  const { data: p } = await admin.from("profiles").select("id").eq("email", email.trim().toLowerCase()).single();
+  if (p) await admin.from("sales_persons").update({ profile_id: p.id }).eq("erp_name", n);
+  revalidatePath("/admin");
+  return r;
+}
+
+// "Delete": hide a sales person from the lists (ERPNext stays the source, so they are not erased)
+// Change a user's display name; the sync then keeps it (name_locked)
+export async function renameUser(userId: string, name: string): Promise<Result> {
+  const me = await requireRole("admin");
+  z.string().uuid().parse(userId);
+  const n = z.string().trim().min(2).max(120).safeParse(name);
+  if (!n.success) return { error: "invalid" };
+  await createAdminClient().from("profiles").update({ full_name: n.data, name_locked: true }).eq("id", userId);
+  await audit(me.userId, "name_changed", userId, { to: n.data });
+  revalidatePath("/admin");
+  return {};
+}
+
+// Merge: link the ERPNext sales person to an existing account and give the account the ERPNext name
+export async function mergeSalesPerson(erpName: string, profileId: string): Promise<Result> {
+  const me = await requireRole("admin");
+  const n = spName.parse(erpName);
+  const id = z.string().uuid().parse(profileId);
+  const admin = createAdminClient();
+  await admin.from("sales_persons").update({ profile_id: null }).eq("profile_id", id).neq("erp_name", n);
+  await admin.from("sales_persons").update({ profile_id: id }).eq("erp_name", n);
+  await admin.from("profiles").update({ full_name: n, name_locked: true }).eq("id", id);
+  await audit(me.userId, "sales_person_merged", n, { profileId: id });
+  revalidatePath("/admin");
+  return {};
+}
+
+// Stop sync for one sales person: the sync keeps their store and status as they are
+export async function setSalesPersonSyncPaused(erpName: string, paused: boolean): Promise<Result> {
+  const me = await requireRole("admin");
+  const n = spName.parse(erpName);
+  await createAdminClient().from("sales_persons").update({ sync_paused: paused }).eq("erp_name", n);
+  await audit(me.userId, paused ? "sales_person_sync_stopped" : "sales_person_sync_resumed", n, {});
+  revalidatePath("/admin");
+  return {};
+}
+
+export async function setSalesPersonIgnored(erpName: string, ignored: boolean): Promise<Result> {
+  const me = await requireRole("admin");
+  const n = spName.parse(erpName);
+  await createAdminClient().from("sales_persons").update({ ignored }).eq("erp_name", n);
+  await audit(me.userId, ignored ? "sales_person_removed" : "sales_person_restored", n, {});
+  revalidatePath("/admin");
+  return {};
+}
