@@ -26,3 +26,6 @@ grant execute on function courier_pickup(uuid, text) to authenticated;
 
 -- Receipt layout (logo, contact, terms, fields); edited in Admin
 insert into app_settings (key, value, updated_by) values ('receipt', '{}'::jsonb, null) on conflict (key) do nothing;
+
+-- Trigger function: never called directly (security advisor)
+revoke execute on function queue_customer_email() from public, anon, authenticated;

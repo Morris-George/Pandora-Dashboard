@@ -14,7 +14,7 @@ async function as(key) {
 }
 let pass = 0, fail = 0;
 const check = (name, ok, detail = "") => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${!ok && detail ? "  → " + detail : ""}`); };
-const [assoc, assoc2, tech, sup, finance] = await Promise.all(["associate", "associate2", "technician", "supervisor", "finance"].map(as));
+const [assoc, assoc2, tech, sup] = await Promise.all(["associate", "associate2", "technician", "supervisor"].map(as));
 const { data: br } = await service.from("branches").select("id, code");
 const B = Object.fromEntries(br.map((b) => [b.code, b.id]));
 
@@ -34,25 +34,23 @@ const last4 = c.mobile.slice(-4);
 const { data: due } = await assoc.rpc("amount_due", { p_ticket: paid });
 check("amount due equals approved quote", Number(due) === total, `${due} vs ${total}`);
 
-const args = (x) => ({ p_ticket: paid, p_mobile_last4: last4, p_method: "card", p_amount: total, p_receipt: "POS-1", p_collected_by: "", ...x });
+// The repair invoice is issued in ERPNext; the ticket only links its number
+const args = (x) => ({ p_ticket: paid, p_mobile_last4: last4, p_erp_invoice: "ACC-SINV-TEST-1", p_collected_by: "", ...x });
 check("wrong last 4 digits rejected", !!(await assoc.rpc("collect_ticket", args({ p_mobile_last4: "0000" }))).error);
 check("other-branch associate blocked", !!(await assoc2.rpc("collect_ticket", args({}))).error);
-check("wrong amount rejected", !!(await assoc.rpc("collect_ticket", args({ p_amount: total - 1 }))).error);
-check("card without receipt rejected", !!(await assoc.rpc("collect_ticket", args({ p_receipt: "" }))).error);
+check("paid pickup without an ERPNext invoice rejected", !!(await assoc.rpc("collect_ticket", args({ p_erp_invoice: "" }))).error);
 const { data: o1, error: e1 } = await assoc.rpc("collect_ticket", args({}));
-check("paid pickup recorded → collected", o1 === "collected", e1?.message);
-const { count: pay } = await service.from("payments").select("*", { count: "exact", head: true }).eq("ticket_id", paid);
-const { count: out } = await service.from("integration_outbox").select("*", { count: "exact", head: true }).eq("ticket_id", paid);
-check("payment stored and 2 ERP outbox rows queued", pay === 1 && out === 2, `${pay} / ${out}`);
-const { error: fc } = await finance.rpc("transition_ticket", { p_ticket: paid, p_to: "closed" });
-check("Finance closes after posting", !fc, fc?.message);
+check("paid pickup with invoice → closed", o1 === "closed", e1?.message);
+const { data: t2 } = await service.from("tickets").select("status, erp_repair_invoice").eq("id", paid).single();
+check("invoice number linked to the ticket", t2.erp_repair_invoice === "ACC-SINV-TEST-1" && t2.status === "closed", JSON.stringify(t2));
 
 // Free ticket: any other CS ticket ready for pickup
 const { data: free } = await service.from("tickets").select("id, customer_id").eq("status", "ready_for_pickup").eq("branch_id", B.CS).limit(1).maybeSingle();
 if (free) {
   const { data: fc2 } = await service.from("customers").select("mobile").eq("id", free.customer_id).single();
-  const { data: o2, error: e2 } = await assoc.rpc("collect_ticket", { p_ticket: free.id, p_mobile_last4: fc2.mobile.slice(-4), p_method: "", p_amount: 0, p_receipt: "", p_collected_by: "Collected by: Brother" });
+  const { data: o2, error: e2 } = await assoc.rpc("collect_ticket", { p_ticket: free.id, p_mobile_last4: fc2.mobile.slice(-4), p_erp_invoice: "", p_collected_by: "Collected by: Brother" });
   check("free pickup closes immediately", o2 === "closed", e2?.message);
 }
-console.log(`\n${pass} passed, ${fail} failed`);
+console.log(`
+${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

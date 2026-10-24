@@ -78,16 +78,17 @@ const assoc2 = await as("associate2");
 const { data: other2 } = await assoc2.from("tickets").select("id").eq("id", tk?.id);
 check("other-branch associate cannot see the ticket", (other2 ?? []).length === 0);
 
+// Super Admin signed in with the password only (no two-step code): no rights at all
 const adm = await as("admin");
 const { data: admT } = await adm.from("tickets").select("id");
-check("admin sees no tickets (SoD-4)", (admT ?? []).length === 0);
+check("admin without two-step sees no tickets", (admT ?? []).length === 0);
 const catName = "Test category " + Date.now();
 const { error: catA } = await adm.from("fault_categories").insert({ name: catName });
-check("admin can add a fault category", !catA, catA?.message);
+check("admin without two-step cannot add a fault category", !!catA);
 const { error: catB } = await assoc.from("fault_categories").insert({ name: catName + " x" });
 check("associate cannot add a fault category", !!catB);
-const { error: catSys } = await adm.from("fault_categories").update({ active: false }).eq("name", "Other");
-check("'Other' cannot be removed", !!catSys);
+const { error: catSys } = await service.from("fault_categories").update({ active: false }).eq("name", "Other");
+check("'Other' cannot be removed (even by the system)", !!catSys);
 
 const { data: audA } = await assoc.from("audit_log").select("id").limit(1);
 check("associate cannot read audit log", (audA ?? []).length === 0);
