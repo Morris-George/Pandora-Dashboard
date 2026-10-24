@@ -59,7 +59,9 @@ async function fetchReport(filters, pr, report = REPORT) {
     const m = report === REPORT_ALL ? {} : await erpCall('frappe.desk.query_report.run', { report_name: REPORT, filters, ignore_prepared_report: true, are_default_filters: false });
     if (report !== REPORT_ALL && (hasRows(m) || !m.prepared_report)) return { columns: m.columns || [], rows: m.result || [] };
     if (m.doc && m.doc.status === 'Completed' && m.doc.name) pr = m.doc.name;
-    else { const q = await erpCall('frappe.desk.query_report.background_enqueue_run', { report_name: REPORT, filters: JSON.stringify(filters) }); pr = q.name || (q.doc && q.doc.name) || q; }
+    else { // "Generate New Report": make_prepared_report on current Frappe, background_enqueue_run on older ones
+      let q; try { q = await erpCall('frappe.core.doctype.prepared_report.prepared_report.make_prepared_report', { report_name: REPORT, filters: JSON.stringify(filters) }); }
+      catch (e) { if (!/failed to get method|has no attribute|417/i.test(e.message)) throw e; q = await erpCall('frappe.desk.query_report.background_enqueue_run', { report_name: REPORT, filters: JSON.stringify(filters) }); } pr = q.name || (q.doc && q.doc.name) || q; }
   }
   // wait for the build (up to ~40 seconds here; the page asks again if it takes longer)
   for (let t = 0; t < 20; t++) {
