@@ -455,7 +455,12 @@ function syncDates(d){
   if(!SERVER||!d.dayMin||!d.dayMax){row.hidden=true;return}
   row.hidden=false;
   st.dayMin=d.dayMin; st.dayMax=d.dayMax;
-  $('dFrom').min=$('dTo').min=d.dayMin; $('dFrom').max=$('dTo').max=d.dayMax;
+  let lo=d.dayMin, hi=d.dayMax;
+  if(st.months.length>1){ // every saved month can be reached from the date boxes
+    const old=st.months[st.months.length-1], nw=st.months[0].split('-').map(Number);
+    lo=old+'-01'; hi=new Date(Date.UTC(nw[0],nw[1],0)).toISOString().slice(0,10);
+  }
+  $('dFrom').min=$('dTo').min=lo; $('dFrom').max=$('dTo').max=hi;
   $('dFrom').value=d.from||d.dayMin; $('dTo').value=d.to||d.dayMax;
   $('dMsg').textContent='';
 }
@@ -475,8 +480,12 @@ async function applyDates(from,to){
     try{history.replaceState(null,'',location.pathname+(qs?'?'+qs:''))}catch(_){}
   }catch(e){msg.textContent='No connection.'}
 }
-$('dFrom').addEventListener('change',()=>{if($('dFrom').value&&$('dTo').value) applyDates($('dFrom').value,$('dTo').value)});
-$('dTo').addEventListener('change',()=>{if($('dFrom').value&&$('dTo').value) applyDates($('dFrom').value,$('dTo').value)});
+$('dFrom').addEventListener('change',()=>{const f=$('dFrom').value; if(!f) return;
+  const k=f.slice(0,7); if(k!==(st.month||st.cur)&&st.months.includes(k)) return openMonth(k,f,'');
+  if($('dTo').value) applyDates(f,$('dTo').value)});
+$('dTo').addEventListener('change',()=>{const t=$('dTo').value; if(!t) return;
+  const k=t.slice(0,7); if(k!==(st.month||st.cur)&&st.months.includes(k)) return openMonth(k,'',t);
+  if($('dFrom').value) applyDates($('dFrom').value,t)});
 $('dAll').addEventListener('click',()=>applyDates('',''));
 $('dLast7').addEventListener('click',()=>{
   if(!st.dayMax) return;
@@ -498,18 +507,21 @@ async function loadMonths(){
     if(r.ok){const j=await r.json();st.months=j.months||[];st.cur=j.current||null}}catch(_){}
   if(st.month&&st.month===st.cur)st.month='';
   drawMonths();
+  if(st.data) syncDates(st.data);
+  if(ROLE.role==='admin'&&st.months.length<2&&!$('mMsg').textContent) $('mMsg').textContent='Only this month is saved so far. Press the button to get earlier months.';
 }
-async function openMonth(k){
+async function openMonth(k,from,to){
   const msg=$('mMsg'); msg.textContent='Loading…';
   try{
     const m=(k===st.cur)?'':k;
-    const r=await fetch('/api/data'+(m?'?month='+m:''),{credentials:'same-origin',cache:'no-store'});
+    const qs=[m?'month='+m:'',from?'from='+from:'',to?'to='+to:''].filter(Boolean).join('&');
+    const r=await fetch('/api/data'+(qs?'?'+qs:''),{credentials:'same-origin',cache:'no-store'});
     if(r.status===401){location.replace('/login.html');return}
-    if(!r.ok){msg.textContent='Could not load '+monthLabel(k)+'.';return}
+    if(!r.ok){msg.textContent=r.status===404?monthLabel(k)+' is not saved yet.':'Could not load '+monthLabel(k)+'.';return}
     const j=await r.json();
     if(!scopeData(j).rows.length){msg.textContent='No sales for '+monthLabel(k)+'.';return}
-    st.month=m; st.from=''; st.to=''; setData(j); drawMonths(); msg.textContent='';
-    try{history.replaceState(null,'',location.pathname+(m?'?month='+m:''))}catch(_){}
+    st.month=m; st.from=from||''; st.to=to||''; setData(j); drawMonths(); msg.textContent='';
+    try{history.replaceState(null,'',location.pathname+(qs?'?'+qs:''))}catch(_){}
   }catch(e){msg.textContent='No connection.'}
 }
 $('monthChips').addEventListener('click',e=>{const b=e.target.closest('[data-m]'); if(b) openMonth(b.dataset.m)});
