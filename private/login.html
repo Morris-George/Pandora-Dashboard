@@ -58,11 +58,12 @@ body{margin:0;color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFon
 .field input:focus{border-color:var(--accent);box-shadow:0 0 0 5px rgba(255,147,160,.28);transform:translateY(-1px)}
 .field input:focus+label,.field input:not(:placeholder-shown)+label{transform:translateY(-11px) scale(.74);color:var(--accent-text)}
 .password-wrap input{padding-right:76px}
-.password-wrap:not(.revealed) input{color:transparent;-webkit-text-fill-color:transparent;caret-color:var(--ink);font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:calc(17px - 1ch)}
-.pwlogos{position:absolute;left:16px;right:76px;top:25px;height:23px;overflow:hidden;pointer-events:none;display:none}
+.password-wrap:not(.revealed) input{color:transparent;-webkit-text-fill-color:transparent;caret-color:var(--ink);font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:calc(16px - 1ch)}
+.pwlogos{position:absolute;left:16px;right:76px;top:27px;height:17px;overflow:hidden;pointer-events:none;display:none}
 .password-wrap:not(.revealed) .pwlogos{display:block}
 .pwlogos div{display:flex;width:max-content;will-change:transform}
-.pwlogos i{flex:none;width:17px;height:23px;background:var(--accent);-webkit-mask:url(/pandora-logo.png) center/contain no-repeat;mask:url(/pandora-logo.png) center/contain no-repeat;animation:pwpop .22s cubic-bezier(.3,1.6,.5,1)}
+.pwlogos i{flex:none;width:12px;height:17px;margin-right:4px;background:var(--logo-black,#000);-webkit-mask:url(/pandora-logo.png) center/contain no-repeat;mask:url(/pandora-logo.png) center/contain no-repeat;animation:pwpop .22s cubic-bezier(.3,1.6,.5,1)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--logo-black:#F6EBEE}}:root[data-theme="dark"]{--logo-black:#F6EBEE}
 @keyframes pwpop{from{transform:scale(.2) rotate(-25deg);opacity:0}to{transform:none;opacity:1}}
 .toggle{position:absolute;right:8px;top:9px;height:38px;padding:0 14px;border:0;border-radius:12px;background:rgba(255,147,160,.18);color:var(--accent-text);font:inherit;font-size:12.5px;font-weight:800;cursor:pointer;transition:background .2s}.toggle:hover{background:rgba(255,147,160,.34)}
 .forgot{text-align:right;margin:-6px 4px 16px;font-size:12.5px}.forgot a,.hint a{color:var(--accent-text);font-weight:700;text-decoration:none}.forgot a:hover,.hint a:hover{text-decoration:underline}
