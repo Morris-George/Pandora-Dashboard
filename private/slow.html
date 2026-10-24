@@ -156,7 +156,7 @@ function draw(){
   const Q=[`<b>${fmt(tq)}</b> slow pieces in <b>${sts.length}</b> stores${hasV?`, worth <b>${money(tv)}</b>`:''}: nothing sold of them in that store in the last ${J.months} months. Most sit at <b>${esc(sts[0]?sts[0].g:'-')}</b> (${fmt(sts[0]?sts[0].qty:0)} pcs).`];
   if(mvq)Q.push(`<b>${fmt(mvq)}</b> of these pieces sell in another store: <b>${routes.length}</b> transfers below. The biggest is <b>${esc(big.from)} → ${esc(big.to)}</b>, ${fmt(big.qty)} pcs.`);
   if(dead.length)Q.push(`<b>${new Set(dead.map(i=>i.sku)).size}</b> SKUs sold nowhere in ${J.months} months (${fmt(sum(dead,'qty'))} pcs): candidates for a promotion, a VM change or a return.`);
-  if(ord.length)Q.push(`<b class="bad">${new Set(ord.map(i=>i.sku)).size} slow SKUs are still in the refill order ${esc(J.order?J.order.name:'')}</b>: transfer first and lower the order.`);
+  if(ord.length)Q.push(`<span data-tag="ord" data-go="1" style="cursor:pointer" title="Show these SKUs"><b class="bad" style="text-decoration:underline">${new Set(ord.map(i=>i.sku)).size} slow SKUs are still in the refill order ${esc(J.order?J.order.name:'')}</b>: transfer first and lower the order. <span class="note">Click to see them ›</span></span>`);
   $('quick').innerHTML=Q.map(t=>`<div class="qk">${t}</div>`).join('');
   $('byStore').innerHTML=`<table><tr><th class="l">Store</th><th>Slow SKUs</th><th>Pieces</th>${hasV?'<th>Value</th>':''}<th>Can move out</th><th>Sold nowhere</th><th class="l">Share of the slow pieces</th></tr>${sts.map(o=>`<tr data-f="store" data-v="${esc(o.g)}" style="${F.store===o.g?'font-weight:800':''}"><td class="l"><b>${esc(o.g)}</b></td><td>${fmt(o.skus)}</td><td>${fmt(o.qty)}</td>${hasV?`<td>${money(o.val)}</td>`:''}<td class="good">${fmt(o.move)}</td><td>${fmt(o.dead)}</td><td class="l"><div class="hb"><i style="width:${o.qty/(tq||1)*100}%;background:var(--accent)"></i></div></td></tr>`).join('')}</table>`;
   $('byCat').innerHTML=`<table><tr><th class="l">Category</th><th>SKUs</th><th>Pieces</th>${hasV?'<th>Value</th>':''}<th>Can move</th></tr>${cats.map(o=>`<tr data-f="cat" data-v="${esc(o.g)}" style="${F.cat===o.g?'font-weight:800':''}"><td class="l">${esc(o.g)}</td><td>${fmt(o.skus)}</td><td>${fmt(o.qty)}</td>${hasV?`<td>${money(o.val)}</td>`:''}<td>${fmt(o.move)}</td></tr>`).join('')}</table>`;
@@ -186,7 +186,7 @@ function drawTable(){const hasV=J.C.val>=0,hasA=ITEMS.some(i=>i.age!=null);
 }
 function drawRaw(){const s=J.snaps.find(x=>x.rows.length)||J.snaps[0];$('raw').innerHTML=s?`<div class="note">${esc(s.warehouse)}</div><table><tr>${s.cols.map(c=>`<th class="l">${esc(c.label)}</th>`).join('')}</tr>${s.rows.slice(0,200).map(r=>`<tr>${r.map(v=>`<td class="l">${esc(v)}</td>`).join('')}</tr>`).join('')}</table>`:''}
 document.addEventListener('click',e=>{const f=e.target.closest('[data-f]');if(f){const k=f.dataset.f;F[k]=F[k]===f.dataset.v?'':f.dataset.v;draw();return}
-  const t=e.target.closest('[data-tag]');if(t){F.tag=t.dataset.tag;draw();return}
+  const t=e.target.closest('[data-tag]');if(t){F.tag=t.dataset.tag;F.cat=F.store=F.ab='';draw();if(t.dataset.go).closest('.card').scrollIntoView({behavior:'smooth',block:'start'});return}
   if(e.target.closest('[data-clear]')){F.cat=F.store=F.ab='';draw();return}
   const s=e.target.closest('th[data-sort]');if(s){const k=s.dataset.sort;SORT=SORT.k===k?{k,d:-SORT.d}:{k,d:typeof ITEMS[0][k]==='string'?1:-1};drawTable()}});
 $('q').oninput=drawTable;
