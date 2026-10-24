@@ -102,6 +102,20 @@ export async function changeEmail(userId: string, email: string): Promise<Result
   return {};
 }
 
+// Lost phone: another Super Admin clears the person's authenticator; they set it up again at next sign-in
+export async function resetTwoStep(userId: string): Promise<Result> {
+  const me = await requireRole("admin");
+  z.string().uuid().parse(userId);
+  if (userId === me.userId) return { error: "self" };
+  const admin = createAdminClient();
+  const { data } = await admin.auth.admin.mfa.listFactors({ userId });
+  for (const f of data?.factors ?? []) await admin.auth.admin.mfa.deleteFactor({ userId, id: f.id });
+  await admin.auth.admin.signOut(userId).catch(() => undefined);
+  await audit(me.userId, "two_step_reset", userId, {});
+  revalidatePath("/admin");
+  return {};
+}
+
 export async function setBranches(userId: string, branchIds: string[]): Promise<Result> {
   const me = await requireRole("admin");
   z.string().uuid().parse(userId);

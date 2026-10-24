@@ -38,6 +38,8 @@ export const requireSession = cache(async (): Promise<Session> => {
   }
 
   const isAdmin = profile.role === "admin";
+  // Super Admins must finish two-step login (authenticator code) before anything else
+  if (isAdmin && data?.claims?.aal !== "aal2") redirect("/mfa");
   const viewingAs = isAdmin ? ((profile.acting_role as AppRole | null) ?? null) : null;
   const role = (viewingAs ?? profile.role) as AppRole;
   const fullAccess = isAdmin && !viewingAs;

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
-import { changeEmail, createUser, renameUser, decideRoleChange, deleteUser, excludeFromSync, requestRoleChange, resetPassword, setActive, setBranches } from "./actions";
+import { changeEmail, createUser, renameUser, resetTwoStep, decideRoleChange, deleteUser, excludeFromSync, requestRoleChange, resetPassword, setActive, setBranches } from "./actions";
 
 export type UserRow = {
   id: string; name: string; email: string; role: AppRole; active: boolean; source: string; mustChange: boolean; branchIds: string[];
@@ -157,6 +157,10 @@ export function UsersPanel({ locale, meId, users, pending, branches }: {
                           const next = window.prompt(t.askName(u.email), u.name);
                           if (next && next.trim() !== u.name) run(() => renameUser(u.id, next));
                         }}>{t.changeName}</button>
+                        {u.role === "admin" && !self && (
+                          <button disabled={busy} className={`${small} border-stone-400`}
+                            onClick={() => { if (window.confirm(t.askResetTwoStep(u.name))) run(() => resetTwoStep(u.id)); }}>{t.resetTwoStep}</button>
+                        )}
                         {!self && (
                           <button disabled={busy} className={`${small} border-red-800 text-red-800`} onClick={() => run(() => setActive(u.id, !u.active))}>
                             {u.active ? t.deactivate : t.reactivate}

@@ -18,6 +18,14 @@ const en = {
   },
   shell: { fullAccess: "Full access · all stores", viewAs: "View as", viewingAs: (r: string) => `Super Admin viewing as ${r}`, useAs: "Use this screen as:",
     signOut: "Sign out", allBranches: "All branches", adminScope: "Users & settings", soon: "Coming soon" },
+  mfa: {
+    title: "Two-step login",
+    setupNote: "Super Admin accounts need a second step. Scan this code with an authenticator app (Google Authenticator, Microsoft Authenticator), then enter the 6-digit code.",
+    enterNote: "Enter the 6-digit code from your authenticator app.",
+    qrAlt: "Authenticator QR code", orKey: "Or type this key in the app:",
+    code: "6-digit code", verify: "Verify", checking: "Checking…",
+    wrong: "That code is not right. Use the latest code from the app.", failed: "Could not start the setup. Reload the page.",
+  },
   pwd: {
     title: "Set your password",
     note: "You signed in with a temporary password. Choose your own password to continue.",
@@ -173,6 +181,7 @@ const en = {
     reactivate: "Reactivate",
     reset: "Reset password",
     changeEmail: "Change email",
+    resetTwoStep: "Reset two-step login", askResetTwoStep: (n: string) => `Clear ${n}'s authenticator? They will set it up again at their next sign-in.`,
     changeName: "Change name", askName: (email: string) => `New name for ${email} (the ERPNext sync will keep it):`,
     askEmail: (cur: string) => `New sign-in email for ${cur}:`,
     askEmailErp: (cur: string) => `New sign-in email for ${cur}:
@@ -585,6 +594,14 @@ const ar: Dict = {
   },
   shell: { fullAccess: "صلاحية كاملة · كل الفروع", viewAs: "عرض كـ", viewingAs: (r: string) => `مدير النظام بيشوف كـ ${r}`, useAs: "استخدم الشاشة كـ:",
     signOut: "تسجيل الخروج", allBranches: "كل الفروع", adminScope: "المستخدمون والإعدادات", soon: "قريبًا" },
+  mfa: {
+    title: "التحقق بخطوتين",
+    setupNote: "حسابات مدير النظام محتاجة خطوة تانية. امسح الكود ده بتطبيق تحقق (Google Authenticator أو Microsoft Authenticator)، وبعدين اكتب الكود اللي من 6 أرقام.",
+    enterNote: "اكتب الكود اللي من 6 أرقام من تطبيق التحقق.",
+    qrAlt: "كود QR لتطبيق التحقق", orKey: "أو اكتب المفتاح ده في التطبيق:",
+    code: "الكود (6 أرقام)", verify: "تحقق", checking: "جاري التحقق…",
+    wrong: "الكود مش صحيح. استخدم آخر كود في التطبيق.", failed: "مقدرناش نبدأ الإعداد. حدّث الصفحة.",
+  },
   pwd: {
     title: "اختر كلمة المرور",
     note: "دخلت بكلمة مرور مؤقتة. اختر كلمة مرور خاصة بك للمتابعة.",
@@ -740,6 +757,7 @@ const ar: Dict = {
     reactivate: "تفعيل",
     reset: "إعادة تعيين كلمة المرور",
     changeEmail: "تغيير الإيميل",
+    resetTwoStep: "إعادة ضبط التحقق بخطوتين", askResetTwoStep: (n: string) => `مسح تطبيق التحقق الخاص بـ ${n}؟ هيضبطه تاني أول ما يدخل.`,
     changeName: "تغيير الاسم", askName: (email: string) => `الاسم الجديد لـ ${email} (المزامنة مع ERPNext هتحافظ عليه):`,
     askEmail: (cur: string) => `إيميل الدخول الجديد بدل ${cur}:`,
     askEmailErp: (cur: string) => `إيميل الدخول الجديد بدل ${cur}:
