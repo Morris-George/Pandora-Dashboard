@@ -69,7 +69,7 @@ dialog::backdrop{background:rgba(20,10,14,.45)}
 .dlg{padding:20px;display:flex;flex-direction:column;gap:14px}
 .dlg h3{margin:0;font-size:18px;font-weight:800}
 .dlg .row{display:flex;gap:12px}.dlg .row>*{flex:1}
-.dlg input{width:100%}
+.dlg input,.dlg select{width:100%}
 .days{display:flex;flex-wrap:wrap;gap:6px}
 .days label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700;cursor:pointer;text-transform:none;letter-spacing:0;color:var(--ink)}
 .days label:has(input:checked){background:var(--fill-soft);border-color:var(--accent)}
@@ -144,7 +144,8 @@ dialog::backdrop{background:rgba(20,10,14,.45)}
 
 <dialog id="dlg"><form class="dlg" id="form" method="dialog">
   <h3 id="dTitle">Add a person</h3>
-  <label class="f">Name <input type="text" id="dName" list="names" maxlength="40" autocomplete="off" required placeholder="Type a name"></label>
+  <label class="f">Name <select id="dPick"></select></label>
+  <label class="f" id="dOtherWrap" hidden>Type the name <input type="text" id="dName" list="names" maxlength="40" autocomplete="off" placeholder="Type a name"></label>
   <div class="row"><label class="f">From <input type="time" id="dFrom" required></label><label class="f">To <input type="time" id="dTo" required></label></div>
   <div class="hint" id="dHint">If the To time is earlier than the From time, the shift ends after midnight.</div>
   <div id="dDaysWrap"><div class="hint" style="margin-bottom:6px;font-weight:700">Which days?</div><div class="days" id="dDays"></div></div>
@@ -173,7 +174,7 @@ var SH=[{k:'m',name:'Morning'},{k:'b',name:'Between'},{k:'n',name:'Night'}];
 var SHN={m:'Morning',b:'Between',n:'Night'};
 var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-var st={role:'',stores:[],store:'',week:'',weekStart:6,times:{m:['10:00','18:00'],b:['13:00','21:00'],n:['16:00','00:00']},names:[],rec:{days:{}},busy:false,edit:null};
+var st={people:[],role:'',stores:[],store:'',week:'',weekStart:6,times:{m:['10:00','18:00'],b:['13:00','21:00'],n:['16:00','00:00']},names:[],rec:{days:{}},busy:false,edit:null};
 var DAYMS=86400000;
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -220,7 +221,7 @@ async function load(){
   showErr('');setStatus('Loading…');
   try{
     var j=await api('/api/schedule?store='+encodeURIComponent(st.store)+'&week='+st.week);
-    st.times=j.times;st.names=j.names||[];st.rec=j.record||{days:{}};
+    st.times=j.times;st.names=j.names||[];st.people=j.people||[];st.rec=j.record||{days:{}};
     $('names').innerHTML=st.names.map(function(n){return '<option value="'+esc(n)+'">'}).join('');
     setStatus('');render();
   }catch(e){if(e.message!=='signed out'){setStatus('');showErr(e.message)}}
@@ -288,19 +289,38 @@ function openDlg(d,s,i){
   var edit=i!=null&&i>=0,e=edit?dayShifts(d,s)[i]:null;
   st.edit={d:d,s:s,i:edit?i:-1};
   $('dTitle').textContent=(edit?'Edit ':'Add to ')+SHN[s]+' · '+WD[dow(d)]+' '+fmtShort(d);
-  $('dName').value=edit?e.n:'';
+  fillPick(edit?e.n:'');
   $('dFrom').value=edit?e.f:st.times[s][0];$('dTo').value=edit?e.t:st.times[s][1];
   $('dErr').hidden=true;$('dDel').hidden=!edit;$('dDaysWrap').hidden=edit;
   $('dSave').textContent=edit?'Save changes':'Save';
   $('dDays').innerHTML=dates(st.week).map(function(x){return '<label><input type="checkbox" value="'+x+'"'+(x===d?' checked':'')+'>'+WD[dow(x)]+' '+dnum(x)+'</label>'}).join('');
   $('dlg').showModal();
-  setTimeout(function(){$(edit?'dFrom':'dName').focus()},30);
+  setTimeout(function(){$(edit?'dFrom':'dPick').focus()},30);
 }
+var OTHER='__other__';
+function fillPick(name){
+  var lower=function(x){return x.toLowerCase()},have={};
+  var list=st.people.slice();list.forEach(function(n){have[lower(n)]=1});
+  // names used before in this store's schedules (not accounts) also show, under the team
+  var extra=st.names.filter(function(n){return !have[lower(n)]});
+  var h='<option value="">Choose a person…</option>';
+  if(list.length)h+='<optgroup label="Store team">'+list.map(function(n){return '<option>'+esc(n)+'</option>'}).join('')+'</optgroup>';
+  if(extra.length)h+='<optgroup label="Planned before">'+extra.map(function(n){return '<option>'+esc(n)+'</option>'}).join('')+'</optgroup>';
+  h+='<option value="'+OTHER+'">Someone else (type a name)</option>';
+  $('dPick').innerHTML=h;
+  var known=list.concat(extra).some(function(n){return lower(n)===lower(name)});
+  if(name&&known){$('dPick').value=list.concat(extra).filter(function(n){return lower(n)===lower(name)})[0];$('dName').value=name}
+  else if(name){$('dPick').value=OTHER;$('dName').value=name}
+  else{$('dPick').value=list.length||extra.length?'':OTHER;$('dName').value=''}
+  syncPick();
+}
+function syncPick(){var o=$('dPick').value===OTHER;$('dOtherWrap').hidden=!o;if(!o)$('dName').value=$('dPick').value}
+$('dPick').addEventListener('change',function(){syncPick();if($('dPick').value===OTHER)$('dName').focus()});
 function dErr(m){var e=$('dErr');e.textContent=m;e.hidden=!m}
 $('form').addEventListener('submit',async function(ev){
   ev.preventDefault();
-  var ed=st.edit,name=$('dName').value.replace(/\s+/g,' ').trim(),f=$('dFrom').value,t=$('dTo').value;
-  if(!name){dErr('Type a name.');return}
+  var ed=st.edit;syncPick();var name=$('dName').value.replace(/\s+/g,' ').trim(),f=$('dFrom').value,t=$('dTo').value;
+  if(!name){dErr('Choose a person or type a name.');return}
   if(!f||!t){dErr('Choose a From and a To time.');return}
   if(f===t){dErr('From and To cannot be the same time.');return}
   var days=ed.i>=0?[ed.d]:[].slice.call($('dDays').querySelectorAll('input:checked')).map(function(x){return x.value});

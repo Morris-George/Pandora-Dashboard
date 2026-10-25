@@ -11,6 +11,7 @@
 const store = require('./_store');
 const { whoami } = require('./_auth');
 const { CANON, canon } = require('./_daily');
+const users = require('./_users');
 
 const WEEK_START = 6; // 0 = Sunday ... 6 = Saturday (the Egyptian working week starts on Saturday). Change this one number to start the week on another day.
 const SHIFTS = ['m', 'b', 'n'];
@@ -106,7 +107,13 @@ module.exports = async function handler(req, res) {
     if (!name) return send(res, 200, { ok: true, role: a.role, stores, weekStart: WEEK_START });
     if (!mayStore(a, name)) return send(res, 403, { ok: false, error: 'You can only open your own stores.' });
     const settings = (await store.getJSON(settingsKey(name))) || {};
-    const out = { ok: true, role: a.role, store: name, times: settings.times || DEFAULT_TIMES, names: settings.names || [], weekStart: WEEK_START };
+    // the approved people of this store (sales people and store managers who have an account), for the name picker
+    let people = [];
+    try {
+      people = (await users.listUsers()).filter(r => r && r.status === 'active' && !r.role && r.store && canon(r.store) === name && cleanName(r.name))
+        .map(r => cleanName(r.name)).filter((n, i, arr) => arr.findIndex(x => x.toLowerCase() === n.toLowerCase()) === i).sort((x, y) => x.localeCompare(y));
+    } catch (_) { people = []; }
+    const out = { ok: true, role: a.role, store: name, times: settings.times || DEFAULT_TIMES, names: settings.names || [], people, weekStart: WEEK_START };
     const week = url.searchParams.get('week');
     if (week) {
       if (!validWeek(week)) return send(res, 400, { ok: false, error: 'The week could not be read.' });
