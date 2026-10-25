@@ -66,215 +66,563 @@ select.sel{height:38px;border:1px solid var(--line);border-radius:10px;padding:0
 .dg tr.today th,.dg th.today{color:var(--accent-text);font-weight:800}
 .more{display:flex;justify-content:center;margin-top:12px}
 @media (max-width:640px){.hb{grid-template-columns:1fr 2fr auto}}
+.fbar{position:sticky;top:8px;z-index:6;box-shadow:0 6px 18px rgba(42,31,36,.07)}
+@media (max-width:760px){.fbar{position:static}}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+.f{display:flex;flex-direction:column;gap:4px;font-size:11.5px;font-weight:700;color:var(--ink2)}
+.f select,.f input{height:38px;border:1px solid var(--line);border-radius:10px;padding:0 8px;font:inherit;font-size:13.5px;font-weight:600;color:var(--ink);background:var(--bg);min-width:0;width:100%}
+.dates{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:10px}.dates .f{width:160px}
+.state{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin-top:12px;font-size:12.5px;color:var(--ink2)}
+.state .sum{margin-left:auto;font-weight:700}
+.fchip{border:1px solid var(--accent);background:var(--fill-soft);color:var(--ink);border-radius:999px;padding:3px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}.fchip:hover{background:var(--hover)}
+.lnk{all:unset;cursor:pointer;color:var(--accent-text);font-weight:700;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}.lnk:hover{text-decoration-color:currentColor}.lnk:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{all:unset;cursor:pointer;padding:10px 16px;font-weight:700;color:var(--ink2);border-bottom:3px solid transparent;white-space:nowrap}.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}.tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:8px}
+.up{color:var(--good)}.down{color:var(--accent-strong)}
+.kpi small.up,.kpi small.down{font-weight:700}
+.btn.sm{padding:4px 11px;font-size:12.5px;border-radius:8px;margin-top:6px}
+.ai .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;width:100%}
+.short{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}.short li{padding-left:16px;position:relative}.short li:before{content:"";position:absolute;left:0;top:8px;width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 8px}
+.clk{cursor:pointer}.clk:hover .t i{background:var(--accent-strong)}.clk:hover>div:first-child{color:var(--accent-text);text-decoration:underline}
+.strip{display:block}
+tr.day td{background:var(--fill-soft);font-weight:800;font-size:12.5px;padding:6px 10px;position:sticky;top:0}
+tr.st{cursor:pointer}tr.st:hover td{background:var(--hover)}tr.st.sel td{background:var(--fill-soft)}
+.pct{display:inline-block;min-width:44px}
+.mini{display:inline-block;width:70px;height:8px;border-radius:5px;background:var(--hover);overflow:hidden;vertical-align:middle;margin-right:6px}.mini i{display:block;height:100%;background:var(--accent)}
+.hint{color:var(--ink2);font-size:12px;margin-top:6px}
+.chart.sm{height:130px}
+.panel{display:flex;flex-direction:column;gap:16px;min-width:0}
+.hb .v{text-align:right}
+.hb.c1{grid-template-columns:minmax(110px,1.1fr) 3fr 56px}.hb.c2{grid-template-columns:minmax(110px,1.1fr) 3fr 96px}.hb.c3{grid-template-columns:minmax(110px,1.1fr) 3fr 200px}
+@media (max-width:640px){.hb.c1,.hb.c2,.hb.c3{grid-template-columns:1fr 2fr auto}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Activity</h1><div class="sub">Who signed in, which pages they opened and for how long, and every change they made. Staff, area managers, the VM and everyone else who has an account. Only you can see this page.</div></div><div class="actions"></div></header>
+  <header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Activity</h1><div class="sub">Who signed in, which pages they opened and for how long, and every change they made. Choose a period and narrow it down with the filters; everything below follows them. Only you can see this page.</div></div>
+    <div class="actions"><label class="share" id="shareBox" hidden><input type="checkbox" id="share"> Let Ibrahim (Overseer) open this page</label><button class="btn" id="refresh" type="button">Refresh</button></div></header>
   <div class="err" id="err" hidden></div>
 
-  <section class="card"><div class="bar">
-    <div class="chips" id="range" role="group" aria-label="Period"></div>
-    <div class="actions"><label class="share" id="shareBox" hidden><input type="checkbox" id="share"> Let Ibrahim (Overseer) open this page</label><button class="btn" id="refresh" type="button">Refresh</button></div>
-  </div><div class="note" id="asof" style="margin-top:8px"></div></section>
+  <section class="card fbar" aria-label="Filters">
+    <div class="bar"><div class="chips" id="range" role="group" aria-label="Period"></div><div class="note" id="asof"></div></div>
+    <div class="dates" id="dates" hidden>
+      <label class="f">From<input type="date" id="dFrom"></label>
+      <label class="f">To<input type="date" id="dTo"></label>
+    </div>
+    <div class="fgrid">
+      <label class="f">Group<select id="fGroup"></select></label>
+      <label class="f">Store<select id="fStore"></select></label>
+      <label class="f">Person<select id="fPerson"></select></label>
+      <label class="f">Page<select id="fPage"></select></label>
+    </div>
+    <div class="state" id="state"></div>
+  </section>
 
-  <div class="kpis" id="kpis"></div>
-
-  <section class="card"><h2>Needs your attention</h2><div class="meta">Things worth a look right now.</div><div class="attn" id="attn"><div class="empty">Loading…</div></div></section>
-
-  <section class="card"><h2>Each day</h2><div class="meta">How many people were active and how many times people signed in.</div><svg class="chart" id="chart" role="img" aria-label="People active and sign-ins for each day"></svg><div class="legend"><span><i style="background:#FF93A0"></i>People active</span><span><i style="background:var(--ink2);opacity:.55"></i>Sign-ins</span></div></section>
-
-  <section class="card"><h2>People</h2><div class="meta">Click a person to see what they do on the site.</div>
-    <div class="bar" style="margin-bottom:10px"><div class="chips" id="groups" role="group" aria-label="Group"></div><input class="search" id="q" type="search" placeholder="Search a name, store or username" aria-label="Search people"></div>
-    <div class="tw"><table><thead><tr id="phead"></tr></thead><tbody id="people"></tbody></table></div></section>
-
-  <section class="card detail" id="detail" hidden></section>
-
-  <section class="card"><h2>Daily store sheet</h2><div class="meta">Did each store type in the morning and night shift? Pink = typed in, grey = came from an Excel sheet, empty = nothing yet. Today's night shift is not expected until the evening.</div><div class="tw" id="daily"><div class="empty">Loading…</div></div></section>
-
-  <div class="two">
-    <section class="card"><h2>Most used pages</h2><div class="meta">How many times each page was opened, and by how many people.</div><div id="pages"></div></section>
-    <section class="card"><h2>Most common changes</h2><div class="meta">What people did most.</div><div id="acts"></div></section>
+  <div class="tabs" role="tablist" aria-label="Sections" id="tabs">
+    <button class="tab" role="tab" type="button" data-tab="overview" id="t-overview" aria-controls="p-overview">Overview</button>
+    <button class="tab" role="tab" type="button" data-tab="people" id="t-people" aria-controls="p-people">People</button>
+    <button class="tab" role="tab" type="button" data-tab="timeline" id="t-timeline" aria-controls="p-timeline">Timeline</button>
+    <button class="tab" role="tab" type="button" data-tab="stores" id="t-stores" aria-controls="p-stores">Stores</button>
   </div>
 
-  <section class="card"><h2>Everything, in order</h2><div class="meta">The newest first. Times are Cairo time.</div>
-    <div class="bar" style="margin-bottom:10px"><div class="chips" id="kinds" role="group" aria-label="Kind"></div><div class="actions"><select class="sel" id="who" aria-label="Person"></select></div></div>
-    <div class="tw"><table class="feed"><thead><tr><th>When</th><th>Who</th><th>What</th><th>Details</th></tr></thead><tbody id="feed"></tbody></table></div>
-    <div class="more"><button class="btn" id="more" type="button" hidden>Show more</button></div>
-    <div class="note" id="feednote" style="margin-top:8px"></div></section>
+  <div id="p-overview" role="tabpanel" aria-labelledby="t-overview" class="panel">
+    <div class="kpis" id="kpis"></div>
+    <section class="card"><h2>In short</h2><ul class="short" id="short"></ul></section>
+    <section class="card"><h2>Needs your attention</h2><div class="meta">Things worth a look. Follows the group, store and person filters.</div><div class="attn" id="attn"><div class="empty">Loading…</div></div></section>
+    <section class="card"><h2>Each day</h2><div class="meta">Choose what to count. Click a bar to look at just that day.</div>
+      <div class="seg chips" id="metric" role="group" aria-label="What to count"></div>
+      <svg class="chart" id="chart" role="img" aria-label="Activity for each day"></svg></section>
+    <div class="two">
+      <section class="card"><h2>Most used pages</h2><div class="meta">Click a page to see who uses it.</div><div id="pages"></div></section>
+      <section class="card"><h2>Most common changes</h2><div class="meta">Click a change to see every time it happened.</div><div id="acts"></div></section>
+    </div>
+    <div class="two">
+      <section class="card"><h2>Busiest hours</h2><div class="meta">When people use the site (Cairo time).</div><svg class="chart sm" id="hours" role="img" aria-label="Activity by hour of the day"></svg><div class="hint" id="hoursNote"></div></section>
+      <section class="card"><h2>Busiest days of the week</h2><div class="meta">Average number of people active on that weekday.</div><div id="wdays"></div></section>
+    </div>
+  </div>
+
+  <div id="p-people" role="tabpanel" aria-labelledby="t-people" class="panel" hidden>
+    <section class="card detail" id="detail" hidden></section>
+    <section class="card"><h2>People</h2><div class="meta">Click a person to see what they do on the site.</div>
+      <div class="bar" style="margin-bottom:10px"><div class="chips" id="status" role="group" aria-label="Show"></div>
+        <div class="actions"><input class="search" id="q" type="search" placeholder="Search name or store" aria-label="Search people"><button class="btn" id="expPeople" type="button">Download Excel (CSV)</button></div></div>
+      <div class="tw"><table><thead><tr id="phead"></tr></thead><tbody id="people"></tbody></table></div></section>
+  </div>
+
+  <div id="p-timeline" role="tabpanel" aria-labelledby="t-timeline" class="panel" hidden>
+    <section class="card"><h2>Everything, in order</h2><div class="meta">The newest first, grouped by day. Click a name to look at just that person. Times are Cairo time.</div>
+      <div class="bar" style="margin-bottom:10px"><div class="chips" id="kinds" role="group" aria-label="Kind"></div>
+        <div class="actions"><input class="search" id="tq" type="search" placeholder="Search what they did" aria-label="Search the timeline"><button class="btn" id="expFeed" type="button">Download Excel (CSV)</button></div></div>
+      <div class="tw"><table class="feed"><thead><tr><th>When</th><th>Who</th><th>What</th><th>Details</th></tr></thead><tbody id="feed"></tbody></table></div>
+      <div class="more"><button class="btn" id="more" type="button" hidden>Show more</button></div>
+      <div class="note" id="feednote" style="margin-top:8px"></div></section>
+  </div>
+
+  <div id="p-stores" role="tabpanel" aria-labelledby="t-stores" class="panel" hidden>
+    <section class="card"><h2>Stores</h2><div class="meta">How much each store's team uses the site in this period, and whether the store typed in its daily sheet. Click a store to see its people.</div>
+      <div class="tw"><table><thead><tr><th>Store</th><th class="n">People</th><th class="n">Active</th><th class="n">Sign-ins</th><th class="n">Pages</th><th class="n">Changes</th><th class="n">Time in use</th><th>Daily sheet (14 days)</th><th>Last seen</th></tr></thead><tbody id="stores"></tbody></table></div></section>
+    <section class="card"><h2>Daily store sheet</h2><div class="meta">Did each store type in the morning and night shift? Pink = typed in, grey = came from an Excel sheet, empty = nothing yet. Today's night shift is not expected until the evening.</div><div class="tw" id="daily"><div class="empty">Loading…</div></div></section>
+  </div>
 
   <section class="card"><h2>About this page</h2><div class="note" style="font-size:13px;line-height:1.6">It records sign-ins, wrong passwords, the pages people open (and the time a page is actually in use: the page is on screen and being touched), and every change made on the site. It never records passwords, and it does not look at what is on a page. The last 300 lines are kept for each person, and daily totals for 150 days. Anyone who is not signed in (a wrong username, a new sign-up, a forgotten password) is shown as "Not signed in". It is a good idea to tell the team the site keeps this log.</div></section>
 </div>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const TZ='Africa/Cairo';
+const TZ='Africa/Cairo',ONE=86400000;
 const fmtT=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false});
-const fmtD=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,day:'numeric',month:'short'});
+const fmtH=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',minute:'2-digit',hour12:false});
+const fmtD=new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',day:'numeric',month:'short'});
+const fmtW=new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',weekday:'long'});
 const when=iso=>iso?fmtT.format(new Date(iso)):'';
+const addDays=(d,n)=>new Date(Date.parse(d+'T12:00:00Z')+n*ONE).toISOString().slice(0,10);
+const span=(a,b)=>{const o=[];for(let d=a;d<=b&&o.length<400;d=addDays(d,1))o.push(d);return o};
+const dayOf=iso=>new Date(Date.parse(iso)+3*3600000).toISOString().slice(0,10);
+const hourOf=iso=>new Date(Date.parse(iso)+3*3600000).getUTCHours();
+const fmtDay=d=>fmtD.format(new Date(d+'T12:00:00Z'));
+const wday=d=>fmtW.format(new Date(d+'T12:00:00Z'));
 function ago(iso){if(!iso)return 'never';const s=Math.max(0,(Date.now()-Date.parse(iso))/1000);if(s<90)return 'just now';if(s<3600)return Math.round(s/60)+' min ago';if(s<86400)return Math.round(s/3600)+' h ago';const d=Math.round(s/86400);return d===1?'yesterday':d+' days ago'}
 function dur(secs){secs=Math.round(secs||0);if(secs<60)return secs?secs+' s':'–';const m=Math.round(secs/60);if(m<60)return m+' min';return Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')+' m'}
 const num=n=>Number(n||0).toLocaleString('en-US');
 function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
 
-let D=null,DAILY=null,RANGE=7,GROUP='all',SORT={k:'lastSeen',dir:-1},SEL='',KIND='all',WHO='',SHOW=100,Q='';
-const RANGES=[[1,'Today'],[7,'Last 7 days'],[30,'Last 30 days'],[90,'Last 90 days']];
+// ---- state ----
+let D=null,DAILY=null,P=null,TAB='overview',SEL='',SHOW=100,METRIC='users',STATUS='all',Q='',TQ='',KIND='all',SORT={k:'lastSeen',dir:-1};
+const F={preset:'7',from:'',to:'',group:'all',store:'',person:'',page:''};
+try{const s=JSON.parse(localStorage.getItem('pandora.activity')||'{}');if(['today','yesterday','7','30','90'].includes(s.preset))F.preset=s.preset;if(['overview','people','timeline','stores'].includes(s.tab))TAB=s.tab}catch(_){}
+const save=()=>{try{localStorage.setItem('pandora.activity',JSON.stringify({preset:F.preset==='custom'?'7':F.preset,tab:TAB}))}catch(_){}};
+
+const PRESETS=[['today','Today'],['yesterday','Yesterday'],['7','7 days'],['30','30 days'],['90','90 days'],['custom','Pick dates']];
 const GROUPS=[['all','Everyone'],['staff','Sales staff'],['store','Store managers'],['area','Area managers'],['vm','VM'],['other','Finance, Overseer, Stock count'],['admin','Super admin']];
 const groupOf=p=>p.role==='staff'?'staff':p.role==='store'?'store':p.role==='area'?'area':p.role==='vm'?'vm':p.role==='admin'?'admin':'other';
 const KINDS=[['all','All'],['login','Sign-ins'],['view','Pages opened'],['action','Changes'],['bad','Problems'],['anon','Not signed in']];
 const kindOf=e=>e.w==='anon'?'anon':e.ty==='login'||e.ty==='logout'?'login':e.ty==='view'?'view':e.ty==='action'?'action':'bad';
 const TYPE_TAG={login:['Signed in','good'],logout:['Signed out','mute'],view:['Opened','mute'],action:['Changed',''],fail:['Problem','warn'],denied:['Not allowed','warn'],error:['Error','warn'],signup:['New sign-up',''],forgot:['Forgot password','']};
+const PAGE_NAMES={'/':'Home','/dashboards':'Pandora Dashboards','/staff':'Staff Performance','/staff/person':'A sales person page','/staff/me':'My sales','/staff/accounts':'Staff approvals','/uploads':'All Uploads','/film':'Launch Film','/daily':'Daily Store Report','/vm':'VM Report','/vm/zones':'VM Zones','/vm/stock':'Zone Stock','/stock':'Stock balance','/stockcount':'Stock Count','/refill':'Refill Order','/slow':'Slow Moving','/distribution':'Orders Distribution'};
+const pageName=p=>PAGE_NAMES[String(p).replace(/\/+$/,'')||'/']||p;
 
-function buildRange(){$('range').innerHTML=RANGES.map(r=>`<button class="chip" type="button" data-r="${r[0]}" aria-pressed="${r[0]===RANGE}">${r[1]}</button>`).join('')}
-$('range').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(!b)return;RANGE=+b.dataset.r;buildRange();load()});
-$('refresh').addEventListener('click',()=>load());
+// ---- stores: "Pandora - CFC" and "CFC" are one store ----
+const storeKey=s=>String(s||'').toLowerCase().replace(/pandora/g,'').replace(/[^a-z0-9]+/g,'');
+const sameStore=(a,b)=>a&&b&&(a===b||(a.length>=3&&b.length>=3&&(a.includes(b)||b.includes(a))));
+function storeList(){
+  const m=new Map();
+  const get=(k,name)=>{let hit=null;for(const [kk,v] of m)if(sameStore(kk,k)){hit=v;break}if(!hit){hit={key:k,name,raw:new Set()};m.set(k,hit)}return hit};
+  if(DAILY&&DAILY.stores)DAILY.stores.forEach(s=>{const h=get(storeKey(s.name),s.name);h.name=s.name;h.daily=s});
+  D.people.forEach(p=>{if(!p.store)return;const k=storeKey(p.store);if(!k)return;const h=get(k,p.store);h.raw.add(p.store)});
+  return [...m.values()].sort((a,b)=>a.name.localeCompare(b.name));
+}
+let STORES=[];
+const storeOfPerson=p=>{if(!p.store)return null;const k=storeKey(p.store);return STORES.find(s=>sameStore(s.key,k))||null};
 
+// ---- period ----
+function period(){
+  const t=D?D.today:dayOf(new Date().toISOString());
+  let from,to;
+  if(F.preset==='today')from=to=t;
+  else if(F.preset==='yesterday')from=to=addDays(t,-1);
+  else if(F.preset==='custom'){from=F.from||addDays(t,-6);to=F.to||t}
+  else{from=addDays(t,-(+F.preset-1));to=t}
+  if(from>to)[from,to]=[to,from];
+  if(to>t)to=t;
+  const days=span(from,to),n=days.length;
+  return{from,to,n,days,pf:addDays(from,-n),pt:addDays(from,-1),hasPrev:!!D&&addDays(from,-n)>=D.from,today:t};
+}
+function phrase(){return F.preset==='today'?'today':F.preset==='yesterday'?'yesterday':P.n===1?'on '+fmtDay(P.from):'between '+fmtDay(P.from)+' and '+fmtDay(P.to)}
+function periodLabel(){
+  if(F.preset==='today')return 'today';if(F.preset==='yesterday')return 'yesterday';
+  return P.n===1?fmtDay(P.from):fmtDay(P.from)+' to '+fmtDay(P.to);
+}
+
+// ---- who is included ----
+const peopleF=()=>D.people.filter(p=>(F.group==='all'||groupOf(p)===F.group)&&(!F.store||(storeOfPerson(p)||{}).key===F.store)&&(!F.person||p.key===F.person));
+const anonOK=()=>F.group==='all'&&!F.store&&!F.person;
+const dayVals=(d)=>{ // one day's counters; with a page chosen, only what happened on that page
+  if(!F.page)return{l:d.l||0,v:d.v||0,a:d.a||0,s:d.s||0,f:d.f||0,dn:d.dn||0};
+  return{l:0,v:(d.pg&&d.pg[F.page])||0,a:0,s:(d.ps&&d.ps[F.page])||0,f:0,dn:0};
+};
+let AC=new Map();
+function aggP(p,from,to){
+  const ck=p.key+'|'+from+'|'+to+'|'+F.page,hit=AC.get(ck);if(hit)return hit;
+  const o={logins:0,views:0,actions:0,secs:0,failed:0,denied:0,activeDays:0,pages:{},acts:{},byDay:{}};
+  for(const day in p.days){
+    if(day<from||day>to)continue;const d=p.days[day],x=dayVals(d);
+    o.logins+=x.l;o.views+=x.v;o.actions+=x.a;o.secs+=x.s;o.failed+=x.f;o.denied+=x.dn;
+    if(x.l||x.v||x.a)o.activeDays++;
+    o.byDay[day]=x.l+x.v+x.a;
+    for(const k in (d.pg||{})){if(F.page&&k!==F.page)continue;(o.pages[k]||(o.pages[k]={n:0,s:0})).n+=d.pg[k]}
+    for(const k in (d.ps||{})){if(F.page&&k!==F.page)continue;(o.pages[k]||(o.pages[k]={n:0,s:0})).s+=d.ps[k]}
+    if(!F.page)for(const k in (d.ac||{}))o.acts[k]=(o.acts[k]||0)+d.ac[k];
+  }
+  AC.set(ck,o);return o;
+}
+const ag=p=>aggP(p,P.from,P.to);
+function totalsFor(list,from,to){
+  const t={users:0,logins:0,views:0,actions:0,secs:0,failed:0};
+  for(const p of list){const a=aggP(p,from,to);if(a.activeDays)t.users++;t.logins+=a.logins;t.views+=a.views;t.actions+=a.actions;t.secs+=a.secs;t.failed+=a.failed}
+  if(anonOK()&&!F.page)for(const e of D.feed){if(e.w!=='anon'||e.ty!=='fail')continue;const d=dayOf(e.t);if(d>=from&&d<=to)t.failed+=e.n||1}
+  return t;
+}
+function feedBase(){ // the log lines inside the period that match the filters
+  const keys=new Set(peopleF().map(p=>p.key)),open=anonOK()&&!F.page;
+  return D.feed.filter(e=>{
+    const d=dayOf(e.t2||e.t);if(d<P.from||d>P.to)return false;
+    if(e.w==='anon'||e.w==='system'){if(!open)return false}else if(!keys.has(e.w))return false;
+    if(F.page&&e.p!==F.page)return false;
+    return true;
+  });
+}
+
+// ---- loading ----
 async function api(path,opts){const r=await fetch(path,{credentials:'same-origin',cache:'no-store',...(opts||{})});let j=null;try{j=await r.json()}catch(_){}
   if(r.status===401){location.href='/login.html';throw new Error('sign in')}
   if(!r.ok||!j||j.ok===false)throw new Error((j&&j.error)||'Something went wrong ('+r.status+').');return j}
-
-async function load(){
+let LOOK=60;
+async function load(look){
+  if(look)LOOK=look;
   $('refresh').disabled=true;showErr('');
   try{
-    const [a,b]=await Promise.all([api('/api/activity?range='+RANGE),api('/api/activity?view=daily&days=14').catch(()=>null)]);
-    D=a;DAILY=b;SHOW=100;render();
+    const [a,b]=await Promise.all([api('/api/activity?range='+LOOK),DAILY?Promise.resolve(DAILY):api('/api/activity?view=daily&days=14').catch(()=>null)]);
+    D=a;DAILY=b;STORES=storeList();SHOW=100;render();
   }catch(e){if(e.message!=='sign in')showErr(e.message)}
   finally{$('refresh').disabled=false}
 }
+// make sure enough days are loaded for the period and the one before it
+async function ensure(){
+  if(!D)return;P=period();
+  const need=span(P.pf,D.today).length;
+  if(need>D.range&&D.range<150){await load(need<=90?90:150);return true}
+  return false;
+}
+
+// ---- the filter bar ----
+function buildRange(){$('range').innerHTML=PRESETS.map(r=>`<button class="chip" type="button" data-r="${r[0]}" aria-pressed="${r[0]===F.preset}">${r[1]}</button>`).join('')}
+$('range').addEventListener('click',async e=>{const b=e.target.closest('[data-r]');if(!b)return;F.preset=b.dataset.r;if(F.preset==='custom'&&!F.from){F.from=addDays(D.today,-6);F.to=D.today}SHOW=100;save();if(!(await ensure()))render()});
+function setDates(){const t=D?D.today:'';$('dates').hidden=F.preset!=='custom';if(D){$('dFrom').max=$('dTo').max=t;$('dFrom').min=$('dTo').min=addDays(t,-149);$('dFrom').value=F.from||'';$('dTo').value=F.to||''}}
+['dFrom','dTo'].forEach(id=>$(id).addEventListener('change',async()=>{const f=$('dFrom').value,t=$('dTo').value;if(f)F.from=f;if(t)F.to=t;if(F.from&&F.to&&F.from>F.to)[F.from,F.to]=[F.to,F.from];SHOW=100;if(!(await ensure()))render()}));
+$('refresh').addEventListener('click',()=>{DAILY=null;load()});
+
+function fillSelect(id,opts,val){
+  const el=$(id),html=opts.map(o=>`<option value="${esc(o[0])}"${o[0]===val?' selected':''}>${esc(o[1])}</option>`).join('');
+  if(el.dataset.h!==html){el.innerHTML=html;el.dataset.h=html}el.value=val;
+}
+function renderFilters(){
+  const cnt={all:0};D.people.forEach(p=>{if(p.status==='pending')return;const g=groupOf(p);cnt[g]=(cnt[g]||0)+1;cnt.all++});
+  fillSelect('fGroup',GROUPS.filter(g=>g[0]==='all'||cnt[g[0]]).map(g=>[g[0],g[1]+' ('+(cnt[g[0]]||0)+')']),F.group);
+  fillSelect('fStore',[['','All stores']].concat(STORES.filter(s=>F.group==='all'||s.key===F.store||D.people.some(p=>groupOf(p)===F.group&&(storeOfPerson(p)||{}).key===s.key)).map(s=>[s.key,s.name])),F.store);
+  const pool=D.people.filter(p=>p.status!=='pending'&&(F.group==='all'||groupOf(p)===F.group)&&(!F.store||(storeOfPerson(p)||{}).key===F.store)).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  if(F.person&&!pool.some(p=>p.key===F.person))F.person='';
+  fillSelect('fPerson',[['','Everyone']].concat(pool.map(p=>[p.key,p.name])),F.person);
+  const pg=new Set();D.people.forEach(p=>{for(const day in p.days){const d=p.days[day];for(const k in (d.pg||{}))pg.add(k)}});
+  if(F.page)pg.add(F.page);
+  fillSelect('fPage',[['','All pages']].concat([...pg].map(k=>[k,pageName(k)]).sort((a,b)=>a[1].localeCompare(b[1]))),F.page);
+}
+['fGroup','fStore','fPerson','fPage'].forEach(id=>$(id).addEventListener('change',e=>{
+  const k={fGroup:'group',fStore:'store',fPerson:'person',fPage:'page'}[id];F[k]=e.target.value;
+  if(k==='group'||k==='store')F.person='';SEL='';SHOW=100;render();
+}));
+function renderState(){
+  const chips=[];
+  if(F.group!=='all')chips.push(['group','Group: '+(GROUPS.find(g=>g[0]===F.group)||[0,F.group])[1]]);
+  if(F.store)chips.push(['store','Store: '+((STORES.find(s=>s.key===F.store)||{}).name||F.store)]);
+  if(F.person)chips.push(['person','Person: '+((D.people.find(p=>p.key===F.person)||{}).name||'')]);
+  if(F.page)chips.push(['page','Page: '+pageName(F.page)]);
+  const list=peopleF().filter(p=>p.status!=='pending');
+  $('state').innerHTML=(chips.length?chips.map(c=>`<button class="fchip" type="button" data-clear="${c[0]}" title="Remove this filter">${esc(c[1])} ✕</button>`).join('')+'<button class="lnk" type="button" data-clear="all">Clear all filters</button>':'<span>No filters on. Showing everyone.</span>')+
+    `<span class="sum">${list.length} ${list.length===1?'person':'people'} · ${esc(periodLabel())}</span>`;
+}
+$('state').addEventListener('click',e=>{const b=e.target.closest('[data-clear]');if(!b)return;const k=b.dataset.clear;if(k==='all'){F.group='all';F.store='';F.person='';F.page=''}else F[k]=k==='group'?'all':'';SEL='';SHOW=100;render()});
+
+// ---- tabs ----
+function showPanels(){['overview','people','timeline','stores'].forEach(t=>{const sel=t===TAB;$('p-'+t).hidden=!sel;$('t-'+t).setAttribute('aria-selected',sel);$('t-'+t).tabIndex=sel?0:-1})}
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;TAB=b.dataset.tab;save();SHOW=100;renderTab()});
+$('tabs').addEventListener('keydown',e=>{const order=['overview','people','timeline','stores'],i=order.indexOf(TAB);let n=-1;if(e.key==='ArrowRight')n=(i+1)%4;else if(e.key==='ArrowLeft')n=(i+3)%4;if(n<0)return;e.preventDefault();TAB=order[n];save();renderTab();$('t-'+TAB).focus()});
+document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(!g)return;if(g.dataset.st)STATUS=g.dataset.st;if(g.dataset.kind){KIND=g.dataset.kind;TQ='';$('tq').value=''}TAB=g.dataset.go;save();SHOW=100;renderTab();window.scrollTo({top:0,behavior:'smooth'})});
 
 function render(){
   if(!D)return;
-  $('asof').textContent='Updated '+when(D.now)+' · '+(D.range===1?'today':D.from+' to '+D.to);
+  P=period();AC=new Map();
+  $('asof').textContent='Updated '+when(D.now);
   const sb=$('shareBox');sb.hidden=!D.canShare;$('share').checked=!!D.shared;
-  renderKpis();renderAttn();renderChart();renderGroups();renderPeople();renderDetail();renderDaily();renderPages();renderActs();renderFeedControls();renderFeed();
+  buildRange();setDates();renderFilters();renderState();renderTab();
+}
+function renderTab(){
+  if(!D)return;showPanels();
+  if(TAB==='overview'){renderKpis();renderShort();renderAttn();renderMetric();renderChart();renderPages();renderActs();renderHours();renderWdays()}
+  else if(TAB==='people'){renderStatus();renderPeople();renderDetail()}
+  else if(TAB==='timeline'){renderKinds();renderFeed()}
+  else renderStores();
 }
 
+// ---- overview ----
+function delta(cur,prev,inv,txt){
+  if(!P.hasPrev)return '';
+  const d=cur-prev;if(!d)return '<small>same as before</small>';
+  const pct=prev?Math.round(Math.abs(d)/prev*100)+'%':num(Math.abs(d));
+  const good=(d>0)!==!!inv;
+  return `<small class="${good?'up':'down'}" title="Compared with ${P.n===1?'the day before':'the '+P.n+' days before'}">${d>0?'▲':'▼'} ${pct} vs before</small>`;
+}
 function renderKpis(){
-  const t=D.totals;
-  const k=[[`${t.activeUsers}<small>of ${t.accounts} accounts</small>`,'People active'],[num(t.logins),'Sign-ins'],[num(t.views),'Pages opened'],[num(t.actions),'Changes made'],[dur(t.secs),'Time in use'],[num(t.failed),'Wrong passwords']];
-  $('kpis').innerHTML=k.map(x=>`<div class="kpi"><b>${x[0]}</b><span>${x[1]}</span></div>`).join('');
+  const list=peopleF().filter(p=>p.status!=='pending'),t=totalsFor(list,P.from,P.to),pv=P.hasPrev?totalsFor(list,P.pf,P.pt):null;
+  const accounts=list.length,c=(k)=>pv?pv[k]:0;
+  const k=F.page?[
+    [`${t.users}<small>of ${accounts} accounts</small>`,'People who opened it',delta(t.users,c('users'))],
+    [num(t.views),'Times opened',delta(t.views,c('views'))],
+    [dur(t.secs),'Time on this page',delta(t.secs,c('secs'))],
+    [t.users?dur(t.secs/t.users):'–','Per person','']
+  ]:[
+    [`${t.users}<small>of ${accounts} accounts</small>`,'People active',delta(t.users,c('users'))],
+    [num(t.logins),'Sign-ins',delta(t.logins,c('logins'))],
+    [num(t.views),'Pages opened',delta(t.views,c('views'))],
+    [num(t.actions),'Changes made',delta(t.actions,c('actions'))],
+    [dur(t.secs),'Time in use',delta(t.secs,c('secs'))],
+    [num(t.failed),'Wrong passwords',delta(t.failed,c('failed'),true)]
+  ];
+  $('kpis').innerHTML=k.map(x=>`<div class="kpi"><b>${x[0]}</b><span>${x[1]}</span>${x[2]||''}</div>`).join('');
 }
-
-function names(list,max){const n=list.map(p=>esc(p.name));return n.slice(0,max||8).join(', ')+(n.length>(max||8)?' and '+(n.length-(max||8))+' more':'')}
-function renderAttn(){
-  const items=[],act=D.people.filter(p=>p.status==='active'&&p.role!=='admin');
-  const never=act.filter(p=>!p.lastLogin);
-  if(never.length)items.push(['b',`Never signed in (${never.length})`,names(never)+'. They have an account but have not used it yet.']);
-  const stale=act.filter(p=>p.lastLogin&&(Date.now()-Date.parse(p.lastSeen||p.lastLogin))>7*86400000);
-  if(stale.length)items.push(['b',`Not seen for more than a week (${stale.length})`,names(stale)+'.']);
-  const fails=D.people.filter(p=>p.failed>0);
-  const anonFails=D.feed.filter(e=>e.w==='anon'&&e.ty==='fail').reduce((n,e)=>n+(e.n||1),0);
-  if(fails.length||anonFails)items.push(['b','Wrong passwords or usernames',(fails.length?fails.map(p=>esc(p.name)+' ('+p.failed+')').join(', ')+'. ':'')+(anonFails?anonFails+' attempt'+(anonFails>1?'s':'')+' with a username that is not an account. ':'')+'See the list below, filter by Problems.']);
-  const den=D.people.filter(p=>p.denied>0);
-  if(den.length)items.push(['b','Tried something they are not allowed to do',den.map(p=>esc(p.name)+' ('+p.denied+')').join(', ')+'.']);
-  if(D.totals.pending)items.push(['b',`Waiting for your approval (${D.totals.pending})`,'New accounts that cannot sign in yet. Open Staff approvals.']);
-  if(DAILY&&DAILY.stores){
-    const y=DAILY.days[DAILY.days.length-2],today=DAILY.today,miss=[];
-    DAILY.stores.forEach(s=>{const c=s.cells.find(c=>c.d===y);if(c&&!c.m&&!c.n&&!c.excel)miss.push(s.name+' (both shifts)');else if(c&&!c.excel){if(!c.m)miss.push(s.name+' (morning)');if(!c.n)miss.push(s.name+' (night)')}});
-    if(y&&miss.length)items.push(['b','Daily sheet missing for yesterday',esc(miss.join(', '))+'.']);
-    const noToday=DAILY.stores.filter(s=>{const c=s.cells.find(c=>c.d===today);return c&&!c.m&&!c.excel});
-    const hr=+new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',hour12:false}).format(new Date());
-    if(noToday.length&&hr>=15)items.push(['b','No morning shift typed in today yet',esc(noToday.map(s=>s.name).join(', '))+'.']);
+const names=(list,max)=>{const n=list.map(p=>esc(p.name)),m=max||8;return n.slice(0,m).join(', ')+(n.length>m?' and '+(n.length-m)+' more':'')};
+function renderShort(){
+  const list=peopleF().filter(p=>p.status!=='pending'),rows=list.map(p=>({p,a:ag(p)})),act=rows.filter(r=>r.a.activeDays>0);
+  const t=totalsFor(list,P.from,P.to),L=[],ph=phrase();
+  const who=F.person?esc((list[0]||{}).name||'This person'):`${act.length} of ${list.length} people`;
+  if(!list.length){$('short').innerHTML='<li>Nobody matches these filters.</li>';return}
+  if(F.page){
+    L.push(`<b>${act.length}</b> of ${list.length} people opened <b>${esc(pageName(F.page))}</b> ${esc(ph)}, ${num(t.views)} times in all, ${esc(dur(t.secs))} in use.`);
+    const top=rows.filter(r=>r.a.views).sort((a,b)=>b.a.views-a.a.views).slice(0,3);
+    if(top.length)L.push('Most: '+top.map(r=>`<b>${esc(r.p.name)}</b> (${r.a.views}×)`).join(', ')+'.');
+    const no=rows.filter(r=>!r.a.views&&r.p.status==='active');
+    if(no.length&&!F.person)L.push(`Did not open it: ${names(no.map(r=>r.p))}.`);
+    $('short').innerHTML=L.map(x=>`<li>${x}</li>`).join('');return;
   }
-  $('attn').innerHTML=items.length?items.map(i=>`<div class="ai"><span class="dot"></span><div><b>${esc(i[1])}</b><br>${i[2]}</div></div>`).join(''):`<div class="ai ok"><span class="dot"></span><div><b>All good.</b><br>Nothing needs attention in this period.</div></div>`;
+  L.push(`${F.person?who:'<b>'+who+'</b>'} ${F.person?'was':'were'} active ${esc(ph)}: ${num(t.logins)} sign-ins, ${num(t.views)} pages opened, ${num(t.actions)} changes, ${esc(dur(t.secs))} in use.`);
+  if(P.n>1&&!F.person){
+    let best=null;for(const d of P.days){let u=0;for(const r of rows)if(r.a.byDay[d])u++;if(!best||u>best.u)best={d,u}}
+    if(best&&best.u)L.push(`Busiest day: <b>${esc(wday(best.d))} ${esc(fmtDay(best.d))}</b> with ${best.u} ${best.u===1?'person':'people'} active.`);
+  }
+  const pg=pagesAgg()[0];if(pg)L.push(`Most used page: <b>${esc(pg.label)}</b> (${num(pg.views)} times${pg.users>1?', '+pg.users+' people':''}).`);
+  const topT=rows.filter(r=>r.a.secs).sort((a,b)=>b.a.secs-a.a.secs)[0];if(topT&&!F.person)L.push(`Most time in use: <b>${esc(topT.p.name)}</b> (${esc(dur(topT.a.secs))}).`);
+  const quiet=rows.filter(r=>!r.a.activeDays&&r.p.status==='active'&&r.p.role!=='admin');
+  if(quiet.length&&!F.person)L.push(`<b>${quiet.length}</b> ${quiet.length===1?'person did':'people did'} not use the site at all: ${names(quiet.map(r=>r.p),6)}.`);
+  $('short').innerHTML=L.map(x=>`<li>${x}</li>`).join('');
+}
+function renderAttn(){
+  const items=[],list=peopleF(),act=list.filter(p=>p.status==='active'&&p.role!=='admin');
+  const never=act.filter(p=>!p.lastLogin);
+  if(never.length)items.push([`Never signed in (${never.length})`,names(never)+'. They have an account but have not used it yet.',{go:'people',st:'never',t:'Show them'}]);
+  const stale=act.filter(p=>p.lastLogin&&(Date.now()-Date.parse(p.lastSeen||p.lastLogin))>7*ONE);
+  if(stale.length)items.push([`Not seen for more than a week (${stale.length})`,names(stale)+'.']);
+  const fails=list.map(p=>[p,ag(p)]).filter(x=>x[1].failed>0);
+  const anonFails=anonOK()&&!F.page?feedBase().filter(e=>e.w==='anon'&&e.ty==='fail').reduce((n,e)=>n+(e.n||1),0):0;
+  if(fails.length||anonFails)items.push(['Wrong passwords or usernames',(fails.length?fails.map(x=>esc(x[0].name)+' ('+x[1].failed+')').join(', ')+'. ':'')+(anonFails?anonFails+' attempt'+(anonFails>1?'s':'')+' with a username that is not an account. ':''),{go:'timeline',kind:'bad',t:'Show them'}]);
+  const den=list.map(p=>[p,ag(p)]).filter(x=>x[1].denied>0);
+  if(den.length)items.push(['Tried something they are not allowed to do',den.map(x=>esc(x[0].name)+' ('+x[1].denied+')').join(', ')+'.',{go:'timeline',kind:'bad',t:'Show them'}]);
+  if(D.totals.pending&&anonOK())items.push([`Waiting for your approval (${D.totals.pending})`,'New accounts that cannot sign in yet. Open Staff approvals.']);
+  if(DAILY&&DAILY.stores&&!F.person&&(F.group==='all'||F.group==='staff'||F.group==='store')){
+    const y=DAILY.days[DAILY.days.length-2],today=DAILY.today,miss=[];
+    const ds=DAILY.stores.filter(s=>!F.store||sameStore(storeKey(s.name),F.store));
+    ds.forEach(s=>{const c=s.cells.find(c=>c.d===y);if(c&&!c.m&&!c.n&&!c.excel)miss.push(s.name+' (both shifts)');else if(c&&!c.excel){if(!c.m)miss.push(s.name+' (morning)');if(!c.n)miss.push(s.name+' (night)')}});
+    if(y&&miss.length)items.push(['Daily sheet missing for yesterday',esc(miss.join(', '))+'.',{go:'stores',t:'Open the Stores tab'}]);
+    const noToday=ds.filter(s=>{const c=s.cells.find(c=>c.d===today);return c&&!c.m&&!c.excel});
+    const hr=+new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',hour12:false}).format(new Date());
+    if(noToday.length&&hr>=15)items.push(['No morning shift typed in today yet',esc(noToday.map(s=>s.name).join(', '))+'.']);
+  }
+  $('attn').innerHTML=items.length?items.map(i=>`<div class="ai"><span class="dot"></span><div class="row"><div><b>${esc(i[0])}</b><br>${i[1]}</div>${i[2]?`<button class="btn sm" type="button" data-go="${i[2].go}"${i[2].st?` data-st="${i[2].st}"`:''}${i[2].kind?` data-kind="${i[2].kind}"`:''}>${esc(i[2].t)}</button>`:''}</div></div>`).join(''):`<div class="ai ok"><span class="dot"></span><div><b>All good.</b><br>Nothing needs attention.</div></div>`;
 }
 
+const METRICS=[['users','People active',1],['logins','Sign-ins',0],['views','Pages opened',1],['actions','Changes',0],['secs','Time in use',1]];
+function renderMetric(){
+  const ms=METRICS.filter(m=>!F.page||m[2]);if(!ms.some(m=>m[0]===METRIC))METRIC=ms[0][0];
+  $('metric').innerHTML=ms.map(m=>`<button class="chip" type="button" data-m="${m[0]}" aria-pressed="${m[0]===METRIC}">${m[1]}</button>`).join('');
+}
+$('metric').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b)return;METRIC=b.dataset.m;renderMetric();renderChart()});
+function seriesF(){
+  const list=peopleF().filter(p=>p.status!=='pending');
+  return P.days.map(day=>{const s={day,users:0,logins:0,views:0,actions:0,secs:0};
+    for(const p of list){const d=p.days[day];if(!d)continue;const x=dayVals(d);s.logins+=x.l;s.views+=x.v;s.actions+=x.a;s.secs+=x.s;if(x.l||x.v||x.a)s.users++}return s});
+}
+const fmtMetric=(m,v)=>m==='secs'?dur(v):num(Math.round(v*10)/10);
 function renderChart(){
-  const s=D.series,W=1000,H=170,pl=34,pb=22,pt=8,iw=W-pl-6,ih=H-pb-pt;
-  const mx=Math.max(1,...s.map(x=>Math.max(x.users,x.logins))),bw=iw/s.length,g=Math.min(8,bw*.18);
-  const tick=Math.max(1,Math.ceil(s.length/(D.range>30?8:12)));
+  const s=seriesF(),W=Math.max(300,Math.round($('chart').getBoundingClientRect().width)||1000),H=170,pl=40,pb=22,pt=8,iw=W-pl-6,ih=H-pb-pt,m=METRIC;
+  const mx=Math.max(1,...s.map(x=>x[m])),bw=iw/s.length,g=Math.min(8,bw*.18);
+  const tick=Math.max(1,Math.ceil(s.length/(W<600?5:12))),label=(METRICS.find(x=>x[0]===m)||[0,''])[1].toLowerCase();
   let h='';
-  [0,.5,1].forEach(f=>{const y=pt+ih-ih*f;h+=`<line x1="${pl}" x2="${W-6}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${pl-6}" y="${y+4}" text-anchor="end">${Math.round(mx*f)}</text>`});
+  [0,.5,1].forEach(f=>{const y=pt+ih-ih*f;h+=`<line x1="${pl}" x2="${W-6}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${pl-6}" y="${y+4}" text-anchor="end">${m==='secs'?(mx*f>=3600?Math.round(mx*f/360)/10+'h':Math.round(mx*f/60)+'m'):Math.round(mx*f)}</text>`});
   s.forEach((x,i)=>{
-    const x0=pl+i*bw+g/2,w=Math.max(2,bw-g),hu=ih*x.users/mx,hl=ih*x.logins/mx;
-    h+=`<rect x="${x0}" y="${pt+ih-hl}" width="${w}" height="${hl}" rx="2" fill="var(--ink2)" opacity=".4"><title>${esc(x.day)}: ${x.logins} sign-ins, ${x.users} people active, ${x.views} pages opened, ${x.actions} changes</title></rect>`;
-    h+=`<rect x="${x0+w*.22}" y="${pt+ih-hu}" width="${Math.max(2,w*.56)}" height="${hu}" rx="2" fill="#FF93A0"><title>${esc(x.day)}: ${x.users} people active</title></rect>`;
-    if(i%tick===0||i===s.length-1)h+=`<text x="${x0+w/2}" y="${H-6}" text-anchor="middle">${esc(fmtD.format(new Date(x.day+'T12:00:00Z')))}</text>`;
+    const x0=pl+i*bw+g/2,w=Math.max(2,bw-g),hh=ih*x[m]/mx;
+    h+=`<g${s.length>1?` class="clk" data-day="${x.day}" style="cursor:pointer"`:''}><rect x="${pl+i*bw}" y="${pt}" width="${bw}" height="${ih+pb-4}" fill="transparent"/><rect x="${x0}" y="${pt+ih-hh}" width="${w}" height="${hh}" rx="2" fill="#FF93A0"><title>${esc(wday(x.day)+' '+fmtDay(x.day))}: ${esc(fmtMetric(m,x[m]))} ${esc(label)}</title></rect></g>`;
+    if(i%tick===0||i===s.length-1)h+=`<text x="${x0+w/2}" y="${H-6}" text-anchor="middle">${esc(fmtDay(x.day))}</text>`;
   });
   $('chart').setAttribute('viewBox',`0 0 ${W} ${H}`);$('chart').innerHTML=h;
 }
+$('chart').addEventListener('click',async e=>{const g=e.target.closest('[data-day]');if(!g)return;F.preset='custom';F.from=F.to=g.dataset.day;SHOW=100;if(!(await ensure()))render()});
 
-function renderGroups(){
-  const cnt={};D.people.forEach(p=>{const g=groupOf(p);cnt[g]=(cnt[g]||0)+1;cnt.all=(cnt.all||0)+1});
-  $('groups').innerHTML=GROUPS.filter(g=>g[0]==='all'||cnt[g[0]]).map(g=>`<button class="chip" type="button" data-g="${g[0]}" aria-pressed="${g[0]===GROUP}">${g[1]}<small>${cnt[g[0]]||0}</small></button>`).join('');
+function pagesAgg(){
+  const list=peopleF().filter(p=>p.status!=='pending'),m=new Map();
+  for(const p of list){const a=ag(p);for(const k in a.pages){const o=m.get(k)||{p:k,label:pageName(k),views:0,secs:0,users:0};o.views+=a.pages[k].n;o.secs+=a.pages[k].s;if(a.pages[k].n||a.pages[k].s)o.users++;m.set(k,o)}}
+  return [...m.values()].filter(o=>o.views||o.secs).sort((a,b)=>b.views-a.views||b.secs-a.secs);
 }
-$('groups').addEventListener('click',e=>{const b=e.target.closest('[data-g]');if(!b)return;GROUP=b.dataset.g;renderGroups();renderPeople()});
-$('q').addEventListener('input',e=>{Q=e.target.value.trim().toLowerCase();renderPeople()});
+function bars(rows,fmt,attr,w){const mx=Math.max(1,...rows.map(r=>r[1]));return rows.map(r=>`<div class="hb${w?' '+w:''}${attr?' clk':''}"${attr?` ${attr}="${esc(r[2]||r[0])}" tabindex="0" role="button"`:''}><div>${esc(r[0])}</div><div class="t"><i style="width:${Math.max(2,r[1]/mx*100)}%"></i></div><div class="v">${fmt?fmt(r):num(r[1])}</div></div>`).join('')}
+function renderPages(){
+  const pg=pagesAgg().slice(0,12);
+  $('pages').innerHTML=pg.length?bars(pg.map(o=>[o.label,o.views,o.p]),r=>{const o=pg.find(x=>x.p===r[2]);return `${num(o.views)}× · ${o.users} ${o.users===1?'person':'people'}${o.secs?' · '+esc(dur(o.secs)):''}`},F.page?'':'data-page','c3'):'<div class="empty">No pages opened in this period.</div>';
+}
+$('pages').addEventListener('click',e=>{const r=e.target.closest('[data-page]');if(!r)return;F.page=r.dataset.page;SEL='';render()});
+$('pages').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const r=e.target.closest('[data-page]');if(r){e.preventDefault();F.page=r.dataset.page;SEL='';render()}}});
+function actsAgg(){const m={};peopleF().forEach(p=>{const a=ag(p);for(const k in a.acts)m[k]=(m[k]||0)+a.acts[k]});return Object.entries(m).sort((a,b)=>b[1]-a[1])}
+function renderActs(){
+  const a=actsAgg().slice(0,12);
+  $('acts').innerHTML=F.page?'<div class="empty">Changes are not shown while a page is chosen. Remove the page filter to see them.</div>':a.length?bars(a,null,'data-act','c1'):'<div class="empty">No changes in this period.</div>';
+}
+function openAct(r){KIND='action';TQ=r.dataset.act;$('tq').value=TQ;TAB='timeline';save();SHOW=100;renderTab();window.scrollTo({top:0,behavior:'smooth'})}
+$('acts').addEventListener('click',e=>{const r=e.target.closest('[data-act]');if(r)openAct(r)});
+$('acts').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const r=e.target.closest('[data-act]');if(r){e.preventDefault();openAct(r)}}});
 
-const COLS=[['name','Person',0],['lastSeen','Last seen',0],['logins','Sign-ins',1],['views','Pages',1],['actions','Changes',1],['secs','Time in use',1],['activeDays','Active days',1],['device','Last device',0]];
+function renderHours(){
+  const ev=feedBase().filter(e=>e.ty==='login'||e.ty==='view'||e.ty==='action'),c=new Array(24).fill(0);
+  ev.forEach(e=>{c[hourOf(e.t)]+=e.n||1});
+  const mx=Math.max(1,...c),W=Math.max(260,Math.round($('hours').getBoundingClientRect().width)||480),H=130,pl=30,pb=20,pt=6,iw=W-pl-6,ih=H-pb-pt,bw=iw/24;
+  let h=[0,1].map(f=>{const y=pt+ih-ih*f;return `<line x1="${pl}" x2="${W-6}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${pl-6}" y="${y+4}" text-anchor="end">${Math.round(mx*f)}</text>`}).join('');
+  c.forEach((v,i)=>{const hh=ih*v/mx,x0=pl+i*bw+2;h+=`<rect x="${x0}" y="${pt+ih-hh}" width="${Math.max(2,bw-4)}" height="${hh}" rx="2" fill="#FF93A0"><title>${String(i).padStart(2,'0')}:00 – ${v} ${v===1?'action':'actions'}</title></rect>`;if(i%(W<400?6:3)===0)h+=`<text x="${x0+(bw-4)/2}" y="${H-5}" text-anchor="middle">${String(i).padStart(2,'0')}</text>`});
+  $('hours').setAttribute('viewBox',`0 0 ${W} ${H}`);$('hours').innerHTML=h;
+  $('hoursNote').textContent=ev.length?'Counts sign-ins, pages opened and changes. Based on the newest log lines kept for each person.':'Nothing recorded in this period.';
+}
+function renderWdays(){
+  if(P.n<7){$('wdays').innerHTML='<div class="empty">Choose 7 days or more to see this.</div>';return}
+  const list=peopleF().filter(p=>p.status!=='pending'),tot=new Array(7).fill(0),cnt=new Array(7).fill(0);
+  for(const d of P.days){const wd=(new Date(d+'T12:00:00Z').getUTCDay()+6)%7;cnt[wd]++;for(const p of list){const a=ag(p);if(a.byDay[d])tot[wd]++}}
+  const names_=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const rows=names_.map((n,i)=>[n,cnt[i]?tot[i]/cnt[i]:0]);
+  $('wdays').innerHTML=bars(rows,r=>(Math.round(r[1]*10)/10)+' '+(r[1]===1?'person':'people'),null,'c2');
+}
+
+// ---- people ----
+function renderStatus(){
+  const list=peopleF(),rows=list.map(p=>({p,a:ag(p)}));
+  const f={all:()=>true,active:r=>r.a.activeDays>0,quiet:r=>r.a.activeDays===0&&r.p.status==='active',never:r=>r.p.status==='active'&&!r.p.lastLogin,problems:r=>r.a.failed>0||r.a.denied>0};
+  const defs=[['all','Everyone'],['active','Used it in this period'],['quiet','Did not use it'],['never','Never signed in'],['problems','Had problems']];
+  $('status').innerHTML=defs.map(d=>`<button class="chip" type="button" data-st="${d[0]}" aria-pressed="${d[0]===STATUS}">${d[1]}<small>${rows.filter(f[d[0]]).length}</small></button>`).join('');
+  return f;
+}
+$('status').addEventListener('click',e=>{const b=e.target.closest('[data-st]');if(!b)return;STATUS=b.dataset.st;renderStatus();renderPeople()});
+$('q').addEventListener('input',e=>{Q=e.target.value.trim().toLowerCase();renderPeople()});
+const COLS=[['name','Person',0],['lastSeen','Last seen',0],['logins','Sign-ins',1],['views','Pages',1],['actions','Changes',1],['secs','Time in use',1],['activeDays','Active days',1],['strip','Activity',0],['device','Last device',0]];
+function strip(a){
+  const days=P.days;if(days.length<2)return '';
+  const k=Math.max(1,Math.ceil(days.length/30)),cells=[];
+  for(let i=0;i<days.length;i+=k){let v=0;for(let j=i;j<Math.min(days.length,i+k);j++)v+=a.byDay[days[j]]||0;cells.push(v)}
+  const w=4,g=1.5;
+  return `<svg class="strip" width="${cells.length*(w+g)}" height="14" aria-hidden="true">${cells.map((v,i)=>`<rect x="${i*(w+g)}" y="0" width="${w}" height="14" rx="1.5" fill="${v?'var(--accent)':'var(--line)'}" opacity="${v?(v>9?1:v>2?.7:.45):1}"/>`).join('')}</svg>`;
+}
+function peopleRows(){
+  const f=renderStatus(),list=peopleF().map(p=>({p,a:ag(p)})).filter(f[STATUS]).filter(r=>!Q||[r.p.name,r.p.username,r.p.store,r.p.label].join(' ').toLowerCase().includes(Q));
+  const k=SORT.k,val=r=>k==='lastSeen'||k==='name'||k==='device'?r.p[k]:r.a[k];
+  list.sort((x,y)=>{let a=val(x),b=val(y);if(typeof a==='string'||typeof b==='string'){a=String(a||'');b=String(b||'');if(k==='name')return a.localeCompare(b)*SORT.dir;return a<b?-SORT.dir:a>b?SORT.dir:0}return ((a||0)-(b||0))*SORT.dir||String(x.p.name).localeCompare(y.p.name)});
+  return list;
+}
 function renderPeople(){
-  $('phead').innerHTML=COLS.map(c=>`<th class="${c[2]?'n':''}" aria-sort="${SORT.k===c[0]?(SORT.dir>0?'ascending':'descending'):'none'}"><button type="button" data-s="${c[0]}">${c[1]}${SORT.k===c[0]?(SORT.dir>0?' ▲':' ▼'):''}</button></th>`).join('');
-  let list=D.people.filter(p=>(GROUP==='all'||groupOf(p)===GROUP)&&(!Q||[p.name,p.username,p.store,p.label].join(' ').toLowerCase().includes(Q)));
-  const k=SORT.k;
-  list.sort((a,b)=>{let x=a[k],y=b[k];if(typeof x==='string'||typeof y==='string'){x=String(x||'');y=String(y||'');if(k==='name')return x.localeCompare(y)*SORT.dir;return x<y?-SORT.dir:x>y?SORT.dir:0}return ((x||0)-(y||0))*SORT.dir||String(a.name).localeCompare(b.name)});
-  $('people').innerHTML=list.length?list.map(p=>{
+  $('phead').innerHTML=COLS.map(c=>{const hide=F.page&&(c[0]==='logins'||c[0]==='actions');if(hide)return '';
+    return c[0]==='strip'?`<th>${c[1]}</th>`:`<th class="${c[2]?'n':''}" aria-sort="${SORT.k===c[0]?(SORT.dir>0?'ascending':'descending'):'none'}"><button type="button" data-s="${c[0]}">${c[1]}${SORT.k===c[0]?(SORT.dir>0?' ▲':' ▼'):''}</button></th>`}).join('');
+  const list=peopleRows();
+  $('people').innerHTML=list.length?list.map(({p,a})=>{
     const st=p.status==='pending'?'<span class="tag mute">Waiting for approval</span>':p.status==='off'?'<span class="tag mute">Switched off</span>':p.status==='removed'?'<span class="tag mute">Removed</span>':'';
     const seen=p.lastSeen?`${esc(ago(p.lastSeen))}<small style="display:block;color:var(--ink2)">${esc(when(p.lastSeen))}</small>`:'<span class="tag '+(p.status==='active'?'warn':'mute')+'">Never</span>';
-    return `<tr class="pp${SEL===p.key?' sel':''}" data-k="${esc(p.key)}" tabindex="0"><td><div class="nm">${esc(p.name)}${st?' '+st:''}<small>${esc(p.label)}${p.store?' · '+esc(p.store):''}${p.zone?' · '+esc(p.zone):''}</small></div></td><td>${seen}</td><td class="n">${num(p.logins)}</td><td class="n">${num(p.views)}</td><td class="n">${num(p.actions)}</td><td class="n">${esc(dur(p.secs))}</td><td class="n">${p.activeDays}</td><td>${esc(p.device||'')}</td></tr>`}).join(''):'<tr><td colspan="8" class="empty">Nobody matches.</td></tr>';
+    return `<tr class="pp${SEL===p.key?' sel':''}" data-k="${esc(p.key)}" tabindex="0"><td><div class="nm">${esc(p.name)}${st?' '+st:''}<small>${esc(p.label)}${p.store?' · '+esc(p.store):''}${p.zone?' · '+esc(p.zone):''}</small></div></td><td>${seen}</td>${F.page?'':`<td class="n">${num(a.logins)}</td>`}<td class="n">${num(a.views)}</td>${F.page?'':`<td class="n">${num(a.actions)}</td>`}<td class="n">${esc(dur(a.secs))}</td><td class="n">${a.activeDays}</td><td>${strip(a)}</td><td>${esc(p.device||'')}</td></tr>`}).join(''):`<tr><td colspan="9" class="empty">Nobody matches.</td></tr>`;
 }
 $('phead').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(!b)return;const k=b.dataset.s;SORT=SORT.k===k?{k,dir:-SORT.dir}:{k,dir:k==='name'?1:-1};renderPeople()});
 function pick(e){const tr=e.target.closest('tr.pp');if(!tr)return;SEL=SEL===tr.dataset.k?'':tr.dataset.k;renderPeople();renderDetail();if(SEL)$('detail').scrollIntoView({behavior:'smooth',block:'nearest'})}
 $('people').addEventListener('click',pick);
 $('people').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick(e)}});
-
-function bars(rows,fmt){const mx=Math.max(1,...rows.map(r=>r[1]));return rows.map(r=>`<div class="hb"><div>${esc(r[0])}</div><div class="t"><i style="width:${Math.max(2,r[1]/mx*100)}%"></i></div><div class="v">${fmt?fmt(r):num(r[1])}</div></div>`).join('')}
 function renderDetail(){
   const box=$('detail'),p=D.people.find(x=>x.key===SEL);
   if(!p){box.hidden=true;return}
-  const pages=Object.entries(p.pages).map(([k,v])=>[k,v.n,v.s]).sort((a,b)=>b[1]-a[1]||b[2]-a[2]).slice(0,10);
-  const labels=D.pagesMap||{};
-  const acts=Object.entries(p.acts).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const ev=D.feed.filter(e=>e.w===p.key).slice(0,25);
-  const days=Object.keys(p.byDay).sort();
+  const a=ag(p),pages=Object.entries(a.pages).map(([k,v])=>[k,v.n,v.s]).sort((x,y)=>y[1]-x[1]||y[2]-x[2]).slice(0,10);
+  const acts=Object.entries(a.acts).sort((x,y)=>y[1]-x[1]).slice(0,10);
+  const ev=D.feed.filter(e=>e.w===p.key&&dayOf(e.t2||e.t)>=P.from&&dayOf(e.t2||e.t)<=P.to&&(!F.page||e.p===F.page)).slice(0,12);
   box.hidden=false;
-  box.innerHTML=`<div class="bar"><div><h2>${esc(p.name)}</h2><div class="meta" style="margin:0">${esc(p.label)}${p.store?' · '+esc(p.store):''}${p.zone?' · '+esc(p.zone):''}${p.username?' · username '+esc(p.username):''}</div></div><button class="btn" type="button" id="closeDetail">Close</button></div>
-  <div class="stat"><div><b>${esc(p.lastSeen?ago(p.lastSeen):'never')}</b>last seen</div><div><b>${num(p.logins)}</b>sign-ins</div><div><b>${num(p.views)}</b>pages opened</div><div><b>${num(p.actions)}</b>changes</div><div><b>${esc(dur(p.secs))}</b>time in use</div><div><b>${p.activeDays}</b>active days</div><div><b>${num(p.failed)}</b>wrong passwords</div></div>
-  <div class="two"><div><h2 style="font-size:15px">Pages</h2>${pages.length?pages.map(r=>`<div class="hb"><div>${esc(pageName(r[0]))}</div><div class="t"><i style="width:${Math.max(2,r[1]/Math.max(1,pages[0][1])*100)}%"></i></div><div class="v">${r[1]}× · ${esc(dur(r[2]))}</div></div>`).join(''):'<div class="empty">No pages opened in this period.</div>'}</div>
-  <div><h2 style="font-size:15px">Changes</h2>${acts.length?bars(acts):'<div class="empty">No changes in this period.</div>'}</div></div>
-  <h2 style="font-size:15px;margin-top:14px">Latest</h2><div class="tw"><table class="feed"><tbody>${ev.length?ev.map(feedRow).join(''):'<tr><td class="empty">Nothing in this period.</td></tr>'}</tbody></table></div>`;
+  box.innerHTML=`<div class="bar"><div><h2>${esc(p.name)}</h2><div class="meta" style="margin:0">${esc(p.label)}${p.store?' · '+esc(p.store):''}${p.zone?' · '+esc(p.zone):''}${p.username?' · username '+esc(p.username):''}${p.device?' · '+esc(p.device):''}</div></div><div class="actions"><button class="btn" type="button" id="dTimeline">Show only their timeline</button><button class="btn" type="button" id="closeDetail">Close</button></div></div>
+  <div class="stat"><div><b>${esc(p.lastSeen?ago(p.lastSeen):'never')}</b>last seen</div><div><b>${num(a.logins)}</b>sign-ins</div><div><b>${num(a.views)}</b>pages opened</div><div><b>${num(a.actions)}</b>changes</div><div><b>${esc(dur(a.secs))}</b>time in use</div><div><b>${a.activeDays}</b>active days</div><div><b>${num(a.failed)}</b>wrong passwords</div></div>
+  <div class="two"><div><h2 style="font-size:15px">Pages</h2>${pages.length?pages.map(r=>`<div class="hb c2"><div>${esc(pageName(r[0]))}</div><div class="t"><i style="width:${Math.max(2,r[1]/Math.max(1,pages[0][1])*100)}%"></i></div><div class="v">${r[1]}× · ${esc(dur(r[2]))}</div></div>`).join(''):'<div class="empty">No pages opened in this period.</div>'}</div>
+  <div><h2 style="font-size:15px">Changes</h2>${acts.length?bars(acts,null,null,'c1'):'<div class="empty">No changes in this period.</div>'}</div></div>
+  <h2 style="font-size:15px;margin-top:14px">Latest</h2><div class="tw"><table class="feed"><tbody>${ev.length?ev.map(e=>feedRow(e,true)).join(''):'<tr><td class="empty">Nothing in this period.</td></tr>'}</tbody></table></div>`;
   $('closeDetail').onclick=()=>{SEL='';renderPeople();renderDetail()};
+  $('dTimeline').onclick=()=>{F.person=p.key;SEL='';KIND='all';TQ='';$('tq').value='';TAB='timeline';save();SHOW=100;render();window.scrollTo({top:0,behavior:'smooth'})};
 }
-const PAGE_NAMES={'/':'Home','/dashboards':'Pandora Dashboards','/staff':'Staff Performance','/staff/person':'A sales person page','/staff/me':'My sales','/staff/accounts':'Staff approvals','/uploads':'All Uploads','/film':'Launch Film','/daily':'Daily Store Report','/vm':'VM Report','/vm/zones':'VM Zones','/vm/stock':'Zone Stock','/stock':'Stock balance','/stockcount':'Stock Count','/refill':'Refill Order','/slow':'Slow Moving','/distribution':'Orders Distribution'};
-const pageName=p=>PAGE_NAMES[String(p).replace(/\/+$/,'')||'/']||p;
 
+// ---- timeline ----
+function feedRow(e,noWho){
+  const tt=TYPE_TAG[e.ty]||['',''];
+  const what=e.ty==='view'?esc(e.a)+(e.s?` <span class="note">· ${esc(dur(e.s))} in use</span>`:''):esc(e.a);
+  const det=[e.d?esc(e.d):'',e.n>1?'<span class="note">'+e.n+' times</span>':'',e.dev&&e.w==='anon'?'<span class="note">'+esc(e.dev)+(e.v?' · visitor '+esc(e.v):'')+'</span>':''].filter(Boolean).join(' ');
+  const who=e.w==='anon'||e.w==='system'?esc(e.who):`<button class="lnk" type="button" data-who="${esc(e.w)}">${esc(e.who)}</button>`;
+  return `<tr><td class="t">${esc(fmtH.format(new Date(e.t2||e.t)))}</td>${noWho?'':`<td><div class="nm">${who}<small>${esc(e.label||'')}${e.store?' · '+esc(e.store):''}</small></div></td>`}<td>${tt[0]?`<span class="tag ${tt[1]}">${esc(tt[0])}</span> `:''}${what}</td><td>${det}</td></tr>`;
+}
+function feedList(){
+  const base=feedBase();
+  const cnt={all:base.length};base.forEach(e=>{const k=kindOf(e);cnt[k]=(cnt[k]||0)+1});
+  const q=TQ.toLowerCase();
+  const list=base.filter(e=>(KIND==='all'||kindOf(e)===KIND)&&(!q||[e.a,e.d,e.who,e.pl,e.store].join(' ').toLowerCase().includes(q)));
+  return{base,cnt,list};
+}
+function renderKinds(){const {cnt}=feedList();$('kinds').innerHTML=KINDS.map(k=>`<button class="chip" type="button" data-kind="${k[0]}" aria-pressed="${k[0]===KIND}">${k[1]}<small>${cnt[k[0]]||0}</small></button>`).join('')}
+$('kinds').addEventListener('click',e=>{const b=e.target.closest('[data-kind]');if(!b)return;KIND=b.dataset.kind;SHOW=100;renderKinds();renderFeed()});
+$('tq').addEventListener('input',e=>{TQ=e.target.value.trim();SHOW=100;renderKinds();renderFeed()});
+$('more').addEventListener('click',()=>{SHOW+=200;renderFeed()});
+function dayHead(d){return d===P.today?'Today':d===addDays(P.today,-1)?'Yesterday':wday(d)}
+function renderFeed(){
+  const {list}=feedList(),shown=list.slice(0,SHOW);let last='',h='';
+  for(const e of shown){const d=dayOf(e.t2||e.t);if(d!==last){last=d;h+=`<tr class="day"><td colspan="4">${esc(dayHead(d))} · ${esc(fmtDay(d))}</td></tr>`}h+=feedRow(e)}
+  $('feed').innerHTML=h||'<tr><td colspan="4" class="empty">Nothing here for these filters.</td></tr>';
+  $('more').hidden=list.length<=SHOW;
+  $('feednote').textContent=list.length+' line'+(list.length===1?'':'s')+(D.feedTotal>D.feed.length?' (only the newest '+D.feed.length+' of '+D.feedTotal+' log lines are loaded; choose a shorter period to see the rest)':'');
+}
+$('feed').addEventListener('click',e=>{const b=e.target.closest('[data-who]');if(!b)return;F.person=b.dataset.who;SEL='';SHOW=100;render()});
+$('detail').addEventListener('click',e=>{const b=e.target.closest('[data-who]');if(!b)return;F.person=b.dataset.who;SEL='';SHOW=100;render()});
+
+// ---- stores ----
+function dailyPct(s){ // how many of the last 14 days' morning and night shifts this store typed in (today is not counted yet)
+  if(!s)return null;const cells=s.cells.filter(c=>c.d<DAILY.today);if(!cells.length)return null;
+  let got=0;cells.forEach(c=>{if(c.excel)got+=2;else{if(c.m)got++;if(c.n)got++}});return Math.round(got/(cells.length*2)*100);
+}
+function renderStores(){
+  const rows=STORES.map(s=>{
+    const ps=D.people.filter(p=>p.status!=='pending'&&(storeOfPerson(p)||{}).key===s.key),ags=ps.map(p=>ag(p));
+    const sum=k=>ags.reduce((n,a)=>n+a[k],0),seen=ps.map(p=>p.lastSeen).filter(Boolean).sort().pop()||'';
+    return{s,n:ps.length,active:ags.filter(a=>a.activeDays>0).length,logins:sum('logins'),views:sum('views'),actions:sum('actions'),secs:sum('secs'),pct:DAILY&&DAILY.stores?dailyPct(s.daily):null,seen};
+  });
+  $('stores').innerHTML=rows.length?rows.map(r=>`<tr class="st${F.store===r.s.key?' sel':''}" data-store="${esc(r.s.key)}" tabindex="0"><td><div class="nm">${esc(r.s.name)}</div></td><td class="n">${r.n}</td><td class="n">${r.active}${r.n&&!r.active?' <span class="tag warn">none</span>':''}</td><td class="n">${num(r.logins)}</td><td class="n">${num(r.views)}</td><td class="n">${num(r.actions)}</td><td class="n">${esc(dur(r.secs))}</td><td>${r.pct==null?'<span class="note">–</span>':`<span class="mini" title="${r.pct}% of shifts typed in"><i style="width:${r.pct}%"></i></span><span class="pct">${r.pct}%</span>`}</td><td>${r.seen?esc(ago(r.seen)):'<span class="note">never</span>'}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">No stores yet.</td></tr>';
+  renderDaily();
+}
+function pickStore(e){const tr=e.target.closest('tr.st');if(!tr)return;F.store=F.store===tr.dataset.store?'':tr.dataset.store;F.person='';if(F.store){STATUS='all';TAB='people';save()}SEL='';render();if(F.store)window.scrollTo({top:0,behavior:'smooth'})}
+$('stores').addEventListener('click',pickStore);
+$('stores').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pickStore(e)}});
 function renderDaily(){
   const box=$('daily');
   if(!DAILY||!DAILY.stores){box.innerHTML='<div class="empty">The daily sheet could not be read.</div>';return}
-  const days=DAILY.days,today=DAILY.today;
-  const head='<tr><th>Store</th>'+days.map(d=>`<th class="${d===today?'today':''}" title="${esc(d)}">${esc(fmtD.format(new Date(d+'T12:00:00Z')))}${d===today?'<br>today':''}</th>`).join('')+'<th>Last entry</th></tr>';
-  const rows=DAILY.stores.map(s=>`<tr><td>${esc(s.name)}</td>${s.cells.map(c=>{
-    const later=c.d===today;
-    const cls=x=>x?'on':c.excel?'xl':later?'later':'';
+  const days=DAILY.days,today=DAILY.today,list=DAILY.stores.filter(s=>!F.store||sameStore(storeKey(s.name),F.store));
+  const head='<tr><th>Store</th>'+days.map(d=>`<th class="${d===today?'today':''}" title="${esc(d)}">${esc(fmtDay(d))}${d===today?'<br>today':''}</th>`).join('')+'<th>Last entry</th></tr>';
+  const rows=list.map(s=>`<tr><td>${esc(s.name)}</td>${s.cells.map(c=>{
+    const later=c.d===today,cls=x=>x?'on':c.excel?'xl':later?'later':'';
     const tip=esc(c.d)+(c.m?' · morning by '+esc(c.m.by||'?'):'')+(c.n?' · night by '+esc(c.n.by||'?'):'')+(c.excel?' · from Excel':'')+(!c.m&&!c.n&&!c.excel?' · nothing typed in':'');
     return `<td title="${tip}"><span class="cell"><i class="${cls(c.m)}"></i><i class="${cls(c.n)}"></i></span></td>`}).join('')}<td style="white-space:nowrap;text-align:left">${s.last?esc(s.last.by||'')+'<small style="display:block;color:var(--ink2)">'+esc(when(s.last.at))+'</small>':'<span class="note">none yet</span>'}</td></tr>`).join('');
-  box.innerHTML=`<table class="dg"><thead>${head}</thead><tbody>${rows}</tbody></table><div class="note" style="margin-top:8px">Each day has two squares: left is the morning shift, right is the night shift. Hover a day to see who typed it in.</div>`;
+  box.innerHTML=list.length?`<table class="dg"><thead>${head}</thead><tbody>${rows}</tbody></table><div class="note" style="margin-top:8px">Each day has two squares: left is the morning shift, right is the night shift. Hover a day to see who typed it in.</div>`:'<div class="empty">No daily sheet for this store.</div>';
 }
 
-function renderPages(){$('pages').innerHTML=D.pages.length?D.pages.slice(0,12).map(p=>[p.label,p.views,p.users,p.secs]).map(r=>`<div class="hb"><div>${esc(r[0])}</div><div class="t"><i style="width:${Math.max(2,r[1]/Math.max(1,D.pages[0].views)*100)}%"></i></div><div class="v">${num(r[1])}× · ${r[2]} ${r[2]===1?'person':'people'}${r[3]?' · '+esc(dur(r[3])):''}</div></div>`).join(''):'<div class="empty">No pages opened in this period.</div>'}
-function renderActs(){$('acts').innerHTML=D.acts.length?bars(D.acts.slice(0,12).map(a=>[a.a,a.n])):'<div class="empty">No changes in this period.</div>'}
-
-function renderFeedControls(){
-  const cnt={all:D.feed.length};D.feed.forEach(e=>{const k=kindOf(e);cnt[k]=(cnt[k]||0)+1});
-  $('kinds').innerHTML=KINDS.map(k=>`<button class="chip" type="button" data-kind="${k[0]}" aria-pressed="${k[0]===KIND}">${k[1]}<small>${cnt[k[0]]||0}</small></button>`).join('');
-  const seen=new Map();D.feed.forEach(e=>{if(!seen.has(e.w))seen.set(e.w,e.who)});
-  $('who').innerHTML='<option value="">Everyone</option>'+[...seen.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1]))).map(([k,n])=>`<option value="${esc(k)}"${k===WHO?' selected':''}>${esc(n)}</option>`).join('');
-}
-$('kinds').addEventListener('click',e=>{const b=e.target.closest('[data-kind]');if(!b)return;KIND=b.dataset.kind;SHOW=100;renderFeedControls();renderFeed()});
-$('who').addEventListener('change',e=>{WHO=e.target.value;SHOW=100;renderFeed()});
-$('more').addEventListener('click',()=>{SHOW+=200;renderFeed()});
-
-function feedRow(e){
-  const tt=TYPE_TAG[e.ty]||['',''];
-  const what=e.ty==='view'?esc(e.a)+(e.s?` <span class="note">· ${esc(dur(e.s))} in use</span>`:''):esc(e.a);
-  const det=[e.d&&e.ty!=='login'?esc(e.d):e.d?esc(e.d):'',e.n>1?'<span class="note">'+e.n+' times</span>':'',e.dev&&e.w==='anon'?'<span class="note">'+esc(e.dev)+(e.v?' · visitor '+esc(e.v):'')+'</span>':''].filter(Boolean).join(' ');
-  return `<tr><td class="t">${esc(when(e.t2||e.t))}</td><td><div class="nm">${esc(e.who)}<small>${esc(e.label||'')}${e.store?' · '+esc(e.store):''}</small></div></td><td>${tt[0]?`<span class="tag ${tt[1]}">${esc(tt[0])}</span> `:''}${what}</td><td>${det}</td></tr>`;
-}
-function renderFeed(){
-  let list=D.feed.filter(e=>(KIND==='all'||kindOf(e)===KIND)&&(!WHO||e.w===WHO));
-  $('feed').innerHTML=list.slice(0,SHOW).map(feedRow).join('')||'<tr><td colspan="4" class="empty">Nothing here for this period.</td></tr>';
-  $('more').hidden=list.length<=SHOW;
-  $('feednote').textContent=list.length+' line'+(list.length===1?'':'s')+(D.feedTotal>D.feed.length?' (the newest '+D.feed.length+' of '+D.feedTotal+' are loaded; choose a shorter period to see the rest)':'');
-}
+// ---- downloads (open in Excel) ----
+function csv(rows){return '﻿'+rows.map(r=>r.map(v=>{let s=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(s))s="'"+s;return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}).join(',')).join('\r\n')}
+function download(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+const stamp=iso=>iso?new Date(Date.parse(iso)+3*3600000).toISOString().slice(0,16).replace('T',' '):'';
+$('expPeople').addEventListener('click',()=>{
+  const rows=[['Name','Role','Store','Username','Last seen (Cairo)','Sign-ins','Pages opened','Changes','Time in use (minutes)','Active days','Wrong passwords','Period']];
+  peopleRows().forEach(({p,a})=>rows.push([p.name,p.label,p.store||'',p.username||'',stamp(p.lastSeen),a.logins,a.views,a.actions,Math.round(a.secs/60),a.activeDays,a.failed,P.from+' to '+P.to]));
+  download('activity-people-'+P.from+'-to-'+P.to+'.csv',csv(rows));
+});
+$('expFeed').addEventListener('click',()=>{
+  const rows=[['When (Cairo)','Who','Role','Store','Type','What','Details','Times','Seconds in use']];
+  feedList().list.forEach(e=>rows.push([stamp(e.t2||e.t),e.who,e.label||'',e.store||'',(TYPE_TAG[e.ty]||[e.ty])[0],e.a,e.d||'',e.n||1,e.s||'']));
+  download('activity-timeline-'+P.from+'-to-'+P.to+'.csv',csv(rows));
+});
 
 $('share').addEventListener('change',async e=>{
   const on=e.target.checked;e.target.disabled=true;
@@ -283,7 +631,8 @@ $('share').addEventListener('change',async e=>{
   finally{e.target.disabled=false}
 });
 
-buildRange();load();
+let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(D&&TAB==='overview'){renderChart();renderHours()}},150)});
+buildRange();showPanels();load();
 </script>
 </body>
 </html>

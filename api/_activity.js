@@ -308,15 +308,12 @@ async function overview(rangeDays) {
   const seen = new Set(), people = [];
   const add = (a, r) => {
     seen.add(a.key);
-    const p = { key: a.key, name: (r && r.name) || a.name, username: a.username || (r && r.username) || '', role: a.role, label: a.label, store: a.store || (r && r.store) || '', zone: (r && r.zone) || '', status: a.status, createdAt: a.createdAt || '', firstSeen: r ? r.first : '', lastSeen: r ? r.lastSeen || '' : '', lastLogin: r ? r.lastLogin || '' : '', device: r ? r.device || '' : '', fails: r ? r.fails || 0 : 0, logins: 0, views: 0, actions: 0, secs: 0, denied: 0, failed: 0, activeDays: 0, pages: {}, acts: {}, byDay: {} };
+    const p = { key: a.key, name: (r && r.name) || a.name, username: a.username || (r && r.username) || '', role: a.role, label: a.label, store: a.store || (r && r.store) || '', zone: (r && r.zone) || '', status: a.status, createdAt: a.createdAt || '', firstSeen: r ? r.first : '', lastSeen: r ? r.lastSeen || '' : '', lastLogin: r ? r.lastLogin || '' : '', device: r ? r.device || '' : '', fails: r ? r.fails || 0 : 0, logins: 0, views: 0, actions: 0, secs: 0, denied: 0, failed: 0, activeDays: 0, days: {} };
     if (r) for (const day of days) {
       const d = r.days && r.days[day]; if (!d) continue;
       p.logins += d.l; p.views += d.v; p.actions += d.a; p.secs += d.s; p.denied += d.dn || 0; p.failed += d.f || 0;
       if (d.l || d.v || d.a) p.activeDays++;
-      for (const k of Object.keys(d.pg || {})) { const o = p.pages[k] || (p.pages[k] = { n: 0, s: 0 }); o.n += d.pg[k]; }
-      for (const k of Object.keys(d.ps || {})) { const o = p.pages[k] || (p.pages[k] = { n: 0, s: 0 }); o.s += d.ps[k]; }
-      for (const k of Object.keys(d.ac || {})) p.acts[k] = (p.acts[k] || 0) + d.ac[k];
-      p.byDay[day] = [d.l, d.v, d.a, d.s];
+      p.days[day] = d; // the page adds these up itself, so every filter (dates, store, page) works without asking again
     }
     people.push(p);
   };
@@ -350,7 +347,7 @@ async function overview(rangeDays) {
   const real = people.filter(p => p.status !== 'pending');
   return {
     ok: true, now: iso(Date.now()), range: rangeDays, from: first, to: days[days.length - 1],
-    people, series, feed: feed.slice(0, 700), feedTotal: feed.length,
+    today: days[days.length - 1], people, series, feed: feed.slice(0, 1500), feedTotal: feed.length,
     pages: [...pageAgg.values()].map(o => ({ p: o.p, label: o.label, views: o.views, secs: o.secs, users: o.users.size })).sort((a, b) => b.views - a.views).slice(0, 30),
     acts: [...actAgg.entries()].map(([a, n]) => ({ a, n })).sort((x, y) => y.n - x.n).slice(0, 30),
     totals: {
@@ -422,7 +419,7 @@ async function handler(req, res) {
   if (!(await canView(who))) return send(res, 403, { ok: false, error: 'Only the super admin can open Activity.' });
   try {
     if (q.get('view') === 'daily') return send(res, 200, await dailyView(Math.max(3, Math.min(31, parseInt(q.get('days'), 10) || 14))));
-    const range = [1, 7, 30, 90].includes(parseInt(q.get('range'), 10)) ? parseInt(q.get('range'), 10) : 7;
+    const range = Math.max(1, Math.min(KEEP_DAYS, parseInt(q.get('range'), 10) || 7));
     const o = await overview(range);
     o.shared = !!(await settings()).overseer; o.canShare = isSuper(who);
     return send(res, 200, o);
