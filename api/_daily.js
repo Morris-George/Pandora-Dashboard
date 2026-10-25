@@ -23,8 +23,7 @@ const CANON = [
   { name: 'Point 90', rx: /point\s*90/i, zone: 'cairo' },
   { name: 'Mall of Egypt', rx: /mall\s*of\s*egypt/i, zone: 'octalex' },
   { name: 'Mall of Arabia', rx: /arabia/i, zone: 'octalex' },
-  { name: 'Alexandria', rx: /alex/i, zone: 'octalex' },
-  { name: 'Online', rx: /online|e-?commerce|website/i, zone: 'online' }
+  { name: 'Alexandria', rx: /alex/i, zone: 'octalex' }
 ];
 const canon = s => { const t = String(s || '').trim(); const c = CANON.find(c => c.rx.test(t)); return c ? c.name : t.replace(/\s+/g, ' ').slice(0, 60); };
 const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
@@ -55,6 +54,7 @@ async function access(req) {
     return who.info.role === 'admin' ? { role: 'admin', by } : { role: 'area', by, allow: (who.info.allow || []).map(a => new RegExp(a, 'i')) };
   }
   if (who.kind === 'staff' && who.info.self && who.info.self.store) {
+    if (/online|e-?commerce|website/i.test(who.info.self.store)) return { code: 403 }; // the Online store has no daily store report
     return { role: who.info.role === 'store' ? 'store' : 'staff', by: who.user.name || 'Staff', own: canon(who.info.self.store) };
   }
   return { code: 403 }; // VM and Stock Count accounts do not use this page
