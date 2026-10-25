@@ -60,6 +60,8 @@ select,input[type=text],input[type=time],input[type=date]{border:1px solid var(-
 .add{margin-top:auto;border:1px dashed var(--line);background:transparent;color:var(--ink2);border-radius:10px;padding:6px 8px;font:inherit;font-weight:700;cursor:pointer}
 .add:hover{border-color:var(--accent);color:var(--accent-text);background:var(--hover)}
 .full{margin-top:auto;text-align:center;font-size:12px;font-weight:700;color:var(--ink2);padding:6px 0}
+.pp.ro{cursor:default}.pp.ro:hover{border-color:var(--line)}.rn{font-weight:750;font-size:13.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rt{font-weight:600;font-variant-numeric:tabular-nums}
+.ro #copy,.ro #times,.ro #clear{display:none}
 .empty{color:var(--ink2);padding:18px;text-align:center}
 .sumwrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
 table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}th:first-child,td:first-child{text-align:left}
@@ -104,7 +106,7 @@ dialog::backdrop{background:rgba(20,10,14,.45)}
 <body>
 <div class="wrap">
   <header class="top">
-    <div><a class="crumb" href="/">&larr; Home</a><h1>Weekly Schedule</h1><div class="sub">Plan who works the Morning, Between and Night shifts each day (up to 3 people per shift), and set each person’s from and to time.</div></div>
+    <div><a class="crumb" href="/">&larr; Home</a><h1>Weekly Schedule</h1><div class="sub" id="sub">Plan who works the Morning, Between and Night shifts each day (up to 3 people per shift), and set each person’s from and to time.</div></div>
   </header>
 
   <div id="err" class="err" hidden role="alert"></div>
@@ -177,7 +179,7 @@ var SH=[{k:'m',name:'Morning'},{k:'b',name:'Between'},{k:'n',name:'Night'}];
 var SHN={m:'Morning',b:'Between',n:'Night'};
 var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-var st={people:[],role:'',stores:[],store:'',week:'',weekStart:6,times:{m:['10:00','18:00'],b:['13:00','21:00'],n:['16:00','00:00']},names:[],rec:{days:{}},busy:false,edit:null};
+var st={canEdit:true,people:[],role:'',stores:[],store:'',week:'',weekStart:6,times:{m:['10:00','18:00'],b:['13:00','21:00'],n:['16:00','00:00']},names:[],rec:{days:{}},busy:false,edit:null};
 var DAYMS=86400000;
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -210,7 +212,7 @@ function remember(){try{localStorage.setItem('sched.store',st.store)}catch(_){}}
 async function init(){
   try{
     var j=await api('/api/schedule');
-    st.role=j.role;st.stores=j.stores||[];st.weekStart=j.weekStart;
+    st.role=j.role;st.canEdit=j.canEdit!==false;st.stores=j.stores||[];if(!st.canEdit){document.documentElement.classList.add('ro');$('sub').textContent='Who works the Morning, Between and Night shifts at your store each day, with their from and to times.'}st.weekStart=j.weekStart;
     if(!st.stores.length){showErr('No stores are linked to your account yet.');return}
     var saved='';try{saved=localStorage.getItem('sched.store')||''}catch(_){}
     st.store=st.stores.indexOf(saved)>-1?saved:st.stores[0];
@@ -250,19 +252,21 @@ function render(){
   $('jump').value=ds[0];
   $('printHead').textContent=st.store+' · Weekly schedule · '+fmtShort(ds[0])+' – '+fmtLong(ds[6]);
   var h='';
-  SH.forEach(function(s){h+='<button type="button" class="rl '+s.k+'" data-usual="1" title="Change the usual times">'+s.name+'<small>usually '+st.times[s.k][0]+' – '+st.times[s.k][1]+' · change</small></button>'});
+  SH.forEach(function(s){h+=st.canEdit?'<button type="button" class="rl '+s.k+'" data-usual="1" title="Change the usual times">'+s.name+'<small>usually '+st.times[s.k][0]+' – '+st.times[s.k][1]+' · change</small></button>':'<div class="rl '+s.k+'">'+s.name+'</div>'});
   ds.forEach(function(d,c){
     h+='<div class="day" style="--c:'+(c+1)+'"><div class="dh'+(d===today?' today':'')+'">'+WD[dow(d)]+'<small>'+fmtShort(d)+'</small></div>';
     SH.forEach(function(s){
       h+='<div class="cell '+s.k+'" data-label="'+s.name+'">';
       dayShifts(d,s.k).forEach(function(e,i){
-        h+='<div class="pp'+(cl.bad[d+s.k+i]?' clash':'')+'" data-d="'+d+'" data-s="'+s.k+'" data-i="'+i+'"><button type="button" class="pn" title="Edit or remove"><b>'+esc(e.n)+'</b></button><div class="tt"><input type="time" class="tf" value="'+e.f+'" aria-label="From time for '+esc(e.n)+'"><span>–</span><input type="time" class="tx" value="'+e.t+'" aria-label="To time for '+esc(e.n)+'"></div></div>';
+        if(!st.canEdit)h+='<div class="pp ro"><b class="rn">'+esc(e.n)+'</b><div class="tt rt">'+e.f+' – '+e.t+'</div></div>';
+        else h+='<div class="pp'+(cl.bad[d+s.k+i]?' clash':'')+'" data-d="'+d+'" data-s="'+s.k+'" data-i="'+i+'"><button type="button" class="pn" title="Edit or remove"><b>'+esc(e.n)+'</b></button><div class="tt"><input type="time" class="tf" value="'+e.f+'" aria-label="From time for '+esc(e.n)+'"><span>–</span><input type="time" class="tx" value="'+e.t+'" aria-label="To time for '+esc(e.n)+'"></div></div>';
       });
-      if(dayShifts(d,s.k).length<3)h+='<button type="button" class="add" data-d="'+d+'" data-s="'+s.k+'" aria-label="Add a person to '+s.name+' on '+WD[dow(d)]+' '+fmtShort(d)+'">+ Add</button>';else h+='<div class="full">Full · 3 of 3</div>';h+='</div>';
+      if(!st.canEdit){}else if(dayShifts(d,s.k).length<3)h+='<button type="button" class="add" data-d="'+d+'" data-s="'+s.k+'" aria-label="Add a person to '+s.name+' on '+WD[dow(d)]+' '+fmtShort(d)+'">+ Add</button>';else h+='<div class="full">Full · 3 of 3</div>';h+='</div>';
     });
     h+='</div>';
   });
   $('board').innerHTML=h;
+  if(!st.canEdit)cl.list=[];
   $('warns').innerHTML=cl.list.filter(function(v,i,a){return a.indexOf(v)===i}).map(function(m){return '<li>'+esc(m)+'</li>'}).join('');
   renderSummary();
 }
@@ -273,7 +277,7 @@ function renderSummary(){
     o.days[d]=1;o[s.k]++;o.h+=hrs(e);
   })})});
   var rows=Object.keys(by).map(function(k){return by[k]}).sort(function(a,b){return a.nm.localeCompare(b.nm)});
-  $('sumcard').hidden=!rows.length;
+  $('sumcard').hidden=!rows.length||!st.canEdit;
   $('sumBody').innerHTML=rows.map(function(o){return '<tr><td><b>'+esc(o.nm)+'</b></td><td>'+Object.keys(o.days).length+'</td><td>'+o.m+'</td><td>'+o.b+'</td><td>'+o.n+'</td><td><b>'+fmtH(o.h)+'</b></td></tr>'}).join('');
 }
 

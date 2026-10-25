@@ -15,7 +15,7 @@ const APPS = [
   { id: 'storeteam', title: 'My store team', desc: 'How each sales person in your store is doing.', href: '/staff', allow: f => !!f.staff && f.staff.role === 'store' },
   { id: 'mysales2', title: 'My sales', desc: 'What you sold, what sells best for you, and tips to improve.', href: '/staff/me', allow: f => !!f.staff && f.staff.role === 'store' },
   { id: 'daily', title: 'Daily Store Report', desc: 'Add the daily sheet and see sales against target, visitors, conversion and more.', href: '/daily', allow: f => !!f.staff && !(f.staff.who && f.staff.who.info && f.staff.who.info.self && /online|e-?commerce|website/i.test(f.staff.who.info.self.store || '')) },
-  { id: 'schedule', title: 'Weekly Schedule', desc: 'Plan who works the Morning, Between and Night shifts each day, with their from and to times.', href: '/schedule', allow: f => !!f.staff && f.staff.role !== 'staff' && !(f.staff.who && f.staff.who.info && f.staff.who.info.self && /online|e-?commerce|website/i.test(f.staff.who.info.self.store || '')) },
+  { id: 'schedule', title: 'Weekly Schedule', desc: 'Plan who works the Morning, Between and Night shifts each day, with their from and to times.', href: '/schedule', allow: f => !!f.staff && !(f.staff.who && f.staff.who.info && f.staff.who.info.self && /online|e-?commerce|website/i.test(f.staff.who.info.self.store || '')) },
   { id: 'vmzones', title: 'VM Zones', desc: 'Which collection is in which zone of each store, and its effect on sales.', href: '/vm/zones', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') },
   { id: 'zonestock', title: 'Zone Stock', desc: 'What is in each zone of the store: counts, goods received, moves, and sales taken off automatically.', href: '/vm/stock', allow: f => !!f.vm || (!!f.staff && (f.staff.role === 'admin' || f.staff.role === 'store')) },
   { id: 'stock', title: 'Stock balance', desc: 'How many pieces are in stock in each category, store by store, for the dates you pick.', href: '/stock', allow: f => !!f.vm || (!!f.staff && f.staff.role !== 'staff' && f.staff.role !== 'store') },
@@ -29,7 +29,7 @@ const APPS = [
 function appsFor(f) {
   // area managers open the same Dashboards as the super admin, but the server only sends them the stores of their zone
   const zoneManager = !!f.staff && f.staff.role !== 'admin' && f.staff.role !== 'staff' && f.staff.role !== 'store';
-  return APPS.filter(a => a.allow(f)).map(a => ({ id: a.id, title: a.title, desc: a.id === 'dashboards' && zoneManager ? 'Sales dashboards for the stores in your zone.' : a.desc, href: a.href }));
+  return APPS.filter(a => a.allow(f)).map(a => ({ id: a.id, title: a.title, desc: a.id === 'dashboards' && zoneManager ? 'Sales dashboards for the stores in your zone.' : a.id === 'schedule' && f.staff && f.staff.role === 'staff' ? 'See who works the Morning, Between and Night shifts at your store this week.' : a.desc, href: a.href }));
 }
 
 // Read the cookies of this request: which logins are valid?

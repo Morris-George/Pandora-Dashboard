@@ -5,7 +5,8 @@
 //   POST /api/schedule?op=times    {store, times:{m:['10:00','18:00'], b:[..], n:[..]}}          the usual From/To that new people start with
 //   POST /api/schedule?op=copy     {store, week, from, replace?:bool}                            copy another week into this one (shifted by whole weeks)
 //   POST /api/schedule?op=clear    {store, week}                                                  empty the whole week
-// Who: super admin = every store; area managers = the stores of their zone; store managers = their own store. Sales people get 403.
+// Who: super admin = every store; area managers = the stores of their zone; store managers = their own store (all three can edit).
+// Sales people can only LOOK at their own store's schedule (GET); every change answers 403.
 // m = Morning, b = Between, n = Night. Times are 24-hour "HH:MM"; a To that is earlier than the From means the shift ends after midnight.
 // Stored at sched/<store>/<week start>.json and sched/<store>/settings.json, reached through api/vm.js (Hobby plan: 12 functions max).
 const store = require('./_store');
@@ -47,7 +48,11 @@ async function access(req) {
     if (/online|e-?commerce|website/i.test(who.info.self.store)) return { code: 403 }; // the Online store has no shop floor shifts
     return { role: 'store', by: who.user.name || 'Store manager', own: canon(who.info.self.store) };
   }
-  return { code: 403 }; // sales people, VM and Stock Count accounts do not plan the schedule
+  if (who.kind === 'staff' && who.info.role === 'staff' && who.info.self && who.info.self.store) {
+    if (/online|e-?commerce|website/i.test(who.info.self.store)) return { code: 403 };
+    return { role: 'staff', by: who.user.name || 'Staff', own: canon(who.info.self.store), readonly: true }; // sales people may look at their own store's schedule, never change it
+  }
+  return { code: 403 }; // VM and Stock Count accounts do not use the schedule
 }
 const mayStore = (a, name) => {
   const n = canon(name);
@@ -97,23 +102,23 @@ module.exports = async function handler(req, res) {
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   const a = await access(req);
   if (a.code === 401) return send(res, 401, { ok: false, error: 'sign-in-required' });
-  if (a.code) return send(res, 403, { ok: false, error: 'Only managers can plan the schedule.' });
+  if (a.code) return send(res, 403, { ok: false, error: 'No access.' });
   const url = new URL(req.url, 'https://x.invalid');
   const stores = CANON.filter(c => mayStore(a, c.name)).map(c => c.name);
   if (a.role === 'store' && !stores.includes(a.own)) stores.push(a.own);
 
   if (req.method === 'GET') {
     const name = url.searchParams.get('store') ? canon(url.searchParams.get('store')) : '';
-    if (!name) return send(res, 200, { ok: true, role: a.role, stores, weekStart: WEEK_START });
+    if (!name) return send(res, 200, { ok: true, role: a.role, canEdit: !a.readonly, stores, weekStart: WEEK_START });
     if (!mayStore(a, name)) return send(res, 403, { ok: false, error: 'You can only open your own stores.' });
     const settings = (await store.getJSON(settingsKey(name))) || {};
     // the approved people of this store (sales people and store managers who have an account), for the name picker
     let people = [];
-    try {
+    if (!a.readonly) try {
       people = (await users.listUsers()).filter(r => r && r.status === 'active' && !r.role && r.store && canon(r.store) === name && cleanName(r.name))
         .map(r => cleanName(r.name)).filter((n, i, arr) => arr.findIndex(x => x.toLowerCase() === n.toLowerCase()) === i).sort((x, y) => x.localeCompare(y));
     } catch (_) { people = []; }
-    const out = { ok: true, role: a.role, store: name, times: settings.times || DEFAULT_TIMES, names: settings.names || [], people, weekStart: WEEK_START };
+    const out = { ok: true, role: a.role, store: name, times: settings.times || DEFAULT_TIMES, names: a.readonly ? [] : (settings.names || []), people, canEdit: !a.readonly, weekStart: WEEK_START };
     const week = url.searchParams.get('week');
     if (week) {
       if (!validWeek(week)) return send(res, 400, { ok: false, error: 'The week could not be read.' });
@@ -124,6 +129,7 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
+    if (a.readonly) return send(res, 403, { ok: false, error: 'You can look at the schedule, but only managers can change it.' });
     const op = url.searchParams.get('op');
     const b = await readBody(req);
     if (!b || typeof b !== 'object') return send(res, 400, { ok: false, error: 'Could not read the data.' });
