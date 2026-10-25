@@ -499,13 +499,27 @@ function drawTable(){
   $('tbl').innerHTML=`<tr><th></th><th class="l">SKU</th><th class="l">Item</th><th class="l">Category</th><th>SOH</th><th>Pipeline</th><th>Sell Out</th><th>Trend</th><th>Bought</th><th>Sold/mo</th><th>Sell-through</th><th>Cover now</th><th>Proposed</th><th>Team</th><th class="l">Comment</th><th class="l">Reason</th><th>Cover after</th><th>FOB</th><th>Total FOB</th><th class="l"></th></tr>`+
     gs.slice(S.page*P,S.page*P+P).map(g=>{const one=g.length===1,sum=k=>g.reduce((a,i)=>a+i[k],0);
       return (one?'':`<tr class="dvh"><td>${pic(g[0].dv)}</td><td class="l"><b>${esc(g[0].dv)}</b></td><td class="name"><b>${esc(g[0].name)}</b> · ${g.length} sizes</td><td class="l">${esc(g[0].cat)}</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('sell'))}</td><td>${spark(g[0].soldBy.map((_,k)=>g.reduce((a,i)=>a+(i.soldBy[k]||0),0)))}</td><td>${fmt(sum('bought'))}</td><td>${m1(sum('mon'))}</td><td></td><td>${m1(g.cover)}</td><td>${fmt(sum('prop'))}</td><td><b>${fmt(sum('fin'))}</b></td><td></td><td></td><td></td><td></td><td>${fmt(g.reduce((a,i)=>a+i.fin*i.fob,0))}</td><td></td></tr>`)+g.map(i=>row(i,one)).join('')}).join('');
-  $('tbl').querySelectorAll('input[data-s]').forEach(inp=>inp.onchange=()=>{const i=items.find(x=>x.sku===inp.dataset.s);const v=inp.value.trim();i.fb=v===''?null:Math.max(0,parseInt(v)||0);calc();saveFb([[i.sku,i.fb]])});
+  $('tbl').querySelectorAll('input[data-s]').forEach(inp=>{
+    const commit=()=>{const i=items.find(x=>x.sku===inp.dataset.s);const v=inp.value.trim();i.fb=v===''?null:Math.max(0,parseInt(v)||0);calc();saveFb([[i.sku,i.fb]])};
+    inp.onchange=commit;
+    inp.onfocus=()=>inp.select();
+    // Enter saves this qty and moves straight to the next qty box, ready to type
+    inp.onkeydown=e=>{
+      if(e.key!=='Enter')return;
+      e.preventDefault();
+      const all=[...$('tbl').querySelectorAll('input[data-s]:not(:disabled)')],nx=all[all.indexOf(inp)+1];
+      const i=items.find(x=>x.sku===inp.dataset.s),v=inp.value.trim(),nv=v===''?null:Math.max(0,parseInt(v)||0);
+      if(nv!==i.fb){S.nextQty=nx?nx.dataset.s:null;commit();return}
+      if(nx){nx.focus()}
+    };
+  });
   $('tbl').querySelectorAll('select[data-r]').forEach(sel=>sel.onchange=()=>{const i=items.find(x=>x.sku===sel.dataset.r);i.reason=sel.value;saveFb([[i.sku,i.fb,i.note,i.reason]])});
   $('tbl').querySelectorAll('td[data-d]').forEach(td=>td.onclick=()=>details(td.dataset.d));
   $('tbl').querySelectorAll('input[data-n]').forEach(inp=>inp.onchange=()=>{const i=items.find(x=>x.sku===inp.dataset.n);i.note=inp.value.trim();saveFb([[i.sku,i.fb,i.note]])});
   $('pager').innerHTML=pages>1?`<button class="btn sm" id="pv" ${S.page?'':'disabled'}>‹</button><span class="note">Page ${S.page+1} of ${pages}</span><button class="btn sm" id="nx" ${S.page<pages-1?'':'disabled'}>›</button>`:'';
   if($('pv')){$('pv').onclick=()=>{S.page--;drawTable()};$('nx').onclick=()=>{S.page++;drawTable()}}
   fillPics();
+  if(S.nextQty){const el=[...$('tbl').querySelectorAll('input[data-s]:not(:disabled)')].find(x=>x.dataset.s===S.nextQty);S.nextQty=null;if(el)el.focus()}
 }
 async function setStatus(status){
   try{const body={id:O.id,status};if(status==='Approved')body.lines=items.filter(i=>i.fin>0||i.prop>0).map(i=>[i.sku,i.prop,i.fin,i.fob]);
