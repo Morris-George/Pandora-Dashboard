@@ -3,6 +3,10 @@ const { appsFor } = require('./_apps');
 const users = require('./_users');
 const store = require('./_store');
 const { stafferCookie } = require('./_auth');
+const activity = require('./_activity');
+
+// every sign-in, wrong password and blocked account goes into the Activity log (api/_activity.js); the log can never stop a sign-in
+const note = (req, id, ev) => activity.recordFor(req, id, ev).catch(() => {});
 
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -41,6 +45,7 @@ module.exports = async function handler(req, res) {
 
   if (matched) {
     if (matched.role !== 'admin' && store.configured() && await users.envOff(matched.user)) {
+      await note(req, activity.identFromAccount(matched), { ty: 'fail', a: 'Sign-in blocked', d: 'the account is switched off', co: 600000 });
       return res.status(403).json({ ok: false, error: 'This account is not active. Please contact your manager.' });
     }
     const cookies = [];
@@ -50,27 +55,37 @@ module.exports = async function handler(req, res) {
     if (matched.role !== 'admin') facts.dash = true;
     // the super admin can open everything, so the super admin also gets the dashboards session
     if (matched.role === 'admin') { cookies.push(cookie('dashboards', matched.user)); facts.dash = true; }
+    await note(req, activity.identFromAccount(matched), { ty: 'login', a: 'Signed in', d: activity.device(req) });
     return finish(cookies, facts);
   }
 
   // not an admin, a manager or the dashboards user: maybe a sales person with their own account
-  const isEnvName = accounts.some(a => safeEqual(typedUser, normName(a.user)));
+  const envAcc = accounts.find(a => safeEqual(typedUser, normName(a.user)));
+  const isEnvName = !!envAcc;
   const uname = users.normUsername(body.username);
-  if (isEnvName || !uname || !store.configured()) { users.burn(body.password || ''); return res.status(401).json({ ok: false }); }
+  if (isEnvName || !uname || !store.configured()) {
+    users.burn(body.password || '');
+    if (envAcc) await note(req, activity.identFromAccount(envAcc), { ty: 'fail', a: 'Wrong password', d: 'wrong password typed', co: 600000 });
+    else if (store.configured() && typedUser) await activity.recordAnon(req, { ty: 'fail', a: 'Sign-in with an unknown username', d: activity.mask(body.username), throttle: true });
+    return res.status(401).json({ ok: false });
+  }
   const rec = await users.getUser(uname);
-  if (!rec) { users.burn(body.password || ''); return res.status(401).json({ ok: false }); }
+  if (!rec) { users.burn(body.password || ''); await activity.recordAnon(req, { ty: 'fail', a: 'Sign-in with an unknown username', d: activity.mask(body.username), throttle: true }); return res.status(401).json({ ok: false }); }
   if (rec.lockUntil && rec.lockUntil > Date.now()) {
+    await note(req, activity.identFromRec(rec), { ty: 'fail', a: 'Sign-in blocked', d: 'locked after too many wrong passwords', co: 600000 });
     return res.status(429).json({ ok: false, error: 'Too many wrong attempts. Please wait 15 minutes and try again.' });
   }
   if (!users.verifyPassword(body.password || '', rec.pass)) {
     rec.fails = (rec.fails || 0) + 1;
     if (rec.fails >= 8) { rec.fails = 0; rec.lockUntil = Date.now() + 15 * 60 * 1000; }
     await users.putUser(rec);
+    await note(req, activity.identFromRec(rec), { ty: 'fail', a: 'Wrong password', d: 'wrong password typed', co: 600000 });
     return res.status(401).json({ ok: false });
   }
-  if (rec.status === 'pending') return res.status(403).json({ ok: false, error: 'Your account is waiting for approval. You will be able to sign in once it is approved.' });
-  if (rec.status !== 'active') return res.status(403).json({ ok: false, error: 'This account is not active. Please contact your manager.' });
+  if (rec.status === 'pending') { await note(req, activity.identFromRec(rec), { ty: 'fail', a: 'Sign-in blocked', d: 'the account is waiting for approval', co: 600000 }); return res.status(403).json({ ok: false, error: 'Your account is waiting for approval. You will be able to sign in once it is approved.' }); }
+  if (rec.status !== 'active') { await note(req, activity.identFromRec(rec), { ty: 'fail', a: 'Sign-in blocked', d: 'the account is switched off', co: 600000 }); return res.status(403).json({ ok: false, error: 'This account is not active. Please contact your manager.' }); }
   if (rec.fails) { rec.fails = 0; rec.lockUntil = 0; await users.putUser(rec); }
+  await note(req, activity.identFromRec(rec), { ty: 'login', a: 'Signed in', d: activity.device(req) });
   if (rec.role === 'overseer') return finish([stafferCookie(rec.username, secret)], { dash: true, staff: { role: 'admin', overseer: true } });
   if (rec.role === 'stockcount') return finish([stafferCookie(rec.username, secret)], { dash: false, staff: null, vm: false, sc: true });
   if (rec.role === 'vm') return finish([stafferCookie(rec.username, secret)], { dash: false, staff: null, vm: true });

@@ -4,6 +4,7 @@ const store = require('./_store');
 const users = require('./_users');
 const { tooMany } = require('./_ratelimit');
 const { safeEqual, staffAccounts, normName } = require('./_projects');
+const activity = require('./_activity');
 
 const LIMIT_PER_HOUR = 6;   // sign-up attempts per visitor per hour
 const MAX_ACCOUNTS = 500;   // protects the storage from being filled with fake accounts
@@ -39,5 +40,6 @@ module.exports = async function handler(req, res) {
   if ((await store.list('users/u/')).length >= MAX_ACCOUNTS) return send(res, 503, { ok: false, error: 'Sign-up is full right now. Please ask your manager.' });
 
   await users.createUser({ username, password: pw, phone, store: shop, name });
+  await activity.recordAnon(req, { ty: 'signup', a: 'Created an account (waiting for approval)', d: name + ' · ' + shop + ' · ' + username });
   return send(res, 200, { ok: true });
 };

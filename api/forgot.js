@@ -3,6 +3,7 @@
 const store = require('./_store');
 const users = require('./_users');
 const { tooMany } = require('./_ratelimit');
+const activity = require('./_activity');
 
 const LIMIT_PER_HOUR = 6;
 function send(res, code, obj) {
@@ -23,5 +24,6 @@ module.exports = async function handler(req, res) {
   const rec = owner ? await users.getUser(owner) : null;
   if (!rec) return send(res, 404, { ok: false, error: 'We could not find an account with this number. Check the number, or create an account.' });
   await store.putJSON('resets/' + rec.username + '.json', { username: rec.username, requestedAt: new Date().toISOString() });
+  await activity.recordAnon(req, { ty: 'forgot', a: 'Asked for a new password', d: rec.username + (rec.name ? ' (' + rec.name + ')' : '') });
   return send(res, 200, { ok: true });
 };

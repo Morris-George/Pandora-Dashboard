@@ -118,3 +118,13 @@ REFILL ORDER (/refill, api/_refill.js via /api/refill -> /api/erp?refill=1)
 - The team can Export Excel, fill Team Feedback / Comment, and "Upload team sheet" (blank or = Proposed means no change).
 - Orders in rf/orders/; Draft -> Submitted (input) -> Approved (manage, locked, keeps the lines). Pictures: /stockcount-pics-N.js by DV.
 - Access per person on Staff approvals (rf/access.json): none / view / input / manage. Super admin is always manage.
+
+ACTIVITY LOG (/activity, api/_activity.js via /api/activity -> /api/vm?activity=1)
+- Super admin only (the Overseer too, once the super admin ticks "Let Ibrahim (Overseer) open this page" on the page; stored in act/settings.json {overseer}). Area managers, VM, store managers and sales people get 403 and no Home card. Home card + /activity route use facts.activity (api/_apps.js sessionFacts -> _activity.canView).
+- What is recorded: sign-ins, wrong passwords (known usernames, merged per 10 min), blocked/pending/disabled attempts, unknown usernames (masked: 2 letters + *** + length), sign-ups, forgot-password requests, sign-outs, every page opened with active seconds (small tracker injected by api/site.js on every page except login), every change made through the APIs in plain words (api/_activity.js describe()), refusals (403 = "denied") and server errors (5xx). Passwords are never stored.
+- Storage (private Blob): act/u/<key>.json per person {profile, lastSeen, lastLogin, logins, fails, device, days{YYYY-MM-DD:{l,v,a,s,f,dn,pg,ps,ac}}, 300 newest events}; act/anon.json for visitors not signed in; act/settings.json. Keys: env-<user> for super admin / area managers, u-<username> for stored accounts. Cairo day = UTC+3.
+- Wrapping: accounts, data, uploads, erp, vm are exported through activity.wrap(name, handler); the wrapper holds res.end until the log line is saved (max 2.5 s) because serverless can freeze right after the response. Repeated identical events are merged (coalescing) and throttled so scans/polling do not flood the log.
+- Page: period chips (Today/7/30/90), KPIs, "Needs your attention" (never signed in, unseen 7+ days, wrong passwords, denied, pending, missing daily sheets), per-day chart, People table with detail panel, Daily store sheet grid (14 days x morning/night, read from daily/<store>/<month>.json), most used pages, most common changes, full feed with filters.
+- No new API function (Hobby limit of 12). ACTIVITY_OFF=1 in Vercel settings switches all logging off.
+- Cost: about 2 Blob writes per page visit plus 1 per change/sign-in. If the Blob quota gets tight, set ACTIVITY_OFF=1 or raise the throttle in api/_activity.js.
+- Tell the team the log exists. History starts from the deploy day.

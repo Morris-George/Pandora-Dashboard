@@ -9,6 +9,7 @@
 //   POST /api/vm            super admin: upload {file, sheets:[{name, columns, rows}]} (gzip or plain JSON)
 //   POST /api/vm?op=delete  super admin: {id}
 const zlib = require('zlib');
+const activity = require('./_activity');
 const store = require('./_store');
 const { whoami } = require('./_auth');
 const ex = require('./_exclude');
@@ -168,8 +169,9 @@ async function storeAverages(from, to) {
   return { ok: true, min, max, from, to, all: fin(all), stores: [...per.entries()].filter(([, o]) => o.inv.size).map(([branch, o]) => ({ branch, ...fin(o) })).sort((a, b) => a.branch.localeCompare(b.branch)) };
 }
 
-module.exports = async function handler(req, res) {
+module.exports = activity.wrap('vm', async function handler(req, res) {
   // /api/vmzones is rewritten here (vercel.json) so it does not count as one more function on the Hobby plan (12 max)
+  { const u0 = new URL(req.url, 'https://x.invalid'); if (u0.searchParams.get('activity') || u0.pathname === '/api/activity') return require('./_activity').handler(req, res); } // Activity log (api/_activity.js), super admin only
   if (new URL(req.url, 'https://x.invalid').searchParams.get('vmzones')) return require('./_vmzones')(req, res);
   if (new URL(req.url, 'https://x.invalid').searchParams.get('zonestock')) return require('./_zonestock')(req, res);
   if (new URL(req.url, 'https://x.invalid').searchParams.get('stockcount')) return require('./_stockcount')(req, res);
@@ -263,4 +265,4 @@ module.exports = async function handler(req, res) {
   }
   res.setHeader('Allow', 'GET, POST');
   return send(res, 405, { ok: false, error: 'Method not allowed' });
-};
+});

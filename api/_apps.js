@@ -8,6 +8,7 @@ const APPS = [
   { id: 'dashboards', title: 'Pandora Dashboards', desc: 'Sales dashboards for the whole business.', href: '/dashboards', allow: f => f.dash },
   { id: 'staff', title: 'Staff Performance', desc: 'How each store and each sales person is doing.', href: '/staff', allow: f => !!f.staff && f.staff.role !== 'staff' && f.staff.role !== 'store' },
   { id: 'uploads', title: 'All Uploads', desc: 'Add, see and remove every document, grouped by where it is used.', href: '/uploads', allow: f => !!f.staff && f.staff.role === 'admin' },
+  { id: 'activity', title: 'Activity', desc: 'Who signed in, which pages they opened and what they changed: staff, area managers and the VM.', href: '/activity', allow: f => !!f.activity },
   { id: 'film', title: 'Launch Film', desc: 'A 15-second motion film of the dashboards, to play in a meeting.', href: '/film', allow: f => !!f.staff && f.staff.role === 'admin' },
   { id: 'approvals', title: 'Staff approvals', desc: 'Approve new sales people, reset passwords and manage accounts.', href: '/staff/accounts', allow: f => !!f.staff && f.staff.role === 'admin' && !f.staff.overseer },
   { id: 'mysales', title: 'My sales', desc: 'What you sold, what sells best for you, and tips to improve.', href: '/staff', allow: f => !!f.staff && f.staff.role === 'staff' },
@@ -44,7 +45,8 @@ async function sessionFacts(req) {
   const staff = who && !vm && !sc ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', overseer: !!who.info.overseer, who } : null;
   const refill = who ? await require('./_refill').levelFor(who) : 'none'; // Refill Order access level, set on Staff approvals
   const dist = who ? await require('./_dist').levelFor(who) : 'none'; // Orders Distribution access level, set on Staff approvals
-  return { dash, staff, vm, sc, refill, dist, vmName: vm || sc ? who.user.name : '' };
+  const activity = who ? await require('./_activity').canView(who) : false; // the Activity page: super admin, or the Overseer once it is switched on
+  return { dash, staff, vm, sc, refill, dist, activity, vmName: vm || sc ? who.user.name : '' };
 }
 
 // Area managers are greeted by first name ("Hello Joseph"). Everyone else keeps their usual label.

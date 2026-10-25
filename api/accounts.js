@@ -1,5 +1,6 @@
 // Sales person accounts: the super admin approves (and links to the right sales person), switches off or removes them.
 const crypto = require('crypto');
+const activity = require('./_activity');
 const store = require('./_store');
 const users = require('./_users');
 const { whoami } = require('./_auth');
@@ -12,7 +13,7 @@ function send(res, code, obj) {
 }
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 
-module.exports = async function handler(req, res) {
+module.exports = activity.wrap('accounts', async function handler(req, res) {
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   const who = await whoami(req);
   if (!who) return send(res, 401, { ok: false, error: 'sign-in-required' });
@@ -202,4 +203,4 @@ module.exports = async function handler(req, res) {
 
   res.setHeader('Allow', 'GET, POST');
   return send(res, 405, { ok: false, error: 'Method not allowed' });
-};
+});

@@ -19,6 +19,21 @@ const THEME_HEAD = '<style id="pandora-theme-css">' +
   '</style><script>(function(){try{var t=localStorage.getItem("pandora-theme");' +
   'if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}})();</script>' + MOTION;
 
+// Activity log (api/_activity.js): tells the server which page was opened and for how long it was actually in use
+// (page visible and the person touching it; a page left open and idle is not counted). Nothing about what is on the page is sent.
+const BEACON = String.raw`<script>(function(){try{
+var p=location.pathname;if(p.replace(/\/+$/,'')==='/activity')return;
+var id=Math.random().toString(36).slice(2,12),x='',act=0,last=Date.now();
+try{if(/^\/staff\/person/.test(p)){var q=new URLSearchParams(location.search);x=[q.get('name'),q.get('store')].filter(Boolean).join(' · ')}}catch(e){}
+function send(o){try{var j=JSON.stringify(o);if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/activity',new Blob([j],{type:'application/json'}))))fetch('/api/activity',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:j,keepalive:true}).catch(function(){})}catch(e){}}
+['pointerdown','keydown','scroll','touchstart','mousemove'].forEach(function(n){addEventListener(n,function(){last=Date.now()},{passive:true,capture:true})});
+setInterval(function(){if(document.visibilityState==='visible'&&Date.now()-last<120000)act+=5},5000);
+setTimeout(function(){send({t:'open',id:id,p:p,x:x})},1200);
+function leave(){if(act>=5){send({t:'leave',id:id,p:p,x:x,secs:act});act=0}}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')leave()});
+addEventListener('pagehide',leave);
+}catch(e){}})();</script>`;
+
 // kind: 'dashboards' | 'staff' | 'home' | 'login'.  multi: the person can open more than one thing, so a Home button is shown.
 function chromeScript(kind, multi) {
   return '<script>(function(){' +
@@ -53,7 +68,7 @@ function withChrome(kind, multi) {
     if (h !== -1) html = html.slice(0, h) + THEME_HEAD + html.slice(h);
     const i = html.lastIndexOf('</body>');
     const at = i === -1 ? html.length : i;
-    html = html.slice(0, at) + chromeScript(kind, multi) + HEADER + html.slice(at);
+    html = html.slice(0, at) + chromeScript(kind, multi) + (kind === 'login' ? '' : BEACON) + HEADER + html.slice(at);
     return Buffer.from(html, 'utf8');
   };
 }
@@ -186,6 +201,12 @@ module.exports = async function handler(req, res) {
       try { return res.status(200).json(await require('./_film').build()); } catch (e) { return res.status(200).json({ ok: false, error: String((e && e.message) || e).slice(0, 160) }); }
     }
     return sendFile(res, 'film.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+  }
+
+  // Activity (super admin; the Overseer only after the super admin switches it on inside the page)
+  if (requestedPath === '/activity' || requestedPath === '/activity/' || requestedPath === '/activity.html') {
+    if (!facts.activity) return toHome();
+    return sendFile(res, 'activity.html', 'text/html; charset=utf-8', withChrome('staff', multi));
   }
 
   // All Uploads (super admin only) and the file readers it shares with the Dashboards page

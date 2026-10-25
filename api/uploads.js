@@ -6,6 +6,7 @@
 // Saved Pandora Dashboards data stays until it is removed here.
 // Staff Performance data lives in data/current.json (api/data.js) and VM reports in vm/ (api/vm.js); this file lists and removes them.
 const zlib = require('zlib');
+const activity = require('./_activity');
 const store = require('./_store');
 const { whoami } = require('./_auth');
 const ex = require('./_exclude');
@@ -31,7 +32,7 @@ const slug = s => String(s || 'file').toLowerCase().replace(/\.[^.]+$/, '').repl
 const iso = v => String(v || '').slice(0, 10);
 const num = v => { const n = Number(v); return isFinite(n) ? Math.round(n * 1000) / 1000 : 0; };
 
-module.exports = async function handler(req, res) {
+module.exports = activity.wrap('uploads', async function handler(req, res) {
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   const who = await whoami(req);
   if (!who) return send(res, 401, { ok: false, error: 'sign-in-required' });
@@ -136,4 +137,4 @@ module.exports = async function handler(req, res) {
 
   res.setHeader('Allow', 'GET, POST');
   return send(res, 405, { ok: false, error: 'Method not allowed' });
-};
+});

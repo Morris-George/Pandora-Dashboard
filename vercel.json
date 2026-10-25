@@ -48,6 +48,10 @@
       "destination": "/api/vm?vmzones=1"
     },
     {
+      "source": "/api/activity",
+      "destination": "/api/vm?activity=1"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/api/site?path=$1"
     }

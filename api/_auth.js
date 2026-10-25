@@ -30,7 +30,16 @@ function stafferUsername(token, secret) {
 }
 
 // -> {kind:'env', account, info} | {kind:'staff', user, info} | {kind:'vm', user, info} | null
-async function whoami(req) {
+// The answer is kept for the length of one request, so the activity log can ask "who is this?" without reading storage again.
+const memo = new WeakMap();
+function whoami(req) {
+  if (req && typeof req === 'object') {
+    if (!memo.has(req)) memo.set(req, whoamiNow(req));
+    return memo.get(req);
+  }
+  return whoamiNow(req);
+}
+async function whoamiNow(req) {
   const secret = process.env.PANDORA_AUTH_SECRET;
   const account = staffSession(readCookie(req, PROJECTS.staff.cookie), secret);
   if (account) {

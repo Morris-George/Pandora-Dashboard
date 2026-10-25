@@ -6,6 +6,7 @@
 // Sales Report by Item & SKU  -> Pandora Dashboards (dash/f/erp-YYYY-MM.json)
 // Sales Person-wise ... Store -> Staff Performance   (data/current.json)
 // Env vars: ERP_URL, ERP_API_KEY, ERP_API_SECRET (read-only ERPNext user), CRON_SECRET; ERP_COMPANY optional (else taken from the sales rows).
+const activity = require('./_activity');
 const store = require('./_store');
 const { whoami } = require('./_auth');
 const ex = require('./_exclude');
@@ -181,7 +182,7 @@ async function sync(m) {
   return status;
 }
 
-module.exports = async function handler(req, res) {
+module.exports = activity.wrap('erp', async function handler(req, res) {
   // /api/stock is rewritten here (vercel.json): the Hobby plan allows 12 functions, so the stock balance lives in _stock.js
   { const u = new URL(req.url, 'https://x.invalid'); if (u.searchParams.get('stock') || u.pathname === '/api/stock') return require('./_stock')(req, res);
     if (u.searchParams.get('refill') || u.pathname === '/api/refill') return require('./_refill')(req, res); // Refill Order (api/_refill.js)
@@ -205,6 +206,6 @@ module.exports = async function handler(req, res) {
   } catch (e) {
     return send(res, 502, { ok: false, error: String(e && e.message || e).slice(0, 300) });
   }
-};
+});
 module.exports.runReport = runReport;
 module.exports.runReportRaw = runReportRaw;

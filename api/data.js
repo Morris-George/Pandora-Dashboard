@@ -3,6 +3,7 @@
 //   POST /api/data                  super admin only: publish a new month (gzip or plain JSON body)
 //   POST /api/data?op=settings      super admin only: which item groups are left out of the numbers
 const zlib = require('zlib');
+const activity = require('./_activity');
 const store = require('./_store');
 const { whoami } = require('./_auth');
 const { staffView } = require('./_stats');
@@ -95,7 +96,7 @@ function validate(d) {
   return '';
 }
 
-module.exports = async function handler(req, res) {
+module.exports = activity.wrap('data', async function handler(req, res) {
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   const who = await whoami(req);
   if (!who) return send(res, 401, { ok: false, error: 'sign-in-required' });
@@ -183,4 +184,4 @@ module.exports = async function handler(req, res) {
 
   res.setHeader('Allow', 'GET, POST');
   return send(res, 405, { ok: false, error: 'Method not allowed' });
-};
+});
