@@ -209,6 +209,13 @@ function describe(name, req) {
   }
   if (name === 'vm') {
     if (m !== 'POST') return null;
+    if (flag(u, 'schedule')) {
+      if (m !== 'POST') return null;
+      return {
+        day: { a: 'Changed a day of the weekly schedule', d: () => S(b.store) + ' · ' + S(b.date), co: 120000 }, times: { a: 'Changed the usual shift times', d: () => S(b.store) },
+        copy: { a: 'Copied a weekly schedule', d: () => S(b.store) + ' · from ' + S(b.from) + ' to ' + S(b.week) }, clear: { a: 'Cleared a weekly schedule', d: () => S(b.store) + ' · ' + S(b.week) }
+      }[op] || null;
+    }
     if (flag(u, 'daily')) {
       if (op === 'shift') return { a: b.data ? 'Saved a daily store shift' : 'Cleared a daily store shift', d: () => S(b.store) + ' · ' + S(b.date) + ' · ' + (b.shift === 'm' ? 'morning' : 'night') + (b.data ? ' · visitors ' + S(b.data.v, 9) + ', transactions ' + S(b.data.t, 9) + ', pieces ' + S(b.data.q, 9) : '') };
       if (op === 'target') return { a: 'Set a monthly store target', d: () => S(b.store) + ' · ' + S(b.month) + ' · EGP ' + S(b.target, 14) };
@@ -283,7 +290,7 @@ async function canView(who) {
 // ---- reading ----
 const PAGES = {
   '/': 'Home', '/dashboards': 'Pandora Dashboards', '/staff': 'Staff Performance', '/staff/person': 'A sales person page', '/staff/me': 'My sales', '/staff/accounts': 'Staff approvals',
-  '/uploads': 'All Uploads', '/film': 'Launch Film', '/daily': 'Daily Store Report', '/vm': 'VM Report', '/vm/zones': 'VM Zones', '/vm/stock': 'Zone Stock', '/stock': 'Stock balance',
+  '/uploads': 'All Uploads', '/film': 'Launch Film', '/daily': 'Daily Store Report', '/schedule': 'Weekly Schedule', '/vm': 'VM Report', '/vm/zones': 'VM Zones', '/vm/stock': 'Zone Stock', '/stock': 'Stock balance',
   '/stockcount': 'Stock Count', '/refill': 'Refill Order', '/slow': 'Slow Moving', '/distribution': 'Orders Distribution', '/activity': 'Activity'
 };
 const pageLabel = p => PAGES[String(p || '').replace(/\/+$/, '') || '/'] || S(p, 40);

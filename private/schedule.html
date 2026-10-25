@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head><link rel="icon" type="image/png" href="/favicon.png?v=2">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Weekly Schedule</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--bg:#FBF6F7;--surface:#FFFFFF;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--grid:#F0E6E8;--accent:#FF93A0;--accent-text:#2A1F24;--fill-soft:#FFE4E8;--hover:#FFF1F3;--good:#1F7A4D;--c2:#5B7DB1;--soft:#E2D6DA;--morning:#FFF3D6;--between:#E3EEFB;--night:#E9E3F7;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--grid:#2E2227;--accent:#FF93A0;--accent-text:#FF93A0;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--c2:#8FB0E0;--soft:#4A3A41;--morning:#3A3220;--between:#22303F;--night:#2D2740;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--grid:#2E2227;--accent:#FF93A0;--accent-text:#FF93A0;--fill-soft:#3A2229;--hover:#2D2025;--good:#5CC48E;--c2:#8FB0E0;--soft:#4A3A41;--morning:#3A3220;--between:#22303F;--night:#2D2740;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{word-spacing:.09em;margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding:20px max(16px,env(safe-area-inset-right,0px)) 56px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between}
+h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(--ink2);font-size:12.5px}
+.crumb{color:var(--ink2);font-size:12.5px;font-weight:600;text-decoration:none}.crumb:hover{color:var(--accent-text)}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}.btn:hover{background:var(--hover)}.btn:disabled{opacity:.5;cursor:wait}
+.btn.main{background:var(--accent);border-color:var(--accent);color:#2A1018;font-weight:750}.btn.main:hover{filter:brightness(.96)}
+.btn.danger{color:#B3283D}
+.btn:focus-visible,select:focus-visible,input:focus-visible,.pp:focus-visible,.add:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;min-width:0}
+.cardhead{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.cardhead h2{margin:0;font-size:17px;font-weight:800;letter-spacing:-.02em}.cardhead .meta{color:var(--ink2);font-size:12.5px}
+.err{background:#FF93A0;color:#2A1018;border-radius:10px;padding:10px 14px;font-weight:600}
+.note{background:var(--fill-soft);border-radius:10px;padding:10px 14px;font-size:13px}
+.bar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
+.bar label,.dlg label.f{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);font-weight:700;display:flex;flex-direction:column;gap:6px}
+select,input[type=text],input[type=time],input[type=date]{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:9px 11px;font:inherit;font-size:15px;font-weight:600;text-transform:none;letter-spacing:0;max-width:100%;min-width:0}
+.storefix{font-weight:800;font-size:15px;padding:9px 0}
+.weeknav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.weeknav .label{font-weight:800;font-size:16px;min-width:210px;text-align:center}
+.spacer{flex:1}
+.status{font-size:12.5px;color:var(--ink2);min-height:18px}
+.status.ok{color:var(--good);font-weight:700}
+/* board: days across, Morning / Between / Night down */
+.board{display:grid;grid-template-columns:104px repeat(7,minmax(0,1fr));gap:8px}
+.day{display:contents}
+.dh{grid-row:1;grid-column:calc(var(--c) + 1);text-align:center;padding:8px 4px;border-radius:12px;background:var(--surface);border:1px solid var(--line);font-weight:800;line-height:1.2}
+.dh small{display:block;font-weight:600;color:var(--ink2);font-size:12px}
+.dh.today{border-color:var(--accent);background:var(--fill-soft)}
+.rl{grid-column:1;padding:10px;border-radius:12px;display:flex;flex-direction:column;justify-content:center;gap:2px;font-weight:800}
+.rl small{font-weight:600;color:var(--ink2);font-size:12px}
+.rl.m,.cell.m{grid-row:2}.rl.b,.cell.b{grid-row:3}.rl.n,.cell.n{grid-row:4}
+.rl.m{background:var(--morning)}.rl.b{background:var(--between)}.rl.n{background:var(--night)}
+.cell{grid-column:calc(var(--c) + 1);border:1px solid var(--line);border-radius:12px;padding:8px;background:var(--surface);display:flex;flex-direction:column;gap:6px;min-width:0;min-height:96px}
+.cell.m{border-top:4px solid #F2C14E}.cell.b{border-top:4px solid #6FA3E0}.cell.n{border-top:4px solid #8C7AD6}
+.cell::before{content:attr(data-label);display:none;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2)}
+.pp{display:flex;flex-direction:column;align-items:flex-start;gap:0;width:100%;text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--hover);color:var(--ink);padding:6px 9px;font:inherit;cursor:pointer;min-width:0}
+.pp:hover{border-color:var(--accent)}
+.pp b{font-weight:750;font-size:13.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pp span{font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.pp.clash{border-color:#E0526A;background:color-mix(in srgb,#E0526A 12%,transparent)}
+.add{margin-top:auto;border:1px dashed var(--line);background:transparent;color:var(--ink2);border-radius:10px;padding:6px 8px;font:inherit;font-weight:700;cursor:pointer}
+.add:hover{border-color:var(--accent);color:var(--accent-text);background:var(--hover)}
+.empty{color:var(--ink2);padding:18px;text-align:center}
+.sumwrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}th:first-child,td:first-child{text-align:left}
+th{background:var(--surface);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2)}
+.warns{margin:0;padding:0;list-style:none;display:grid;gap:6px}.warns li{background:color-mix(in srgb,#E0526A 12%,transparent);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600}
+dialog{border:1px solid var(--line);border-radius:18px;background:var(--surface);color:var(--ink);padding:0;width:min(440px,calc(100vw - 24px));font-family:var(--font)}
+dialog::backdrop{background:rgba(20,10,14,.45)}
+.dlg{padding:20px;display:flex;flex-direction:column;gap:14px}
+.dlg h3{margin:0;font-size:18px;font-weight:800}
+.dlg .row{display:flex;gap:12px}.dlg .row>*{flex:1}
+.dlg input{width:100%}
+.days{display:flex;flex-wrap:wrap;gap:6px}
+.days label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700;cursor:pointer;text-transform:none;letter-spacing:0;color:var(--ink)}
+.days label:has(input:checked){background:var(--fill-soft);border-color:var(--accent)}
+.days input{width:auto;accent-color:#E0526A}
+.dlg .actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.dlg .hint{font-size:12.5px;color:var(--ink2)}
+.tsets{display:grid;gap:10px}.tsets .trow{display:grid;grid-template-columns:96px 1fr 1fr;gap:10px;align-items:center;font-weight:700}
+.printhead{display:none}
+@media screen and (max-width:900px){
+  .board{display:flex;flex-direction:column}
+  .day{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px}
+  .dh{border:0;background:none;text-align:left;padding:0;font-size:16px}.dh small{display:inline;margin-left:8px}
+  .dh.today{background:none}.dh.today::after{content:"Today";margin-left:8px;font-size:11px;background:var(--accent);color:#2A1018;border-radius:99px;padding:2px 8px;vertical-align:middle}
+  .rl{display:none}
+  .cell{min-height:0}.cell::before{display:block}
+  .weeknav .label{min-width:0;flex:1 1 100%;order:-1}
+}
+@media print{
+  @page{size:landscape;margin:10mm}
+  :root{--bg:#fff;--surface:#fff;--ink:#000;--ink2:#444;--line:#bbb;--hover:#fff;--fill-soft:#eee;--morning:#FFF3D6;--between:#E3EEFB;--night:#E9E3F7;color-scheme:light}
+  body{padding:0;background:#fff;font-size:11px}
+  .top,.toolbar,.add,.status,.noprint,.warns,#sumcard,.pandora-fab,.pandora-sw,#pandora-header,[class*="pandora-"]{display:none!important}
+  .printhead{display:block;font-size:16px;font-weight:800;margin-bottom:6px}
+  .card{border:0;padding:0}
+  .board{gap:4px}.cell{min-height:60px;padding:4px}.pp{padding:3px 6px;border-radius:6px}.pp b{font-size:11px}.pp span{font-size:10.5px}
+  .pp.clash{background:#fff}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style></head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div><a class="crumb" href="/">&larr; Home</a><h1>Weekly Schedule</h1><div class="sub">Plan who works the Morning, Between and Night shifts each day, and set each person’s from and to time.</div></div>
+  </header>
+
+  <div id="err" class="err" hidden role="alert"></div>
+
+  <section class="card toolbar">
+    <div class="bar">
+      <label id="storeLbl">Store <select id="store"></select></label>
+      <div id="storeFixed" class="storefix" hidden></div>
+      <div class="weeknav" role="group" aria-label="Week">
+        <button class="btn" id="prev" type="button" aria-label="Previous week">&larr;</button>
+        <div class="label" id="weekLabel" aria-live="polite"></div>
+        <button class="btn" id="next" type="button" aria-label="Next week">&rarr;</button>
+        <button class="btn" id="thisWeek" type="button">This week</button>
+        <label class="f" style="flex-direction:row;align-items:center;gap:8px">Go to <input type="date" id="jump"></label>
+      </div>
+      <span class="spacer"></span>
+      <button class="btn" id="copy" type="button">Copy last week</button>
+      <button class="btn" id="times" type="button">Usual times</button>
+      <button class="btn danger" id="clear" type="button">Clear week</button>
+      <button class="btn main" id="print" type="button">Print / Save PDF</button>
+    </div>
+    <div class="status" id="status" aria-live="polite" style="margin-top:10px"></div>
+  </section>
+
+  <section class="card">
+    <div class="printhead" id="printHead"></div>
+    <div id="board" class="board" aria-label="Week schedule"></div>
+  </section>
+
+  <ul class="warns" id="warns"></ul>
+
+  <section class="card" id="sumcard" hidden>
+    <div class="cardhead"><h2>People this week</h2><span class="meta">Days worked and total hours, worked out from the from and to times.</span></div>
+    <div class="sumwrap"><table><thead><tr><th>Name</th><th>Days</th><th>Morning</th><th>Between</th><th>Night</th><th>Hours</th></tr></thead><tbody id="sumBody"></tbody></table></div>
+  </section>
+</div>
+
+<datalist id="names"></datalist>
+
+<dialog id="dlg"><form class="dlg" id="form" method="dialog">
+  <h3 id="dTitle">Add a person</h3>
+  <label class="f">Name <input type="text" id="dName" list="names" maxlength="40" autocomplete="off" required placeholder="Type a name"></label>
+  <div class="row"><label class="f">From <input type="time" id="dFrom" required></label><label class="f">To <input type="time" id="dTo" required></label></div>
+  <div class="hint" id="dHint">If the To time is earlier than the From time, the shift ends after midnight.</div>
+  <div id="dDaysWrap"><div class="hint" style="margin-bottom:6px;font-weight:700">Which days?</div><div class="days" id="dDays"></div></div>
+  <div class="err" id="dErr" hidden></div>
+  <div class="actions">
+    <button class="btn danger" type="button" id="dDel" hidden>Remove</button>
+    <span class="spacer"></span>
+    <button class="btn" type="button" id="dCancel">Cancel</button>
+    <button class="btn main" type="submit" id="dSave">Save</button>
+  </div>
+</form></dialog>
+
+<dialog id="tdlg"><form class="dlg" id="tform" method="dialog">
+  <h3>Usual shift times</h3>
+  <div class="hint">New people start with these times. You can still change the from and to time for each person.</div>
+  <div class="tsets" id="tsets"></div>
+  <div class="err" id="tErr" hidden></div>
+  <div class="actions"><button class="btn" type="button" id="tCancel">Cancel</button><button class="btn main" type="submit">Save</button></div>
+</form></dialog>
+
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+var SH=[{k:'m',name:'Morning'},{k:'b',name:'Between'},{k:'n',name:'Night'}];
+var SHN={m:'Morning',b:'Between',n:'Night'};
+var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var st={role:'',stores:[],store:'',week:'',weekStart:6,times:{m:['10:00','18:00'],b:['13:00','21:00'],n:['16:00','00:00']},names:[],rec:{days:{}},busy:false,edit:null};
+var DAYMS=86400000;
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function cairoToday(){return new Date(Date.now()+3*3600*1000).toISOString().slice(0,10)}
+function add(d,n){return new Date(Date.parse(d+'T00:00:00Z')+n*DAYMS).toISOString().slice(0,10)}
+function dow(d){return new Date(d+'T00:00:00Z').getUTCDay()}
+function weekOf(d){var back=(dow(d)-st.weekStart+7)%7;return add(d,-back)}
+function dates(w){var o=[];for(var i=0;i<7;i++)o.push(add(w,i));return o}
+function dnum(d){return +d.slice(8,10)}
+function fmtShort(d){return dnum(d)+' '+MON[+d.slice(5,7)-1]}
+function fmtLong(d){return fmtShort(d)+' '+d.slice(0,4)}
+function mins(t){return +t.slice(0,2)*60+ +t.slice(3,5)}
+function span(e){var s=mins(e.f),x=mins(e.t);if(x<=s)x+=1440;return[s,x]}
+function hrs(e){var p=span(e);return (p[1]-p[0])/60}
+function fmtH(h){var r=Math.round(h*10)/10;return (r%1?r.toFixed(1):String(r))}
+
+function showErr(msg){var e=$('err');e.textContent=msg||'';e.hidden=!msg;if(msg)e.scrollIntoView({block:'nearest'})}
+function setStatus(msg,ok){var s=$('status');s.textContent=msg||'';s.className='status'+(ok?' ok':'')}
+async function api(path,opt){
+  var r=await fetch(path,Object.assign({credentials:'same-origin',cache:'no-store'},opt||{}));
+  if(r.status===401){location.replace('/login.html');throw new Error('signed out')}
+  var j=await r.json().catch(function(){return {}});
+  if(!r.ok||j.ok===false){var e=new Error(j.error||'Something went wrong.');e.status=r.status;e.data=j;throw e}
+  return j;
+}
+function post(op,body){return api('/api/schedule?op='+op,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})}
+function remember(){try{localStorage.setItem('sched.store',st.store)}catch(_){}}
+
+/* ---------- loading ---------- */
+async function init(){
+  try{
+    var j=await api('/api/schedule');
+    st.role=j.role;st.stores=j.stores||[];st.weekStart=j.weekStart;
+    if(!st.stores.length){showErr('No stores are linked to your account yet.');return}
+    var saved='';try{saved=localStorage.getItem('sched.store')||''}catch(_){}
+    st.store=st.stores.indexOf(saved)>-1?saved:st.stores[0];
+    var sel=$('store');sel.innerHTML=st.stores.map(function(s){return '<option>'+esc(s)+'</option>'}).join('');sel.value=st.store;
+    if(st.stores.length===1){$('storeLbl').hidden=true;$('storeFixed').hidden=false;$('storeFixed').textContent=st.store}
+    st.week=weekOf(cairoToday());
+    await load();
+  }catch(e){if(e.message!=='signed out')showErr(e.message)}
+}
+async function load(){
+  showErr('');setStatus('Loading…');
+  try{
+    var j=await api('/api/schedule?store='+encodeURIComponent(st.store)+'&week='+st.week);
+    st.times=j.times;st.names=j.names||[];st.rec=j.record||{days:{}};
+    $('names').innerHTML=st.names.map(function(n){return '<option value="'+esc(n)+'">'}).join('');
+    setStatus('');render();
+  }catch(e){if(e.message!=='signed out'){setStatus('');showErr(e.message)}}
+}
+
+/* ---------- drawing ---------- */
+function dayShifts(d,s){return ((st.rec.days||{})[d]||{})[s]||[]}
+function clashes(){ // same person at overlapping times on one day
+  var out=[],bad={};
+  dates(st.week).forEach(function(d){
+    var all=[];SH.forEach(function(s){dayShifts(d,s.k).forEach(function(e,i){all.push({e:e,s:s.k,i:i})})});
+    for(var a=0;a<all.length;a++)for(var b=a+1;b<all.length;b++){
+      var x=all[a],y=all[b];if(x.e.n.toLowerCase()!==y.e.n.toLowerCase())continue;
+      var p=span(x.e),q=span(y.e);
+      if(p[0]<q[1]&&q[0]<p[1]){bad[d+x.s+x.i]=1;bad[d+y.s+y.i]=1;out.push(x.e.n+' is planned twice at the same time on '+WD[dow(d)]+' '+fmtShort(d)+'.')}
+    }
+  });
+  return {list:out,bad:bad};
+}
+function render(){
+  var ds=dates(st.week),today=cairoToday(),cl=clashes();
+  $('weekLabel').textContent=fmtShort(ds[0])+' – '+fmtLong(ds[6]);
+  $('jump').value=ds[0];
+  $('printHead').textContent=st.store+' · Weekly schedule · '+fmtShort(ds[0])+' – '+fmtLong(ds[6]);
+  var h='';
+  SH.forEach(function(s){h+='<div class="rl '+s.k+'">'+s.name+'<small>usually '+st.times[s.k][0]+' – '+st.times[s.k][1]+'</small></div>'});
+  ds.forEach(function(d,c){
+    h+='<div class="day" style="--c:'+(c+1)+'"><div class="dh'+(d===today?' today':'')+'">'+WD[dow(d)]+'<small>'+fmtShort(d)+'</small></div>';
+    SH.forEach(function(s){
+      h+='<div class="cell '+s.k+'" data-label="'+s.name+'">';
+      dayShifts(d,s.k).forEach(function(e,i){
+        h+='<button type="button" class="pp'+(cl.bad[d+s.k+i]?' clash':'')+'" data-d="'+d+'" data-s="'+s.k+'" data-i="'+i+'"><b>'+esc(e.n)+'</b><span>'+e.f+' – '+e.t+'</span></button>';
+      });
+      h+='<button type="button" class="add" data-d="'+d+'" data-s="'+s.k+'" aria-label="Add a person to '+s.name+' on '+WD[dow(d)]+' '+fmtShort(d)+'">+ Add</button></div>';
+    });
+    h+='</div>';
+  });
+  $('board').innerHTML=h;
+  $('warns').innerHTML=cl.list.filter(function(v,i,a){return a.indexOf(v)===i}).map(function(m){return '<li>'+esc(m)+'</li>'}).join('');
+  renderSummary();
+}
+function renderSummary(){
+  var by={},ds=dates(st.week);
+  ds.forEach(function(d){SH.forEach(function(s){dayShifts(d,s.k).forEach(function(e){
+    var k=e.n.toLowerCase(),o=by[k]||(by[k]={nm:e.n,days:{},m:0,b:0,n:0,h:0});
+    o.days[d]=1;o[s.k]++;o.h+=hrs(e);
+  })})});
+  var rows=Object.keys(by).map(function(k){return by[k]}).sort(function(a,b){return a.nm.localeCompare(b.nm)});
+  $('sumcard').hidden=!rows.length;
+  $('sumBody').innerHTML=rows.map(function(o){return '<tr><td><b>'+esc(o.nm)+'</b></td><td>'+Object.keys(o.days).length+'</td><td>'+o.m+'</td><td>'+o.b+'</td><td>'+o.n+'</td><td><b>'+fmtH(o.h)+'</b></td></tr>'}).join('');
+}
+
+/* ---------- saving one day ---------- */
+async function saveDay(date,shifts){
+  var r=await post('day',{store:st.store,week:st.week,date:date,shifts:shifts});
+  st.rec=r.record;
+  (function(){var known={};st.names.forEach(function(n){known[n.toLowerCase()]=1});
+    ['m','b','n'].forEach(function(s){((r.record.days[date]||{})[s]||[]).forEach(function(e){if(!known[e.n.toLowerCase()]){known[e.n.toLowerCase()]=1;st.names.unshift(e.n)}})});
+    $('names').innerHTML=st.names.map(function(n){return '<option value="'+esc(n)+'">'}).join('')})();
+}
+function copyDay(d){var o={};SH.forEach(function(s){o[s.k]=dayShifts(d,s.k).map(function(e){return {n:e.n,f:e.f,t:e.t}})});return o}
+
+/* ---------- add / edit dialog ---------- */
+function openDlg(d,s,i){
+  var edit=i!=null&&i>=0,e=edit?dayShifts(d,s)[i]:null;
+  st.edit={d:d,s:s,i:edit?i:-1};
+  $('dTitle').textContent=(edit?'Edit ':'Add to ')+SHN[s]+' · '+WD[dow(d)]+' '+fmtShort(d);
+  $('dName').value=edit?e.n:'';
+  $('dFrom').value=edit?e.f:st.times[s][0];$('dTo').value=edit?e.t:st.times[s][1];
+  $('dErr').hidden=true;$('dDel').hidden=!edit;$('dDaysWrap').hidden=edit;
+  $('dSave').textContent=edit?'Save changes':'Save';
+  $('dDays').innerHTML=dates(st.week).map(function(x){return '<label><input type="checkbox" value="'+x+'"'+(x===d?' checked':'')+'>'+WD[dow(x)]+' '+dnum(x)+'</label>'}).join('');
+  $('dlg').showModal();
+  setTimeout(function(){$(edit?'dFrom':'dName').focus()},30);
+}
+function dErr(m){var e=$('dErr');e.textContent=m;e.hidden=!m}
+$('form').addEventListener('submit',async function(ev){
+  ev.preventDefault();
+  var ed=st.edit,name=$('dName').value.replace(/\s+/g,' ').trim(),f=$('dFrom').value,t=$('dTo').value;
+  if(!name){dErr('Type a name.');return}
+  if(!f||!t){dErr('Choose a From and a To time.');return}
+  if(f===t){dErr('From and To cannot be the same time.');return}
+  var days=ed.i>=0?[ed.d]:[].slice.call($('dDays').querySelectorAll('input:checked')).map(function(x){return x.value});
+  if(!days.length){dErr('Tick at least one day.');return}
+  var btn=$('dSave');btn.disabled=true;dErr('');
+  try{
+    for(var k=0;k<days.length;k++){
+      var d=days[k],sh=copyDay(d),list=sh[ed.s];
+      if(ed.i>=0)list[ed.i]={n:name,f:f,t:t};
+      else{
+        var dup=list.some(function(x){return x.n.toLowerCase()===name.toLowerCase()&&x.f===f&&x.t===t});
+        if(dup)continue;list.push({n:name,f:f,t:t});
+      }
+      await saveDay(d,sh);
+    }
+    $('dlg').close();render();setStatus('Saved ✓',true);setTimeout(function(){if($('status').textContent==='Saved ✓')setStatus('')},2500);
+  }catch(e){if(e.message!=='signed out')dErr(e.message);render()}
+  finally{btn.disabled=false}
+});
+$('dDel').addEventListener('click',async function(){
+  var ed=st.edit;if(ed.i<0)return;
+  var sh=copyDay(ed.d);sh[ed.s].splice(ed.i,1);
+  this.disabled=true;
+  try{await saveDay(ed.d,sh);$('dlg').close();render();setStatus('Removed ✓',true);setTimeout(function(){setStatus('')},2500)}
+  catch(e){if(e.message!=='signed out')dErr(e.message)}
+  finally{this.disabled=false}
+});
+$('dCancel').addEventListener('click',function(){$('dlg').close()});
+
+/* ---------- usual times ---------- */
+$('times').addEventListener('click',function(){
+  $('tErr').hidden=true;
+  $('tsets').innerHTML=SH.map(function(s){return '<div class="trow"><span>'+s.name+'</span><input type="time" data-s="'+s.k+'" data-p="0" value="'+st.times[s.k][0]+'" aria-label="'+s.name+' from"><input type="time" data-s="'+s.k+'" data-p="1" value="'+st.times[s.k][1]+'" aria-label="'+s.name+' to"></div>'}).join('');
+  $('tdlg').showModal();
+});
+$('tCancel').addEventListener('click',function(){$('tdlg').close()});
+$('tform').addEventListener('submit',async function(ev){
+  ev.preventDefault();
+  var t={m:['',''],b:['',''],n:['','']};
+  [].slice.call($('tsets').querySelectorAll('input')).forEach(function(i){t[i.dataset.s][+i.dataset.p]=i.value});
+  try{var r=await post('times',{store:st.store,times:t});st.times=r.times;$('tdlg').close();render();setStatus('Saved ✓',true);setTimeout(function(){setStatus('')},2500)}
+  catch(e){if(e.message!=='signed out'){$('tErr').textContent=e.message;$('tErr').hidden=false}}
+});
+
+/* ---------- board clicks, navigation ---------- */
+$('board').addEventListener('click',function(ev){
+  var b=ev.target.closest('button');if(!b)return;
+  if(b.classList.contains('add'))openDlg(b.dataset.d,b.dataset.s,-1);
+  else if(b.classList.contains('pp'))openDlg(b.dataset.d,b.dataset.s,+b.dataset.i);
+});
+function go(w){st.week=w;load()}
+$('prev').addEventListener('click',function(){go(add(st.week,-7))});
+$('next').addEventListener('click',function(){go(add(st.week,7))});
+$('thisWeek').addEventListener('click',function(){go(weekOf(cairoToday()))});
+$('jump').addEventListener('change',function(){if(this.value)go(weekOf(this.value))});
+$('store').addEventListener('change',function(){st.store=this.value;remember();load()});
+
+$('copy').addEventListener('click',async function(){
+  var from=add(st.week,-7),btn=this;
+  btn.disabled=true;showErr('');
+  try{
+    var r;
+    try{r=await post('copy',{store:st.store,week:st.week,from:from})}
+    catch(e){
+      if(e.status===409&&e.data&&e.data.needsReplace){
+        if(!confirm('This week already has people planned. Replace it with last week’s schedule?'))return;
+        r=await post('copy',{store:st.store,week:st.week,from:from,replace:true});
+      }else throw e;
+    }
+    st.rec=r.record;render();setStatus('Copied last week ✓',true);setTimeout(function(){setStatus('')},3000);
+  }catch(e){if(e.message!=='signed out')showErr(e.status===404?'Last week has nobody planned, so there is nothing to copy.':e.message)}
+  finally{btn.disabled=false}
+});
+$('clear').addEventListener('click',async function(){
+  var n=0;dates(st.week).forEach(function(d){SH.forEach(function(s){n+=dayShifts(d,s.k).length})});
+  if(!n){setStatus('This week is already empty.');return}
+  if(!confirm('Clear all '+n+' planned shifts in this week for '+st.store+'? This cannot be undone.'))return;
+  this.disabled=true;
+  try{var r=await post('clear',{store:st.store,week:st.week});st.rec=r.record;render();setStatus('Week cleared ✓',true);setTimeout(function(){setStatus('')},3000)}
+  catch(e){if(e.message!=='signed out')showErr(e.message)}
+  finally{this.disabled=false}
+});
+$('print').addEventListener('click',function(){window.print()});
+init();
+})();
+</script>
+</body>
+</html>

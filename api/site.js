@@ -225,6 +225,12 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'daily.html', 'text/html; charset=utf-8', withChrome('staff', multi));
   }
 
+  // Weekly Schedule: managers (super admin, area managers, store managers) plan who works Morning, Between and Night shifts
+  if (requestedPath === '/schedule' || requestedPath === '/schedule/' || requestedPath === '/schedule.html') {
+    if (!facts.staff || facts.staff.role === 'staff') return toHome();
+    return sendFile(res, 'schedule.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+  }
+
   // VM Zones: the VM account and the super admin place collections in store zones and see the effect on sales
   if (requestedPath === '/vm/zones' || requestedPath === '/vm/zones/' || requestedPath === '/vmzones.html') {
     const admin = !!facts.staff && facts.staff.role === 'admin';

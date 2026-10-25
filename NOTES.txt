@@ -130,3 +130,11 @@ ACTIVITY LOG (/activity, api/_activity.js via /api/activity -> /api/vm?activity=
 - No new API function (Hobby limit of 12). ACTIVITY_OFF=1 in Vercel settings switches all logging off.
 - Cost: about 2 Blob writes per page visit plus 1 per change/sign-in. If the Blob quota gets tight, set ACTIVITY_OFF=1 or raise the throttle in api/_activity.js.
 - Tell the team the log exists. History starts from the deploy day.
+
+WEEKLY SCHEDULE (/schedule, private/schedule.html, API /api/schedule -> /api/vm?schedule=1, helper api/_schedule.js)
+- Managers only: super admin (all stores), area managers (their zone), store managers (own store). Sales people, VM and Stock Count get 403 and no Home card; the Online store has none.
+- Week board: 7 days across (the week starts on WEEK_START in api/_schedule.js, 6 = Saturday), rows Morning / Between / Night. Each person has a name and their own From and To time (a To earlier than From means after midnight). "+ Add" can tick several days at once; click a person to edit or remove.
+- Also: store + week navigation, Copy last week (asks before replacing), Clear week, Usual times (what new people start with, per store), a warning when the same person is in two overlapping shifts on a day, a "People this week" table (days and hours), Print / Save PDF.
+- Storage: sched/<store>/<week start>.json {store, week, days{date:{m:[{n,f,t}],b:[],n:[]}}, updated, log}; sched/<store>/settings.json {times, names (remembered for the name suggestions)}. Each change saves one day; two managers editing the same day: last save wins.
+- No new API function (Hobby limit of 12): /api/schedule is a rewrite to api/vm.js. Activity log + page label added in api/_activity.js.
+- Tests: scratchpad only (handler checks and a headless-browser run).

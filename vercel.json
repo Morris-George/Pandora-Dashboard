@@ -44,6 +44,10 @@
       "destination": "/api/vm?daily=1"
     },
     {
+      "source": "/api/schedule",
+      "destination": "/api/vm?schedule=1"
+    },
+    {
       "source": "/api/vmzones",
       "destination": "/api/vm?vmzones=1"
     },
