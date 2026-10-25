@@ -105,13 +105,31 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
 .sb{height:5px;background:var(--soft);border-radius:99px;margin:2px 0;overflow:hidden}.sb i{display:block;height:100%}
 .btn.del{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,var(--line))}.btn.del:hover{background:var(--bad);color:#fff}
 .log div{border-top:1px solid var(--line);padding:4px 0;font-size:12.5px}
+
+/* Other view: one product at a time */
+#ov{position:fixed;inset:0;z-index:950;background:var(--bg);display:flex;flex-direction:column;align-items:center;overflow:auto}
+#ov[hidden]{display:none}
+#ov .ovbar{width:100%;max-width:560px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;position:sticky;top:0;background:var(--bg);z-index:2}
+#ov .ovbar .btn{min-width:84px}#ov .ovcount{font-weight:700;text-align:center;flex:1}
+#ov .ovcard{width:100%;max-width:560px;padding:6px 18px 28px;text-align:center;transition:transform .22s ease,opacity .22s ease}
+#ov .ovcard.out-l{transform:translateX(-40px);opacity:0}#ov .ovcard.out-r{transform:translateX(40px);opacity:0}
+#ov .ovp{display:flex;justify-content:center}
+#ov .ovp .img{width:min(78vw,42vh,380px);height:min(78vw,42vh,380px);border-radius:18px;font-size:14px;box-shadow:0 10px 28px rgba(176,58,79,.18)}
+#ov .ovs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+#ov .ovs div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 4px}
+#ov .ovs small{display:block;color:var(--ink2);font-size:12px;font-weight:600}#ov .ovs b{font-size:24px}
+#ov .ovn{margin-top:16px;font-size:18px;font-weight:700;line-height:1.3}
+#ov .ovm{margin-top:4px;color:var(--ink2);font-size:13px}
+#ov .ovq{margin-top:18px}#ov .ovq small{display:block;color:var(--ink2);font-weight:600;margin-bottom:6px}
+#ov .ovq input{width:min(60vw,220px);text-align:center;font-size:40px;font-weight:800;padding:10px;border-radius:16px;border:2px solid var(--accent)}
+#ov .ovh{margin-top:10px;color:var(--ink2);font-size:12.5px;min-height:18px}
 </style>
 </head>
 <body><div class="wrap">
 <div class="topbar"><div class="brand"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="bt"><span class="eyebrow">RETAIL INTELLIGENCE</span><h1>Refill Order</h1><div class="sub">Suggested order to Pandora from the available to order list, stock, pipeline and sell out. SKUs of the same DV stay together.</div></div></div><div class="top-actions"></div></div>
 <header class="row" style="justify-content:flex-start">
   <div class="row"><select id="ord" aria-label="Order"></select><button class="btn" id="newo" hidden>New order</button>
-    <span class="status" id="status"></span><button class="btn" id="stBtn" hidden></button><button class="btn" id="reopen" hidden>Reopen</button><button class="btn" id="xlsx">Export Excel</button><label class="btn" id="picBtn" title="Show or hide the product pictures in every list"><input type="checkbox" id="showPics" checked> Pictures</label><button class="btn del" id="delo" hidden>Delete order</button><label class="btn" id="fbUp" hidden>Upload team sheet<input type="file" id="fbFile" accept=".xlsx,.xls" hidden></label></div>
+    <span class="status" id="status"></span><button class="btn" id="stBtn" hidden></button><button class="btn" id="reopen" hidden>Reopen</button><button class="btn" id="xlsx">Export Excel</button><button class="btn" id="ovBtn" title="Show the order one product at a time with a big picture">Other view</button><label class="btn" id="picBtn" title="Show or hide the product pictures in every list"><input type="checkbox" id="showPics" checked> Pictures</label><button class="btn del" id="delo" hidden>Delete order</button><label class="btn" id="fbUp" hidden>Upload team sheet<input type="file" id="fbFile" accept=".xlsx,.xls" hidden></label></div>
 </header>
 <div class="err" id="err" hidden></div>
 
@@ -185,6 +203,7 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
 </div>
 </div>
 <div id="det" hidden></div>
+<div id="ov" hidden></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="/stockcount-pics-1.js" async></script><script src="/stockcount-pics-2.js" async></script><script src="/stockcount-pics-3.js" async></script><script src="/stockcount-pics-4.js" async></script>
@@ -521,6 +540,50 @@ function drawTable(){
   fillPics();
   if(S.nextQty){const el=[...$('tbl').querySelectorAll('input[data-s]:not(:disabled)')].find(x=>x.dataset.s===S.nextQty);S.nextQty=null;if(el)el.focus()}
 }
+
+// ---- Other view: big picture, one product at a time. Type a qty, Enter saves and moves to the next product.
+let OV={list:[],k:0};
+function ovOpen(){
+  if(!items.length){alert('Load an order first.');return}
+  OV.list=grouped(filtered()).flat();OV.k=0;
+  if(!OV.list.length){alert('No products match the current filter.');return}
+  $('ov').hidden=false;document.body.style.overflow='hidden';ovDraw();
+}
+function ovClose(){$('ov').hidden=true;document.body.style.overflow='';OV.list=[]}
+function ovSave(inp){
+  const i=items.find(x=>x.sku===inp.dataset.s);if(!i)return;
+  const v=inp.value.trim(),nv=v===''?null:Math.max(0,parseInt(v)||0);
+  if(nv===i.fb)return;
+  i.fb=nv;calc();saveFb([[i.sku,i.fb]]);
+}
+function ovGo(d,dir){
+  const inp=$('ov').querySelector('input[data-s]');if(inp&&!inp.disabled)ovSave(inp);
+  const k=OV.k+d;if(k<0||k>=OV.list.length){const h=$('ov').querySelector('.ovh');if(h)h.textContent=k<0?'This is the first product.':'This is the last product.';return}
+  const card=$('ov').querySelector('.ovcard');
+  if(card){card.classList.add(d>0?'out-l':'out-r')}
+  setTimeout(()=>{OV.k=k;ovDraw()},card?160:0);
+}
+function ovDraw(){
+  const sk=OV.list[OV.k],i=items.find(x=>x.sku===sk.sku)||sk,ro=locked()||!can('input'),n=OV.list.length;
+  $('ov').innerHTML=`<div class="ovbar"><button class="btn" id="ovBack">‹ Back</button><div class="ovcount">${OV.k+1} / ${n}</div><button class="btn" id="ovFwd">Forward ›</button><button class="btn" id="ovX" title="Close">✕</button></div>
+  <div class="ovcard"><div class="ovp">${pic(i.dv)}</div>
+    <div class="ovs"><div><small>SOH</small><b>${fmt(i.soh)}</b></div><div><small>Pipeline</small><b>${fmt(i.pipe)}</b></div><div><small>Sell out</small><b>${fmt(i.sell)}</b></div></div>
+    <div class="ovn">${esc(i.name)||'<span class="note">not in the master</span>'}</div>
+    <div class="ovm">${esc(i.sku)} · ${esc(i.cat)}</div>
+    <div class="ovq"><small>${ro?'Qty (view only)':'Qty'} · suggested ${i.prop||0}</small><input type="number" inputmode="numeric" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}></div>
+    <div class="ovh"></div></div>`;
+  $('ovBack').onclick=()=>ovGo(-1);$('ovFwd').onclick=()=>ovGo(1);$('ovX').onclick=ovClose;
+  const inp=$('ov').querySelector('input[data-s]');
+  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ovGo(1)}};
+  inp.onfocus=()=>inp.select();
+  const card=$('ov').querySelector('.ovcard');let x0=null,y0=0;
+  card.ontouchstart=e=>{x0=e.touches[0].clientX;y0=e.touches[0].clientY};
+  card.ontouchend=e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;x0=null;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5)ovGo(dx<0?1:-1)};
+  fillPics();
+  if(!ro&&!('ontouchstart' in window))inp.focus();else if(!ro)inp.focus();
+}
+$('ovBtn').onclick=ovOpen;
+document.addEventListener('keydown',e=>{if(!$('ov').hidden&&e.key==='Escape')ovClose()});
 async function setStatus(status){
   try{const body={id:O.id,status};if(status==='Approved')body.lines=items.filter(i=>i.fin>0||i.prop>0).map(i=>[i.sku,i.prop,i.fin,i.fob]);
     await api('/api/refill?op=status',body);H=await api('/api/refill');boot()}catch(e){showErr(e.message)}}
