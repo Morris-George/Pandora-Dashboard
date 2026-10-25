@@ -123,6 +123,8 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
 #ov .ovq{margin-top:18px}#ov .ovq small{display:block;color:var(--ink2);font-weight:600;margin-bottom:6px}
 #ov .ovq input{width:min(60vw,220px);text-align:center;font-size:40px;font-weight:800;padding:10px;border-radius:16px;border:2px solid var(--accent)}
 #ov .ovh{margin-top:10px;color:var(--ink2);font-size:12.5px;min-height:18px}
+#ov .ovtools{width:100%;max-width:560px;display:flex;gap:8px;padding:0 14px 8px}#ov .ovtools select{flex:1;min-width:0}
+#ov .ovprog{width:100%;max-width:560px;padding:0 14px 6px}#ov .ovpt{display:flex;justify-content:space-between;font-size:13.5px}#ov .ovpt span{color:var(--ink2)}
 </style>
 </head>
 <body><div class="wrap">
@@ -542,46 +544,65 @@ function drawTable(){
 }
 
 // ---- Other view: big picture, one product at a time. Type a qty, Enter saves and moves to the next product.
-let OV={list:[],k:0};
+let OV={base:[],list:[],k:0,cat:'',miss:false};
+const ovDone=i=>i.fb!=null;
+function ovScope(){return OV.base.filter(i=>!OV.cat||i.cat===OV.cat)}
+function ovBuild(keep){
+  const sc=ovScope();OV.list=OV.miss?sc.filter(i=>!ovDone(i)):sc;
+  OV.k=keep?Math.min(OV.k,Math.max(0,OV.list.length-1)):0;
+}
 function ovOpen(){
   if(!items.length){alert('Load an order first.');return}
-  OV.list=grouped(filtered()).flat();OV.k=0;
-  if(!OV.list.length){alert('No products match the current filter.');return}
-  $('ov').hidden=false;document.body.style.overflow='hidden';ovDraw();
+  OV.base=grouped(filtered()).flat();OV.cat='';OV.miss=false;
+  if(!OV.base.length){alert('No products match the current filter.');return}
+  ovBuild();$('ov').hidden=false;document.body.style.overflow='hidden';ovDraw();
 }
-function ovClose(){$('ov').hidden=true;document.body.style.overflow='';OV.list=[]}
+function ovClose(){$('ov').hidden=true;document.body.style.overflow='';OV.base=[];OV.list=[]}
 function ovSave(inp){
   const i=items.find(x=>x.sku===inp.dataset.s);if(!i)return;
   const v=inp.value.trim(),nv=v===''?null:Math.max(0,parseInt(v)||0);
   if(nv===i.fb)return;
   i.fb=nv;calc();saveFb([[i.sku,i.fb]]);
 }
-function ovGo(d,dir){
+function ovGo(d){
   const inp=$('ov').querySelector('input[data-s]');if(inp&&!inp.disabled)ovSave(inp);
-  const k=OV.k+d;if(k<0||k>=OV.list.length){const h=$('ov').querySelector('.ovh');if(h)h.textContent=k<0?'This is the first product.':'This is the last product.';return}
+  const k=OV.k+d;if(k<0||k>=OV.list.length){ovDraw(k<0?'This is the first product.':'This is the last product.');return}
   const card=$('ov').querySelector('.ovcard');
-  if(card){card.classList.add(d>0?'out-l':'out-r')}
+  if(card)card.classList.add(d>0?'out-l':'out-r');
   setTimeout(()=>{OV.k=k;ovDraw()},card?160:0);
 }
-function ovDraw(){
-  const sk=OV.list[OV.k],i=items.find(x=>x.sku===sk.sku)||sk,ro=locked()||!can('input'),n=OV.list.length;
-  $('ov').innerHTML=`<div class="ovbar"><button class="btn" id="ovBack">‹ Back</button><div class="ovcount">${OV.k+1} / ${n}</div><button class="btn" id="ovFwd">Forward ›</button><button class="btn" id="ovX" title="Close">✕</button></div>
-  <div class="ovcard"><div class="ovp">${pic(i.dv)}</div>
+function ovDraw(msg){
+  const ro=locked()||!can('input'),sc=ovScope(),done=sc.filter(ovDone).length,tot=sc.length,left=tot-done;
+  const cats=[...new Set(OV.base.map(i=>i.cat))].sort();
+  const top=`<div class="ovbar"><button class="btn" id="ovBack">‹ Back</button><div class="ovcount">${OV.list.length?OV.k+1+' / '+OV.list.length:'0 / 0'}</div><button class="btn" id="ovFwd">Forward ›</button><button class="btn" id="ovX" title="Close">✕</button></div>
+  <div class="ovtools"><select id="ovCat" aria-label="Category"><option value="">All categories</option>${cats.map(c=>`<option${c===OV.cat?' selected':''}>${esc(c)}</option>`).join('')}</select><button class="btn ${OV.miss?'go':''}" id="ovMiss">${OV.miss?'View all items':'View missing items ('+left+')'}</button></div>
+  <div class="ovprog"><div class="ovpt"><b>${done} of ${tot} done</b><span>${left?left+' missing':'All done ✓'}</span></div><div class="bar"><i style="width:${tot?done/tot*100:0}%"></i></div></div>`;
+  let body;
+  if(!OV.list.length){
+    body=`<div class="ovcard"><div class="ovn" style="margin-top:40px">${OV.miss?'Nothing is missing here ✓':'No products in this category.'}</div></div>`;
+  }else{
+    const i=OV.list[OV.k];
+    body=`<div class="ovcard"><div class="ovp">${pic(i.dv)}</div>
     <div class="ovs"><div><small>SOH</small><b>${fmt(i.soh)}</b></div><div><small>Pipeline</small><b>${fmt(i.pipe)}</b></div><div><small>Sell out</small><b>${fmt(i.sell)}</b></div></div>
     <div class="ovn">${esc(i.name)||'<span class="note">not in the master</span>'}</div>
     <div class="ovm">${esc(i.sku)} · ${esc(i.cat)}</div>
-    <div class="ovq"><small>${ro?'Qty (view only)':'Qty'} · suggested ${i.prop||0}</small><input type="number" inputmode="numeric" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}></div>
-    <div class="ovh"></div></div>`;
+    <div class="ovq"><small>${ro?'Qty (view only)':'Qty'} · suggested ${i.prop||0}${ovDone(i)?' · <span style="color:var(--good)">done ✓</span>':' · <span style="color:var(--bad)">missing</span>'}</small><input type="number" inputmode="numeric" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}></div>
+    <div class="ovh">${msg||''}</div></div>`;
+  }
+  $('ov').innerHTML=top+body;
   $('ovBack').onclick=()=>ovGo(-1);$('ovFwd').onclick=()=>ovGo(1);$('ovX').onclick=ovClose;
-  const inp=$('ov').querySelector('input[data-s]');
+  $('ovCat').onchange=e=>{ovSave0();OV.cat=e.target.value;ovBuild();ovDraw()};
+  $('ovMiss').onclick=()=>{ovSave0();OV.miss=!OV.miss;ovBuild();ovDraw()};
+  const inp=$('ov').querySelector('input[data-s]');if(!inp)return;
   inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ovGo(1)}};
   inp.onfocus=()=>inp.select();
   const card=$('ov').querySelector('.ovcard');let x0=null,y0=0;
   card.ontouchstart=e=>{x0=e.touches[0].clientX;y0=e.touches[0].clientY};
   card.ontouchend=e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;x0=null;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5)ovGo(dx<0?1:-1)};
   fillPics();
-  if(!ro&&!('ontouchstart' in window))inp.focus();else if(!ro)inp.focus();
+  if(!ro)inp.focus();
 }
+function ovSave0(){const inp=$('ov').querySelector('input[data-s]');if(inp&&!inp.disabled)ovSave(inp)}
 $('ovBtn').onclick=ovOpen;
 document.addEventListener('keydown',e=>{if(!$('ov').hidden&&e.key==='Escape')ovClose()});
 async function setStatus(status){
