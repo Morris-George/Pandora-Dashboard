@@ -19,7 +19,7 @@ const DEFAULT_TIMES = { m: ['10:00', '18:00'], b: ['13:00', '21:00'], n: ['16:00
 const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
-const MAX_PER_SHIFT = 30, MAX_NAMES = 80;
+const MAX_PER_SHIFT = 3, MAX_NAMES = 80;
 
 function send(res, code, obj) {
   res.setHeader('Cache-Control', 'no-store');
@@ -67,7 +67,7 @@ const cleanName = v => String(v == null ? '' : v).replace(/[\u0000-\u001f<>]/g, 
 // one shift's people -> clean list, or an error text
 function cleanShift(list) {
   if (!Array.isArray(list)) return { err: 'The shift list could not be read.' };
-  if (list.length > MAX_PER_SHIFT) return { err: 'Too many people in one shift (max ' + MAX_PER_SHIFT + ').' };
+  if (list.length > MAX_PER_SHIFT) return { err: 'Up to ' + MAX_PER_SHIFT + ' people per shift.' };
   const out = [];
   for (const e of list) {
     const n = cleanName(e && e.n);

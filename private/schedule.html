@@ -59,6 +59,7 @@ select,input[type=text],input[type=time],input[type=date]{border:1px solid var(-
 .pp.clash{border-color:#E0526A;background:color-mix(in srgb,#E0526A 12%,transparent)}
 .add{margin-top:auto;border:1px dashed var(--line);background:transparent;color:var(--ink2);border-radius:10px;padding:6px 8px;font:inherit;font-weight:700;cursor:pointer}
 .add:hover{border-color:var(--accent);color:var(--accent-text);background:var(--hover)}
+.full{margin-top:auto;text-align:center;font-size:12px;font-weight:700;color:var(--ink2);padding:6px 0}
 .empty{color:var(--ink2);padding:18px;text-align:center}
 .sumwrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
 table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}th:first-child,td:first-child{text-align:left}
@@ -70,6 +71,7 @@ dialog::backdrop{background:rgba(20,10,14,.45)}
 .dlg h3{margin:0;font-size:18px;font-weight:800}
 .dlg .row{display:flex;gap:12px}.dlg .row>*{flex:1}
 .dlg input,.dlg select{width:100%}
+.people{display:grid;gap:8px}.prow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.prow .pk{flex:1 1 160px}.prow .po{flex:1 1 160px}.prow .rm{padding:6px 11px;flex:none}
 .days{display:flex;flex-wrap:wrap;gap:6px}
 .days label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700;cursor:pointer;text-transform:none;letter-spacing:0;color:var(--ink)}
 .days label:has(input:checked){background:var(--fill-soft);border-color:var(--accent)}
@@ -91,7 +93,7 @@ dialog::backdrop{background:rgba(20,10,14,.45)}
   @page{size:landscape;margin:10mm}
   :root{--bg:#fff;--surface:#fff;--ink:#000;--ink2:#444;--line:#bbb;--hover:#fff;--fill-soft:#eee;--morning:#FFF3D6;--between:#E3EEFB;--night:#E9E3F7;color-scheme:light}
   body{padding:0;background:#fff;font-size:11px}
-  .top,.toolbar,.add,.status,.noprint,.warns,#sumcard,.pandora-fab,.pandora-sw,#pandora-header,[class*="pandora-"]{display:none!important}
+  .top,.toolbar,.add,.full,.status,.noprint,.warns,#sumcard,.pandora-fab,.pandora-sw,#pandora-header,[class*="pandora-"]{display:none!important}
   .printhead{display:block;font-size:16px;font-weight:800;margin-bottom:6px}
   .card{border:0;padding:0}
   .board{gap:4px}.cell{min-height:60px;padding:4px}.pp{padding:3px 6px;border-radius:6px}.pp b{font-size:11px}.tt input{font-size:10.5px;border:0!important;background:none!important;padding:0;-webkit-appearance:none;appearance:none}.tt input::-webkit-calendar-picker-indicator{display:none}
@@ -102,7 +104,7 @@ dialog::backdrop{background:rgba(20,10,14,.45)}
 <body>
 <div class="wrap">
   <header class="top">
-    <div><a class="crumb" href="/">&larr; Home</a><h1>Weekly Schedule</h1><div class="sub">Plan who works the Morning, Between and Night shifts each day, and set each person’s from and to time.</div></div>
+    <div><a class="crumb" href="/">&larr; Home</a><h1>Weekly Schedule</h1><div class="sub">Plan who works the Morning, Between and Night shifts each day (up to 3 people per shift), and set each person’s from and to time.</div></div>
   </header>
 
   <div id="err" class="err" hidden role="alert"></div>
@@ -144,8 +146,9 @@ dialog::backdrop{background:rgba(20,10,14,.45)}
 
 <dialog id="dlg"><form class="dlg" id="form" method="dialog">
   <h3 id="dTitle">Add a person</h3>
-  <label class="f">Name <select id="dPick"></select></label>
-  <label class="f" id="dOtherWrap" hidden>Type the name <input type="text" id="dName" list="names" maxlength="40" autocomplete="off" placeholder="Type a name"></label>
+  <div class="hint" style="font-weight:700">Who works this shift? <span id="dCap">Up to 3 people per shift.</span></div>
+  <div id="dPeople" class="people"></div>
+  <button type="button" class="btn" id="dMore">+ Add another person</button>
   <div class="row"><label class="f">From <input type="time" id="dFrom" required></label><label class="f">To <input type="time" id="dTo" required></label></div>
   <div class="hint" id="dHint">If the To time is earlier than the From time, the shift ends after midnight.</div>
   <div id="dDaysWrap"><div class="hint" style="margin-bottom:6px;font-weight:700">Which days?</div><div class="days" id="dDays"></div></div>
@@ -255,7 +258,7 @@ function render(){
       dayShifts(d,s.k).forEach(function(e,i){
         h+='<div class="pp'+(cl.bad[d+s.k+i]?' clash':'')+'" data-d="'+d+'" data-s="'+s.k+'" data-i="'+i+'"><button type="button" class="pn" title="Edit or remove"><b>'+esc(e.n)+'</b></button><div class="tt"><input type="time" class="tf" value="'+e.f+'" aria-label="From time for '+esc(e.n)+'"><span>–</span><input type="time" class="tx" value="'+e.t+'" aria-label="To time for '+esc(e.n)+'"></div></div>';
       });
-      h+='<button type="button" class="add" data-d="'+d+'" data-s="'+s.k+'" aria-label="Add a person to '+s.name+' on '+WD[dow(d)]+' '+fmtShort(d)+'">+ Add</button></div>';
+      if(dayShifts(d,s.k).length<3)h+='<button type="button" class="add" data-d="'+d+'" data-s="'+s.k+'" aria-label="Add a person to '+s.name+' on '+WD[dow(d)]+' '+fmtShort(d)+'">+ Add</button>';else h+='<div class="full">Full · 3 of 3</div>';h+='</div>';
     });
     h+='</div>';
   });
@@ -285,42 +288,55 @@ async function saveDay(date,shifts){
 function copyDay(d){var o={};SH.forEach(function(s){o[s.k]=dayShifts(d,s.k).map(function(e){return {n:e.n,f:e.f,t:e.t}})});return o}
 
 /* ---------- add / edit dialog ---------- */
+var MAXP=3; // up to 3 people in one shift (same limit in api/_schedule.js)
+var OTHER='__other__';
 function openDlg(d,s,i){
   var edit=i!=null&&i>=0,e=edit?dayShifts(d,s)[i]:null;
   st.edit={d:d,s:s,i:edit?i:-1};
   $('dTitle').textContent=(edit?'Edit ':'Add to ')+SHN[s]+' · '+WD[dow(d)]+' '+fmtShort(d);
-  fillPick(edit?e.n:'');
+  $('dPeople').innerHTML='';addRow(edit?e.n:'');
   $('dFrom').value=edit?e.f:st.times[s][0];$('dTo').value=edit?e.t:st.times[s][1];
   $('dErr').hidden=true;$('dDel').hidden=!edit;$('dDaysWrap').hidden=edit;
   $('dSave').textContent=edit?'Save changes':'Save';
   $('dDays').innerHTML=dates(st.week).map(function(x){return '<label><input type="checkbox" value="'+x+'"'+(x===d?' checked':'')+'>'+WD[dow(x)]+' '+dnum(x)+'</label>'}).join('');
+  syncAddMore();
   $('dlg').showModal();
-  setTimeout(function(){$(edit?'dFrom':'dPick').focus()},30);
+  setTimeout(function(){var f=$('dPeople').querySelector(edit?'.po:not([hidden])':'.pk');if(edit)$('dFrom').focus();else if(f)f.focus()},30);
 }
-var OTHER='__other__';
-function fillPick(name){
+function room(){return MAXP-dayShifts(st.edit.d,st.edit.s).length} // free places on the day that was clicked
+function rows(){return [].slice.call($('dPeople').children)}
+function syncAddMore(){
+  var edit=st.edit.i>=0,left=room()-rows().length;
+  $('dMore').hidden=edit||left<=0;
+  $('dMore').textContent='+ Add another person ('+(rows().length)+' of '+Math.max(rows().length,Math.min(MAXP,room()))+')';
+  rows().forEach(function(r){r.querySelector('.rm').hidden=rows().length<2});
+}
+function addRow(name){
   var lower=function(x){return x.toLowerCase()},have={};
   var list=st.people.slice();list.forEach(function(n){have[lower(n)]=1});
-  // names used before in this store's schedules (not accounts) also show, under the team
   var extra=st.names.filter(function(n){return !have[lower(n)]});
+  var r=document.createElement('div');r.className='prow';
   var h='<option value="">Choose a person…</option>';
   if(list.length)h+='<optgroup label="Store team">'+list.map(function(n){return '<option>'+esc(n)+'</option>'}).join('')+'</optgroup>';
   if(extra.length)h+='<optgroup label="Planned before">'+extra.map(function(n){return '<option>'+esc(n)+'</option>'}).join('')+'</optgroup>';
   h+='<option value="'+OTHER+'">Someone else (type a name)</option>';
-  $('dPick').innerHTML=h;
-  var known=list.concat(extra).some(function(n){return lower(n)===lower(name)});
-  if(name&&known){$('dPick').value=list.concat(extra).filter(function(n){return lower(n)===lower(name)})[0];$('dName').value=name}
-  else if(name){$('dPick').value=OTHER;$('dName').value=name}
-  else{$('dPick').value=list.length||extra.length?'':OTHER;$('dName').value=''}
-  syncPick();
+  r.innerHTML='<select class="pk" aria-label="Person">'+h+'</select><input type="text" class="po" list="names" maxlength="40" autocomplete="off" placeholder="Type the name" hidden aria-label="Name"><button type="button" class="btn rm" aria-label="Remove this person row" title="Remove this row">×</button>';
+  var sel=r.querySelector('.pk'),inp=r.querySelector('.po'),all=list.concat(extra);
+  var hit=name?all.filter(function(n){return lower(n)===lower(name)})[0]:null;
+  if(hit)sel.value=hit;else if(name){sel.value=OTHER;inp.value=name}else sel.value=all.length?'':OTHER;
+  var sync=function(){inp.hidden=sel.value!==OTHER};sync();
+  sel.addEventListener('change',function(){sync();if(sel.value===OTHER)inp.focus()});
+  r.querySelector('.rm').addEventListener('click',function(){r.remove();syncAddMore()});
+  $('dPeople').appendChild(r);syncAddMore();
 }
-function syncPick(){var o=$('dPick').value===OTHER;$('dOtherWrap').hidden=!o;if(!o)$('dName').value=$('dPick').value}
-$('dPick').addEventListener('change',function(){syncPick();if($('dPick').value===OTHER)$('dName').focus()});
+function rowName(r){var sel=r.querySelector('.pk'),v=sel.value===OTHER?r.querySelector('.po').value:sel.value;return String(v||'').replace(/\s+/g,' ').trim()}
+$('dMore').addEventListener('click',function(){if(rows().length<room()){addRow('');var l=$('dPeople').lastChild.querySelector('.pk');l.focus()}});
 function dErr(m){var e=$('dErr');e.textContent=m;e.hidden=!m}
 $('form').addEventListener('submit',async function(ev){
   ev.preventDefault();
-  var ed=st.edit;syncPick();var name=$('dName').value.replace(/\s+/g,' ').trim(),f=$('dFrom').value,t=$('dTo').value;
-  if(!name){dErr('Choose a person or type a name.');return}
+  var ed=st.edit,f=$('dFrom').value,t=$('dTo').value,names=[],seen={};
+  rows().forEach(function(r){var n=rowName(r);if(n&&!seen[n.toLowerCase()]){seen[n.toLowerCase()]=1;names.push(n)}});
+  if(!names.length){dErr('Choose a person or type a name.');return}
   if(!f||!t){dErr('Choose a From and a To time.');return}
   if(f===t){dErr('From and To cannot be the same time.');return}
   var days=ed.i>=0?[ed.d]:[].slice.call($('dDays').querySelectorAll('input:checked')).map(function(x){return x.value});
@@ -329,11 +345,12 @@ $('form').addEventListener('submit',async function(ev){
   try{
     for(var k=0;k<days.length;k++){
       var d=days[k],sh=copyDay(d),list=sh[ed.s];
-      if(ed.i>=0)list[ed.i]={n:name,f:f,t:t};
-      else{
+      if(ed.i>=0)list[ed.i]={n:names[0],f:f,t:t};
+      else names.forEach(function(name){
         var dup=list.some(function(x){return x.n.toLowerCase()===name.toLowerCase()&&x.f===f&&x.t===t});
-        if(dup)continue;list.push({n:name,f:f,t:t});
-      }
+        if(!dup)list.push({n:name,f:f,t:t});
+      });
+      if(list.length>MAXP){dErr(SHN[ed.s]+' on '+WD[dow(d)]+' '+fmtShort(d)+' can only have '+MAXP+' people. Remove someone first or untick that day.');render();return}
       await saveDay(d,sh);
     }
     $('dlg').close();render();setStatus('Saved ✓',true);setTimeout(function(){if($('status').textContent==='Saved ✓')setStatus('')},2500);
