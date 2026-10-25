@@ -125,6 +125,8 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
 #ov .ovh{margin-top:10px;color:var(--ink2);font-size:12.5px;min-height:18px}
 #ov .ovtools{width:100%;max-width:560px;display:flex;gap:8px;padding:0 14px 8px}#ov .ovtools select{flex:1;min-width:0}
 #ov .ovprog{width:100%;max-width:560px;padding:0 14px 6px}#ov .ovpt{display:flex;justify-content:space-between;font-size:13.5px}#ov .ovpt span{color:var(--ink2)}
+#ov .ovmode{width:100%;max-width:560px;padding:0 14px 8px;font-size:12.5px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em}
+#ov .ovwhy{margin-top:8px;font-size:13.5px;font-weight:600;color:var(--bad)}
 </style>
 </head>
 <body><div class="wrap">
@@ -545,26 +547,31 @@ function drawTable(){
 }
 
 // ---- Other view: big picture, one product at a time. Type a qty, Enter saves and moves to the next product.
-let OV={base:[],list:[],k:0,cat:'',miss:false};
-const ovDone=i=>i.fb!=null;
-function ovScope(){return OV.base.filter(i=>!OV.cat||i.cat===OV.cat)}
+// Second list: the items left OUT of the order, so you can include them.
+let OV={orderBase:[],base:[],list:[],k:0,cat:'',miss:false,ex:false,rs:''};
+const OVR={slow:'On the Slow Moving list',stop:'Its category is stopped',man:'New item with no sales yet: your decision',team:'The team set it to 0',none:'Not needed: stock and pipeline cover the sales'};
+const ovWhy=i=>i.flag==='slow'?'slow':i.flag==='stop'?'stop':i.flag==='man'?'man':i.fb===0?'team':'none';
+const ovExcl=()=>items.filter(i=>i.av&&i.fin<=0);
+const ovDone=i=>OV.ex?i.fin>0:i.fb!=null;
+function ovScope(){return OV.base.filter(i=>(!OV.cat||i.cat===OV.cat)&&(!OV.ex||!OV.rs||ovWhy(i)===OV.rs))}
 function ovBuild(keep){
-  const sc=ovScope();OV.list=OV.miss?sc.filter(i=>!ovDone(i)):sc;
+  const sc=ovScope();OV.list=OV.miss&&!OV.ex?sc.filter(i=>!ovDone(i)):sc;
   OV.k=keep?Math.min(OV.k,Math.max(0,OV.list.length-1)):0;
 }
 function ovOpen(){
   if(!items.length){alert('Load an order first.');return}
-  OV.base=grouped(filtered()).flat();OV.cat='';OV.miss=false;
+  OV.orderBase=grouped(filtered()).flat();OV.base=OV.orderBase;OV.cat='';OV.miss=false;OV.ex=false;OV.rs='';
   if(!OV.base.length){alert('No products match the current filter.');return}
   ovBuild();$('ov').hidden=false;document.body.style.overflow='hidden';ovDraw();
 }
-function ovClose(){$('ov').hidden=true;document.body.style.overflow='';OV.base=[];OV.list=[]}
+function ovClose(){$('ov').hidden=true;document.body.style.overflow='';OV.base=[];OV.orderBase=[];OV.list=[]}
 function ovSave(inp){
   const i=items.find(x=>x.sku===inp.dataset.s);if(!i)return;
   const v=inp.value.trim(),nv=v===''?null:Math.max(0,parseInt(v)||0);
   if(nv===i.fb)return;
   i.fb=nv;calc();saveFb([[i.sku,i.fb]]);
 }
+function ovSet(i,q){i.fb=q;calc();saveFb([[i.sku,i.fb]])}
 function ovGo(d){
   const inp=$('ov').querySelector('input[data-s]');if(inp&&!inp.disabled)ovSave(inp);
   const k=OV.k+d;if(k<0||k>=OV.list.length){ovDraw(k<0?'This is the first product.':'This is the last product.');return}
@@ -575,25 +582,38 @@ function ovGo(d){
 function ovDraw(msg){
   const ro=locked()||!can('input'),sc=ovScope(),done=sc.filter(ovDone).length,tot=sc.length,left=tot-done;
   const cats=[...new Set(OV.base.map(i=>i.cat))].sort();
+  const nEx=ovExcl().length;
   const top=`<div class="ovbar"><button class="btn" id="ovBack">‹ Back</button><div class="ovcount">${OV.list.length?OV.k+1+' / '+OV.list.length:'0 / 0'}</div><button class="btn" id="ovFwd">Forward ›</button><button class="btn" id="ovX" title="Close">✕</button></div>
-  <div class="ovtools"><select id="ovCat" aria-label="Category"><option value="">All categories</option>${cats.map(c=>`<option${c===OV.cat?' selected':''}>${esc(c)}</option>`).join('')}</select><button class="btn ${OV.miss?'go':''}" id="ovMiss">${OV.miss?'View all items':'View missing items ('+left+')'}</button></div>
-  <div class="ovprog"><div class="ovpt"><b>${done} of ${tot} done</b><span>${left?left+' missing':'All done ✓'}</span></div><div class="bar"><i style="width:${tot?done/tot*100:0}%"></i></div></div>`;
+  <div class="ovmode">${OV.ex?'Excluded from the order: type a qty to include an item':'In the order'}</div>
+  <div class="ovtools"><select id="ovCat" aria-label="Category"><option value="">All categories</option>${cats.map(c=>`<option${c===OV.cat?' selected':''}>${esc(c)}</option>`).join('')}</select>${OV.ex?`<select id="ovRs" aria-label="Why excluded"><option value="">Any reason</option>${Object.keys(OVR).map(k=>`<option value="${k}"${k===OV.rs?' selected':''}>${esc(OVR[k])}</option>`).join('')}</select>`:`<button class="btn ${OV.miss?'go':''}" id="ovMiss">${OV.miss?'View all items':'View missing items ('+left+')'}</button>`}</div>
+  <div class="ovtools"><button class="btn ${OV.ex?'go':''}" id="ovEx" style="flex:1">${OV.ex?'‹ Back to the order':'View excluded items ('+fmt(nEx)+')'}</button></div>
+  <div class="ovprog"><div class="ovpt"><b>${done} of ${tot} ${OV.ex?'included':'done'}</b><span>${OV.ex?(tot-done)+' still out':(left?left+' missing':'All done ✓')}</span></div><div class="bar"><i style="width:${tot?done/tot*100:0}%"></i></div></div>`;
   let body;
   if(!OV.list.length){
-    body=`<div class="ovcard"><div class="ovn" style="margin-top:40px">${OV.miss?'Nothing is missing here ✓':'No products in this category.'}</div></div>`;
+    body=`<div class="ovcard"><div class="ovn" style="margin-top:40px">${OV.ex?'Nothing excluded here.':OV.miss?'Nothing is missing here ✓':'No products in this category.'}</div></div>`;
   }else{
-    const i=OV.list[OV.k];
+    const i=OV.list[OV.k],w=ovWhy(i);
+    const tag=OV.ex?(i.fin>0?' · <span style="color:var(--good)">included ✓</span>':''):(ovDone(i)?' · <span style="color:var(--good)">done ✓</span>':' · <span style="color:var(--bad)">missing</span>');
+    const why=OV.ex?`<div class="ovwhy">${i.fin>0?'Was left out because: ':'Left out because: '}${esc(OVR[w])}${w==='stop'&&i.would?` (it would have ordered ${i.would})`:''}</div>`:'';
+    const quick=OV.ex&&!ro&&i.would>0&&i.fin<=0?`<button class="btn go" id="ovInc" style="margin-top:10px">Include ${i.would}</button>`:'';
     body=`<div class="ovcard"><div class="ovp">${pic(i.dv)}</div>
     <div class="ovs"><div><small>SOH</small><b>${fmt(i.soh)}</b></div><div><small>Pipeline</small><b>${fmt(i.pipe)}</b></div><div><small>Sell out</small><b>${fmt(i.sell)}</b></div></div>
     <div class="ovn">${esc(i.name)||'<span class="note">not in the master</span>'}</div>
-    <div class="ovm">${esc(i.sku)} · ${esc(i.cat)}</div>
-    <div class="ovq"><small>${ro?'Qty (view only)':'Qty'} · suggested ${i.prop||0}${ovDone(i)?' · <span style="color:var(--good)">done ✓</span>':' · <span style="color:var(--bad)">missing</span>'}</small><input type="number" inputmode="numeric" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}></div>
+    <div class="ovm">${esc(i.sku)} · ${esc(i.cat)}</div>${why}
+    <div class="ovq"><small>${ro?'Qty (view only)':OV.ex?'Qty to include':'Qty'}${OV.ex?'':' · suggested '+(i.prop||0)}${tag}</small><input type="number" inputmode="numeric" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}>${quick}</div>
     <div class="ovh">${msg||''}</div></div>`;
   }
   $('ov').innerHTML=top+body;
   $('ovBack').onclick=()=>ovGo(-1);$('ovFwd').onclick=()=>ovGo(1);$('ovX').onclick=ovClose;
   $('ovCat').onchange=e=>{ovSave0();OV.cat=e.target.value;ovBuild();ovDraw()};
-  $('ovMiss').onclick=()=>{ovSave0();OV.miss=!OV.miss;ovBuild();ovDraw()};
+  if($('ovRs'))$('ovRs').onchange=e=>{ovSave0();OV.rs=e.target.value;ovBuild();ovDraw()};
+  if($('ovMiss'))$('ovMiss').onclick=()=>{ovSave0();OV.miss=!OV.miss;ovBuild();ovDraw()};
+  $('ovEx').onclick=()=>{
+    ovSave0();OV.ex=!OV.ex;OV.cat='';OV.rs='';OV.miss=false;
+    OV.base=OV.ex?ovExcl().sort((a,b)=>b.sell-a.sell||a.sku.localeCompare(b.sku,undefined,{numeric:true})):OV.orderBase;
+    ovBuild();ovDraw();
+  };
+  if($('ovInc'))$('ovInc').onclick=()=>{const i=OV.list[OV.k];ovSet(i,i.would);ovDraw('Included ✓')};
   const inp=$('ov').querySelector('input[data-s]');if(!inp)return;
   inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ovGo(1)}};
   inp.onfocus=()=>inp.select();
