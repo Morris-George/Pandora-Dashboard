@@ -503,10 +503,10 @@ async function fit(){
   for(const i of order){const cost=i.fin*i.fob;if(sum+cost<=bg){sum+=cost;continue}const k=Math.max(0,Math.floor((bg-sum)/(i.fob||1)));if(k!==i.fin){i.fb=k;ch.push([i.sku,k])}sum+=k*i.fob}
   calc();if(ch.length)await saveFb(ch);
 }
+const ffMatch=(i,f)=>!f||(f==='order'&&i.fin>0)||(f==='man'&&i.flag==='man')||(f==='slow'&&i.slow)||(f==='stop'&&i.flag==='stop')||(f==='na'&&!i.av)||(f==='nm'&&!i.inMaster)||(f==='fb'&&i.fb!=null)||(f==='neg'&&i.neg<0)||(f==='new'&&i.isNew)||(f==='old'&&!i.isNew);
 function filtered(){
   const q=$('q').value.trim().toUpperCase(),c=$('fc').value,f=$('ff').value;
-  return items.filter(i=>(!q||i.sku.includes(q)||i.dv.includes(q)||i.name.toUpperCase().includes(q))&&(!c||i.cat===c)&&
-    (!f||(f==='order'&&i.fin>0)||(f==='man'&&i.flag==='man')||(f==='slow'&&i.slow)||(f==='stop'&&i.flag==='stop')||(f==='na'&&!i.av)||(f==='nm'&&!i.inMaster)||(f==='fb'&&i.fb!=null)||(f==='neg'&&i.neg<0)||(f==='new'&&i.isNew)||(f==='old'&&!i.isNew)));
+  return items.filter(i=>(!q||i.sku.includes(q)||i.dv.includes(q)||i.name.toUpperCase().includes(q))&&(!c||i.cat===c)&&ffMatch(i,f));
 }
 // SKUs of the same DV stay together; DVs that run out first come first
 function grouped(l){const g=new Map();for(const i of l){if(!g.has(i.dv))g.set(i.dv,[]);g.get(i.dv).push(i)}
@@ -548,7 +548,8 @@ function drawTable(){
 
 // ---- Other view: big picture, one product at a time. Type a qty, Enter saves and moves to the next product.
 // Second list: the items left OUT of the order, so you can include them.
-let OV={orderBase:[],base:[],list:[],k:0,cat:'',miss:false,ex:false,rs:''};
+let OV={orderBase:[],base:[],list:[],k:0,cat:'',miss:false,ex:false,rs:'',ff:'order'};
+function ovOrderBase(){const q=$('q').value.trim().toUpperCase();return grouped(items.filter(i=>(!q||i.sku.includes(q)||i.dv.includes(q)||i.name.toUpperCase().includes(q))&&ffMatch(i,OV.ff))).flat()}
 const OVR={slow:'On the Slow Moving list',stop:'Its category is stopped',man:'New item with no sales yet: your decision',team:'The team set it to 0',none:'Not needed: stock and pipeline cover the sales'};
 const ovWhy=i=>i.flag==='slow'?'slow':i.flag==='stop'?'stop':i.flag==='man'?'man':i.fb===0?'team':'none';
 const ovExcl=()=>items.filter(i=>i.av&&i.fin<=0);
@@ -560,8 +561,9 @@ function ovBuild(keep){
 }
 function ovOpen(){
   if(!items.length){alert('Load an order first.');return}
-  OV.orderBase=grouped(filtered()).flat();OV.base=OV.orderBase;OV.cat='';OV.miss=false;OV.ex=false;OV.rs='';
+  OV.ff=$('ff').value;OV.orderBase=ovOrderBase();OV.base=OV.orderBase;OV.cat='';OV.miss=false;OV.ex=false;OV.rs='';
   if(!OV.base.length){alert('No products match the current filter.');return}
+  const fc=$('fc').value;if(fc&&OV.base.some(i=>i.cat===fc))OV.cat=fc;
   ovBuild();$('ov').hidden=false;document.body.style.overflow='hidden';ovDraw();
 }
 function ovClose(){$('ov').hidden=true;document.body.style.overflow='';OV.base=[];OV.orderBase=[];OV.list=[]}
@@ -586,11 +588,11 @@ function ovDraw(msg){
   const top=`<div class="ovbar"><button class="btn" id="ovBack">‹ Back</button><div class="ovcount">${OV.list.length?OV.k+1+' / '+OV.list.length:'0 / 0'}</div><button class="btn" id="ovFwd">Forward ›</button><button class="btn" id="ovX" title="Close">✕</button></div>
   <div class="ovmode">${OV.ex?'Excluded from the order: type a qty to include an item':'In the order'}</div>
   <div class="ovtools"><select id="ovCat" aria-label="Category"><option value="">All categories</option>${cats.map(c=>`<option${c===OV.cat?' selected':''}>${esc(c)}</option>`).join('')}</select>${OV.ex?`<select id="ovRs" aria-label="Why excluded"><option value="">Any reason</option>${Object.keys(OVR).map(k=>`<option value="${k}"${k===OV.rs?' selected':''}>${esc(OVR[k])}</option>`).join('')}</select>`:`<button class="btn ${OV.miss?'go':''}" id="ovMiss">${OV.miss?'View all items':'View missing items ('+left+')'}</button>`}</div>
-  <div class="ovtools"><button class="btn ${OV.ex?'go':''}" id="ovEx" style="flex:1">${OV.ex?'‹ Back to the order':'View excluded items ('+fmt(nEx)+')'}</button></div>
+  <div class="ovtools">${OV.ex?'':`<select id="ovFf" aria-label="Filter">${[...$('ff').options].map(o=>`<option value="${esc(o.value)}"${o.value===OV.ff?' selected':''}>${esc(o.textContent)}</option>`).join('')}</select>`}<button class="btn ${OV.ex?'go':''}" id="ovEx" style="${OV.ex?'flex:1':'white-space:nowrap'}">${OV.ex?'‹ Back to the order':'View excluded items ('+fmt(nEx)+')'}</button></div>
   <div class="ovprog"><div class="ovpt"><b>${done} of ${tot} ${OV.ex?'included':'done'}</b><span>${OV.ex?(tot-done)+' still out':(left?left+' missing':'All done ✓')}</span></div><div class="bar"><i style="width:${tot?done/tot*100:0}%"></i></div></div>`;
   let body;
   if(!OV.list.length){
-    body=`<div class="ovcard"><div class="ovn" style="margin-top:40px">${OV.ex?'Nothing excluded here.':OV.miss?'Nothing is missing here ✓':'No products in this category.'}</div></div>`;
+    body=`<div class="ovcard"><div class="ovn" style="margin-top:40px">${OV.ex?'Nothing excluded here.':OV.miss?'Nothing is missing here ✓':'No products match this filter.'}</div></div>`;
   }else{
     const i=OV.list[OV.k],w=ovWhy(i);
     const tag=OV.ex?(i.fin>0?' · <span style="color:var(--good)">included ✓</span>':''):(ovDone(i)?' · <span style="color:var(--good)">done ✓</span>':' · <span style="color:var(--bad)">missing</span>');
@@ -613,6 +615,7 @@ function ovDraw(msg){
     OV.base=OV.ex?ovExcl().sort((a,b)=>b.sell-a.sell||a.sku.localeCompare(b.sku,undefined,{numeric:true})):OV.orderBase;
     ovBuild();ovDraw();
   };
+  if($('ovFf'))$('ovFf').onchange=e=>{ovSave0();OV.ff=e.target.value;OV.orderBase=ovOrderBase();OV.base=OV.orderBase;OV.cat='';OV.miss=false;ovBuild();ovDraw()};
   if($('ovInc'))$('ovInc').onclick=()=>{const i=OV.list[OV.k];ovSet(i,i.would);ovDraw('Included ✓')};
   const inp=$('ov').querySelector('input[data-s]');if(!inp)return;
   inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ovGo(1)}};
