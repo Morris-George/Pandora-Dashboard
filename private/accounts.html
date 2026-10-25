@@ -54,7 +54,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
 let PEOPLE=[],HASDATA=false,ACCTS={};
-const SIGNUP_STORES=['CC Almaza','City Stars','CFC','Point 90','Mall of Egypt','Mall of Arabia','Alexandria'];
+const SIGNUP_STORES=['CC Almaza','City Stars','CFC','Point 90','Mall of Egypt','Mall of Arabia','Alexandria','Online'];
 function mgrBox(a){return a.status==='pending'?`<label class="note" style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" data-mgr="${esc(a.username)}"> Store manager (sees the staff of this store)</label>`:''}
 function pickHtml(a){
   if(!HASDATA) return `<div class="note">No sales file is published yet. You can approve now and link later.</div>${mgrBox(a)}`;

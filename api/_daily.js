@@ -23,7 +23,8 @@ const CANON = [
   { name: 'Point 90', rx: /point\s*90/i, zone: 'cairo' },
   { name: 'Mall of Egypt', rx: /mall\s*of\s*egypt/i, zone: 'octalex' },
   { name: 'Mall of Arabia', rx: /arabia/i, zone: 'octalex' },
-  { name: 'Alexandria', rx: /alex/i, zone: 'octalex' }
+  { name: 'Alexandria', rx: /alex/i, zone: 'octalex' },
+  { name: 'Online', rx: /online|e-?commerce|website/i, zone: 'online' }
 ];
 const canon = s => { const t = String(s || '').trim(); const c = CANON.find(c => c.rx.test(t)); return c ? c.name : t.replace(/\s+/g, ' ').slice(0, 60); };
 const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
