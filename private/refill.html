@@ -131,7 +131,7 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
 <div class="topbar"><div class="brand"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="bt"><span class="eyebrow">RETAIL INTELLIGENCE</span><h1>Refill Order</h1><div class="sub">Suggested order to Pandora from the available to order list, stock, pipeline and sell out. SKUs of the same DV stay together.</div></div></div><div class="top-actions"></div></div>
 <header class="row" style="justify-content:flex-start">
   <div class="row"><select id="ord" aria-label="Order"></select><button class="btn" id="newo" hidden>New order</button>
-    <span class="status" id="status"></span><button class="btn" id="stBtn" hidden></button><button class="btn" id="reopen" hidden>Reopen</button><button class="btn" id="xlsx">Export Excel</button><button class="btn" id="ovBtn" title="Show the order one product at a time with a big picture">Other view</button><label class="btn" id="picBtn" title="Show or hide the product pictures in every list"><input type="checkbox" id="showPics" checked> Pictures</label><button class="btn del" id="delo" hidden>Delete order</button><label class="btn" id="fbUp" hidden>Upload team sheet<input type="file" id="fbFile" accept=".xlsx,.xls" hidden></label></div>
+    <span class="status" id="status"></span><button class="btn" id="stBtn" hidden></button><button class="btn" id="reopen" hidden>Reopen</button><button class="btn" id="xlsx">Export Excel</button><button class="btn del" id="rstBtn" hidden title="Clear every quantity the team typed, back to the suggested order">Reset order</button><button class="btn" id="ovBtn" title="Show the order one product at a time with a big picture">Other view</button><label class="btn" id="picBtn" title="Show or hide the product pictures in every list"><input type="checkbox" id="showPics" checked> Pictures</label><button class="btn del" id="delo" hidden>Delete order</button><label class="btn" id="fbUp" hidden>Upload team sheet<input type="file" id="fbFile" accept=".xlsx,.xls" hidden></label></div>
 </header>
 <div class="err" id="err" hidden></div>
 
@@ -428,6 +428,7 @@ function drawStatus(){
   const st=$('stBtn');st.hidden=!O||O.status==='Approved'||(O.status==='Draft'?!can('input'):!can('manage'));st.textContent=O&&O.status==='Draft'?'Submit':'Approve';
   $('reopen').hidden=!O||O.status==='Draft'||!can('manage');
   $('delo').hidden=!O||!can('manage');
+  $('rstBtn').hidden=!O||locked()||!can('input');
 }
 function draw(){
   drawStatus();
@@ -613,6 +614,16 @@ $('delo').onclick=async()=>{if(!O)return;const t=prompt(`Delete the order "${O.n
 
 Type the order name to confirm:`);if(t==null)return;if(t.trim()!==O.name){alert('The name does not match. Nothing was deleted.');return}
   try{await api('/api/refill?op=delete',{id:O.id});O=null;items=[];H=await api('/api/refill');boot()}catch(e){showErr(e.message)}};
+$('rstBtn').onclick=async()=>{
+  if(!O||locked()||!can('input'))return;
+  const ch=items.filter(i=>i.fb!=null);
+  if(!ch.length){alert('Nothing to reset: no quantity has been typed in this order.');return}
+  if(!confirm(`Reset the order "${O.name}"?\n\nThis clears the ${ch.length} quantities typed by the team and goes back to the suggested order. Comments and reasons stay. This cannot be undone.`))return;
+  const lines=ch.map(i=>[i.sku,null]);
+  ch.forEach(i=>{i.fb=null});calc();
+  try{for(let k=0;k<lines.length;k+=500)await api('/api/refill?op=fb',{id:O.id,lines:lines.slice(k,k+500)});$('saved').textContent='Order reset.';setTimeout(()=>$('saved').textContent='',2500)}catch(e){showErr(e.message)}
+  if(!$('ov').hidden){OV.miss=false;ovBuild();ovDraw()}
+};
 $('reopen').onclick=()=>{if(confirm('Reopen this order so it can be changed?'))setStatus('Draft')};
 $('xlsx').onclick=()=>{if(!O||!items.length)return;
   const rows=items.slice().sort((a,b)=>a.dv.localeCompare(b.dv)||a.sku.localeCompare(b.sku,undefined,{numeric:true})).map(i=>({'SKU#':i.sku,'Proposed QTY':i.prop,'Team Feedback':i.fin,'Diff':i.fin-i.prop,'FOB':i.fob,'Total FOB $':Math.round(i.fin*i.fob*100)/100,'DV':i.dv,'RP':i.rrp,'Description':i.name,'Category':i.cat,'Real Campaign Launch':i.launch,'Sub Category':i.sub,'Item Group':i.grp,'Pandora Status':i.status,
