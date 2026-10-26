@@ -153,7 +153,7 @@ module.exports = async function handler(req, res) {
   }
   if (isChecker && pair.hasPair(req, 'checker')) {
     const f1 = await sessionFacts(req);
-    if (!(f1.sc || (f1.staff && f1.staff.role !== 'staff'))) {
+    if (!(f1.staff && f1.staff.role === 'admin' && !f1.staff.overseer)) {
       // not signed in as someone who may open it: the paired phone sees only this page (no Home link, nothing else)
       const chrome = withChrome('staff', false);
       return sendFile(res, 'stockchecker.html', 'text/html; charset=utf-8', function (buf) {
@@ -327,9 +327,9 @@ module.exports = async function handler(req, res) {
     if (!(facts.staff && facts.staff.role === 'admin') && !facts.sc) return toHome();
     return sendFile(res, 'stockcount.html', 'text/html; charset=utf-8', withChrome('staff', multi));
   }
-  // Stock Checker: super admin, area managers, store managers and Stock Count accounts (never sales people or the VM)
+  // Stock Checker: the super admin only
   if (requestedPath === '/stockchecker' || requestedPath === '/stockchecker/' || requestedPath === '/stockchecker.html') {
-    if (!facts.sc && !(facts.staff && facts.staff.role !== 'staff')) return toHome();
+    if (!(facts.staff && facts.staff.role === 'admin' && !facts.staff.overseer)) return toHome();
     return sendFile(res, 'stockchecker.html', 'text/html; charset=utf-8', withChrome('staff', multi));
   }
   // Refill Order: whoever the super admin gave access to (Staff approvals)
