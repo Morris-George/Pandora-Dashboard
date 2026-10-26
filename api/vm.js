@@ -172,6 +172,7 @@ async function storeAverages(from, to) {
 module.exports = activity.wrap('vm', async function handler(req, res) {
   // /api/vmzones is rewritten here (vercel.json) so it does not count as one more function on the Hobby plan (12 max)
   { const u0 = new URL(req.url, 'https://x.invalid'); if (u0.searchParams.get('activity') || u0.pathname === '/api/activity') return require('./_activity').handler(req, res); } // Activity log (api/_activity.js), super admin only
+  if (new URL(req.url, 'https://x.invalid').searchParams.get('access')) return require('./_access')(req, res); // Report access, super admin only
   if (new URL(req.url, 'https://x.invalid').searchParams.get('vmzones')) return require('./_vmzones')(req, res);
   if (new URL(req.url, 'https://x.invalid').searchParams.get('zonestock')) return require('./_zonestock')(req, res);
   if (new URL(req.url, 'https://x.invalid').searchParams.get('stockcount')) return require('./_stockcount')(req, res);

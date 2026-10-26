@@ -52,6 +52,10 @@
       "destination": "/api/vm?vmzones=1"
     },
     {
+      "source": "/api/access",
+      "destination": "/api/vm?access=1"
+    },
+    {
       "source": "/api/activity",
       "destination": "/api/vm?activity=1"
     },

@@ -203,6 +203,12 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'film.html', 'text/html; charset=utf-8', withChrome('staff', multi));
   }
 
+  // Report access (super admin only, not the Overseer): who may open which report
+  if (requestedPath === '/access' || requestedPath === '/access/' || requestedPath === '/access.html') {
+    if (!(facts.staff && facts.staff.role === 'admin' && !facts.staff.overseer)) return toHome();
+    return sendFile(res, 'access.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+  }
+
   // Activity (super admin; the Overseer only after the super admin switches it on inside the page)
   if (requestedPath === '/activity' || requestedPath === '/activity/' || requestedPath === '/activity.html') {
     if (!facts.activity) return toHome();

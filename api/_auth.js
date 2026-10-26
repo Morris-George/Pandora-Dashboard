@@ -29,6 +29,29 @@ function stafferUsername(token, secret) {
   } catch (_) { return null; }
 }
 
+// The kind of person a saved account is (also used by the Report access page, api/_access.js, to see what each account can open).
+// The caller decides whether the account is active; this only reads its role.
+function whoFromRec(rec) {
+  if (rec.role === 'vm') {
+    return { kind: 'vm', user: rec, info: { role: 'vm', label: 'Visual Merchandiser', zone: null, allow: null, zones: null } };
+  }
+  if (rec.role === 'overseer') {
+    // an Overseer (for example Ibrahim Nassif): sees and does everything the super admin does, except managing accounts and passwords
+    const account = { role: 'admin', label: 'Overseer', user: rec.username, overseer: true };
+    return { kind: 'env', account, user: rec, info: { ...roleInfo(account), overseer: true } };
+  }
+  if (rec.role === 'stockcount') {
+    // a Stock Count only account: opens the Stock Count page and its data, nothing else
+    return { kind: 'sc', user: rec, info: { role: 'stockcount', label: 'Stock Count', zone: null, allow: null, zones: null } };
+  }
+  if (rec.storeManager && rec.linked && rec.store) {
+    // a store manager: still a sales person (own page at /staff/me), and also sees the team of their own store, nothing else
+    const rx = '^' + String(rec.store).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$';
+    return { kind: 'staff', user: rec, info: { role: 'store', label: 'Store manager', zone: rec.store, allow: [rx], zones: null, self: { store: rec.store, name: rec.name }, storeManager: true } };
+  }
+  return { kind: 'staff', user: rec, info: { role: 'staff', label: 'Sales person', zone: null, allow: null, zones: null, self: { store: rec.store, name: rec.name } } };
+}
+
 // -> {kind:'env', account, info} | {kind:'staff', user, info} | {kind:'vm', user, info} | null
 // The answer is kept for the length of one request, so the activity log can ask "who is this?" without reading storage again.
 const memo = new WeakMap();
@@ -50,28 +73,9 @@ async function whoamiNow(req) {
   const u = stafferUsername(readCookie(req, STAFFER_COOKIE), secret);
   if (u && store.configured()) {
     const rec = await users.getUser(u);
-    if (rec && rec.status === 'active' && rec.role === 'vm') {
-      return { kind: 'vm', user: rec, info: { role: 'vm', label: 'Visual Merchandiser', zone: null, allow: null, zones: null } };
-    }
-    if (rec && rec.status === 'active' && rec.role === 'overseer') {
-      // an Overseer (for example Ibrahim Nassif): sees and does everything the super admin does, except managing accounts and passwords
-      const account = { role: 'admin', label: 'Overseer', user: rec.username, overseer: true };
-      return { kind: 'env', account, user: rec, info: { ...roleInfo(account), overseer: true } };
-    }
-    if (rec && rec.status === 'active' && rec.role === 'stockcount') {
-      // a Stock Count only account: opens the Stock Count page and its data, nothing else
-      return { kind: 'sc', user: rec, info: { role: 'stockcount', label: 'Stock Count', zone: null, allow: null, zones: null } };
-    }
-    if (rec && rec.status === 'active' && rec.storeManager && rec.linked && rec.store) {
-      // a store manager: still a sales person (own page at /staff/me), and also sees the team of their own store, nothing else
-      const rx = '^' + String(rec.store).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$';
-      return { kind: 'staff', user: rec, info: { role: 'store', label: 'Store manager', zone: rec.store, allow: [rx], zones: null, self: { store: rec.store, name: rec.name }, storeManager: true } };
-    }
-    if (rec && rec.status === 'active') {
-      return { kind: 'staff', user: rec, info: { role: 'staff', label: 'Sales person', zone: null, allow: null, zones: null, self: { store: rec.store, name: rec.name } } };
-    }
+    if (rec && rec.status === 'active') return whoFromRec(rec);
   }
   return null;
 }
 
-module.exports = { STAFFER_COOKIE, stafferCookie, whoami };
+module.exports = { STAFFER_COOKIE, stafferCookie, whoami, whoFromRec };
