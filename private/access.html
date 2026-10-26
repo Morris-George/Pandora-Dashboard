@@ -50,16 +50,23 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
 .rep:first-of-type{border-top:0}.rep b{overflow-wrap:anywhere}.rep .d{color:var(--ink2);font-size:12.5px}
 .rep .nt{font-size:12px;font-weight:700;color:var(--accent-text);background:var(--fill-soft);border-radius:99px;padding:3px 10px;white-space:nowrap}
 .cnt{color:var(--ink2);font-size:12.5px;font-weight:600}
-@media (max-width:640px){.rep{grid-template-columns:1fr}}
+.rep{grid-template-columns:minmax(0,1.1fr) minmax(0,1.6fr) auto auto}
+.sw2{position:relative;width:46px;height:26px;border-radius:99px;border:1px solid var(--line);background:var(--line);cursor:pointer;padding:0;flex:none;transition:background .2s}
+.sw2::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.sw2.on{background:var(--accent);border-color:var(--accent)}.sw2.on::after{transform:translateX(20px)}
+.sw2:disabled{opacity:.45;cursor:not-allowed}.sw2.busy{opacity:.6;cursor:wait}
+.rep.off b{color:var(--ink2);text-decoration:line-through;text-decoration-color:var(--line)}.rep.off .d{opacity:.7}
+.why{font-size:11.5px;color:var(--ink2)}
+@media (max-width:640px){.rep{grid-template-columns:1fr auto}.rep .d,.rep .nt,.rep .why{grid-column:1/-1}.rep .sw2{grid-row:1;grid-column:2}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Report access</h1><div class="sub">Pick a person to see which reports they are allowed to open. This is exactly what appears on their own home screen.</div></div><div class="actions"><a class="btn" href="/staff/accounts" style="text-decoration:none">Staff approvals</a></div></header>
+  <header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Report access</h1><div class="sub">Pick a person to see every report. Switch a report off to take it away from them, or on to give it back.</div></div><div class="actions"><a class="btn" href="/staff/accounts" style="text-decoration:none">Staff approvals</a></div></header>
   <div class="err" id="err" hidden></div>
   <section class="card">
     <div class="pick"><label for="who">Person</label><select id="who" disabled><option>Loading…</option></select></div>
-    <div class="note">Only the super admin can open this page.</div>
+    <div class="note" id="count">Only the super admin can open this page.</div>
   </section>
   <section class="card" id="out" hidden></section>
 </div>
@@ -74,21 +81,31 @@ function draw(){
   const p=people.find(x=>x.key===$('who').value),box=$('out');
   if(!p){box.hidden=true;return}
   box.hidden=false;
-  const note=p.status==='active'?'':p.status==='pending'?'Not approved yet, so they cannot sign in. This is what they would get once approved.':'This account is switched off. This is what they would get when it is switched on.';
+  const note=p.status==='active'?'':p.status==='pending'?'Not approved yet, so they cannot sign in. These switches apply once they are approved.':'This account is switched off. These switches apply when it is switched on.';
+  const on=p.apps.filter(a=>a.on).length;
   box.innerHTML=`<div class="who2"><h2>${esc(p.name)}</h2><span class="chip">${esc(p.label)}</span>${status(p)}</div>
     <div class="meta">${esc(p.scope)}</div>
     ${note?`<div class="note" style="margin:0 0 8px">${esc(note)}</div>`:''}
-    <div class="cnt">${p.apps.length} report${p.apps.length===1?'':'s'} and page${p.apps.length===1?'':'s'}</div>
-    ${p.apps.length?p.apps.map(a=>`<div class="rep"><b>${esc(a.title)}</b><span class="d">${esc(a.desc)}</span>${a.note?`<span class="nt">${esc(a.note)}</span>`:'<span></span>'}</div>`).join(''):'<div class="empty">Nothing yet. Open Staff approvals to give this person access.</div>'}`;
+    <div class="cnt">${on} of ${p.apps.length} reports on</div>
+    ${p.apps.map(a=>`<div class="rep${a.on?'':' off'}"><b>${esc(a.title)}</b><span class="d">${esc(a.desc)}${a.why?`<br><span class="why">${esc(a.why)}</span>`:''}</span>${a.note?`<span class="nt">${esc(a.note)}</span>`:'<span></span>'}<button type="button" class="sw2${a.on?' on':''}" data-app="${esc(a.id)}" data-on="${a.on?1:0}" role="switch" aria-checked="${a.on}" aria-label="${esc(a.title)}"${a.locked?' disabled':''}></button></div>`).join('')}`;
 }
-async function load(){
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('button.sw2');if(!b||b.disabled)return;
+  const key=$('who').value;b.classList.add('busy');b.disabled=true;
+  try{
+    const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,app:b.dataset.app,on:b.dataset.on!=='1'})});
+    const j=await r.json();
+    if(!r.ok||!j.ok){showErr(j.error||'Could not save.')}else showErr('');
+    await load(key);
+  }catch(_){showErr('Could not save. Please try again.');await load(key)}
+});
+async function load(keepKey){
   try{
     const r=await fetch('/api/access',{credentials:'same-origin',cache:'no-store'});
     if(r.status===401){location.replace('/login.html');return}
     const j=await r.json();
     if(!r.ok||!j.ok){showErr(j.error||'Could not load.');$('who').innerHTML='<option>Could not load</option>';return}
-    showErr('');
-    people=j.people;
+    people=j.people;$('count').textContent=people.length+' people';
     const groups=ORDER.concat([...new Set(people.map(p=>p.group))].filter(g=>!ORDER.includes(g)));
     let h='<option value="">Choose a person…</option>';
     for(const g of groups){
@@ -97,7 +114,7 @@ async function load(){
       h+=`<optgroup label="${esc(g)}">`+list.map(p=>`<option value="${esc(p.key)}">${esc(p.name)}${p.store&&g==='Sales people'||p.store&&g==='Store managers'?' · '+esc(p.store):''}${p.status==='active'?'':p.status==='pending'?' (waiting)':' (off)'}</option>`).join('')+'</optgroup>';
     }
     $('who').innerHTML=h;$('who').disabled=false;
-    const keep=sessionStorage.getItem('accessWho');
+    let keep=keepKey||sessionStorage.getItem('accessWho');
     if(keep&&people.some(p=>p.key===keep)){$('who').value=keep;draw()}
   }catch(e){showErr('Could not load. Please refresh the page.')}
 }

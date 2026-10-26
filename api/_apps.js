@@ -30,11 +30,28 @@ const APPS = [
 function appsFor(f) {
   // area managers open the same Dashboards as the super admin, but the server only sends them the stores of their zone
   const zoneManager = !!f.staff && f.staff.role !== 'admin' && f.staff.role !== 'staff' && f.staff.role !== 'store';
-  return APPS.filter(a => a.allow(f)).map(a => ({ id: a.id, title: a.title, desc: a.id === 'dashboards' && zoneManager ? 'Sales dashboards for the stores in your zone.' : a.id === 'schedule' && f.staff && f.staff.role === 'staff' ? 'See who works the Morning, Between and Night shifts at your store this week.' : a.desc, href: a.href }));
+  const hidden = f.hidden || [];
+  return APPS.filter(a => a.allow(f) && !hidden.includes(a.id)).map(a => ({ id: a.id, title: a.title, desc: a.id === 'dashboards' && zoneManager ? 'Sales dashboards for the stores in your zone.' : a.id === 'schedule' && f.staff && f.staff.role === 'staff' ? 'See who works the Morning, Between and Night shifts at your store this week.' : a.desc, href: a.href }));
+}
+
+// Reports the super admin switched off for one person (Report access page): access/overrides.json = { "<key>": { remove: ["stock", ...] } }.
+// The super admin is never affected, so nobody can lock themselves out. Hiding "mysales" also hides its twin "mysales2".
+const OVERRIDES = 'access/overrides.json';
+async function hiddenFor(who) {
+  try {
+    if (!who || (who.kind === 'env' && who.info.role === 'admin' && !who.info.overseer)) return [];
+    const store = require('./_store');
+    if (!store.configured()) return [];
+    const all = (await store.getJSON(OVERRIDES)) || {};
+    const o = all[require('./_refill').keyOf(who)];
+    const ids = o && Array.isArray(o.remove) ? o.remove.slice() : [];
+    if (ids.includes('mysales')) ids.push('mysales2');
+    return ids;
+  } catch (_) { return []; }
 }
 
 // What one person (a "who" from api/_auth.js) can open. dashOk = they hold the separate Dashboards session (super admin).
-async function factsFromWho(who, dashOk) {
+async function factsFromWho(who, dashOk, withOverrides) {
   // area managers open Dashboards with their staff login, limited to their zone by the server (api/uploads.js)
   const dash = !!dashOk || (!!who && who.kind === 'env' && (!!who.info.allow || !!who.info.overseer));
   const vm = !!who && who.kind === 'vm';
@@ -43,7 +60,8 @@ async function factsFromWho(who, dashOk) {
   const refill = who ? await require('./_refill').levelFor(who) : 'none'; // Refill Order access level, set on Staff approvals
   const dist = who ? await require('./_dist').levelFor(who) : 'none'; // Orders Distribution access level, set on Staff approvals
   const activity = who ? await require('./_activity').canView(who) : false; // the Activity page: super admin, or the Overseer once it is switched on
-  return { dash, staff, vm, sc, refill, dist, activity, vmName: vm || sc ? who.user.name : '' };
+  const hidden = withOverrides ? await hiddenFor(who) : [];
+  return { dash, staff, vm, sc, refill, dist, activity, hidden, vmName: vm || sc ? who.user.name : '' };
 }
 
 // Read the cookies of this request: which logins are valid?
@@ -53,7 +71,7 @@ async function sessionFacts(req) {
   const tok = readCookie(req, PROJECTS.dashboards.cookie);
   const adminUser = (staffAccounts().find(a => a.role === 'admin') || {}).user;
   const who = await whoami(req);
-  return factsFromWho(who, validSession('dashboards', tok, adminUser, secret));
+  return factsFromWho(who, validSession('dashboards', tok, adminUser, secret), true);
 }
 
 // Area managers are greeted by first name ("Hello Joseph"). Everyone else keeps their usual label.
@@ -65,4 +83,4 @@ function greetName(f) {
   return first ? first.charAt(0).toUpperCase() + first.slice(1).toLowerCase() : '';
 }
 
-module.exports = { APPS, appsFor, sessionFacts, factsFromWho, greetName };
+module.exports = { APPS, appsFor, sessionFacts, factsFromWho, greetName, OVERRIDES };

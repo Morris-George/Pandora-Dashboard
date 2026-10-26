@@ -150,6 +150,31 @@ module.exports = async function handler(req, res) {
   const toHome = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/'); return res.status(302).end(); };
   if (!signedIn && !facts.vm && !facts.sc) return toLogin();
 
+  // Reports the super admin switched off for this person (Report access page) are closed here, and hidden on the home screen
+  if (facts.hidden && facts.hidden.length) {
+    const role = facts.staff && facts.staff.role;
+    const P = requestedPath.replace(/\/+$/, '') || '/';
+    let id = '';
+    if (P === '/dashboards' || P === '/index.html') id = 'dashboards';
+    else if (P === '/staff' || P === '/staff.html' || P === '/staff/index.html' || P === '/staff/person') id = role === 'staff' ? 'mysales' : role === 'store' ? 'storeteam' : 'staff';
+    else if (P === '/staff/me') id = 'mysales2';
+    else if (P === '/staff/accounts') id = 'approvals';
+    else if (P === '/uploads' || P === '/uploads.html') id = 'uploads';
+    else if (P === '/activity' || P === '/activity.html') id = 'activity';
+    else if (P === '/film' || P === '/film.html') id = 'film';
+    else if (P === '/daily' || P === '/daily.html') id = 'daily';
+    else if (P === '/schedule' || P === '/schedule.html') id = 'schedule';
+    else if (P === '/vm/zones' || P === '/vmzones.html') id = 'vmzones';
+    else if (P === '/vm/stock' || P === '/zonestock.html') id = 'zonestock';
+    else if (P === '/stock' || P === '/stock.html') id = 'stock';
+    else if (P === '/stockcount' || P === '/stockcount.html') id = 'stockcount';
+    else if (P === '/refill' || P === '/refill.html') id = 'refill';
+    else if (P === '/slow' || P === '/slow.html') id = 'slow';
+    else if (P === '/distribution' || P === '/distribution.html') id = 'dist';
+    else if (P === '/vm' || P === '/vm.html') id = 'vm';
+    if (id && facts.hidden.includes(id)) return requestedPath === '/' ? toHome() : toHome();
+  }
+
   // Home: the options this person can open
   if (requestedPath === '/' || requestedPath === '/home.html') {
     const label = facts.vm || facts.sc ? facts.vmName : facts.staff ? (facts.staff.role === 'staff' || facts.staff.role === 'store' ? facts.staff.name : facts.staff.label) : 'Pandora Dashboards';
