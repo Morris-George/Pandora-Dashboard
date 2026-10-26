@@ -51,6 +51,12 @@ video{width:100%;height:100%;object-fit:cover;display:block}
 .flag.okk{background:var(--ok);color:#10281D}
 .verdict{display:flex;gap:8px;margin-top:10px}
 .verdict button{flex:1;padding:10px}
+.qrcard{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
+@media(max-width:520px){.qrcard{grid-template-columns:1fr;justify-items:center;text-align:center}}
+.qrbox{width:230px;max-width:100%;aspect-ratio:1;background:#fff;border-radius:12px;padding:8px;display:grid;place-items:center;color:#2A1F24;font-size:12px;text-align:center}
+.qrbox svg{width:100%;height:100%;display:block}
+.qrcard h3{margin:0 0 6px;font-size:20px;font-weight:800;letter-spacing:-.02em;text-transform:none;color:var(--fg)}
+.qrcard .sku{margin:8px 0 12px}
 .empty{color:var(--mute);font-size:15px;grid-column:1/-1}
 h2{font-size:13px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:22px 0 8px}
 .list{display:grid;gap:8px}
@@ -74,6 +80,17 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 <header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Stock Checker</h1><div class="sub">Scan each barcode in the store and compare the item in your hand with its picture.</div></div><div class="actions"></div></header>
 <div class="tots tot">Scans <b id="totScans">0</b> · SKUs <b id="totSkus">0</b></div>
 
+<section class="qrcard" id="qrCard" hidden>
+  <div class="qrbox" id="qrBox" role="img" aria-label="QR code that opens Stock Checker on a phone"></div>
+  <div>
+    <h3>Scan with your phone</h3>
+    <p class="hint">Point the phone camera at this code and open the link. Log in, tap Start camera, then scan the barcodes. Counts are kept on the phone doing the scanning.</p>
+    <div class="sku" id="qrUrl"></div>
+    <button id="useHere" type="button" class="sec">Use this computer's camera instead</button>
+  </div>
+</section>
+
+<div id="camBlock">
 <div class="cam" id="cam">
   <video id="video" playsinline muted></video>
   <div class="reticle"></div>
@@ -85,6 +102,8 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 <div class="row">
   <button id="startBtn" type="button">Start camera</button>
   <button id="flipBtn" type="button" class="sec">Flip camera</button>
+    <button id="showQr" type="button" class="sec" hidden>Show phone QR code</button>
+</div>
 </div>
 
 <div class="last" id="last">
@@ -123,6 +142,7 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 <p class="hint" id="note"></p>
 
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 (function(){
 'use strict';
@@ -275,6 +295,27 @@ function camError(err){
 $('startBtn').onclick=function(){if(running){stopCam();stateEl.textContent='Camera off';camMsg.hidden=false;camMsg.textContent='Camera stopped.';this.textContent='Start camera'}else{startCam();this.textContent='Stop camera'}};
 $('flipBtn').onclick=function(){facing=facing==='environment'?'user':'environment';if(running)startCam()};
 document.addEventListener('visibilitychange',function(){if(document.hidden&&running){stopCam();$('startBtn').textContent='Start camera';stateEl.textContent='Camera off';camMsg.hidden=false;camMsg.textContent='Camera paused. Tap Start camera.'}});
+
+/* ---- computer: show a QR code to open this page on a phone; phone: show the camera ---- */
+var qrCard=$('qrCard'),camBlock=$('camBlock'),qrBox=$('qrBox');
+var pageUrl=location.origin+'/stockchecker';
+function drawQR(){
+  $('qrUrl').textContent=pageUrl;
+  try{
+    var q=qrcode(0,'Q');q.addData(pageUrl);q.make();
+    var n=q.getModuleCount(),m=4,d='';
+    for(var r=0;r<n;r++)for(var c=0;c<n;c++)if(q.isDark(r,c))d+='M'+(c+m)+' '+(r+m)+'h1v1h-1z';
+    var w=n+2*m;
+    qrBox.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+w+' '+w+'" shape-rendering="crispEdges"><rect width="'+w+'" height="'+w+'" fill="#fff"/><path d="'+d+'" fill="#2A1F24"/></svg>';
+  }catch(e){qrBox.textContent='The QR code could not load. Open the link below on your phone.'}
+}
+var onPhone=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
+function showQrView(on){qrCard.hidden=!on;camBlock.hidden=on;if(on&&running){stopCam();$('startBtn').textContent='Start camera'}}
+if(!onPhone){
+  drawQR();$('showQr').hidden=false;showQrView(true);
+  $('useHere').onclick=function(){showQrView(false)};
+  $('showQr').onclick=function(){showQrView(true)};
+}
 
 renderAll();
 })();
