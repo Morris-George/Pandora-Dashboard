@@ -176,6 +176,7 @@ module.exports = activity.wrap('vm', async function handler(req, res) {
   if (new URL(req.url, 'https://x.invalid').searchParams.get('vmzones')) return require('./_vmzones')(req, res);
   if (new URL(req.url, 'https://x.invalid').searchParams.get('zonestock')) return require('./_zonestock')(req, res);
   if (new URL(req.url, 'https://x.invalid').searchParams.get('stockcount')) return require('./_stockcount')(req, res);
+  if (new URL(req.url, 'https://x.invalid').searchParams.get('checkerpair')) return require('./_checkerpair')(req, res); // Stock Checker phone link
   if (new URL(req.url, 'https://x.invalid').searchParams.get('daily')) return require('./_daily')(req, res);
   if (new URL(req.url, 'https://x.invalid').searchParams.get('schedule')) return require('./_schedule')(req, res); // Weekly Schedule (managers)
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });

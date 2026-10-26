@@ -36,6 +36,10 @@
       "destination": "/api/vm?zonestock=1"
     },
     {
+      "source": "/api/checkerpair",
+      "destination": "/api/vm?checkerpair=1"
+    },
+    {
       "source": "/api/stockcount",
       "destination": "/api/vm?stockcount=1"
     },

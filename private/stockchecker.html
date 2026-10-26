@@ -53,7 +53,7 @@ video{width:100%;height:100%;object-fit:cover;display:block}
 .verdict button{flex:1;padding:10px}
 .qrcard{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
 @media(max-width:520px){.qrcard{grid-template-columns:1fr;justify-items:center;text-align:center}}
-.qrbox{width:230px;max-width:100%;aspect-ratio:1;background:#fff;border-radius:12px;padding:8px;display:grid;place-items:center;color:#2A1F24;font-size:12px;text-align:center}
+.qrbox{width:280px;max-width:100%;aspect-ratio:1;background:#fff;border-radius:12px;padding:8px;display:grid;place-items:center;color:#2A1F24;font-size:12px;text-align:center}
 .qrbox svg{width:100%;height:100%;display:block}
 .qrcard h3{margin:0 0 6px;font-size:20px;font-weight:800;letter-spacing:-.02em;text-transform:none;color:var(--fg)}
 .qrcard .sku{margin:8px 0 12px}
@@ -84,7 +84,7 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
   <div class="qrbox" id="qrBox" role="img" aria-label="QR code that opens Stock Checker on a phone"></div>
   <div>
     <h3>Scan with your phone</h3>
-    <p class="hint">Point the phone camera at this code and open the link. Log in, tap Start camera, then scan the barcodes. Counts are kept on the phone doing the scanning.</p>
+    <p class="hint">Point the phone camera at this code and open the link. It opens straight to the scanner, with no login. Tap Start camera and scan the barcodes. Counts are kept on the phone doing the scanning.</p>
     <div class="sku" id="qrUrl"></div>
     <button id="useHere" type="button" class="sec">Use this computer's camera instead</button>
   </div>
@@ -298,21 +298,26 @@ document.addEventListener('visibilitychange',function(){if(document.hidden&&runn
 
 /* ---- computer: show a QR code to open this page on a phone; phone: show the camera ---- */
 var qrCard=$('qrCard'),camBlock=$('camBlock'),qrBox=$('qrBox');
-var pageUrl=location.origin+'/stockchecker';
-function drawQR(){
-  $('qrUrl').textContent=pageUrl;
+function drawQR(link){
+  $('qrUrl').textContent='Opens the camera on the phone, no login needed (valid 12 hours)';
   try{
-    var q=qrcode(0,'Q');q.addData(pageUrl);q.make();
+    var q=qrcode(0,'M');q.addData(link);q.make();
     var n=q.getModuleCount(),m=4,d='';
     for(var r=0;r<n;r++)for(var c=0;c<n;c++)if(q.isDark(r,c))d+='M'+(c+m)+' '+(r+m)+'h1v1h-1z';
     var w=n+2*m;
     qrBox.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+w+' '+w+'" shape-rendering="crispEdges"><rect width="'+w+'" height="'+w+'" fill="#fff"/><path d="'+d+'" fill="#2A1F24"/></svg>';
   }catch(e){qrBox.textContent='The QR code could not load. Open the link below on your phone.'}
 }
-var onPhone=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
+var onPhone=!!window.__PAIRED||!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
+if(window.__PAIRED){var cr=document.querySelector('.crumb');if(cr)cr.hidden=true}
 function showQrView(on){qrCard.hidden=!on;camBlock.hidden=on;if(on&&running){stopCam();$('startBtn').textContent='Start camera'}}
 if(!onPhone){
-  drawQR();$('showQr').hidden=false;showQrView(true);
+  $('showQr').hidden=false;showQrView(true);
+  qrBox.textContent='Making the phone link…';
+  fetch('/api/checkerpair',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:'{}'}).then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j}})}).then(function(o){
+    if(o.ok&&o.j&&o.j.token)drawQR(location.origin+'/stockchecker?pair='+encodeURIComponent(o.j.token));
+    else qrBox.textContent=(o.j&&o.j.error)||'The phone link could not be made. Reload the page and try again.';
+  }).catch(function(){qrBox.textContent='The phone link could not be made. Reload the page and try again.'});
   $('useHere').onclick=function(){showQrView(false)};
   $('showQr').onclick=function(){showQrView(true)};
 }

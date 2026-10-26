@@ -142,6 +142,29 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  // A phone paired from Stock Checker: the link carries a signed token (valid 12 hours). Valid -> keep it in a cookie that
+  // opens only Stock Checker, drop it from the address, and open the camera page. Not valid -> the normal sign-in rules below.
+  const isChecker = requestedPath === '/stockchecker' || requestedPath === '/stockchecker/' || requestedPath === '/stockchecker.html';
+  if (isChecker && url.searchParams.get('pair') && pair.validToken(url.searchParams.get('pair'), process.env.PANDORA_AUTH_SECRET, 'checker')) {
+    res.setHeader('Set-Cookie', pair.cookieHeader(url.searchParams.get('pair'), 'checker'));
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Location', '/stockchecker');
+    return res.status(302).end();
+  }
+  if (isChecker && pair.hasPair(req, 'checker')) {
+    const f1 = await sessionFacts(req);
+    if (!(f1.sc || (f1.staff && f1.staff.role !== 'staff'))) {
+      // not signed in as someone who may open it: the paired phone sees only this page (no Home link, nothing else)
+      const chrome = withChrome('staff', false);
+      return sendFile(res, 'stockchecker.html', 'text/html; charset=utf-8', function (buf) {
+        let html = buf.toString('utf8');
+        const h = html.search(/<\/head>/i);
+        if (h !== -1) html = html.slice(0, h) + '<script>window.__PAIRED=true;</script>' + html.slice(h);
+        return chrome(Buffer.from(html, 'utf8'));
+      });
+    }
+  }
+
   // Everything below needs a login. Which logins this browser holds decides what it can open.
   const facts = await sessionFacts(req);
   const signedIn = facts.dash || facts.staff;
