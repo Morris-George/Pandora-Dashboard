@@ -13,7 +13,7 @@ const INDEX = 'slow/index.json';
 const REPORT = process.env.ERP_SLOW_REPORT || 'Pandora Slow Moving by SKU';
 // the same report without the warehouse filter: one row per item and store (a Warehouse column), one run for every store
 const REPORT_ALL = process.env.ERP_SLOW_REPORT_ALL || 'Pandora Slow Moving by SKU-No Warehouse Filter';
-const NOT_A_STORE = /sample|main|transit|damage|defect|reject|return/i;
+const NOT_A_STORE = /sample|main|transit|damage|defect|reject|return|water\s*way/i;
 
 function send(res, code, obj) {
   res.setHeader('Cache-Control', 'no-store');
@@ -39,7 +39,7 @@ async function warehouses() {
   const r = await fetch(erpBase() + '/api/resource/Warehouse?' + q, { headers: erpAuth(), signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error('ERP answered ' + r.status + ' for the warehouse list');
   const d = await r.json(), { storeOf, settings } = require('./_dist'), st = await settings();
-  return (d.data || []).filter(w => !w.is_group && !w.disabled).map(w => ({ name: w.name, store: storeOf(w.name, st.stores) || '' }))
+  return (d.data || []).filter(w => !w.is_group && !w.disabled && !/water\s*way/i.test(w.name)).map(w => ({ name: w.name, store: storeOf(w.name, st.stores) || '' }))
     .sort((a, b) => (!!b.store - !!a.store) || a.name.localeCompare(b.name));
 }
 
@@ -213,7 +213,7 @@ module.exports = async function handler(req, res) {
     }
     const idx = (await store.getJSON(INDEX)) || {}, { storeOf, settings } = require('./_dist'), st = await settings();
     const snaps = [];
-    for (const [w, v] of Object.entries(idx)) { const s = await store.getJSON('slow/w/' + v.k + '.json'); if (s) snaps.push({ ...s, store: storeOf(w, st.stores) || w }); }
+    for (const [w, v] of Object.entries(idx)) { if (/water\s*way/i.test(w)) continue; const s = await store.getJSON('slow/w/' + v.k + '.json'); if (s) snaps.push({ ...s, store: storeOf(w, st.stores) || w }); }
     if (!snaps.length) return send(res, 200, { ok: true, level: lvl, snaps: [] });
     // the SKU column, by name
     const c0 = snaps.find(s => s.cols.length).cols, skuCol = c0 ? c0.findIndex(c => c.fieldname === '_sku') : -1;

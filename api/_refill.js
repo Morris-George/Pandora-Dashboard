@@ -66,6 +66,7 @@ const groupOf = x => String(pick(x, 'item_group', 'full_group', 'category', 'ite
 function keepRow(x) {
   const brand = String(x.brand || ''), grp = groupOf(x), name = String(pick(x, 'item_name', 'description') || '');
   if (brand && !/pandora/i.test(brand)) return false;
+  if (require('./_exclude').anyHit(x.warehouse, x.cost_center, x.branch)) return false; // Waterway 2 and Laderach are left out
   return !notJewel(grp, name);
 }
 const pick = (x, ...ks) => { for (const k of ks) if (x[k] != null && x[k] !== '') return x[k]; return null; };

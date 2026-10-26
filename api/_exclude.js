@@ -1,7 +1,8 @@
-// Laderach is no longer part of the dashboards: its branches, categories and items are left out everywhere.
+// Laderach and the Waterway 2 branch are no longer part of the dashboards: their branches, categories and items are left out everywhere.
 // Used when data comes in (ERP sync, uploads) and again when saved data is read, so older saved files are cleaned too.
 const plain = v => String(v == null ? '' : v).normalize('NFD').replace(/[̀-ͯ]/g, '');
-const RX = /laderach/i;
+// Waterway 2 (a closed branch) is left out the same way, wherever it shows up as a store, branch or warehouse.
+const RX = /laderach|water\s*way/i;
 const hit = v => typeof v === 'string' && RX.test(plain(v));
 const anyHit = (...vals) => vals.some(hit);
 // "Sales Team" is not a store: it is left out of every Staff Performance report (all roles, including super admin).

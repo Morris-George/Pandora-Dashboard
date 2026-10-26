@@ -62,7 +62,7 @@ async function settings() { const s = (await store.getJSON(SETTINGS)) || {}; ret
 // which store a warehouse or branch name belongs to (first match in the list)
 function storeOf(name, stores) {
   const n = norm(name); if (!n) return '';
-  if (/sample|main\s*warehouse|transit|damage|defect/.test(n)) return '';
+  if (/sample|main\s*warehouse|transit|damage|defect|water\s*way/.test(n)) return '';
   for (const s of stores) { try { if (new RegExp(s.match || s.code, 'i').test(n)) return s.code; } catch (_) { if (n.includes(String(s.code).toLowerCase())) return s.code; } }
   return '';
 }
