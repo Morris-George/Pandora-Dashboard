@@ -7,6 +7,7 @@
 //   POST /api/schedule?op=clear    {store, week}                                                  empty the whole week
 // Who: super admin = every store; area managers = the stores of their zone; store managers = their own store (all three can edit).
 // Sales people can only LOOK at their own store's schedule (GET); every change answers 403.
+// o = people on vacation that day: [{n, r}] with r = annual | weekly | holiday (sent inside shifts of op=day, same as m/b/n).
 // m = Morning, b = Between, n = Night. Times are 24-hour "HH:MM"; a To that is earlier than the From means the shift ends after midnight.
 // Stored at sched/<store>/<week start>.json and sched/<store>/settings.json, reached through api/vm.js (Hobby plan: 12 functions max).
 const store = require('./_store');
@@ -21,6 +22,9 @@ const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').repl
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 const MAX_PER_SHIFT = 3, MAX_NAMES = 80;
+// People who are NOT on a shift that day because they are away. Saved on the day as o:[{n, r}] where r is one of LEAVE_REASONS.
+const LEAVE_REASONS = ['annual', 'weekly', 'holiday']; // annual vacation, weekly vacation (day off), official holiday
+const MAX_LEAVE = 12;
 
 function send(res, code, obj) {
   res.setHeader('Cache-Control', 'no-store');
@@ -83,6 +87,21 @@ function cleanShift(list) {
   }
   return { list: out };
 }
+// the "on vacation" list of one day -> clean list, or an error text
+function cleanLeave(list) {
+  if (!Array.isArray(list)) return { err: 'The vacation list could not be read.' };
+  if (list.length > MAX_LEAVE) return { err: 'Up to ' + MAX_LEAVE + ' people can be marked on vacation in one day.' };
+  const out = [], seen = new Set();
+  for (const e of list) {
+    const n = cleanName(e && e.n);
+    if (!n) return { err: 'Every person needs a name.' };
+    if (!LEAVE_REASONS.includes(e.r)) return { err: 'Choose the reason ' + n + ' is on vacation.' };
+    if (seen.has(n.toLowerCase())) continue;
+    seen.add(n.toLowerCase());
+    out.push({ n, r: e.r });
+  }
+  return { list: out };
+}
 const cleanTimes = t => {
   const out = {};
   for (const s of SHIFTS) {
@@ -96,7 +115,7 @@ const cleanTimes = t => {
 const weekKey = (name, week) => 'sched/' + slug(name) + '/' + week + '.json';
 const settingsKey = name => 'sched/' + slug(name) + '/settings.json';
 const emptyWeek = (name, week) => ({ store: name, week, days: {} });
-const hasPeople = rec => !!rec && Object.keys(rec.days || {}).some(d => SHIFTS.some(s => (rec.days[d][s] || []).length));
+const hasPeople = rec => !!rec && Object.keys(rec.days || {}).some(d => SHIFTS.concat('o').some(s => (rec.days[d][s] || []).length));
 
 module.exports = async function handler(req, res) {
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
@@ -160,6 +179,9 @@ module.exports = async function handler(req, res) {
         if (c.err) return send(res, 400, { ok: false, error: c.err });
         if (c.list.length) day[s] = c.list;
       }
+      const lv = cleanLeave(shifts.o || []);
+      if (lv.err) return send(res, 400, { ok: false, error: lv.err });
+      if (lv.list.length) day.o = lv.list;
       const rec = (await store.getJSON(key)) || emptyWeek(name, week);
       rec.days = rec.days || {};
       if (Object.keys(day).length) rec.days[date] = day; else delete rec.days[date];
@@ -167,7 +189,7 @@ module.exports = async function handler(req, res) {
       rec.log = [{ at, by: a.by, date, action: 'changed' }, ...(rec.log || [])].slice(0, 40);
       await store.putJSON(key, rec);
       // remember the names so the next week can pick them from a list
-      const added = [].concat(...SHIFTS.map(s => day[s] || [])).map(e => e.n);
+      const added = [].concat(...SHIFTS.concat('o').map(s => day[s] || [])).map(e => e.n);
       if (added.length) {
         const st = (await store.getJSON(settingsKey(name))) || {};
         const seen = new Set(), names = [];
