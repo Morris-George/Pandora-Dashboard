@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Shelf Check Scanner</title>
+<style>
+:root{
+  --bg:#14120F; --panel:#1E1B17; --line:#322E28; --fg:#F4EFE6; --mute:#9A9286;
+  --accent:#FF93A0; --ok:#4CC38A; --bad:#FF5C5C; --warn:#F2B84B;
+  --ui:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--ui)}
+body{padding:max(12px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));max-width:720px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+h1{font-size:18px;margin:0;letter-spacing:.01em}
+.tot{font:600 13px var(--mono);color:var(--mute)}
+.tot b{color:var(--fg)}
+button{font:600 15px var(--ui);border:0;border-radius:12px;padding:12px 16px;cursor:pointer;color:#14120F;background:var(--accent)}
+button.sec{background:var(--panel);color:var(--fg);box-shadow:inset 0 0 0 1.5px var(--line)}
+button.ok{background:var(--ok)} button.bad{background:var(--bad)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+.cam{position:relative;aspect-ratio:4/3;background:#000;border-radius:16px;overflow:hidden}
+video{width:100%;height:100%;object-fit:cover;display:block}
+.reticle{position:absolute;inset:18% 12%;border:3px solid rgba(255,255,255,.85);border-radius:14px;pointer-events:none;transition:border-color .15s}
+.cam.hit .reticle{border-color:var(--ok)}
+.cam.cool .reticle{border-color:var(--warn)}
+.cool-bar{position:absolute;left:0;right:0;bottom:0;height:6px;background:rgba(255,255,255,.15)}
+.cool-bar i{display:block;height:100%;width:0;background:var(--warn)}
+.cam-msg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;color:var(--mute);font-size:15px}
+.state{position:absolute;left:10px;top:10px;font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;background:rgba(0,0,0,.6);padding:6px 10px;border-radius:999px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.row>*{flex:1 1 140px}
+.last{background:var(--panel);border-radius:16px;padding:14px;margin-top:4px;display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);gap:14px;align-items:start}
+@media(max-width:420px){.last{grid-template-columns:1fr}}
+.pic{aspect-ratio:1;border-radius:12px;background:#2A2620;display:grid;place-items:center;overflow:hidden;color:var(--mute);font-size:13px;text-align:center;padding:6px}
+.pic img{width:100%;height:100%;object-fit:contain;background:#fff;display:block}
+.name{font-size:20px;font-weight:700;line-height:1.2;overflow-wrap:anywhere}
+.sku{font:500 14px var(--mono);color:var(--mute);margin-top:4px;overflow-wrap:anywhere}
+.count{font:800 54px/1 var(--mono);margin:10px 0 2px;font-variant-numeric:tabular-nums}
+.count small{font:600 13px var(--ui);color:var(--mute);margin-left:6px}
+.flag{display:inline-block;font:700 12px var(--ui);padding:4px 10px;border-radius:999px;margin-top:4px}
+.flag.unk{background:var(--warn);color:#14120F}
+.flag.sw{background:var(--bad);color:#fff}
+.flag.okk{background:var(--ok);color:#14120F}
+.verdict{display:flex;gap:8px;margin-top:10px}
+.verdict button{flex:1;padding:10px}
+.empty{color:var(--mute);font-size:15px;grid-column:1/-1}
+h2{font-size:13px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:22px 0 8px}
+.list{display:grid;gap:8px}
+.item{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--panel);border-radius:12px;padding:8px 12px 8px 8px}
+.item .th{width:52px;height:52px;border-radius:8px;background:#2A2620;overflow:hidden;display:grid;place-items:center;color:var(--mute);font-size:11px}
+.item .th img{width:100%;height:100%;object-fit:contain;background:#fff}
+.item b{display:block;font-size:15px;overflow-wrap:anywhere}
+.item span{font:12px var(--mono);color:var(--mute);overflow-wrap:anywhere}
+.item em{font:800 26px var(--mono);font-style:normal;font-variant-numeric:tabular-nums}
+.item .sw{color:var(--bad);font:700 12px var(--ui);display:block}
+details{background:var(--panel);border-radius:14px;padding:12px 14px;margin-top:16px}
+summary{cursor:pointer;font-weight:600}
+textarea,input[type=text]{width:100%;font:14px var(--mono);color:var(--fg);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:10px}
+textarea{min-height:120px;margin:10px 0}
+p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
+.manual{display:flex;gap:8px}
+.manual input{flex:1;min-width:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Shelf Check Scanner</h1>
+  <div class="tot">Scans <b id="totScans">0</b> · SKUs <b id="totSkus">0</b></div>
+</header>
+
+<div class="cam" id="cam">
+  <video id="video" playsinline muted></video>
+  <div class="reticle"></div>
+  <div class="state" id="state">Camera off</div>
+  <div class="cam-msg" id="camMsg">Tap “Start camera” and point at a barcode.</div>
+  <div class="cool-bar"><i id="coolFill"></i></div>
+</div>
+
+<div class="row">
+  <button id="startBtn" type="button">Start camera</button>
+  <button id="flipBtn" type="button" class="sec">Flip camera</button>
+</div>
+
+<div class="last" id="last">
+  <div class="empty">No scans yet. The product picture and running count appear here after each scan.</div>
+</div>
+
+<h2>Scanned items</h2>
+<div class="list" id="list"></div>
+
+<details>
+  <summary>Product catalog (barcode → name and picture)</summary>
+  <p class="hint">One product per line: <b>barcode, name, picture link</b>. Copy it from Excel (tab-separated also works). The picture link must be a direct image URL. A barcode that is not listed still counts and is flagged “Not in catalog”.</p>
+  <textarea id="catText" placeholder="6224000000011, Charm bracelet silver, https://example.com/img/1.jpg&#10;6224000000028, Heart ring, https://example.com/img/2.jpg"></textarea>
+  <div class="row">
+    <button id="saveCat" type="button">Save catalog</button>
+    <button id="addPhotos" type="button" class="sec">Load catalog from file</button>
+    <input id="catFile" type="file" accept=".csv,.txt,.tsv" hidden>
+  </div>
+  <p class="hint" id="catInfo"></p>
+</details>
+
+<details>
+  <summary>Type a code / USB scanner</summary>
+  <p class="hint">Useful for testing at a desk. Obeys the same 2-second cooldown.</p>
+  <form class="manual" id="manual">
+    <input type="text" id="manualCode" inputmode="numeric" autocomplete="off" placeholder="Barcode">
+    <button type="submit">Add</button>
+  </form>
+</details>
+
+<div class="row" style="margin-top:18px">
+  <button id="csvBtn" type="button" class="sec">Copy results (CSV)</button>
+  <button id="undoBtn" type="button" class="sec">Undo last scan</button>
+  <button id="resetBtn" type="button" class="sec">Reset counts</button>
+</div>
+<p class="hint" id="note"></p>
+
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script>
+(function(){
+'use strict';
+var COOLDOWN=2000;
+var $=function(i){return document.getElementById(i)};
+var video=$('video'),cam=$('cam'),stateEl=$('state'),camMsg=$('camMsg'),fill=$('coolFill');
+var catalog={},counts={},log=[],stream=null,facing='environment',coolUntil=0,running=false,rafId=0,zxReader=null,detector=null;
+
+function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+catalog=load('sc_catalog',{});counts=load('sc_counts',{});log=load('sc_log',[]);
+
+/* ---- catalog ---- */
+function splitLine(l){
+  var sep=l.indexOf('\t')>-1?'\t':(l.indexOf(';')>-1&&l.indexOf(',')<0?';':',');
+  var out=[],cur='',q=false;
+  for(var i=0;i<l.length;i++){var c=l[i];
+    if(c==='"'){q=!q}else if(c===sep&&!q){out.push(cur.trim());cur=''}else cur+=c}
+  out.push(cur.trim());return out;
+}
+function parseCatalog(text){
+  var cat={},n=0;
+  text.split(/\r?\n/).forEach(function(l){
+    if(!l.trim())return;
+    var p=splitLine(l);
+    if(!p[0]||/^(barcode|sku|code)$/i.test(p[0]))return;
+    cat[p[0]]={name:p[1]||'',img:p[2]||''};n++;
+  });
+  return cat;
+}
+function catToText(){return Object.keys(catalog).map(function(k){var c=catalog[k];return [k,c.name,c.img].join(', ')}).join('\n')}
+function refreshCatInfo(){var n=Object.keys(catalog).length;$('catInfo').textContent=n?n+' products in catalog.':'No catalog yet. Scans will show the barcode only.'}
+$('catText').value=catToText();refreshCatInfo();
+$('saveCat').onclick=function(){catalog=parseCatalog($('catText').value);save('sc_catalog',catalog);refreshCatInfo();renderAll()};
+$('addPhotos').onclick=function(){$('catFile').click()};
+$('catFile').onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){$('catText').value=r.result;catalog=parseCatalog(r.result);save('sc_catalog',catalog);refreshCatInfo();renderAll()};r.readAsText(f)};
+
+/* ---- rendering ---- */
+function esc(s){var d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML}
+function imgTag(code){var c=catalog[code];return c&&c.img?'<img alt="" src="'+esc(c.img)+'" onerror="this.replaceWith(document.createTextNode(\'Picture not found\'))">':'No picture'}
+function renderLast(){
+  var el=$('last');
+  if(!log.length){el.innerHTML='<div class="empty">No scans yet. The product picture and running count appear here after each scan.</div>';return}
+  var e=log[log.length-1],c=catalog[e.code],n=(counts[e.code]||{}).n||0;
+  var flag=!c?'<span class="flag unk">Not in catalog</span>':'';
+  if(e.verdict==='swapped')flag+=' <span class="flag sw">Marked swapped</span>';
+  if(e.verdict==='ok')flag+=' <span class="flag okk">Matches</span>';
+  el.innerHTML='<div class="pic">'+imgTag(e.code)+'</div><div><div class="name">'+esc(c&&c.name?c.name:'Unknown item')+'</div><div class="sku">'+esc(e.code)+'</div><div class="count">'+n+'<small>scanned</small></div>'+flag+
+   '<div class="verdict"><button type="button" class="ok" data-v="ok">Matches</button><button type="button" class="bad" data-v="swapped">Swapped</button></div></div>';
+  [].forEach.call(el.querySelectorAll('[data-v]'),function(b){b.onclick=function(){setVerdict(b.getAttribute('data-v'))}});
+}
+function renderList(){
+  var keys=Object.keys(counts).sort(function(a,b){return counts[b].last-counts[a].last});
+  $('list').innerHTML=keys.length?keys.map(function(k){var c=catalog[k],o=counts[k];
+    return '<div class="item"><div class="th">'+imgTag(k)+'</div><div><b>'+esc(c&&c.name?c.name:'Not in catalog')+'</b><span>'+esc(k)+'</span>'+(o.sw?'<span class="sw">'+o.sw+' marked swapped</span>':'')+'</div><em>'+o.n+'</em></div>'}).join(''):'<p class="hint">Nothing scanned yet.</p>';
+  var t=0;keys.forEach(function(k){t+=counts[k].n});$('totScans').textContent=t;$('totSkus').textContent=keys.length;
+}
+function renderAll(){renderLast();renderList()}
+
+/* ---- scan handling ---- */
+function beep(){try{var a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=880;g.gain.value=.12;o.connect(g);g.connect(a.destination);o.start();setTimeout(function(){o.stop();a.close()},110)}catch(e){}if(navigator.vibrate)navigator.vibrate(60)}
+function handleCode(raw,source){
+  var code=String(raw||'').trim();if(!code)return false;
+  var now=Date.now();if(now<coolUntil)return false;
+  coolUntil=now+COOLDOWN;
+  var o=counts[code]||(counts[code]={n:0,sw:0,last:0});o.n++;o.last=now;
+  log.push({code:code,t:now,verdict:''});if(log.length>500)log.shift();
+  save('sc_counts',counts);save('sc_log',log);
+  beep();cam.classList.add('hit');setTimeout(function(){cam.classList.remove('hit')},350);
+  renderAll();return true;
+}
+function setVerdict(v){
+  if(!log.length)return;var e=log[log.length-1];
+  if(e.verdict==='swapped'&&counts[e.code])counts[e.code].sw=Math.max(0,counts[e.code].sw-1);
+  e.verdict=v;if(v==='swapped')counts[e.code].sw=(counts[e.code].sw||0)+1;
+  save('sc_counts',counts);save('sc_log',log);renderAll();
+}
+$('undoBtn').onclick=function(){
+  if(!log.length)return;var e=log.pop(),o=counts[e.code];
+  if(o){o.n--;if(e.verdict==='swapped')o.sw=Math.max(0,o.sw-1);if(o.n<=0)delete counts[e.code]}
+  save('sc_counts',counts);save('sc_log',log);renderAll();
+};
+var armed=false;
+$('resetBtn').onclick=function(){
+  var b=$('resetBtn');
+  if(!armed){armed=true;b.textContent='Tap again to erase counts';setTimeout(function(){armed=false;b.textContent='Reset counts'},3000);return}
+  armed=false;b.textContent='Reset counts';counts={};log=[];save('sc_counts',counts);save('sc_log',log);renderAll();
+};
+$('csvBtn').onclick=function(){
+  var rows=['barcode,name,count,marked_swapped'];
+  Object.keys(counts).forEach(function(k){var c=catalog[k];rows.push([k,'"'+(c&&c.name?c.name.replace(/"/g,'""'):'NOT IN CATALOG')+'"',counts[k].n,counts[k].sw||0].join(','))});
+  var txt=rows.join('\n');
+  var done=function(m){$('note').textContent=m};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){done('Copied. Paste into Excel or Sheets.')},function(){done(txt)})}else done(txt);
+};
+$('manual').onsubmit=function(e){e.preventDefault();var i=$('manualCode');if(handleCode(i.value,'manual'))i.value='';else $('note').textContent='Wait for the 2-second cooldown.'};
+
+/* ---- cooldown ui ---- */
+function tickUI(){
+  var left=coolUntil-Date.now();
+  if(left>0){fill.style.width=(left/COOLDOWN*100)+'%';cam.classList.add('cool');if(running)stateEl.textContent='Cooldown '+(left/1000).toFixed(1)+'s'}
+  else{fill.style.width='0';cam.classList.remove('cool');if(running)stateEl.textContent='Ready to scan'}
+  requestAnimationFrame(tickUI);
+}
+requestAnimationFrame(tickUI);
+
+/* ---- camera ---- */
+function stopCam(){
+  running=false;cancelAnimationFrame(rafId);
+  if(zxReader){try{zxReader.reset()}catch(e){}zxReader=null}
+  if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
+  video.srcObject=null;
+}
+function startCam(){
+  stopCam();
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){camMsg.hidden=false;camMsg.textContent='Camera needs a secure (https) page. Open this file from an https link.';return}
+  camMsg.hidden=true;stateEl.textContent='Starting…';
+  var hasBD='BarcodeDetector' in window;
+  if(hasBD){
+    navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:720}},audio:false}).then(function(s){
+      stream=s;video.srcObject=s;return video.play()
+    }).then(function(){
+      running=true;
+      var fmts=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','code_93','itf','codabar','qr_code'];
+      var go=function(sup){
+        var use=fmts.filter(function(f){return !sup||sup.indexOf(f)>-1});
+        detector=new BarcodeDetector({formats:use});
+        var busy=false;
+        (function loop(){
+          if(!running)return;
+          if(!busy&&Date.now()>=coolUntil&&video.readyState>=2){busy=true;
+            detector.detect(video).then(function(r){if(r.length)handleCode(r[0].rawValue)}).catch(function(){}).then(function(){busy=false})}
+          rafId=requestAnimationFrame(loop);
+        })();
+      };
+      if(BarcodeDetector.getSupportedFormats)BarcodeDetector.getSupportedFormats().then(go,function(){go(null)});else go(null);
+    }).catch(camError);
+  }else if(window.ZXing){
+    zxReader=new ZXing.BrowserMultiFormatReader();
+    running=true;
+    zxReader.decodeFromConstraints({video:{facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:720}},audio:false},video,function(res){
+      if(res&&Date.now()>=coolUntil)handleCode(res.getText());
+    }).catch(camError);
+  }else{camMsg.hidden=false;camMsg.textContent='Barcode reader could not load. Check the internet connection and reload.'}
+}
+function camError(err){
+  running=false;stateEl.textContent='Camera off';camMsg.hidden=false;
+  camMsg.textContent=(err&&err.name==='NotAllowedError')?'Camera permission was blocked. Allow the camera for this site in the browser settings, then tap Start camera.':'Could not start the camera ('+(err&&err.name||'error')+').';
+}
+$('startBtn').onclick=function(){if(running){stopCam();stateEl.textContent='Camera off';camMsg.hidden=false;camMsg.textContent='Camera stopped.';this.textContent='Start camera'}else{startCam();this.textContent='Stop camera'}};
+$('flipBtn').onclick=function(){facing=facing==='environment'?'user':'environment';if(running)startCam()};
+document.addEventListener('visibilitychange',function(){if(document.hidden&&running){stopCam();$('startBtn').textContent='Start camera';stateEl.textContent='Camera off';camMsg.hidden=false;camMsg.textContent='Camera paused. Tap Start camera.'}});
+
+renderAll();
+})();
+</script>
+</body>
+</html>
