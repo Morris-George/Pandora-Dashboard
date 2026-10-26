@@ -168,6 +168,7 @@ module.exports = async function handler(req, res) {
     else if (P === '/vm/stock' || P === '/zonestock.html') id = 'zonestock';
     else if (P === '/stock' || P === '/stock.html') id = 'stock';
     else if (P === '/stockcount' || P === '/stockcount.html') id = 'stockcount';
+    else if (P === '/stockchecker' || P === '/stockchecker.html') id = 'stockchecker';
     else if (P === '/refill' || P === '/refill.html') id = 'refill';
     else if (P === '/slow' || P === '/slow.html') id = 'slow';
     else if (P === '/distribution' || P === '/distribution.html') id = 'dist';
@@ -302,6 +303,11 @@ module.exports = async function handler(req, res) {
   if (requestedPath === '/stockcount' || requestedPath === '/stockcount/' || requestedPath === '/stockcount.html') {
     if (!(facts.staff && facts.staff.role === 'admin') && !facts.sc) return toHome();
     return sendFile(res, 'stockcount.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+  }
+  // Stock Checker: super admin, area managers, store managers and Stock Count accounts (never sales people or the VM)
+  if (requestedPath === '/stockchecker' || requestedPath === '/stockchecker/' || requestedPath === '/stockchecker.html') {
+    if (!facts.sc && !(facts.staff && facts.staff.role !== 'staff')) return toHome();
+    return sendFile(res, 'stockchecker.html', 'text/html; charset=utf-8', withChrome('staff', multi));
   }
   // Refill Order: whoever the super admin gave access to (Staff approvals)
   if (requestedPath === '/refill' || requestedPath === '/refill/' || requestedPath === '/refill.html') {

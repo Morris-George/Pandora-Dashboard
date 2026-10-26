@@ -201,7 +201,7 @@ const groupOf=p=>p.role==='staff'?'staff':p.role==='store'?'store':p.role==='are
 const KINDS=[['all','All'],['login','Sign-ins'],['view','Pages opened'],['action','Changes'],['bad','Problems'],['anon','Not signed in']];
 const kindOf=e=>e.w==='anon'?'anon':e.ty==='login'||e.ty==='logout'?'login':e.ty==='view'?'view':e.ty==='action'?'action':'bad';
 const TYPE_TAG={login:['Signed in','good'],logout:['Signed out','mute'],view:['Opened','mute'],action:['Changed',''],fail:['Problem','warn'],denied:['Not allowed','warn'],error:['Error','warn'],signup:['New sign-up',''],forgot:['Forgot password','']};
-const PAGE_NAMES={'/':'Home','/dashboards':'Pandora Dashboards','/staff':'Staff Performance','/staff/person':'A sales person page','/staff/me':'My sales','/staff/accounts':'Staff approvals','/uploads':'All Uploads','/film':'Launch Film','/daily':'Daily Store Report','/vm':'VM Report','/vm/zones':'VM Zones','/vm/stock':'Zone Stock','/stock':'Stock balance','/stockcount':'Stock Count','/refill':'Refill Order','/slow':'Slow Moving','/distribution':'Orders Distribution'};
+const PAGE_NAMES={'/':'Home','/dashboards':'Pandora Dashboards','/staff':'Staff Performance','/staff/person':'A sales person page','/staff/me':'My sales','/staff/accounts':'Staff approvals','/uploads':'All Uploads','/film':'Launch Film','/daily':'Daily Store Report','/vm':'VM Report','/vm/zones':'VM Zones','/vm/stock':'Zone Stock','/stock':'Stock balance','/stockcount':'Stock Count','/stockchecker':'Stock Checker','/refill':'Refill Order','/slow':'Slow Moving','/distribution':'Orders Distribution'};
 const pageName=p=>PAGE_NAMES[String(p).replace(/\/+$/,'')||'/']||p;
 
 // ---- stores: "Pandora - CFC" and "CFC" are one store ----

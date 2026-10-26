@@ -291,7 +291,7 @@ async function canView(who) {
 const PAGES = {
   '/': 'Home', '/dashboards': 'Pandora Dashboards', '/staff': 'Staff Performance', '/staff/person': 'A sales person page', '/staff/me': 'My sales', '/staff/accounts': 'Staff approvals',
   '/uploads': 'All Uploads', '/film': 'Launch Film', '/daily': 'Daily Store Report', '/schedule': 'Weekly Schedule', '/vm': 'VM Report', '/vm/zones': 'VM Zones', '/vm/stock': 'Zone Stock', '/stock': 'Stock balance',
-  '/stockcount': 'Stock Count', '/refill': 'Refill Order', '/slow': 'Slow Moving', '/distribution': 'Orders Distribution', '/activity': 'Activity', '/access': 'Report access'
+  '/stockcount': 'Stock Count', '/stockchecker': 'Stock Checker', '/refill': 'Refill Order', '/slow': 'Slow Moving', '/distribution': 'Orders Distribution', '/activity': 'Activity', '/access': 'Report access'
 };
 const pageLabel = p => PAGES[String(p || '').replace(/\/+$/, '') || '/'] || S(p, 40);
 
