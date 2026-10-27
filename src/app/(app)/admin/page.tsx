@@ -8,6 +8,7 @@ import { ErpPanel } from "./erp-panel";
 import { SecurityPanel } from "./security-panel";
 import { ReceiptPanel } from "./receipt-panel";
 import { StoresPanel } from "./stores-panel";
+import { SlaPanel } from "./sla-panel";
 import { withDefaults } from "@/lib/receipt-settings";
 import { StaffPanel, type StaffRow } from "./staff-panel";
 import { erpConfigured } from "@/lib/erpnext";
@@ -47,9 +48,13 @@ export default async function AdminPage() {
     id: r.id, userName: byId.get(r.user_id) ?? "—", newRole: r.new_role, mine: r.requested_by === me.userId,
   }));
 
+  const { data: sla } = await supabase.from("sla_rules").select("status, max_days");
+  const ORDER = ["received_at_branch", "awaiting_dispatch", "in_transit_to_hq", "received_at_hq", "under_diagnosis", "awaiting_customer_approval", "in_repair", "awaiting_parts", "quality_check", "ready_to_return", "quote_rejected", "unrepairable", "in_transit_to_branch", "ready_for_pickup"];
+  const slaRules = (sla ?? []).map((r) => ({ status: r.status as string, days: Number(r.max_days) })).sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status));
   return (
     <div className="flex flex-col gap-6">
       <StoresPanel locale={locale} stores={(branches ?? []).map((b) => ({ id: b.id, name: b.name, whatsapp: b.whatsapp }))} />
+      <SlaPanel locale={locale} rules={slaRules} />
       <ReceiptPanel locale={locale} initial={withDefaults(receipt?.value)} />
       <SecurityPanel locale={locale} twoStep={twoStep?.value !== false} />
       <ErpPanel locale={locale} configured={erpConfigured()} excluded={excl ?? []}

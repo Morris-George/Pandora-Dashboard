@@ -474,3 +474,19 @@ export async function syncCategoryCosts(): Promise<Result & { synced?: number }>
   revalidatePath("/admin");
   return { synced };
 }
+
+// SLA targets (days per stage)
+export async function saveSla(rows: { status: string; days: number }[]): Promise<Result> {
+  await requireRole("admin");
+  const p = z.array(z.object({ status: z.string().min(1).max(40), days: z.number().positive().max(365) })).max(30).safeParse(rows);
+  if (!p.success) return { error: "invalid" };
+  const supabase = await createClient();
+  for (const r of p.data) {
+    const { error } = await supabase.from("sla_rules").update({ max_days: r.days, updated_at: new Date().toISOString() }).eq("status", r.status);
+    if (error) return { error: "failed" };
+  }
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath("/tickets");
+  return {};
+}

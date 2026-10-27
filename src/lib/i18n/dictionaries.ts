@@ -144,6 +144,12 @@ const en = {
     errRecord: (n: number, m: string) => `Photo ${n} could not be recorded: ${m}`,
   },
   admin: {
+    sla: {
+      title: "SLA — target days per stage",
+      note: "How many days a ticket may stay in each stage. Past that it shows as late on My Work and in Tickets. Half days are allowed (e.g. 0.5).",
+      days: "days", save: "Save", discard: "Discard changes", unsaved: (n: number) => `${n} unsaved change(s) (highlighted)`,
+      invalid: "Each target must be more than 0 and at most 365 days.", failed: "Could not save. Reload the page and try again.",
+    },
     stores: {
       title: "Stores — WhatsApp number",
       note: "Each store's WhatsApp number. It is printed on the receipts and the customer can tap it on the tracking page to chat with the store.",
@@ -825,6 +831,12 @@ const ar: Dict = {
     errRecord: (n, m) => `تعذر تسجيل الصورة ${n}: ${m}`,
   },
   admin: {
+    sla: {
+      title: "مدة كل مرحلة (SLA)",
+      note: "عدد الأيام المسموح بيها للتيكيت في كل مرحلة. لو عدّاها بيظهر متأخر في \"شغلي\" وفي التيكيتات. ينفع نص يوم (مثلاً 0.5).",
+      days: "يوم", save: "حفظ", discard: "إلغاء التغييرات", unsaved: (n: number) => `${n} تغيير مش محفوظ (متعلّم)`,
+      invalid: "كل مدة لازم تكون أكبر من 0 ولحد 365 يوم.", failed: "مقدرناش نحفظ. اعمل تحديث للصفحة وجرب تاني.",
+    },
     stores: {
       title: "الفروع — رقم واتساب",
       note: "رقم واتساب كل فرع. بيتطبع على الإيصالات، والعميل يقدر يدوس عليه من صفحة التتبع ويكلم الفرع.",
