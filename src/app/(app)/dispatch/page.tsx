@@ -9,11 +9,11 @@ export const metadata = { title: "Pandora Maintenance" };
 type Joined<T> = T | null;
 
 export default async function DispatchPage({ searchParams }: { searchParams: Promise<{ as?: string }> }) {
-  const user = await requireRole("associate", "manager", "courier", "hq", "supervisor");
+  const user = await requireRole("associate", "manager", "courier", "hq", "technician", "supervisor");
   const { locale, t: d } = await getI18n();
   // Super Admin chooses which role's version of this screen to use
-  const me = { ...user, role: screenRole(user, (await searchParams).as, ["manager", "courier", "hq", "supervisor"]) };
-  const tabs = <RoleTabs me={user} path="/dispatch" current={me.role} roles={["manager", "courier", "hq", "supervisor"]} labels={d.roles} title={d.shell.useAs} />;
+  const me = { ...user, role: screenRole(user, (await searchParams).as, ["manager", "courier", "hq", "technician", "supervisor"]) };
+  const tabs = <RoleTabs me={user} path="/dispatch" current={me.role} roles={["manager", "courier", "hq", "technician", "supervisor"]} labels={d.roles} title={d.shell.useAs} />;
   const supabase = await createClient();
   const isBranch = me.role === "associate" || me.role === "manager";
 

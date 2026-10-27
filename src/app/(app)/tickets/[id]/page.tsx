@@ -28,7 +28,7 @@ export default async function TicketPage({ params, searchParams }: {
   // RLS returns nothing for tickets outside the user's scope
   const { data: tk } = await supabase
     .from("tickets")
-    .select("id, ticket_no, tracking_token, status, item_name, item_code, item_description, item_barcode, item_image, no_invoice, erp_sales_invoice, purchase_date, fault_category, fault_notes, accessories, warranty_provisional, created_at, customer_id, agreed_amount, branches(name)")
+    .select("id, ticket_no, tracking_token, status, item_name, item_code, item_description, item_barcode, item_image, no_invoice, erp_sales_invoice, purchase_date, fault_category, fault_notes, accessories, warranty_provisional, created_at, customer_id, agreed_amount, held_by, held_since, branches(name)")
     .eq("id", id)
     .maybeSingle();
   if (!tk) notFound();
@@ -74,6 +74,10 @@ export default async function TicketPage({ params, searchParams }: {
   const uids = [...new Set((hist ?? []).map((h) => h.user_id).filter(Boolean))] as string[];
   const { data: people } = uids.length ? await createAdminClient().from("profiles").select("id, full_name").in("id", uids) : { data: [] };
   const who = new Map((people ?? []).map((p) => [p.id, p.full_name]));
+  // Custody: who holds the item now (set when the area manager or the receiver scans it)
+  const holder = tk.held_by
+    ? who.get(tk.held_by) ?? (await createAdminClient().from("profiles").select("full_name, role").eq("id", tk.held_by).maybeSingle()).data?.full_name ?? "—"
+    : null;
   const span = (ms: number) => {
     const h = Math.round(ms / 3600_000);
     return h < 1 ? t.timeline.lessHour : h < 48 ? t.timeline.hours(h) : t.timeline.days(Math.round(h / 24));
@@ -141,6 +145,10 @@ export default async function TicketPage({ params, searchParams }: {
           {tk.item_barcode && <div><dt className="text-stone-500">{t.barcode}</dt><dd className="font-medium" dir="ltr">{tk.item_barcode}</dd></div>}
           <div><dt className="text-stone-500">{t.invoice}</dt><dd className="font-medium">{tk.no_invoice ? t.noInvoice : <>{tk.erp_sales_invoice ?? "—"}{tk.purchase_date ? ` · ${tk.purchase_date}` : ""}</>}</dd></div>
           <div><dt className="text-stone-500">{t.fault}</dt><dd className="font-medium">{tk.fault_category}</dd></div>
+          {holder && (
+            <div><dt className="text-stone-500">{t.heldBy}</dt>
+              <dd className="font-medium">{holder}{tk.held_since ? <span className="text-stone-500 font-normal"> · {new Date(tk.held_since).toLocaleString(locale === "ar" ? "ar-EG" : "en-GB", { dateStyle: "medium", timeStyle: "short" })}</span> : null}</dd></div>
+          )}
           <div><dt className="text-stone-500">{t.warranty}</dt><dd className="font-medium">{d.warranty[tk.warranty_provisional as Warranty]}</dd></div>
           {tk.fault_notes && <div className="sm:col-span-2"><dt className="text-stone-500">{t.comment}</dt><dd>{tk.fault_notes}</dd></div>}
           {tk.accessories && <div className="sm:col-span-2"><dt className="text-stone-500">{t.accessories}</dt><dd>{tk.accessories}</dd></div>}

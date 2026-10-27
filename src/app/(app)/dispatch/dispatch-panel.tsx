@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "@/components/toast";
+import { BarcodeScan } from "@/components/barcode-scan";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
 import { approveBatch, courierPickup, createOutbound, createReturn, receiveBatch } from "./actions";
@@ -47,7 +48,7 @@ export function DispatchPanel({ locale, role, myBranches, packable, returnable, 
 
   const awaiting = batches.filter((b) => b.direction === "outbound" && b.status === "awaiting_approval");
   const incoming = batches.filter((b) => b.status === "in_transit" &&
-    ((role === "hq" && b.direction === "outbound") || (isBranch && b.direction === "return")));
+    ((["hq", "technician", "supervisor"].includes(role) && b.direction === "outbound") || (isBranch && b.direction === "return")));
   const fmt = (s: string) => new Date(s).toLocaleString(locale === "ar" ? "ar-EG" : "en-GB", { dateStyle: "short", timeStyle: "short" });
 
   // Return items grouped by destination branch
@@ -106,7 +107,7 @@ export function DispatchPanel({ locale, role, myBranches, packable, returnable, 
         </section>
       )}
 
-      {(role === "hq" || isBranch) && (
+      {(["hq", "technician", "supervisor"].includes(role) || isBranch) && (
         <section className={card}>
           <div>
             <h2 className="text-lg font-semibold">{t.incomingTitle}</h2>
@@ -199,24 +200,21 @@ function PackCard({ t, title, note, empty, nested, busy, run, branches, items, o
   );
 }
 
-function ReceiveCard({ t, b, busy, run }: { t: T; b: BatchRow; busy: boolean; run: Run }) {
+// Scan every item in a batch: typed, a barcode scanner (types + Enter) or the camera
+function useItemScan(t: T, b: BatchRow) {
   const [scanned, setScanned] = useState<string[]>([]);
   const [code, setCode] = useState("");
   const [warn, setWarn] = useState("");
   const inBatch = new Set(b.items.map((i) => i.ticketNo.toUpperCase()));
-
-  const add = () => {
-    const c = code.trim().toUpperCase();
+  const add = (raw = code) => {
+    const c = raw.trim().toUpperCase();
     if (!c) return;
     if (!inBatch.has(c)) setWarn(t.unknown(c));
-    else { setWarn(""); if (!scanned.includes(c)) setScanned([...scanned, c]); }
+    else { setWarn(""); setScanned((s) => (s.includes(c) ? s : [...s, c])); }
     setCode("");
   };
-  const missing = b.items.length - scanned.length;
-
-  return (
-    <div className="border-t border-stone-100 pt-3 flex flex-col gap-3">
-      <BatchHead t={t} b={b} />
+  const ui = (
+    <>
       <div className="flex flex-col">
         {b.items.map((i) => {
           const ok = scanned.includes(i.ticketNo.toUpperCase());
@@ -234,14 +232,30 @@ function ReceiveCard({ t, b, busy, run }: { t: T; b: BatchRow; busy: boolean; ru
           <input value={code} onChange={(e) => setCode(e.target.value)} dir="ltr" placeholder="MT-1001"
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} className={`${input} w-52`} />
         </label>
-        <button onClick={add} className="rounded-lg border border-stone-900 px-4 py-2.5 text-sm">{t.add}</button>
+        <button onClick={() => add()} className="rounded-lg border border-stone-900 px-4 py-2.5 text-sm">{t.add}</button>
+        <BarcodeScan label={t.camera} title={t.scan} cancel={t.cancel} denied={t.cameraDenied} onResult={(c) => add(c)} />
       </div>
       {warn && <p className="text-sm text-red-800">{warn}</p>}
-      {missing > 0 && scanned.length > 0 && <p className="text-sm text-amber-800">{t.missingWarn(missing)}</p>}
-      {b.mine ? <p className="text-xs text-stone-500">{t.errors.sod}</p> : (
-        <button disabled={busy || !scanned.length} className={primary} onClick={() => run(() => receiveBatch(b.id, scanned))}>
-          {t.receive(scanned.length, b.items.length)}
-        </button>
+    </>
+  );
+  return { scanned, ui, missing: b.items.length - scanned.length };
+}
+
+function ReceiveCard({ t, b, busy, run }: { t: T; b: BatchRow; busy: boolean; run: Run }) {
+  const { scanned, ui, missing } = useItemScan(t, b);
+  return (
+    <div className="border-t border-stone-100 pt-3 flex flex-col gap-3">
+      <BatchHead t={t} b={b} />
+      {!b.pickedAt ? <p className="text-sm text-amber-800">{t.notCollectedYet}</p> : (
+        <>
+          {ui}
+          {missing > 0 && scanned.length > 0 && <p className="text-sm text-amber-800">{t.missingWarn(missing)}</p>}
+          {b.mine ? <p className="text-xs text-stone-500">{t.errors.sod}</p> : (
+            <button disabled={busy || !scanned.length} className={primary} onClick={() => run(() => receiveBatch(b.id, scanned))}>
+              {t.receive(scanned.length, b.items.length)}
+            </button>
+          )}
+        </>
       )}
     </div>
   );
@@ -269,16 +283,21 @@ function ItemList({ items }: { items: BatchRow["items"] }) {
 // Courier: type the seal number written on the bag to confirm collecting it
 function CollectCard({ t, b, busy, run }: { t: T; b: BatchRow; busy: boolean; run: Run }) {
   const [seal, setSeal] = useState("");
+  const { scanned, ui, missing } = useItemScan(t, b);
   return (
-    <div className="border-t border-stone-100 pt-3 flex flex-wrap items-end gap-3">
-      <div className="flex-1 min-w-56">
+    <div className="border-t border-stone-100 pt-3 flex flex-col gap-3">
+      <div>
         <strong dir="ltr">{b.batchNo}</strong>
         <div className="text-sm text-stone-600">{b.direction === "outbound" ? t.outbound : t.return} · {b.branchName} · {t.items}: {b.items.length}</div>
       </div>
-      <label className="flex flex-col gap-1 text-sm font-medium">{t.sealOnBag}
-        <input value={seal} onChange={(e) => setSeal(e.target.value)} dir="ltr" className={`${input} w-40`} />
-      </label>
-      <button disabled={busy || !seal.trim()} className={primary} onClick={() => run(() => courierPickup(b.id, seal))}>{t.collect}</button>
+      {ui}
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1 text-sm font-medium">{t.sealOnBag}
+          <input value={seal} onChange={(e) => setSeal(e.target.value)} dir="ltr" className={`${input} w-40`} />
+        </label>
+        <button disabled={busy || !seal.trim() || missing > 0} className={primary} onClick={() => run(() => courierPickup(b.id, seal, scanned))}>{t.collect}</button>
+        <span className="text-sm text-stone-600">{missing > 0 ? t.scanAllFirst(missing) : t.allScanned}</span>
+      </div>
     </div>
   );
 }

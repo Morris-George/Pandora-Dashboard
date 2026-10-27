@@ -21,8 +21,8 @@ function check(name, ok, detail = "") {
 
 const { data: br } = await service.from("branches").select("id, code");
 const B = Object.fromEntries(br.map((b) => [b.code, b.id]));
-const [assoc, manager, assoc2, hq, tech, sup] = await Promise.all(
-  ["associate", "manager", "associate2", "hq", "technician", "supervisor"].map(as));
+const [assoc, manager, assoc2, hq, tech, sup, courier] = await Promise.all(
+  ["associate", "manager", "associate2", "hq", "technician", "supervisor", "courier"].map(as));
 
 // Two received tickets at CS
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
@@ -59,12 +59,25 @@ check("manager approves", !apErr, apErr?.message);
 const s1 = await status(ids[0]);
 check("tickets in transit to HQ", s1.status === "in_transit_to_hq" && s1.current_location === "in_transit");
 
-const { error: techRecv } = await tech.rpc("receive_batch", { p_batch: ob.id, p_scanned: [tickets[0].ticket_no] });
-check("technician cannot receive", !!techRecv);
+// Custody: the area manager scans every item and the seal before taking the batch
+const { error: hqBeforePickup } = await hq.rpc("receive_batch", { p_batch: ob.id, p_scanned: [tickets[0].ticket_no] });
+check("HQ cannot receive before the area manager collects", !!hqBeforePickup);
+const { error: partial } = await courier.rpc("courier_pickup", { p_batch: ob.id, p_seal: "SEAL-T1", p_scanned: [tickets[0].ticket_no] });
+check("area manager cannot collect with an item unscanned", !!partial);
+const { error: badSeal } = await courier.rpc("courier_pickup", { p_batch: ob.id, p_seal: "WRONG", p_scanned: tickets.map((t) => t.ticket_no) });
+check("area manager cannot collect with the wrong seal", !!badSeal);
+const { error: pickErr } = await courier.rpc("courier_pickup", { p_batch: ob.id, p_seal: "seal-t1", p_scanned: tickets.map((t) => t.ticket_no) });
+check("area manager collects after scanning all items", !pickErr, pickErr?.message);
+const { data: held1 } = await service.from("tickets").select("held_by").eq("id", ids[0]).single();
+check("custody moves to the area manager", held1?.held_by === creds.courier.id || !!held1?.held_by);
+const { error: courierRecv } = await courier.rpc("receive_batch", { p_batch: ob.id, p_scanned: [tickets[0].ticket_no] });
+check("area manager cannot receive their own batch", !!courierRecv);
 const { data: rb1, error: rcErr } = await hq.rpc("receive_batch", { p_batch: ob.id, p_scanned: [tickets[0].ticket_no.toLowerCase()] });
 check("HQ receives with one item scanned", !rcErr, rcErr?.message);
 check("missing item → batch incident", rb1?.status === "incident");
 check("scanned item received at HQ", (await status(ids[0])).status === "received_at_hq");
+const { data: held2 } = await service.from("tickets").select("held_by").eq("id", ids[0]).single();
+check("custody moves to the HQ receiver", !!held2?.held_by && held2.held_by !== held1?.held_by);
 check("unscanned item still in transit", (await status(ids[1])).status === "in_transit_to_hq");
 
 // Workshop steps to get item 1 ready to return
@@ -79,6 +92,8 @@ check("return to the wrong branch is rejected", !!wrongDest);
 const { data: ret, error: retErr } = await sup.rpc("create_return_batch", { p_branch: B.CS, p_seal: "SEAL-R1", p_tickets: [ids[0]] });
 check("supervisor creates return batch", !retErr && ret?.status === "in_transit", retErr?.message);
 
+const { error: retPick } = await courier.rpc("courier_pickup", { p_batch: ret.id, p_seal: "SEAL-R1", p_scanned: [tickets[0].ticket_no] });
+check("area manager collects the return batch", !retPick, retPick?.message);
 const { error: supRecv } = await sup.rpc("receive_batch", { p_batch: ret.id, p_scanned: [tickets[0].ticket_no] });
 check("supervisor cannot receive own return", !!supRecv);
 const { error: a2Recv } = await assoc2.rpc("receive_batch", { p_batch: ret.id, p_scanned: [tickets[0].ticket_no] });

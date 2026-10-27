@@ -14,7 +14,7 @@ async function as(key) {
 }
 let pass = 0, fail = 0;
 const check = (name, ok, detail = "") => { ok ? pass++ : fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${!ok && detail ? "  → " + detail : ""}`); };
-const [assoc, assoc2, tech, sup] = await Promise.all(["associate", "associate2", "technician", "supervisor"].map(as));
+const [assoc, assoc2, tech, sup, courier] = await Promise.all(["associate", "associate2", "technician", "supervisor", "courier"].map(as));
 const { data: br } = await service.from("branches").select("id, code");
 const B = Object.fromEntries(br.map((b) => [b.code, b.id]));
 
@@ -25,6 +25,7 @@ const paid = q.ticket_id, total = Number(q.total);
 await tech.rpc("complete_repair", { p_ticket: paid, p_parts: [] });
 await sup.rpc("transition_ticket", { p_ticket: paid, p_to: "ready_to_return" });
 const { data: rb } = await sup.rpc("create_return_batch", { p_branch: B.CS, p_seal: "SEAL-P", p_tickets: [paid] });
+await courier.rpc("courier_pickup", { p_batch: rb.id, p_seal: "SEAL-P", p_scanned: [q.tickets.ticket_no] });
 await assoc.rpc("receive_batch", { p_batch: rb.id, p_scanned: [q.tickets.ticket_no] });
 
 const { data: t1 } = await service.from("tickets").select("status, customer_id").eq("id", paid).single();

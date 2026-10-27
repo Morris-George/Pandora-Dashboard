@@ -312,6 +312,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     signReceived: "Received by (signature)",
   },
   ticket: {
+    heldBy: "In custody of",
     timeline: {
       title: "Timeline", lessHour: "under 1 hour", hours: (h: number) => `${h} h`, days: (n: number) => `${n} days`,
       took: (x: string) => `took ${x}`, since: (x: string) => `here for ${x}`,
@@ -355,7 +356,10 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     footer: (s: string) => `Please keep this memo and bring it when collecting your item. Status: ${s}.`,
   },
   dispatch: {
-    collectTitle: "Batches to collect", collectNote: "Check the items and their count with the store before taking the bag, make sure it is sealed, then type the seal number on it and confirm. This records you as the person who carried it.",
+    camera: "📷 Camera", cancel: "Cancel", cameraDenied: "Camera not available. Allow camera access or type the number.",
+    scanAllFirst: (n: number) => `Scan every item first (${n} left).`, allScanned: "All items scanned ✓",
+    notCollectedYet: "Waiting for the area manager to collect this batch from the sender.",
+    collectTitle: "Batches to collect", collectNote: "Check the items with whoever hands them over, scan every item, then type the seal number on the bag and confirm. The items are in your custody until the receiver scans them.",
     noneToCollect: "No sealed batches are waiting for collection.", sealOnBag: "Seal number on the bag", collect: "Confirm collected",
     collected: (at: string) => `Collected by area manager · ${at}`,
     title: "Dispatches & Returns",
@@ -388,6 +392,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     batchStatus: { awaiting_approval: "Awaiting approval", in_transit: "In transit", received: "Received", incident: "Incident" } as Record<string, string>,
     cols: { batch: "Batch", direction: "Direction", branch: "Branch", seal: "Seal", items: "Items", created: "Created", status: "Status" },
     errors: {
+      scanAll: "Scan every item in the batch before collecting it.", notCollected: "The area manager has not collected this batch yet.",
       sealMismatch: "The seal number does not match this batch. Do not take it; tell the supervisor.", 
       sod: "Separation of duties: the person who packed or sent this batch can't approve or receive it.",
       seal: "Enter the seal number.",
@@ -1002,6 +1007,7 @@ const ar: Dict = {
     signReceived: "توقيع المستلم",
   },
   ticket: {
+    heldBy: "في عهدة",
     timeline: {
       title: "مسار التيكيت", lessHour: "أقل من ساعة", hours: (h: number) => `${h} ساعة`, days: (n: number) => `${n} يوم`,
       took: (x: string) => `خدت ${x}`, since: (x: string) => `بقالها ${x}`,
@@ -1045,7 +1051,10 @@ const ar: Dict = {
     footer: (s) => `برجاء الاحتفاظ بهذا الإيصال وإحضاره عند استلام القطعة. الحالة: ${s}.`,
   },
   dispatch: {
-    collectTitle: "شحنات للاستلام", collectNote: "راجع القطع وعددها مع الفرع قبل ما تستلم، اتأكد إن الشنطة مقفولة بالسيل، واكتب رقم السيل اللي عليها وأكّد. كده هتتسجل إنك اللي نقلتها.",
+    camera: "📷 كاميرا", cancel: "إلغاء", cameraDenied: "الكاميرا مش متاحة. اسمح بالكاميرا أو اكتب الرقم.",
+    scanAllFirst: (n: number) => `اعمل سكان لكل القطع الأول (فاضل ${n}).`, allScanned: "كل القطع اتعملها سكان ✓",
+    notCollectedYet: "مستنيين مدير المنطقة يستلم الشحنة دي من الجهة اللي بعتتها.",
+    collectTitle: "شحنات للاستلام", collectNote: "راجع القطع مع الجهة اللي بتسلمك، واعمل سكان لكل قطعة، وبعدين اكتب رقم السيل اللي على الشنطة وأكّد. القطع بتبقى في عهدتك لحد ما المستلم يعمل لها سكان.",
     noneToCollect: "مفيش شحنات مقفولة مستنية الاستلام.", sealOnBag: "رقم السيل على الشنطة", collect: "تأكيد الاستلام",
     collected: (at: string) => `استلمها مدير المنطقة · ${at}`,
     title: "الشحن والمرتجعات",
@@ -1078,6 +1087,7 @@ const ar: Dict = {
     batchStatus: { awaiting_approval: "في انتظار الموافقة", in_transit: "في الطريق", received: "تم الاستلام", incident: "مشكلة" } as Record<string, string>,
     cols: { batch: "الشحنة", direction: "الاتجاه", branch: "الفرع", seal: "السيل", items: "القطع", created: "التاريخ", status: "الحالة" },
     errors: {
+      scanAll: "اعمل سكان لكل القطع اللي في الشحنة قبل ما تستلمها.", notCollected: "مدير المنطقة لسه ماستلمش الشحنة دي.",
       sealMismatch: "رقم السيل مش مطابق للشحنة دي. متستلمهاش وبلّغ المشرف.", 
       sod: "فصل المهام: اللي جهز أو أرسل الشحنة مايقدرش يوافق عليها أو يستلمها.",
       seal: "أدخل رقم السيل.",

@@ -11,6 +11,8 @@ type Result = { error?: string; batchNo?: string };
 
 // Map database exceptions to dictionary error keys
 function errorKey(message: string): string {
+  if (message.includes("scan every item")) return "scanAll";
+  if (message.includes("not collected this batch")) return "notCollected";
   if (message.includes("SoD")) return "sod";
   if (message.includes("does not match")) return "sealMismatch";
   if (message.includes("already collected")) return "stale";
@@ -66,16 +68,18 @@ export async function approveBatch(batchId: string): Promise<Result> {
 }
 
 // Courier confirms collecting a sealed batch (seal number must match)
-export async function courierPickup(batchId: string, seal: string): Promise<Result> {
+export async function courierPickup(batchId: string, seal: string, scanned: string[]): Promise<Result> {
   await requireRole("courier");
+  const list = z.array(z.string().trim().min(1).max(40)).max(100).safeParse(scanned);
+  if (!list.success) return { error: "invalid" };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("courier_pickup", { p_batch: z.string().uuid().parse(batchId), p_seal: seal.trim().slice(0, 40) });
+  const { error } = await supabase.rpc("courier_pickup", { p_batch: z.string().uuid().parse(batchId), p_seal: seal.trim().slice(0, 40), p_scanned: list.data });
   if (error) return { error: errorKey(error.message) };
   return done();
 }
 
 export async function receiveBatch(batchId: string, scanned: string[]): Promise<Result> {
-  await requireRole("hq", "associate", "manager");
+  await requireRole("hq", "technician", "supervisor", "associate", "manager");
   const list = z.array(z.string().trim().min(1).max(40)).max(100).safeParse(scanned);
   if (!list.success) return { error: "invalid" };
   const supabase = await createClient();

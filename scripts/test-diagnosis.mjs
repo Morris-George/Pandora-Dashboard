@@ -21,7 +21,7 @@ function check(name, ok, detail = "") {
 
 const { data: br } = await service.from("branches").select("id, code");
 const B = Object.fromEntries(br.map((b) => [b.code, b.id]));
-const [assoc, manager, hq, tech, sup] = await Promise.all(["associate", "manager", "hq", "technician", "supervisor"].map(as));
+const [assoc, manager, hq, tech, sup, courier] = await Promise.all(["associate", "manager", "hq", "technician", "supervisor", "courier"].map(as));
 const { data: techProfile } = await service.from("profiles").select("id").eq("email", creds.technician.email).single();
 const status = async (id) => (await service.from("tickets").select("status, warranty_final, quote_total").eq("id", id).single()).data;
 
@@ -43,6 +43,7 @@ const A = await make({ no_invoice: true, warranty_provisional: "out_of_warranty"
 const Bt = await make({});
 const { data: ob } = await assoc.rpc("create_outbound_batch", { p_branch: B.CS, p_seal: "SEAL-D", p_tickets: [A.id, Bt.id] });
 await manager.rpc("approve_batch", { p_batch: ob.id });
+await courier.rpc("courier_pickup", { p_batch: ob.id, p_seal: "SEAL-D", p_scanned: [A.ticket_no, Bt.ticket_no] });
 await hq.rpc("receive_batch", { p_batch: ob.id, p_scanned: [A.ticket_no, Bt.ticket_no] });
 check("both tickets at HQ", (await status(A.id)).status === "received_at_hq" && (await status(Bt.id)).status === "received_at_hq");
 
