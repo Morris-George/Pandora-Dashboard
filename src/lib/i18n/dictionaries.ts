@@ -159,6 +159,8 @@ const en = {
     },
     dlg: { save: "Save", cancel: "Cancel", confirm: "Confirm", next: "Next", merge: "Merge (same person)", linkOnly: "Only link", mergeTitle: "Same person?", manager: "Branch Manager", associate: "Branch Associate" },
     receipt: {
+      previewLabel: "Preview bag label", labelSize: "Bag label size (label printer)", labelWidth: "Label width (mm)", labelHeight: "Label height (mm)",
+      labelNote: "Width × height of your labels in millimetres (e.g. 50 × 30). The label carries the ticket barcode that is scanned at every handover.",
       title: "Receipt (80 mm printer)",
       note: "Layout of the intake and delivery receipts. Changes apply to the next print in every store.",
       previewIntake: "Preview intake receipt", previewDelivery: "Preview delivery receipt",
@@ -339,6 +341,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     print: "Print A4 memo",
     printReceipt: "Print receipt (80 mm)",
     whatsapp: { received: "WhatsApp: item received", update: "WhatsApp: status update", quote: "WhatsApp: send the quote", ready: "WhatsApp: ready for pickup", reminder: "WhatsApp: pickup reminder", collected: "WhatsApp: thank you" } as Record<string, string>,
+    printLabel: "Print bag label",
     printDelivery: "Print delivery receipt",
     customer: "Customer",
     mobile: "Mobile",
@@ -853,6 +856,8 @@ const ar: Dict = {
     },
     dlg: { save: "حفظ", cancel: "إلغاء", confirm: "تأكيد", next: "التالي", merge: "دمج (نفس الشخص)", linkOnly: "ربط بس", mergeTitle: "نفس الشخص؟", manager: "مدير فرع", associate: "موظف فرع" },
     receipt: {
+      previewLabel: "معاينة ملصق الكيس", labelSize: "مقاس ملصق الكيس (طابعة الملصقات)", labelWidth: "عرض الملصق (مم)", labelHeight: "طول الملصق (مم)",
+      labelNote: "العرض × الطول بالمللي (مثلاً 50 × 30). الملصق عليه باركود رقم التيكيت اللي بيتعمله سكان في كل تسليم.",
       title: "الإيصال (طابعة 80 مم)",
       note: "شكل إيصال الاستلام وإيصال التسليم. التغيير بيتطبق على أول طباعة جاية في كل الفروع.",
       previewIntake: "معاينة إيصال الاستلام", previewDelivery: "معاينة إيصال التسليم",
@@ -1034,6 +1039,7 @@ const ar: Dict = {
     print: "طباعة A4",
     printReceipt: "طباعة إيصال (80 مم)",
     whatsapp: { received: "واتساب: تم الاستلام", update: "واتساب: آخر حالة", quote: "واتساب: ابعت عرض السعر", ready: "واتساب: جاهزة للاستلام", reminder: "واتساب: تذكير بالاستلام", collected: "واتساب: شكراً" } as Record<string, string>,
+    printLabel: "طباعة ملصق الكيس",
     printDelivery: "طباعة إيصال التسليم",
     customer: "العميل",
     mobile: "الموبايل",

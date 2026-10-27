@@ -119,6 +119,7 @@ export default async function TicketPage({ params, searchParams }: {
           </div>
           <div className="no-print flex flex-wrap gap-2">
             <a href={`/receipt/${tk.id}`} target="_blank" rel="noopener" className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-4 py-2 text-sm font-bold">{t.printReceipt}</a>
+            <a href={`/label/${tk.id}`} target="_blank" rel="noopener" className="rounded-lg border border-stone-900 px-4 py-2 text-sm font-bold">{t.printLabel}</a>
             {(tk.status === "collected" || tk.status === "closed") && (
               <a href={`/receipt/${tk.id}?kind=delivery`} target="_blank" rel="noopener" className="rounded-lg border border-stone-900 px-4 py-2 text-sm font-bold">{t.printDelivery}</a>
             )}

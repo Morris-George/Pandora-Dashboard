@@ -42,6 +42,7 @@ export function ReceiptPanel({ locale, initial }: { locale: Locale; initial: Rec
         <div className="flex gap-2">
           <a href="/receipt/sample" target="_blank" rel="noopener" className="rounded-lg border border-stone-900 px-3 py-2 text-sm">{t.previewIntake}</a>
           <a href="/receipt/sample?kind=delivery" target="_blank" rel="noopener" className="rounded-lg border border-stone-900 px-3 py-2 text-sm">{t.previewDelivery}</a>
+          <a href="/label/sample" target="_blank" rel="noopener" className="rounded-lg border border-stone-900 px-3 py-2 text-sm">{t.previewLabel}</a>
         </div>
       </div>
 
@@ -82,6 +83,16 @@ export function ReceiptPanel({ locale, initial }: { locale: Locale; initial: Rec
           ))}
         </fieldset>
 
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-sm font-medium mb-1">{t.labelSize}</legend>
+          <div className="flex items-center gap-2 text-sm" dir="ltr">
+            <input value={s.labelWidth} onChange={(e) => set("labelWidth", Number(e.target.value.replace(/[^\d]/g, "")) || 0)} inputMode="numeric" aria-label={t.labelWidth} className={`${input} w-20 text-center`} />
+            <span>×</span>
+            <input value={s.labelHeight} onChange={(e) => set("labelHeight", Number(e.target.value.replace(/[^\d]/g, "")) || 0)} inputMode="numeric" aria-label={t.labelHeight} className={`${input} w-20 text-center`} />
+            <span>mm</span>
+          </div>
+          <span className="text-xs text-stone-500">{t.labelNote}</span>
+        </fieldset>
         {bi("footer", t.footer)}
         {bi("termsIntake", t.termsIntake)}
         {bi("termsDelivery", t.termsDelivery)}
