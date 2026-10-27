@@ -39,6 +39,11 @@ export async function flushEmails(limit = 20): Promise<{ sent: number; failed: n
   const out = { sent: 0, failed: 0 };
   if (!emailConfigured()) return out;
   const db = createAdminClient();
+  // Paused (pilot): drop queued notices so old ones are not sent later when email is switched on
+  if (process.env.EMAIL_PAUSED === "1") {
+    await db.from("email_outbox").update({ status: "failed", last_error: "email paused" }).eq("status", "pending");
+    return out;
+  }
   const { data: rows } = await db.from("email_outbox")
     .select("id, kind, to_email, attempts, tickets(ticket_no, item_name, tracking_token, customers(full_name))")
     .eq("status", "pending").lt("attempts", 5).order("created_at").limit(limit);
