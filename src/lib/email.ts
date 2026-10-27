@@ -28,6 +28,9 @@ function render(kind: Kind, name: string, ticketNo: string, item: string, link: 
 <p style="margin:0">رقم التيكيت: <b dir="ltr">${esc(ticketNo)}</b><br>القطعة: ${esc(item)}</p></div>
 <div dir="ltr" style="padding:0 24px 8px;color:#6b5a5e;font-size:14px;line-height:1.6">${c.en}</div>
 <div style="padding:16px 24px 28px;text-align:center"><a href="${link}" style="display:inline-block;background:#FF93A0;color:#2A1018;text-decoration:none;font-weight:bold;padding:12px 28px;border-radius:10px">تابع التيكيت · Track ticket</a></div>
+<div style="border-top:1px solid #eadfe1;padding:14px 24px;color:#8a7a7e;font-size:12px;line-height:1.6;text-align:center">
+<div dir="rtl">دي رسالة تلقائية، من فضلك ماتردش عليها. للاستفسار كلم الفرع من صفحة التتبع.</div>
+<div dir="ltr">This is an automated message — please do not reply. For questions, contact your store from the tracking page.</div></div>
 </div></body></html>`;
 }
 
@@ -47,7 +50,7 @@ export async function flushEmails(limit = 20): Promise<{ sent: number; failed: n
       method: "POST",
       headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM, to: [r.to_email], subject: COPY[kind].subject(t.ticket_no),
+        from: process.env.EMAIL_FROM, to: [r.to_email], headers: { "Auto-Submitted": "auto-generated", "X-Auto-Response-Suppress": "All" }, subject: COPY[kind].subject(t.ticket_no),
         html: render(kind, t.customers?.full_name ?? "", t.ticket_no, t.item_name, `${SITE}/track/${t.tracking_token}`),
       }),
     }).catch((e: unknown) => ({ ok: false, text: async () => String(e) }) as const);
