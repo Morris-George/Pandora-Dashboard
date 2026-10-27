@@ -42,6 +42,8 @@ const en = {
     "/quotes": "Quote Approval", "/pickup": "Pickup", "/reports": "Reports", "/admin": "Admin",
   } as Record<string, string>,
   home: {
+    stores: { title: "Today by store", note: "Open tickets per store, how many are past their target time, and the longest delay. Most delayed first.",
+      store: "Store", open: "Open", late: "Late", worst: "Longest delay", days: (n: number) => `${n} day(s) late` },
     deniedTitle: "Access denied",
     denied: (role: string) => `The role ${role} has no permission for that screen.`,
     welcome: (name: string) => `Welcome, ${name}`,
@@ -729,6 +731,8 @@ const ar: Dict = {
     "/quotes": "موافقة العرض", "/pickup": "التسليم للعميل", "/reports": "التقارير", "/admin": "الإدارة",
   },
   home: {
+    stores: { title: "ملخص اليوم حسب الفرع", note: "التيكيتات المفتوحة في كل فرع، وكام واحدة عدّت المدة المحددة، وأطول تأخير. الأكتر تأخير الأول.",
+      store: "الفرع", open: "مفتوحة", late: "متأخرة", worst: "أطول تأخير", days: (n: number) => `متأخرة ${n} يوم` },
     deniedTitle: "غير مسموح",
     denied: (role) => `دور ${role} ليس له صلاحية على هذه الشاشة.`,
     welcome: (name) => `أهلاً، ${name}`,
