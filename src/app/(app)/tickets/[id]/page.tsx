@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Warranty } from "@/lib/warranty";
 import { PrintButton } from "./print-button";
+import { waKind, waMessage, waNumber } from "@/lib/whatsapp";
 import { ExceptionActions } from "./exception-actions";
 import { EXCEPTIONS, type ExceptionTarget } from "./exceptions";
 
@@ -58,6 +59,16 @@ export default async function TicketPage({ params, searchParams }: {
     .map((r) => ({ to: r.to_status as ExceptionTarget, needsReason: r.requires_reason }));
   const branch = (tk.branches as unknown as { name: string } | null)?.name ?? "";
 
+  // WhatsApp message to the customer for the current step, sent from the store's own WhatsApp
+  const kind = waKind(tk.status);
+  const { data: lastQuote } = kind === "quote"
+    ? await supabase.from("quotations").select("total").eq("ticket_id", tk.id).order("sent_at", { ascending: false, nullsFirst: false }).limit(1).maybeSingle()
+    : { data: null };
+  const waHref = customer?.mobile ? `https://wa.me/${waNumber(customer.mobile)}?text=${encodeURIComponent(waMessage(kind, {
+    name: customer.full_name ?? "", ticketNo: tk.ticket_no, item: tk.item_name, store: branch, link: trackUrl,
+    quote: lastQuote?.total != null ? money(Number(lastQuote.total)) : undefined,
+  }))}` : null;
+
   // Timeline: every status change, who made it and how long the ticket stayed there
   const { data: hist } = await supabase.from("status_history").select("to_status, user_id, role, reason, at").eq("ticket_id", tk.id).order("at");
   const uids = [...new Set((hist ?? []).map((h) => h.user_id).filter(Boolean))] as string[];
@@ -106,6 +117,9 @@ export default async function TicketPage({ params, searchParams }: {
             <a href={`/receipt/${tk.id}`} target="_blank" rel="noopener" className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-4 py-2 text-sm font-bold">{t.printReceipt}</a>
             {(tk.status === "collected" || tk.status === "closed") && (
               <a href={`/receipt/${tk.id}?kind=delivery`} target="_blank" rel="noopener" className="rounded-lg border border-stone-900 px-4 py-2 text-sm font-bold">{t.printDelivery}</a>
+            )}
+            {waHref && (
+              <a href={waHref} target="_blank" rel="noopener" className="rounded-lg bg-emerald-700 text-white px-4 py-2 text-sm font-bold">{t.whatsapp[kind]}</a>
             )}
             <PrintButton label={t.print} />
           </div>
