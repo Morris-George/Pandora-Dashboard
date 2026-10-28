@@ -153,7 +153,9 @@ async function explorerData(rec) {
 // The online shop is not a store the VM works on, so it is left out of this card, and out of the all-stores figure too.
 const ONLINE = /online|e-?commerce|web\s*-?\s*(shop|store|site)/i;
 async function storeAverages(from, to) {
-  const rows = (await dashRows()).filter(r => !ONLINE.test(String(r[7] || '')));
+  // Services and Maintenance, and the jewellery boxes, are not jewellery sales: left out, as on Staff Performance,
+  // so UPT and ATV match there (an invoice with only those lines does not count as an invoice)
+  const rows = (await dashRows()).filter(r => !ONLINE.test(String(r[7] || '')) && r[8] !== 'Services' && r[8] !== 'Accessories');
   const days = rows.map(r => String(r[0] || '').slice(0, 10)).filter(Boolean).sort();
   const min = days[0] || '', max = days[days.length - 1] || '';
   const per = new Map(), all = { inv: new Set(), qty: 0, val: 0 };
