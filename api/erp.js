@@ -127,29 +127,27 @@ function salesRows(list) {
 //  - an invoice in both reports: each person's lines are scaled so the invoice equals the Dashboards' net (covers discounts);
 //  - an invoice only in the staff report (nothing sold in ERP's sales report, e.g. cancelled): left out;
 //  - an invoice only in the Dashboards (returns, credit notes, sales with no sales person): one "Returns & adjustments" line in its store.
-// Service groups are ignored on both sides (they are hidden on Staff Performance). Sales Team lines stay hidden as before.
+// Sales Team lines stay hidden as before.
 const ADJ = 'Returns & adjustments';
 const nk = v => String(v || '').toLowerCase().replace(/ - an\b/g, '').replace(/[^a-z0-9]/g, '');
 function reconcile(staffList, dashRows) {
   const stat = { scaled: 0, dropped: 0, adjInvoices: 0, adjNet: 0, unmapped: 0 };
   const dash = new Map(); // invoice -> {net, qty, date, branch}
   for (const r of dashRows) {
-    if (r[8] === 'Services') continue;
     const d = dash.get(r[1]) || { net: 0, qty: 0, date: r[0], branch: r[7] };
     d.net += r[3]; d.qty += r[2]; dash.set(r[1], d);
   }
   if (!dash.size) return { list: staffList, stat: { skipped: 'no Dashboards sales' } };
-  const mine = new Map(), storeOf = new Map(); // invoice -> staff net (service groups left out)
+  const mine = new Map(), storeOf = new Map(); // invoice -> staff net 
   for (const r of staffList) {
     const sn = String(r.parent_sales_person || '').trim();
     if (sn && !ex.hideTeam(sn) && r.warehouse && !storeOf.has(nk(r.warehouse))) storeOf.set(nk(r.warehouse), sn);
-    if (ex.hideService(String(r.item_group || ''))) continue;
     mine.set(r.sales_invoice, (mine.get(r.sales_invoice) || 0) + (Number(r.contribution_amt) || 0));
   }
   const out = [], seen = new Set();
   for (const r of staffList) {
     const inv = r.sales_invoice, sn = String(r.parent_sales_person || '').trim();
-    if (ex.hideService(String(r.item_group || '')) || ex.hideTeam(sn)) { out.push(r); continue; }
+    if (ex.hideTeam(sn)) { out.push(r); continue; }
     const m = mine.get(inv) || 0, d = dash.get(inv);
     if (d && Math.abs(m) > 0.005) { seen.add(inv); out.push({ ...r, contribution_amt: (Number(r.contribution_amt) || 0) * d.net / m }); stat.scaled++; }
     else if (!d && Math.abs(m) > 0.005) stat.dropped++;

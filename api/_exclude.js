@@ -6,8 +6,6 @@ const RX = /laderach|water\s*way/i;
 const hit = v => typeof v === 'string' && RX.test(plain(v));
 const anyHit = (...vals) => vals.some(hit);
 // "Sales Team" is not a store: it is left out of every Staff Performance report (all roles, including super admin).
-// Service item groups (Pandora Services, Pandora Maintenance) are not sales: they are left out of every Staff Performance report.
-const hideService = v => typeof v === 'string' && /\b(services?|maintenance)\b/i.test(v);
 const hideTeam = v => typeof v === 'string' && /^\s*sales\s*team\s*$/i.test(v);
 
 // Pandora Dashboards sales line: [date, invoice, qty, net, gross, sku, name, branch, category, payment, collection (ERP lines only)]
@@ -18,7 +16,7 @@ const filterSales = rows => rows.filter(keepSale);
 function filterStaff(d) {
   if (!d || !Array.isArray(d.stores) || !Array.isArray(d.people) || !Array.isArray(d.groups) || !Array.isArray(d.rows)) return d;
   const items = Array.isArray(d.items) ? d.items : [];
-  const badStore = d.stores.map(v => hit(v) || hideTeam(v)), badGroup = d.groups.map(g => hit(g) || hideService(g)), badItem = items.map(i => Array.isArray(i) ? anyHit(i[0], i[1]) : hit(i));
+  const badStore = d.stores.map(v => hit(v) || hideTeam(v)), badGroup = d.groups.map(hit), badItem = items.map(i => Array.isArray(i) ? anyHit(i[0], i[1]) : hit(i));
   if (![...badStore, ...badGroup, ...badItem].some(Boolean)) return d;
   const remap = (flags, list) => { const m = new Map(), out = []; list.forEach((x, i) => { if (!flags[i]) { m.set(i, out.length); out.push(x); } }); return { m, out }; };
   const S = remap(badStore, d.stores), G = remap(badGroup, d.groups), I = remap(badItem, items);
@@ -48,4 +46,4 @@ function monthKey(d) {
   return mx === null ? null : new Date(mx * 86400000).toISOString().slice(0, 7);
 }
 
-module.exports = { hideService, hideTeam, hit, anyHit, filterSales, filterStaff, filterTable, monthKey };
+module.exports = { hideTeam, hit, anyHit, filterSales, filterStaff, filterTable, monthKey };
