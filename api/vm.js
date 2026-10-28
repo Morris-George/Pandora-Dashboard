@@ -152,23 +152,25 @@ async function explorerData(rec) {
 // Only these two averages leave the server: no totals, no invoice counts, and nothing about sales people.
 // The online shop is not a store the VM works on, so it is left out of this card, and out of the all-stores figure too.
 const ONLINE = /online|e-?commerce|web\s*-?\s*(shop|store|site)/i;
+// Worked out exactly like Staff Performance: the same sales-person data, the same item groups left out (set on that page),
+// each person's invoices counted, ATV = amount before VAT x 1.14 / invoices.
 async function storeAverages(from, to) {
-  // Services and Maintenance, and the jewellery boxes, are not jewellery sales: left out, as on Staff Performance,
-  // so UPT and ATV match there (an invoice with only those lines does not count as an invoice)
-  const rows = (await dashRows()).filter(r => !ONLINE.test(String(r[7] || '')) && r[8] !== 'Services' && r[8] !== 'Accessories');
-  const days = rows.map(r => String(r[0] || '').slice(0, 10)).filter(Boolean).sort();
-  const min = days[0] || '', max = days[days.length - 1] || '';
-  const per = new Map(), all = { inv: new Set(), qty: 0, val: 0 };
-  for (const r of rows) {
-    const day = String(r[0] || '').slice(0, 10);
-    if (day < from || day > to) continue;
-    const branch = String(r[7] || 'Unspecified'), qty = Number(r[2]) || 0, gross = Number(r[4]) || 0;
-    let o = per.get(branch); if (!o) per.set(branch, o = { inv: new Set(), qty: 0, val: 0 });
-    o.qty += qty; o.val += gross; all.qty += qty; all.val += gross;
-    if (gross > 0) { const id = branch + '|' + r[1]; o.inv.add(id); all.inv.add(id); }
-  }
-  const fin = o => { const n = o.inv.size; return { upt: n ? Math.round(o.qty / n * 100) / 100 : 0, atv: n ? Math.round(o.val / n) : 0 }; };
-  return { ok: true, min, max, from, to, all: fin(all), stores: [...per.entries()].filter(([, o]) => o.inv.size).map(([branch, o]) => ({ branch, ...fin(o) })).sort((a, b) => a.branch.localeCompare(b.branch)) };
+  const store = require('./_store'), cur = await store.getJSON('data/current.json');
+  const q = new URLSearchParams(); if (from > '0000-01-01') q.set('from', from); if (to < '9999-12-31') q.set('to', to);
+  const d = await require('./data').loadData(q, cur);
+  if (!d) return { ok: true, min: '', max: '', from, to, all: { upt: 0, atv: 0 }, stores: [] };
+  const exG = new Set((d.ex || []).map(g => d.groups.indexOf(g)).filter(i => i >= 0));
+  const P = d.people.map(() => ({ inv: new Set(), qty: 0, amt: 0 }));
+  for (const r of d.rows) { if (exG.has(r[1])) continue; const p = P[r[0]]; if (!p) continue; p.inv.add(r[2]); p.qty += r[3]; p.amt += r[4]; }
+  const per = new Map(), all = { inv: 0, qty: 0, amt: 0 };
+  d.people.forEach((pp, i) => {
+    const branch = d.stores[pp[1]] || 'Unspecified', p = P[i];
+    if (ONLINE.test(branch) || !p.inv.size) return;
+    let o = per.get(branch); if (!o) per.set(branch, o = { inv: 0, qty: 0, amt: 0 });
+    o.inv += p.inv.size; o.qty += p.qty; o.amt += p.amt; all.inv += p.inv.size; all.qty += p.qty; all.amt += p.amt;
+  });
+  const fin = o => ({ upt: o.inv ? Math.round(o.qty / o.inv * 100) / 100 : 0, atv: o.inv ? Math.round(o.amt * 1.14 / o.inv) : 0 });
+  return { ok: true, min: d.dayMin || '', max: d.dayMax || '', from, to, all: fin(all), stores: [...per.entries()].filter(([, o]) => o.inv).map(([branch, o]) => ({ branch, ...fin(o) })).sort((x, y) => x.branch.localeCompare(y.branch)) };
 }
 
 module.exports = activity.wrap('vm', async function handler(req, res) {

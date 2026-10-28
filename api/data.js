@@ -96,6 +96,35 @@ function validate(d) {
   return '';
 }
 
+// the staff data for ?month= or ?from=&to= (Laderach, Sales Team ... already left out), or null
+async function loadData(q, cur) {
+  let raw = cur;
+  const mk = q.get('month'), ck = ex.monthKey(cur);
+  const loadMonth = async k => {
+    if (k === ck) return cur;
+    const m = await store.getJSON('data/m/' + k + '.json');
+    return m && cur && cur.ex ? { ...m, ex: cur.ex } : m; // the hidden item groups are the same for every month
+  };
+  if (/^\d{4}-\d{2}$/.test(mk || '')) {
+    if (ck !== mk) raw = await loadMonth(mk);
+  } else if (ISO.test(q.get('from') || '') || ISO.test(q.get('to') || '')) {
+    // free dates: pick any start and end day, even in different months
+    const saved = (await store.list('data/m/')).map(p => (/^data\/m\/(\d{4}-\d{2})\.json$/.exec(p) || [])[1]).filter(Boolean);
+    if (ck && !saved.includes(ck)) saved.push(ck);
+    saved.sort();
+    const fk = ISO.test(q.get('from') || '') ? q.get('from').slice(0, 7) : saved[0], tk = ISO.test(q.get('to') || '') ? q.get('to').slice(0, 7) : saved[saved.length - 1];
+    if (saved.length && fk && tk && (fk !== ck || tk !== ck)) {
+      const lo = fk < tk ? fk : tk, hi = fk < tk ? tk : fk;
+      const want = monthsBetween(lo, hi).filter(k => saved.includes(k));
+      const parts = [];
+      for (const k of want) { const m = await loadMonth(k); if (m) parts.push(ex.filterStaff(m)); }
+      if (parts.length === 1) raw = parts[0]; else if (parts.length > 1) raw = mergeMonths(parts);
+    }
+  }
+  const d0 = ex.filterStaff(raw);
+  return d0 ? byDate(d0, q.get('from'), q.get('to')) : null;
+}
+
 module.exports = activity.wrap('data', async function handler(req, res) {
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   const who = await whoami(req);
@@ -112,32 +141,8 @@ module.exports = activity.wrap('data', async function handler(req, res) {
       keys.sort().reverse();
       return send(res, 200, { ok: true, months: keys, current: ck || null });
     }
-    let raw = cur;
-    const mk = q.get('month'), ck = ex.monthKey(cur);
-    const loadMonth = async k => {
-      if (k === ck) return cur;
-      const m = await store.getJSON('data/m/' + k + '.json');
-      return m && cur && cur.ex ? { ...m, ex: cur.ex } : m; // the hidden item groups are the same for every month
-    };
-    if (/^\d{4}-\d{2}$/.test(mk || '')) {
-      if (ck !== mk) raw = await loadMonth(mk);
-    } else if (ISO.test(q.get('from') || '') || ISO.test(q.get('to') || '')) {
-      // free dates: pick any start and end day, even in different months
-      const saved = (await store.list('data/m/')).map(p => (/^data\/m\/(\d{4}-\d{2})\.json$/.exec(p) || [])[1]).filter(Boolean);
-      if (ck && !saved.includes(ck)) saved.push(ck);
-      saved.sort();
-      const fk = ISO.test(q.get('from') || '') ? q.get('from').slice(0, 7) : saved[0], tk = ISO.test(q.get('to') || '') ? q.get('to').slice(0, 7) : saved[saved.length - 1];
-      if (saved.length && fk && tk && (fk !== ck || tk !== ck)) {
-        const lo = fk < tk ? fk : tk, hi = fk < tk ? tk : fk;
-        const want = monthsBetween(lo, hi).filter(k => saved.includes(k));
-        const parts = [];
-        for (const k of want) { const m = await loadMonth(k); if (m) parts.push(ex.filterStaff(m)); }
-        if (parts.length === 1) raw = parts[0]; else if (parts.length > 1) raw = mergeMonths(parts);
-      }
-    }
-    const d0 = ex.filterStaff(raw);
-    if (!d0) return send(res, 404, { ok: false, error: 'no-data' });
-    const d = byDate(d0, q.get('from'), q.get('to'));
+    const d = await loadData(q, cur);
+    if (!d) return send(res, 404, { ok: false, error: 'no-data' });
     const wantMe = q.get('me');
     if (who.kind === 'staff' && (wantMe || !who.info.storeManager)) return send(res, 200, staffView(d, who.user.store, who.user.name)); // own page only
     if (who.info.allow) return send(res, 200, scopeByStores(d, who.info.allow)); // area managers: their zone; store managers: their own store
@@ -185,3 +190,5 @@ module.exports = activity.wrap('data', async function handler(req, res) {
   res.setHeader('Allow', 'GET, POST');
   return send(res, 405, { ok: false, error: 'Method not allowed' });
 });
+
+module.exports.loadData = loadData;
