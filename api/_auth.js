@@ -40,6 +40,10 @@ function whoFromRec(rec) {
     const account = { role: 'admin', label: 'Overseer', user: rec.username, overseer: true };
     return { kind: 'env', account, user: rec, info: { ...roleInfo(account), overseer: true } };
   }
+  if (rec.role === 'hr') {
+    // an HR account (for example Sandra): can look at the Weekly Schedule of every store, view only, and nothing else
+    return { kind: 'hr', user: rec, info: { role: 'hr', label: 'HR', zone: null, allow: null, zones: null } };
+  }
   if (rec.role === 'stockcount') {
     // a Stock Count only account: opens the Stock Count page and its data, nothing else
     return { kind: 'sc', user: rec, info: { role: 'stockcount', label: 'Stock Count', zone: null, allow: null, zones: null } };
@@ -52,7 +56,7 @@ function whoFromRec(rec) {
   return { kind: 'staff', user: rec, info: { role: 'staff', label: 'Sales person', zone: null, allow: null, zones: null, self: { store: rec.store, name: rec.name } } };
 }
 
-// -> {kind:'env', account, info} | {kind:'staff', user, info} | {kind:'vm', user, info} | null
+// -> {kind:'env', account, info} | {kind:'staff', user, info} | {kind:'vm'|'sc'|'hr', user, info} | null
 // The answer is kept for the length of one request, so the activity log can ask "who is this?" without reading storage again.
 const memo = new WeakMap();
 function whoami(req) {

@@ -3,7 +3,7 @@
 const { PROJECTS, validSession, readCookie, staffAccounts } = require('./_projects');
 const { whoami } = require('./_auth');
 
-// f = { dash: true/false, staff: { role, label, name } | null, vm: true/false, sc: true/false (Stock Count only account) }
+// f = { dash: true/false, staff: { role, label, name } | null, vm: true/false, sc: true/false (Stock Count only account), hr: true/false (HR: Weekly Schedule, view only) }
 const APPS = [
   { id: 'dashboards', title: 'Pandora Dashboards', desc: 'Sales dashboards for the whole business.', href: '/dashboards', allow: f => f.dash },
   { id: 'staff', title: 'Staff Performance', desc: 'How each store and each sales person is doing.', href: '/staff', allow: f => !!f.staff && f.staff.role !== 'staff' && f.staff.role !== 'store' },
@@ -15,7 +15,7 @@ const APPS = [
   { id: 'storeteam', title: 'My store team', desc: 'How each sales person in your store is doing.', href: '/staff', allow: f => !!f.staff && f.staff.role === 'store' },
   { id: 'mysales2', title: 'My sales', desc: 'What you sold, what sells best for you, and tips to improve.', href: '/staff/me', allow: f => !!f.staff && f.staff.role === 'store' },
   { id: 'daily', title: 'Daily Store Report', desc: 'Add the daily sheet and see sales against target, visitors, conversion and more.', href: '/daily', allow: f => !!f.staff && !(f.staff.who && f.staff.who.info && f.staff.who.info.self && /online|e-?commerce|website/i.test(f.staff.who.info.self.store || '')) },
-  { id: 'schedule', title: 'Weekly Schedule', desc: 'Plan who works the Morning, Between and Night shifts each day, with their from and to times.', href: '/schedule', allow: f => !!f.staff && !(f.staff.who && f.staff.who.info && f.staff.who.info.self && /online|e-?commerce|website/i.test(f.staff.who.info.self.store || '')) },
+  { id: 'schedule', title: 'Weekly Schedule', desc: 'Plan who works the Morning, Between and Night shifts each day, with their from and to times.', href: '/schedule', allow: f => !!f.hr || !!f.staff && !(f.staff.who && f.staff.who.info && f.staff.who.info.self && /online|e-?commerce|website/i.test(f.staff.who.info.self.store || '')) },
   { id: 'vmzones', title: 'VM Zones', desc: 'Which collection is in which zone of each store, and its effect on sales.', href: '/vm/zones', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') },
   { id: 'zonestock', title: 'Zone Stock', desc: 'What is in each zone of the store: counts, goods received, moves, and sales taken off automatically.', href: '/vm/stock', allow: f => !!f.vm || (!!f.staff && (f.staff.role === 'admin' || f.staff.role === 'store')) },
   { id: 'stock', title: 'Stock balance', desc: 'How many pieces are in stock in each category, store by store, for the dates you pick.', href: '/stock', allow: f => !!f.vm || (!!f.staff && f.staff.role !== 'staff' && f.staff.role !== 'store') },
@@ -31,7 +31,7 @@ function appsFor(f) {
   // area managers open the same Dashboards as the super admin, but the server only sends them the stores of their zone
   const zoneManager = !!f.staff && f.staff.role !== 'admin' && f.staff.role !== 'staff' && f.staff.role !== 'store';
   const hidden = f.hidden || [];
-  return APPS.filter(a => a.allow(f) && !hidden.includes(a.id)).map(a => ({ id: a.id, title: a.title, desc: a.id === 'dashboards' && zoneManager ? 'Sales dashboards for the stores in your zone.' : a.id === 'schedule' && f.staff && f.staff.role === 'staff' ? 'See who works the Morning, Between and Night shifts at your store this week.' : a.desc, href: a.href }));
+  return APPS.filter(a => a.allow(f) && !hidden.includes(a.id)).map(a => ({ id: a.id, title: a.title, desc: a.id === 'dashboards' && zoneManager ? 'Sales dashboards for the stores in your zone.' : a.id === 'schedule' && f.staff && f.staff.role === 'staff' ? 'See who works the Morning, Between and Night shifts at your store this week.' : a.id === 'schedule' && f.hr ? 'See who works the Morning, Between and Night shifts in every store. View only.' : a.desc, href: a.href }));
 }
 
 // Reports the super admin switched off for one person (Report access page): access/overrides.json = { "<key>": { remove: ["stock", ...] } }.
@@ -56,12 +56,13 @@ async function factsFromWho(who, dashOk, withOverrides) {
   const dash = !!dashOk || (!!who && who.kind === 'env' && (!!who.info.allow || !!who.info.overseer));
   const vm = !!who && who.kind === 'vm';
   const sc = !!who && who.kind === 'sc';
-  const staff = who && !vm && !sc ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', overseer: !!who.info.overseer, who } : null;
+  const hr = !!who && who.kind === 'hr';
+  const staff = who && !vm && !sc && !hr ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', overseer: !!who.info.overseer, who } : null;
   const refill = who ? await require('./_refill').levelFor(who) : 'none'; // Refill Order access level, set on Staff approvals
   const dist = who ? await require('./_dist').levelFor(who) : 'none'; // Orders Distribution access level, set on Staff approvals
   const activity = who ? await require('./_activity').canView(who) : false; // the Activity page: super admin, or the Overseer once it is switched on
   const hidden = withOverrides ? await hiddenFor(who) : [];
-  return { dash, staff, vm, sc, refill, dist, activity, hidden, vmName: vm || sc ? who.user.name : '' };
+  return { dash, staff, vm, sc, hr, refill, dist, activity, hidden, vmName: vm || sc || hr ? who.user.name : '' };
 }
 
 // Read the cookies of this request: which logins are valid?

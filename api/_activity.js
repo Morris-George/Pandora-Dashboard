@@ -52,8 +52,8 @@ function identFromAccount(a, info) {
   return { key: 'env-' + slug(normName(a.user)), username: a.user, name: a.role === 'admin' ? 'Super admin' : prettyName(a.user), role: a.role === 'admin' ? 'admin' : 'area', label: a.label, store: '', zone: (info && info.zone) || (a.role === 'cairo' ? 'Cairo zone' : a.role === 'octalex' ? 'October & Alexandria zone' : '') };
 }
 function identFromRec(r) {
-  const role = r.role === 'vm' ? 'vm' : r.role === 'overseer' ? 'overseer' : r.role === 'stockcount' ? 'stockcount' : r.storeManager && r.linked ? 'store' : 'staff';
-  const label = { vm: 'Visual Merchandiser', overseer: 'Overseer', stockcount: 'Stock Count', store: 'Store manager', staff: 'Sales person' }[role];
+  const role = r.role === 'vm' ? 'vm' : r.role === 'overseer' ? 'overseer' : r.role === 'stockcount' ? 'stockcount' : r.role === 'hr' ? 'hr' : r.storeManager && r.linked ? 'store' : 'staff';
+  const label = { vm: 'Visual Merchandiser', overseer: 'Overseer', stockcount: 'Stock Count', hr: 'HR', store: 'Store manager', staff: 'Sales person' }[role];
   return { key: 'u-' + slug(r.username), username: r.username, name: r.name || prettyName(r.username), role, label: r.title ? label + ' · ' + r.title : label, store: r.store || '', zone: '' };
 }
 function ident(who) {

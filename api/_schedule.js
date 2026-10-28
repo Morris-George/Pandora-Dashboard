@@ -7,6 +7,7 @@
 //   POST /api/schedule?op=clear    {store, week}                                                  empty the whole week
 // Who: super admin = every store; area managers = the stores of their zone; store managers = their own store (all three can edit).
 // Sales people can only LOOK at their own store's schedule (GET); every change answers 403.
+// HR accounts can LOOK at every store's schedule (GET) and nothing else; every change answers 403.
 // o = people on vacation that day: [{n, r}] with r = annual | weekly | holiday (sent inside shifts of op=day, same as m/b/n).
 // m = Morning, b = Between, n = Night. Times are 24-hour "HH:MM"; a To that is earlier than the From means the shift ends after midnight.
 // Stored at sched/<store>/<week start>.json and sched/<store>/settings.json, reached through api/vm.js (Hobby plan: 12 functions max).
@@ -56,12 +57,13 @@ async function access(req) {
     if (/online|e-?commerce|website/i.test(who.info.self.store)) return { code: 403 };
     return { role: 'staff', by: who.user.name || 'Staff', own: canon(who.info.self.store), readonly: true }; // sales people may look at their own store's schedule, never change it
   }
+  if (who.kind === 'hr') return { role: 'hr', by: who.user.name || 'HR', readonly: true }; // HR looks at every store's schedule, never changes it
   return { code: 403 }; // VM and Stock Count accounts do not use the schedule
 }
 const mayStore = (a, name) => {
   const n = canon(name);
   if (!n) return false;
-  if (a.role === 'admin') return true;
+  if (a.role === 'admin' || a.role === 'hr') return true;
   if (a.role === 'area') return a.allow.some(rx => rx.test(n));
   return n === a.own;
 };

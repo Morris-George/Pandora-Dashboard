@@ -95,7 +95,7 @@ module.exports = activity.wrap('accounts', async function handler(req, res) {
       if (name.length < 2) return send(res, 400, { ok: false, error: 'Type the person\'s full name.' });
       if (!uname) return send(res, 400, { ok: false, error: 'Username: 3 to 30 letters or numbers (you can use . _ -), no spaces.' });
       if (pw.length < 8 || pw.length > 100) return send(res, 400, { ok: false, error: 'Password must be at least 8 characters.' });
-      if (b.role !== 'vm' && b.role !== 'stockcount' && b.role !== 'overseer') return send(res, 400, { ok: false, error: 'Unknown account type.' });
+      if (b.role !== 'vm' && b.role !== 'stockcount' && b.role !== 'overseer' && b.role !== 'hr') return send(res, 400, { ok: false, error: 'Unknown account type.' });
       if (staffAccounts().some(a => normName(a.user) === uname) || await users.getUser(uname)) return send(res, 409, { ok: false, error: 'That username is taken. Choose another.' });
       await users.createSpecial({ username: uname, password: pw, name, role: b.role });
       return send(res, 200, { ok: true, username: uname });

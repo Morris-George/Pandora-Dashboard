@@ -24,6 +24,7 @@ function noteFor(app, f, who) {
   if (['dashboards', 'staff', 'stock'].includes(app.id) && who && who.info && who.info.zone && role !== 'store' && role !== 'staff') return who.info.zone + ' only';
   if (app.id === 'stock' && f.vm) return 'pieces only';
   if (app.id === 'vm' && f.vm) return 'view only';
+  if (app.id === 'schedule' && f.hr) return 'all stores, view only';
   if (app.id === 'daily' || app.id === 'schedule') {
     if (role === 'staff') return app.id === 'schedule' ? 'own store, view only' : 'own store';
     if (role === 'store') return 'own store';
@@ -40,6 +41,7 @@ function scopeOf(who) {
   if (i.role === 'admin') return 'Sees everything';
   if (i.role === 'vm') return 'Visual Merchandiser: pieces only, never sales amounts';
   if (i.role === 'stockcount') return 'Stock Count account only';
+  if (i.role === 'hr') return 'HR: Weekly Schedule only, view only';
   if (i.role === 'store') return 'Store manager of ' + i.zone;
   if (i.role === 'staff') return 'Sees only their own sales' + (i.self && i.self.store ? ' at ' + i.self.store : '');
   if (i.zone) return 'Area manager: ' + i.zone + ' only';
@@ -93,6 +95,7 @@ async function build() {
     let group = 'Sales people';
     if (rec.role === 'overseer') group = 'Brand manager and Overseer';
     else if (rec.role === 'vm') group = 'Visual Merchandiser';
+    else if (rec.role === 'hr') group = 'HR';
     else if (rec.role === 'stockcount') group = rec.title === 'Finance' ? 'Finance' : 'Stock Count accounts';
     else if (rec.storeManager) group = 'Store managers';
     out.push({

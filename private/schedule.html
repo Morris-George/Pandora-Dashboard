@@ -247,7 +247,7 @@ function remember(){try{localStorage.setItem('sched.store',st.store)}catch(_){}}
 async function init(){
   try{
     var j=await api('/api/schedule');
-    st.role=j.role;st.canEdit=j.canEdit!==false;st.stores=j.stores||[];if(!st.canEdit){document.documentElement.classList.add('ro');$('sub').textContent='Who works the Morning, Between and Night shifts at your store each day, with their from and to times.'}st.weekStart=j.weekStart;
+    st.role=j.role;st.canEdit=j.canEdit!==false;st.stores=j.stores||[];if(!st.canEdit){document.documentElement.classList.add('ro');$('sub').textContent=st.role==='hr'?'Who works the Morning, Between and Night shifts in each store, day by day, with their from and to times. View only.':'Who works the Morning, Between and Night shifts at your store each day, with their from and to times.'}st.weekStart=j.weekStart;
     if(!st.stores.length){showErr('No stores are linked to your account yet.');return}
     var saved='';try{saved=localStorage.getItem('sched.store')||''}catch(_){}
     st.store=st.stores.indexOf(saved)>-1?saved:st.stores[0];

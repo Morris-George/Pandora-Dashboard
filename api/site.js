@@ -167,7 +167,7 @@ module.exports = async function handler(req, res) {
 
   // Everything below needs a login. Which logins this browser holds decides what it can open.
   const facts = await sessionFacts(req);
-  const signedIn = facts.dash || facts.staff;
+  const signedIn = facts.dash || facts.staff || facts.hr;
   const multi = appsFor(facts).length > 1;
   const toLogin = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/login.html'); return res.status(302).end(); };
   const toHome = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/'); return res.status(302).end(); };
@@ -201,7 +201,7 @@ module.exports = async function handler(req, res) {
 
   // Home: the options this person can open
   if (requestedPath === '/' || requestedPath === '/home.html') {
-    const label = facts.vm || facts.sc ? facts.vmName : facts.staff ? (facts.staff.role === 'staff' || facts.staff.role === 'store' ? facts.staff.name : facts.staff.label) : 'Pandora Dashboards';
+    const label = facts.vm || facts.sc || facts.hr ? facts.vmName : facts.staff ? (facts.staff.role === 'staff' || facts.staff.role === 'store' ? facts.staff.name : facts.staff.label) : 'Pandora Dashboards';
     const boot = JSON.stringify({ ok: true, label, greet: greetName(facts), apps: appsFor(facts) }).replace(/</g, '\\u003c');
     const chrome = withChrome('home', multi);
     return sendFile(res, 'home.html', 'text/html; charset=utf-8', function (buf) {
@@ -282,7 +282,7 @@ module.exports = async function handler(req, res) {
 
   // Weekly Schedule: managers (super admin, area managers, store managers) plan; sales people only look at their own store's who works Morning, Between and Night shifts
   if (requestedPath === '/schedule' || requestedPath === '/schedule/' || requestedPath === '/schedule.html') {
-    if (!facts.staff) return toHome();
+    if (!facts.staff && !facts.hr) return toHome();
     return sendFile(res, 'schedule.html', 'text/html; charset=utf-8', withChrome('staff', multi));
   }
 
