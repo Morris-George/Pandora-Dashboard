@@ -48,4 +48,4 @@ function monthKey(d) {
   return mx === null ? null : new Date(mx * 86400000).toISOString().slice(0, 7);
 }
 
-module.exports = { hit, anyHit, filterSales, filterStaff, filterTable, monthKey };
+module.exports = { hideService, hideTeam, hit, anyHit, filterSales, filterStaff, filterTable, monthKey };

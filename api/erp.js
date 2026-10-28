@@ -122,6 +122,51 @@ function salesRows(list) {
   return out;
 }
 
+
+// Makes Staff Performance add up to Pandora Dashboards (which match ERP), invoice by invoice:
+//  - an invoice in both reports: each person's lines are scaled so the invoice equals the Dashboards' net (covers discounts);
+//  - an invoice only in the staff report (nothing sold in ERP's sales report, e.g. cancelled): left out;
+//  - an invoice only in the Dashboards (returns, credit notes, sales with no sales person): one "Returns & adjustments" line in its store.
+// Service groups are ignored on both sides (they are hidden on Staff Performance). Sales Team lines stay hidden as before.
+const ADJ = 'Returns & adjustments';
+const nk = v => String(v || '').toLowerCase().replace(/ - an\b/g, '').replace(/[^a-z0-9]/g, '');
+function reconcile(staffList, dashRows) {
+  const stat = { scaled: 0, dropped: 0, adjInvoices: 0, adjNet: 0, unmapped: 0 };
+  const dash = new Map(); // invoice -> {net, qty, date, branch}
+  for (const r of dashRows) {
+    if (r[8] === 'Services') continue;
+    const d = dash.get(r[1]) || { net: 0, qty: 0, date: r[0], branch: r[7] };
+    d.net += r[3]; d.qty += r[2]; dash.set(r[1], d);
+  }
+  if (!dash.size) return { list: staffList, stat: { skipped: 'no Dashboards sales' } };
+  const mine = new Map(), storeOf = new Map(); // invoice -> staff net (service groups left out)
+  for (const r of staffList) {
+    const sn = String(r.parent_sales_person || '').trim();
+    if (sn && !ex.hideTeam(sn) && r.warehouse && !storeOf.has(nk(r.warehouse))) storeOf.set(nk(r.warehouse), sn);
+    if (ex.hideService(String(r.item_group || ''))) continue;
+    mine.set(r.sales_invoice, (mine.get(r.sales_invoice) || 0) + (Number(r.contribution_amt) || 0));
+  }
+  const out = [], seen = new Set();
+  for (const r of staffList) {
+    const inv = r.sales_invoice, sn = String(r.parent_sales_person || '').trim();
+    if (ex.hideService(String(r.item_group || '')) || ex.hideTeam(sn)) { out.push(r); continue; }
+    const m = mine.get(inv) || 0, d = dash.get(inv);
+    if (d && Math.abs(m) > 0.005) { seen.add(inv); out.push({ ...r, contribution_amt: (Number(r.contribution_amt) || 0) * d.net / m }); stat.scaled++; }
+    else if (!d && Math.abs(m) > 0.005) stat.dropped++;
+    else out.push(r);
+  }
+  for (const [inv, d] of dash) {
+    if (seen.has(inv) || Math.abs(d.net) < 0.5) continue;
+    if ((mine.get(inv) || 0) !== 0) continue;
+    const st = storeOf.get(nk(d.branch));
+    if (!st) { stat.unmapped++; continue; }
+    out.push({ sales_person: ADJ, parent_sales_person: st, posting_date: d.date, item_group: ADJ, sales_invoice: ADJ, contribution_qty: d.qty, contribution_amt: d.net });
+    stat.adjInvoices++; stat.adjNet += d.net;
+  }
+  stat.adjNet = Math.round(stat.adjNet);
+  return { list: out, stat };
+}
+
 // Same shape as PandoraParse.staff (private/parsers.js).
 function staffData(list, period, itemNames, keyName) {
   const stores = [], people = [], groups = [], invs = [], items = [], sI = new Map(), pI = new Map(), gI = new Map(), iI = new Map(), tI = new Map(), rows = [];
@@ -166,7 +211,8 @@ async function sync(m) {
   // Staff Performance: one month at a time, keeps the admin's hidden item groups.
   const names = new Map();
   for (const r of salesList) if (r.item_code && r.item_name && !names.has(r.item_code)) names.set(r.item_code, String(r.item_name));
-  const sd = ex.filterStaff(staffData(staffList, fmtPeriod(from, to), names, 'ERP ' + key));
+  const rec = reconcile(staffList, rows);
+  const sd = ex.filterStaff(staffData(rec.list, fmtPeriod(from, to), names, 'ERP ' + key));
   let updatedCurrent = false;
   if (sd.rows.length) {
     const prev = await store.getJSON('data/current.json');
@@ -177,7 +223,7 @@ async function sync(m) {
     if (!prev || !pk || key >= pk) { await store.putJSON('data/current.json', { ...sd, ex: (prev && prev.ex) || undefined, uploadedAt }); updatedCurrent = true; }
   }
 
-  const status = { month: key, company, at: uploadedAt, seconds: Math.round((Date.now() - t0) / 100) / 10, sales: rows.length, staff: sd.rows.length };
+  const status = { month: key, company, at: uploadedAt, seconds: Math.round((Date.now() - t0) / 100) / 10, sales: rows.length, staff: sd.rows.length, staffMatch: rec.stat };
   if (updatedCurrent || !m) await store.putJSON(STATUS, status); // an older month fetched on request does not change the "last sync" shown
   return status;
 }
