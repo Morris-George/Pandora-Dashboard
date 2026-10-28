@@ -237,7 +237,7 @@ function compute(){
   }
   const fin=o=>{const inv=o.inv.size;return{inv,qty:o.qty,amt:o.amt,incl:o.amt*VAT,upt:inv?o.qty/inv:0,atv:inv?o.amt*VAT/inv:0}};
   const stores=d.stores.map((name,si)=>({name,tot:fin(S[si]),people:[]}));
-  d.people.forEach((p,i)=>{const f=fin(P[i]); if(f.inv>0||f.amt!==0) stores[p[1]].people.push({name:p[0],...f})});
+  d.people.forEach((p,i)=>{const f=fin(P[i]); if(p[0]==='Returns & adjustments') return; /* counted in the store totals, never listed as a person */ if(f.inv>0||f.amt!==0) stores[p[1]].people.push({name:p[0],...f})});
   return{stores:stores.filter(s=>s.people.length),grand:fin(G)};
 }
 
