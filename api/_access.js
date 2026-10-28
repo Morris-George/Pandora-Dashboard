@@ -20,6 +20,7 @@ function noteFor(app, f, who) {
   if (app.id === 'refill') return LEVEL_TEXT[f.refill] || '';
   if (app.id === 'slow') return LEVEL_TEXT[f.refill] || '';
   if (app.id === 'dist') return LEVEL_TEXT[f.dist] || '';
+  if (app.id === 'recv') return ({ accounts: 'scans for Accounts', warehouse: 'scans for the Warehouse', view: 'report only', manage: 'full control' })[f.recv] || '';
   const role = f.staff && f.staff.role;
   if (['dashboards', 'staff', 'stock'].includes(app.id) && who && who.info && who.info.zone && role !== 'store' && role !== 'staff') return who.info.zone + ' only';
   if (app.id === 'stock' && f.vm) return 'pieces only';

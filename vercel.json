@@ -28,6 +28,10 @@
       "destination": "/api/erp?dist=1"
     },
     {
+      "source": "/api/recv",
+      "destination": "/api/erp?recv=1"
+    },
+    {
       "source": "/api/slow",
       "destination": "/api/erp?slow=1"
     },

@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head><link rel="icon" type="image/png" href="/favicon.png?v=2">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Shipment Receiving</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--bg:#FBF6F7;--surface:#FFFFFF;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--accent:#FF93A0;--soft:#FFE4E8;--good:#1F7A4D;--warn:#B7791F;--bad:#C2414F;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--soft:#3A2229;--good:#5CC48E;--warn:#E0A84A;--bad:#FF8A96;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--soft:#3A2229;--good:#5CC48E;--warn:#E0A84A;--bad:#FF8A96;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding:20px 16px 48px}
+.wrap{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}h2{margin:0 0 8px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}h2::before{content:"";width:4px;height:16px;border-radius:2px;background:var(--accent)}
+.sub,.note{color:var(--ink2);font-size:12.5px}.crumb{color:var(--ink2);font-size:12.5px;font-weight:600;text-decoration:none}
+header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0;box-shadow:0 1px 2px rgba(42,31,36,.04),0 4px 14px rgba(42,31,36,.04)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn,select,input{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.btn{cursor:pointer;font-weight:600}.btn.go{background:var(--accent);border-color:var(--accent);color:#2A1018}.btn:disabled{opacity:.5;cursor:not-allowed}.btn.sm{padding:3px 9px;font-size:12.5px}.btn.del{color:var(--bad)}
+.err{background:var(--accent);color:#2A1018;border-radius:10px;padding:10px 14px;font-weight:600}
+.tabs{display:flex;gap:0}.tabs .tab{border-radius:0;padding:8px 20px}.tabs .tab:first-child{border-radius:10px 0 0 10px}.tabs .tab:last-child{border-radius:0 10px 10px 0}.tabs .tab+.tab{border-left:0}.tab.on{background:var(--accent);border-color:var(--accent);color:#2A1018}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.kpi{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 10px 10px 14px}.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}.kpi small{display:block;color:var(--ink2);font-size:11.5px;font-weight:600}.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.tw{overflow:auto;max-height:70vh}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:5px 7px;border-top:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}th{position:sticky;top:0;background:var(--surface);color:var(--ink2);font-size:11.5px;z-index:1}
+th.l,td.l{text-align:left}td.name{max-width:260px;overflow:hidden;text-overflow:ellipsis;text-align:left}
+tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+td input.q{width:46px;padding:2px 4px;text-align:right}td input.q.man{outline:2px solid var(--warn)}
+.ctx{display:block;font-size:10.5px;color:var(--ink2);font-weight:500}
+.img{width:38px;height:38px;border-radius:7px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;vertical-align:middle;font-size:9px;color:var(--ink2)}.img img{width:100%;height:100%;object-fit:cover}
+.nopic .img{display:none}
+.bars{display:flex;flex-direction:column;gap:5px}.bar{display:grid;grid-template-columns:90px 1fr 60px;gap:8px;align-items:center;font-size:12.5px}.bar i{display:block;height:10px;border-radius:99px;background:var(--accent);min-width:2px}
+.st{display:grid;grid-template-columns:34px 1fr 1fr 2fr 60px;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+/* the warehouse scan screen */
+.scanbox{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.scanbox input{font-size:22px;padding:12px 16px;flex:1 1 280px;border-width:2px;border-color:var(--accent)}
+.hit{display:grid;grid-template-columns:minmax(160px,260px) 1fr;gap:18px;align-items:start}@media(max-width:700px){.hit{grid-template-columns:1fr}}
+.hit .big{width:100%;aspect-ratio:1;border-radius:16px;background:var(--soft);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--ink2)}.hit .big img{width:100%;height:100%;object-fit:cover}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:10px}
+.cell{border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center}.cell small{display:block;color:var(--ink2);font-weight:700}.cell b{font-size:34px;line-height:1.1}.cell.zero{opacity:.35}.cell.on{background:color-mix(in srgb,var(--good) 14%,transparent);border-color:var(--good)}
+.flash{animation:fl .6s ease-out}@keyframes fl{from{background:color-mix(in srgb,var(--accent) 35%,transparent)}to{background:transparent}}
+.bad{color:var(--bad)}.good{color:var(--good)}
+video{width:100%;max-width:420px;border-radius:12px;background:#000}
+.boxes{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px}.bx{border:1px solid var(--line);border-radius:10px;padding:6px 4px;text-align:center;cursor:pointer;background:var(--surface);font:inherit;color:var(--ink)}.bx b{display:block;font-size:16px}.bx small{font-size:11px;color:var(--ink2)}.bx.has{background:color-mix(in srgb,var(--good) 12%,transparent);border-color:var(--good)}.bx.on{background:var(--accent);border-color:var(--accent);color:#2A1018}.bx.on small{color:#2A1018}
+.curbox{font-size:28px;font-weight:800}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer;background:var(--surface)}.chip.on{background:var(--accent);border-color:var(--accent);color:#2A1018}
+.tag{display:inline-block;border-radius:99px;padding:1px 8px;font-size:11px;font-weight:700}.t-ok{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}.t-short{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}.t-over{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}.t-dis{background:var(--bad);color:#fff}.t-unk{background:var(--soft);color:var(--ink2)}
+td.d0{color:var(--ink2)}td.dn{color:var(--bad);font-weight:700}td.dp{color:var(--warn);font-weight:700}
+.status{font-weight:800}.status.Open{color:var(--good)}.status.Closed{color:var(--ink2)}
+.team{display:inline-block;padding:4px 12px;border-radius:99px;background:var(--soft);font-weight:800}
+</style>
+</head>
+<body><div class="wrap">
+<header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Shipment Receiving</h1><div class="sub">Upload the commercial invoice, let Accounts and the Warehouse each count the shipment box by box, then match the three.</div></div><div class="actions"></div></header>
+<div class="err" id="err" hidden></div>
+<div class="row" style="justify-content:space-between">
+  <div class="tabs" id="tabs"><button class="btn tab" data-tab="ship" id="tShip" hidden>Shipments</button><button class="btn tab" data-tab="scan" id="tScan" hidden>Scan</button><button class="btn tab" data-tab="rep" id="tRep" hidden>Report</button></div>
+  <label class="note"><input type="checkbox" id="pics" checked> Show pictures</label>
+</div>
+
+<!-- shipments (admin) -->
+<div id="pShip" hidden>
+<div class="card" id="upCard" hidden><h2>New shipment</h2>
+  <div class="row"><input id="nName" placeholder="Shipment name (e.g. October Pandora order)" style="min-width:260px"><input id="nInv" placeholder="Invoice #" style="width:150px">
+    <label class="note">Boxes <input type="number" id="nBoxes" min="1" max="50" value="50" style="width:70px"></label>
+    <label class="btn go">Upload invoice (Excel)<input type="file" id="upFile" accept=".xlsx,.xls,.csv" hidden></label></div>
+  <div class="note" style="margin-top:6px">The sheet needs <b>SKU</b> and <b>Quantity</b>; <b>EAN</b> (barcode) and <b>Per unit</b> (cost in USD) are read too. Same layout as the Pandora invoice export.</div>
+</div>
+<div class="card"><h2>Shipments</h2><div class="tw"><table id="shipT"></table></div></div>
+</div>
+
+<!-- scan (Accounts, Warehouse, or the admin for either) -->
+<div id="pScan" hidden>
+<div class="card">
+  <div class="row" style="justify-content:space-between"><div class="row"><select id="scSel" aria-label="Shipment" style="min-width:240px"></select><span id="teamBox"></span></div><span class="note" id="scInfo"></span></div>
+  <div class="row" style="margin-top:10px;justify-content:space-between"><div><span class="note">Box</span> <span class="curbox" id="curBox">—</span> <span class="note" id="curPcs"></span></div>
+    <div class="row"><button class="btn" id="undo" disabled>Undo last</button><button class="btn del" id="clrBox" disabled>Clear this box</button></div></div>
+  <div class="boxes" id="boxes" style="margin-top:8px"></div>
+  <div class="scanbox" style="margin-top:12px"><input id="scanIn" placeholder="Pick a box, then scan the barcode (EAN) or type the SKU" autocomplete="off"><button class="btn" id="cam">Use the camera</button></div>
+  <video id="vid" hidden playsinline muted style="margin-top:8px"></video>
+  <div class="note" id="scanMsg" style="margin-top:6px"></div>
+</div>
+<div class="card" id="hitCard" hidden><div class="hit"><div class="big" id="hitPic"></div><div><div style="font-size:26px;font-weight:800" id="hitSku"></div><div class="note" id="hitEan"></div>
+  <div class="row" style="margin-top:10px"><span class="kpi" style="padding:8px 14px"><small>In this box</small><b id="hitBox"></b></span><span class="kpi" style="padding:8px 14px"><small>All boxes (your team)</small><b id="hitAll"></b></span></div></div></div></div>
+<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0" id="bxTitle">In this box</h2><button class="btn sm" id="scRef">Refresh</button></div><div class="tw" style="max-height:50vh"><table id="bxT"></table></div></div>
+</div>
+
+<!-- report (admin and view) -->
+<div id="pRep" hidden>
+<div class="card"><div class="row" style="justify-content:space-between"><div class="row"><select id="rpSel" aria-label="Shipment" style="min-width:260px"></select><span class="status" id="rpStatus"></span></div>
+  <div class="row"><button class="btn" id="rpRef">Refresh</button><button class="btn" id="rpClose" hidden></button><button class="btn" id="rpX">Download Excel</button></div></div>
+  <div class="note" id="rpMeta" style="margin-top:6px"></div></div>
+<div class="kpis" id="kpis"></div>
+<div class="card"><h2>Quick Read</h2><div id="quick"></div></div>
+<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Invoice vs Accounts vs Warehouse</h2><span class="row"><input type="search" id="q" placeholder="Search SKU or EAN" style="width:200px"><span class="chips" id="flt"></span><span class="note" id="cnt"></span></span></div>
+  <div class="tw" style="margin-top:8px"><table id="recT"></table></div></div>
+<div class="card"><h2>By Box</h2><div class="note">Pieces each team put in each box. A box where the teams differ is marked.</div><div class="tw" style="max-height:50vh"><table id="boxT"></table></div></div>
+<div class="card"><h2>Who Scanned</h2><div class="tw"><table id="pplT"></table></div><div class="note" id="logL" style="margin-top:8px"></div></div>
+</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="/stockcount-pics-1.js" async></script><script src="/stockcount-pics-2.js" async></script><script src="/stockcount-pics-3.js" async></script><script src="/stockcount-pics-4.js" async></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Math.round(n||0).toLocaleString('en-US');
+const usd=n=>(n<0?'-':'')+'$'+Math.abs(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const U=s=>String(s==null?'':s).trim().toUpperCase().replace(/\.0$/,'');
+function showErr(t){$('err').hidden=!t;$('err').textContent=t||''}
+async function api(u,body){const r=await fetch(u,body?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{credentials:'same-origin',cache:'no-store'});
+  if(r.status===401){location.replace('/login.html');throw new Error('Sign in again.')}const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('Error '+r.status));return j}
+let L=null,LVL='none',TEAM='',TEAMS={};const mg=()=>LVL==='manage',sees=()=>LVL==='manage'||LVL==='view';
+
+/* ---------- pictures ---------- */
+const PICS=(window.__PICS=window.__PICS||{});
+const dvOf=sku=>String(sku).split('-')[0];
+function pic(sku){const dv=dvOf(sku),v=PICS[dv];
+  if(v)return `<img src="data:image/jpeg;base64,${v}" alt="">`;
+  return `<img src="/api/refill?img=${encodeURIComponent(dv)}" alt="" loading="lazy" data-dv="${esc(dv)}" onerror="webPic(this)">`}
+const WEBQ=new Map();
+async function webPic(im){const dv=im.dataset.dv;im.onerror=null;if(!dv){im.remove();return}
+  try{if(!WEBQ.has(dv))WEBQ.set(dv,fetch('/api/refill?pics='+encodeURIComponent(dv),{credentials:'same-origin'}).then(r=>r.json()).catch(()=>({})));
+    const j=await WEBQ.get(dv),u=j.map&&j.map[dv];if(u){im.src=(u.startsWith('//')?'https:'+u:u)+(u.includes('?')?'&':'?')+'width=300';return}}catch(_){}
+  im.replaceWith(Object.assign(document.createElement('span'),{textContent:'no picture'}))}
+const box=sku=>String(sku).startsWith('?')?'<span class="img">?</span>':`<span class="img">${pic(sku)}</span>`;
+try{$('pics').checked=localStorage.getItem('rc.pics')!=='0'}catch(_){}
+const applyPics=()=>{document.body.classList.toggle('nopic',!$('pics').checked)};applyPics();
+$('pics').onchange=()=>{try{localStorage.setItem('rc.pics',$('pics').checked?'1':'0')}catch(_){}applyPics()};
+
+/* ---------- start ---------- */
+async function boot(){showErr('');
+  try{L=await api('/api/recv');LVL=L.level;TEAM=L.team;TEAMS=L.teams||{}}catch(e){showErr(e.message);return}
+  $('tShip').hidden=!mg();$('upCard').hidden=!mg();$('tRep').hidden=!sees();$('tScan').hidden=!(mg()||TEAM);
+  drawShips();fillSel();
+  const want=(()=>{try{return localStorage.getItem('rc.tab')}catch(_){return ''}})();
+  tab(want&&!$('t'+want[0].toUpperCase()+want.slice(1)).hidden?want:(mg()?'ship':sees()?'rep':'scan'))}
+function fillSel(){const open=L.shipments.filter(s=>s.status==='Open'),opt=l=>l.map(s=>`<option value="${s.id}">${esc(s.name)}${s.invoice?' · '+esc(s.invoice):''}${s.status==='Closed'?' (closed)':''}</option>`).join('');
+  const a=$('scSel').value,b=$('rpSel').value;
+  $('scSel').innerHTML=open.length?opt(open):'<option value="">No open shipment</option>';$('rpSel').innerHTML=L.shipments.length?opt(L.shipments):'<option value="">No shipment yet</option>';
+  if(a&&open.some(s=>s.id===a))$('scSel').value=a;if(b&&L.shipments.some(s=>s.id===b))$('rpSel').value=b}
+function tab(t){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));$('pShip').hidden=t!=='ship';$('pScan').hidden=t!=='scan';$('pRep').hidden=t!=='rep';
+  try{localStorage.setItem('rc.tab',t)}catch(_){}
+  if(t==='scan')openScan();if(t==='rep')openRep()}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+
+/* ---------- shipments ---------- */
+function drawShips(){const l=L.shipments;
+  $('shipT').innerHTML=l.length?`<tr><th class="l">Shipment</th><th class="l">Invoice #</th><th>SKUs</th><th>Pieces</th><th>Value (USD)</th><th>Boxes</th><th class="l">Uploaded</th><th class="l">Status</th><th></th></tr>`+l.map(s=>`<tr><td class="l"><b>${esc(s.name)}</b></td><td class="l">${esc(s.invoice)}</td><td>${fmt(s.skus)}</td><td>${fmt(s.pcs)}</td><td>${usd(s.usd)}</td><td>${s.boxes}</td><td class="l">${new Date(s.at).toLocaleDateString([],{day:'numeric',month:'short',year:'numeric'})} · ${esc(s.by)}</td><td class="l"><span class="status ${s.status}">${s.status}</span></td>
+    <td class="l"><button class="btn sm" data-rep="${s.id}">Report</button> <button class="btn sm" data-st="${s.id}" data-to="${s.status==='Open'?'Closed':'Open'}">${s.status==='Open'?'Close':'Open again'}</button> <button class="btn sm del" data-del="${s.id}">Delete</button></td></tr>`).join(''):'<tr><td class="l note">No shipment yet. Upload an invoice above.</td></tr>'}
+$('shipT').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.rep){$('rpSel').value=b.dataset.rep;tab('rep');return}
+  if(b.dataset.st){const to=b.dataset.to;if(to==='Closed'&&!confirm('Close this shipment? Scanning stops and the report is frozen. You can open it again later.'))return;
+    try{await api('/api/recv?op=status',{id:b.dataset.st,status:to});await boot()}catch(er){showErr(er.message)}return}
+  if(b.dataset.del){const s=L.shipments.find(x=>x.id===b.dataset.del);const t=prompt('This deletes the shipment and every scan of both teams. Type the shipment name to confirm:\n'+s.name);if(t==null)return;if(t.trim()!==s.name){alert('The name does not match. Nothing was deleted.');return}
+    try{await api('/api/recv?op=delete',{id:s.id});await boot()}catch(er){showErr(er.message)}}};
+// the Pandora invoice export: SKU, Quantity, Per unit, EAN, Sales Pool (other names are accepted too)
+const SKU_H=/^(sku|sku ?#|sku ?no\.?|item ?code|item|article|material)$/,QTY_H=/^(qty\.?|quantity|pcs|pieces|units|invoice ?qty|shipped ?qty)$/,
+  COST_H=/^(per ?unit|unit ?price|price|cost|unit ?cost|cost ?\(?usd\)?|usd|price ?usd|fob)$/,EAN_H=/^(ean|barcode|ean ?code|bar ?code|upc)$/,POOL_H=/^(sales ?pool|pool|collection)$/;
+$('upFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;showErr('');
+  try{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});let lines=null;
+    for(const n of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:'',raw:true});
+      const hi=rows.slice(0,30).findIndex(r=>{const h=r.map(c=>String(c).trim().toLowerCase());return h.some(c=>SKU_H.test(c))&&h.some(c=>QTY_H.test(c))});if(hi<0)continue;
+      const h=rows[hi].map(c=>String(c).trim().toLowerCase()),ix=re=>h.findIndex(c=>re.test(c)),c={s:ix(SKU_H),q:ix(QTY_H),c:ix(COST_H),e:ix(EAN_H),p:ix(POOL_H)};
+      lines=rows.slice(hi+1).filter(r=>U(r[c.s])&&+r[c.q]>0).map(r=>[U(r[c.s]),c.e>=0?String(r[c.e]).replace(/\.0$/,'').replace(/\D/g,''):'',+r[c.q],c.c>=0?+r[c.c]||0:0,c.p>=0?String(r[c.p]):'']);break}
+    if(!lines||!lines.length)throw new Error('The file needs a SKU column and a Quantity column (like the Pandora invoice export).');
+    const pcs=lines.reduce((a,l)=>a+l[2],0),v=lines.reduce((a,l)=>a+l[2]*l[3],0),name=$('nName').value.trim()||f.name.replace(/\.[^.]+$/,'');
+    if(!confirm(`${name}\n${lines.length} lines · ${fmt(pcs)} pieces · ${usd(v)}\n${+$('nBoxes').value||50} boxes\n\nCreate this shipment?`))return;
+    const j=await api('/api/recv?op=new',{name,invoice:$('nInv').value.trim()||(f.name.match(/\d{5,}/)||[''])[0],boxes:+$('nBoxes').value||50,lines});
+    $('nName').value=$('nInv').value='';await boot();$('rpSel').value=j.id}catch(er){showErr(er.message)}};
+
+/* ---------- scan ---------- */
+let S=null,BOX=0,UNDO=[],QUEUE=Promise.resolve();
+const teamOf=()=>TEAM||$('teamSel')?.value||'warehouse';
+async function openScan(){const id=$('scSel').value;
+  $('teamBox').innerHTML=mg()?`<select id="teamSel" aria-label="Team">${Object.entries(TEAMS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>`:TEAM?`<span class="team">${esc(TEAMS[TEAM])}</span>`:'';
+  if(mg()){try{$('teamSel').value=localStorage.getItem('rc.team')||'warehouse'}catch(_){}$('teamSel').onchange=()=>{try{localStorage.setItem('rc.team',$('teamSel').value)}catch(_){}UNDO=[];loadScan()}}
+  if(!id){S=null;drawScan();return}await loadScan()}
+async function loadScan(){const id=$('scSel').value;if(!id)return;
+  try{const j=await api('/api/recv?id='+id);S={...j.shipment,counts:j.counts};
+    if(!(BOX>=1&&BOX<=S.boxes))BOX=+(localStorage.getItem('rc.box.'+id)||0)||0;drawScan()}catch(e){showErr(e.message)}}
+const tb=()=>(S&&S.counts[teamOf()]||{boxes:{}}).boxes;
+const boxPcs=b=>Object.values(tb()[b]||{}).reduce((a,n)=>a+n,0);
+function drawScan(){if(!S){$('boxes').innerHTML='';$('scInfo').textContent='No open shipment. The admin opens one on Shipments.';$('bxT').innerHTML='';return}
+  const all=Object.keys(tb()).reduce((a,b)=>a+boxPcs(b),0);
+  $('scInfo').textContent=`${S.name}${S.invoice?' · '+S.invoice:''} · your team scanned ${fmt(all)} pcs`;
+  $('boxes').innerHTML=Array.from({length:S.boxes},(_,i)=>i+1).map(b=>{const p=boxPcs(b);return `<button class="bx ${b===BOX?'on':''} ${p?'has':''}" data-box="${b}"><b>${b}</b><small>${p?fmt(p)+' pcs':'empty'}</small></button>`}).join('');
+  $('curBox').textContent=BOX||'—';$('curPcs').textContent=BOX?fmt(boxPcs(BOX))+' pcs':'pick a box';$('clrBox').disabled=!BOX||!boxPcs(BOX);$('undo').disabled=!UNDO.length;
+  $('bxTitle').textContent=BOX?'In box '+BOX+' ('+(TEAMS[teamOf()]||'')+')':'In this box';
+  const m=Object.entries(tb()[BOX]||{}).sort((a,b)=>b[1]-a[1]),ean=new Map(S.lines.map(l=>[l[0],l[1]]));
+  $('bxT').innerHTML=BOX?(m.length?`<tr><th></th><th class="l">SKU</th><th class="l">EAN</th><th>Pieces</th></tr>`+m.map(([c,n])=>`<tr><td>${box(c)}</td><td class="l"><b>${esc(c.replace(/^\?/,''))}</b>${c.startsWith('?')?' <span class="tag t-unk">not on the invoice</span>':''}</td><td class="l">${esc(ean.get(c)||'')}</td><td>${fmt(n)}</td></tr>`).join(''):'<tr><td class="l note">Nothing scanned in this box yet.</td></tr>'):'<tr><td class="l note">Pick a box above.</td></tr>'}
+$('boxes').onclick=e=>{const b=e.target.closest('[data-box]');if(!b)return;BOX=+b.dataset.box;try{localStorage.setItem('rc.box.'+S.id,BOX)}catch(_){}drawScan();$('scanIn').focus()};
+$('scSel').onchange=()=>{BOX=0;UNDO=[];loadScan()};
+$('scRef').onclick=()=>loadScan();
+function beep(ok){try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator();o.frequency.value=ok?880:220;o.connect(a.destination);o.start();o.stop(a.currentTime+(ok?.08:.3))}catch(_){}try{navigator.vibrate&&navigator.vibrate(ok?40:[80,60,80])}catch(_){}}
+function scan(code,n=1,bx=BOX){code=String(code||'').trim();if(!code||!S)return;
+  if(!bx){$('scanMsg').innerHTML='<b class="bad">Pick a box first.</b>';beep(false);return}
+  QUEUE=QUEUE.then(async()=>{try{const j=await api('/api/recv?op=scan',{id:S.id,box:bx,code,n,team:teamOf()});
+      const B=tb()[bx]||(tb()[bx]={});B[j.code]=(B[j.code]||0)+n;if(!B[j.code])delete B[j.code];
+      if(n>0)UNDO.push([bx,j.code]);beep(j.known||n<0);
+      const all=Object.values(tb()).reduce((a,m)=>a+(m[j.code]||0),0),l=S.lines.find(x=>x[0]===j.code);
+      $('scanMsg').innerHTML=j.known?`${n>0?'Scanned':'Taken back'} <b>${esc(j.code)}</b> · box ${bx}`:`<b class="bad">Not on the invoice: ${esc(code)}</b> · kept in box ${bx} so it shows on the report`;
+      $('hitCard').hidden=false;$('hitPic').innerHTML=j.known&&$('pics').checked?pic(j.code):'';$('hitSku').textContent=j.code.replace(/^\?/,'');$('hitEan').textContent=l?l[1]:'not on the invoice';
+      $('hitBox').textContent=fmt(B[j.code]||0);$('hitAll').textContent=fmt(all);$('hitCard').classList.remove('flash');void $('hitCard').offsetWidth;$('hitCard').classList.add('flash');drawScan()}
+    catch(er){$('scanMsg').innerHTML=`<b class="bad">${esc(er.message)}</b>`;beep(false)}})}
+$('scanIn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const v=$('scanIn').value;$('scanIn').value='';scan(v)}};
+$('undo').onclick=()=>{const u=UNDO.pop();if(u)scan(u[1],-1,u[0]);$('scanIn').focus()};
+$('clrBox').onclick=async()=>{if(!BOX)return;const p=boxPcs(BOX);
+  if(!confirm(`Clear box ${BOX}?\n\nThis removes all ${fmt(p)} pieces your team (${TEAMS[teamOf()]}) scanned into box ${BOX}, by everyone. The other team's count is not touched.`))return;
+  try{const j=await api('/api/recv?op=clearbox',{id:S.id,box:BOX,team:teamOf()});UNDO=UNDO.filter(u=>u[0]!==BOX);$('scanMsg').innerHTML=`Box ${BOX} cleared (${fmt(j.cleared)} pcs). Scan it again.`;await loadScan()}catch(er){showErr(er.message)}};
+let STREAM=null;
+$('cam').onclick=async()=>{const v=$('vid');
+  if(STREAM){STREAM.getTracks().forEach(t=>t.stop());STREAM=null;v.hidden=true;$('cam').textContent='Use the camera';return}
+  if(!('BarcodeDetector' in window)){showErr('This browser cannot read barcodes with the camera. Use Chrome on Android, a scanner, or type the code.');return}
+  try{STREAM=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});v.srcObject=STREAM;v.hidden=false;await v.play();$('cam').textContent='Stop the camera';
+    const det=new BarcodeDetector({formats:['ean_13','ean_8','code_128','upc_a','upc_e']});let last='',at=0;
+    const loop=async()=>{if(!STREAM)return;try{const r=await det.detect(v);if(r[0]){const c=r[0].rawValue;if(c!==last||Date.now()-at>2500){last=c;at=Date.now();scan(c)}}}catch(_){}setTimeout(loop,250)};loop()
+  }catch(e){showErr('Camera: '+e.message)}};
+
+/* ---------- report ---------- */
+let R=null,F='',RT=null;
+async function openRep(){const id=$('rpSel').value;if(!id){R=null;$('kpis').innerHTML='';return}
+  try{const j=await api('/api/recv?id='+id);R={...j.shipment,counts:j.counts};drawRep()}catch(e){showErr(e.message)}
+  clearTimeout(RT);RT=setTimeout(()=>{if(!$('pRep').hidden&&R&&R.status==='Open')openRep()},30000)}
+$('rpSel').onchange=openRep;$('rpRef').onclick=openRep;
+const tot=(t,c)=>Object.values((R.counts[t]||{boxes:{}}).boxes).reduce((a,m)=>a+(m[c]||0),0);
+function recRows(){const lines=new Map(R.lines.map(l=>[l[0],l])),codes=new Set(R.lines.map(l=>l[0]));
+  for(const t of Object.keys(TEAMS))for(const m of Object.values((R.counts[t]||{boxes:{}}).boxes))Object.keys(m).forEach(c=>codes.add(c));
+  return [...codes].map(c=>{const l=lines.get(c),inv=l?l[2]:0,cost=l?l[3]:0,a=tot('accounts',c),w=tot('warehouse',c);
+    const st=!l?'unk':a!==w?'dis':w===inv?'ok':w<inv?'short':'over';
+    return {sku:c.replace(/^\?/,''),code:c,ean:l?l[1]:'',pool:l?l[4]:'',inv,cost,a,w,da:a-inv,dw:w-inv,st}})}
+const ST_T={ok:['Match','t-ok'],short:['Short','t-short'],over:['Over','t-over'],dis:['Teams differ','t-dis'],unk:['Not on the invoice','t-unk']};
+function drawRep(){if(!R)return;const rows=recRows(),inv=R.lines.reduce((a,l)=>a+l[2],0),val=R.lines.reduce((a,l)=>a+l[2]*l[3],0);
+  const A=rows.reduce((a,r)=>a+r.a,0),W=rows.reduce((a,r)=>a+r.w,0),cnt=k=>rows.filter(r=>r.st===k).length,dv=k=>rows.reduce((a,r)=>a+r[k]*r.cost,0);
+  $('rpStatus').className='status '+R.status;$('rpStatus').textContent=R.status;
+  $('rpClose').hidden=!mg();$('rpClose').textContent=R.status==='Open'?'Close shipment':'Open again';
+  $('rpMeta').textContent=`${R.invoice?'Invoice '+R.invoice+' · ':''}uploaded ${new Date(R.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} by ${R.by} · ${R.boxes} boxes${R.status==='Open'?' · refreshes every 30 seconds':''}`;
+  $('kpis').innerHTML=[['Invoice',fmt(inv)+' pcs',usd(val)],['Accounts counted',fmt(A)+' pcs',(A-inv?(A>inv?'+':'')+fmt(A-inv)+' vs invoice':'= invoice')],['Warehouse counted',fmt(W)+' pcs',(W-inv?(W>inv?'+':'')+fmt(W-inv)+' vs invoice':'= invoice')],['SKUs matching',fmt(cnt('ok'))+' / '+fmt(R.lines.length),''],['SKUs with differences',fmt(rows.length-cnt('ok')),usd(dv('dw'))+' (warehouse)'],['Teams differ',fmt(cnt('dis'))+' SKUs','']]
+    .map(k=>`<div class="kpi"><small>${k[0]}</small><b>${k[1]}</b>${k[2]?`<small>${k[2]}</small>`:''}</div>`).join('');
+  const Q=[];
+  if(!A&&!W)Q.push('Nobody has scanned yet.');
+  else if(rows.every(r=>r.st==='ok'))Q.push(`<b class="good">Everything matches:</b> invoice, Accounts and Warehouse all have ${fmt(inv)} pieces.`);
+  else{if(cnt('dis'))Q.push(`<b class="bad">${cnt('dis')} SKUs</b> where Accounts and Warehouse disagree: recount those boxes first.`);
+    if(cnt('short'))Q.push(`<b>${cnt('short')} SKUs short</b> (both teams agree): ${fmt(-rows.filter(r=>r.st==='short').reduce((a,r)=>a+r.dw,0))} pcs, ${usd(-rows.filter(r=>r.st==='short').reduce((a,r)=>a+r.dw*r.cost,0))} to claim from the supplier.`);
+    if(cnt('over'))Q.push(`<b>${cnt('over')} SKUs over</b> (both teams agree): ${fmt(rows.filter(r=>r.st==='over').reduce((a,r)=>a+r.dw,0))} pcs more than invoiced.`);
+    if(cnt('unk'))Q.push(`<b>${cnt('unk')} codes not on the invoice</b> were scanned: check the barcode or a wrong item in the shipment.`)}
+  $('quick').innerHTML=Q.map(x=>`<div style="padding:6px 0;border-top:1px solid var(--line)">${x}</div>`).join('');
+  $('flt').innerHTML=[['','All'],['diff','All differences'],['dis','Teams differ'],['short','Short'],['over','Over'],['unk','Not on invoice'],['ok','Match']].map(([k,t])=>`<span class="chip ${F===k?'on':''}" data-f="${k}">${t}</span>`).join('');
+  const q=($('q').value||'').trim().toUpperCase(),order={dis:0,short:1,over:2,unk:3,ok:4};
+  const l=rows.filter(r=>(!F||(F==='diff'?r.st!=='ok':r.st===F))&&(!q||r.sku.includes(q)||r.ean.includes(q))).sort((a,b)=>order[a.st]-order[b.st]||Math.abs(b.dw)-Math.abs(a.dw)||a.sku.localeCompare(b.sku));
+  $('cnt').textContent=fmt(l.length)+' rows';
+  const d=n=>`<td class="${n<0?'dn':n>0?'dp':'d0'}">${n>0?'+':''}${fmt(n)}</td>`;
+  $('recT').innerHTML=`<tr><th></th><th class="l">SKU</th><th class="l">EAN</th><th>Cost $</th><th>Invoice</th><th>Accounts</th><th>Warehouse</th><th>Accounts vs invoice</th><th>Warehouse vs invoice</th><th>Difference $</th><th class="l">Status</th></tr>`+
+    l.slice(0,1500).map(r=>`<tr><td>${box(r.code)}</td><td class="l"><b>${esc(r.sku)}</b></td><td class="l">${esc(r.ean)}</td><td>${r.cost?r.cost.toFixed(2):''}</td><td>${fmt(r.inv)}</td><td>${fmt(r.a)}</td><td>${fmt(r.w)}</td>${d(r.da)}${d(r.dw)}<td>${r.dw&&r.cost?usd(r.dw*r.cost):''}</td><td class="l"><span class="tag ${ST_T[r.st][1]}">${ST_T[r.st][0]}</span></td></tr>`).join('');
+  // by box
+  const bset=new Set();Object.keys(TEAMS).forEach(t=>Object.keys((R.counts[t]||{boxes:{}}).boxes).forEach(b=>bset.add(+b)));
+  const bp=(t,b)=>Object.values(((R.counts[t]||{boxes:{}}).boxes[b])||{}).reduce((a,n)=>a+n,0);
+  const bxs=[...bset].sort((a,b)=>a-b);
+  $('boxT').innerHTML=bxs.length?`<tr><th class="l">Box</th><th>Accounts</th><th>Warehouse</th><th>Difference</th><th class="l"></th></tr>`+bxs.map(b=>{const a=bp('accounts',b),w=bp('warehouse',b);return `<tr><td class="l"><b>Box ${b}</b></td><td>${fmt(a)}</td><td>${fmt(w)}</td>${d(w-a)}<td class="l">${a===w?'<span class="tag t-ok">same</span>':'<span class="tag t-dis">teams differ</span>'}</td></tr>`}).join(''):'<tr><td class="l note">No box scanned yet.</td></tr>';
+  const ppl=Object.entries(TEAMS).flatMap(([t,n])=>((R.counts[t]||{}).people||[]).map(p=>({...p,team:n}))).sort((a,b)=>b.pcs-a.pcs);
+  $('pplT').innerHTML=ppl.length?`<tr><th class="l">Person</th><th class="l">Team</th><th>Pieces</th><th class="l">Last scan</th></tr>`+ppl.map(p=>`<tr><td class="l">${esc(p.by)}</td><td class="l">${esc(p.team)}</td><td>${fmt(p.pcs)}</td><td class="l">${p.at?new Date(p.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''}</td></tr>`).join(''):'<tr><td class="l note">Nobody has scanned yet.</td></tr>';
+  $('logL').innerHTML=(R.log||[]).map(x=>`${esc(x.what)} · ${esc(x.by)} · ${new Date(x.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`).join('<br>')}
+$('flt').onclick=e=>{const c=e.target.closest('[data-f]');if(!c)return;F=c.dataset.f;drawRep()};
+$('q').oninput=drawRep;
+$('rpClose').onclick=async()=>{const to=R.status==='Open'?'Closed':'Open';if(to==='Closed'&&!confirm('Close this shipment? Scanning stops and the report is frozen. You can open it again later.'))return;
+  try{await api('/api/recv?op=status',{id:R.id,status:to});await boot();$('rpSel').value=R.id;tab('rep')}catch(e){showErr(e.message)}};
+$('rpX').onclick=()=>{if(!R)return;const rows=recRows(),wb=XLSX.utils.book_new(),inv=R.lines.reduce((a,l)=>a+l[2],0);
+  const one=r=>({SKU:r.sku,EAN:r.ean,'Sales pool':r.pool,'Cost USD':r.cost,Invoice:r.inv,Accounts:r.a,Warehouse:r.w,'Accounts vs invoice':r.da,'Warehouse vs invoice':r.dw,'Difference USD':Math.round(r.dw*r.cost*100)/100,Status:ST_T[r.st][0]});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Shipment:R.name,'Invoice #':R.invoice,Status:R.status,'Invoice pcs':inv,'Invoice USD':Math.round(R.lines.reduce((a,l)=>a+l[2]*l[3],0)*100)/100,'Accounts pcs':rows.reduce((a,r)=>a+r.a,0),'Warehouse pcs':rows.reduce((a,r)=>a+r.w,0),'SKUs matching':rows.filter(r=>r.st==='ok').length,'SKUs with differences':rows.filter(r=>r.st!=='ok').length}]),'Summary');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.map(one)),'Reconciliation');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.filter(r=>r.st!=='ok').map(one)),'Differences');
+  const bx=[];for(const [t,n] of Object.entries(TEAMS))for(const [b,m] of Object.entries((R.counts[t]||{boxes:{}}).boxes))for(const [c,q] of Object.entries(m))bx.push({Team:n,Box:+b,SKU:c.replace(/^\?/,''),'On the invoice':c.startsWith('?')?'No':'Yes',Pieces:q});
+  bx.sort((a,b)=>a.Box-b.Box||a.Team.localeCompare(b.Team)||a.SKU.localeCompare(b.SKU));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(bx.length?bx:[{Note:'Nothing scanned yet'}]),'By box');
+  XLSX.writeFile(wb,'Receiving '+(R.invoice||R.name).replace(/[\\/:*?"<>|]/g,' ')+' '+new Date().toISOString().slice(0,10)+'.xlsx')};
+boot();
+</script>
+<style>#zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out}#zoom img{max-width:90vw;max-height:90vh;border-radius:10px;background:#fff}.img img,#hitPic img{cursor:zoom-in}</style>
+<script>document.addEventListener("click",e=>{const z=document.getElementById("zoom");if(z){z.remove();return}const im=e.target.closest&&e.target.closest(".img img,#hitPic img");if(!im)return;e.stopPropagation();e.preventDefault();const d=document.createElement("div");d.id="zoom";d.innerHTML="<img alt=\"\">";d.firstChild.src=im.src;document.body.appendChild(d)},true);document.addEventListener("keydown",e=>{if(e.key==="Escape"){const z=document.getElementById("zoom");if(z)z.remove()}});</script>
+</body></html>

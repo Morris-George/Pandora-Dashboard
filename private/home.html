@@ -56,7 +56,7 @@ function paint(j){
   document.getElementById('hello').textContent=j.greet?'Hello '+j.greet:j.label?'Hello, '+j.label:'Welcome';
   if(j.apps.some(a=>a.id==='uploads')&&!document.querySelector('a.upl')){const u=document.createElement('a');u.className='pandora-fab upl';u.href='/uploads';u.innerHTML=ICON.uploads+'All Uploads';document.body.appendChild(u)}
   const apps=j.apps.filter(a=>a.id!=='uploads');
-  const GROUPS=[['Sales',['dashboards','staff','mysales','mysales2','storeteam','daily','film']],['Stock',['stock','stockcount','stockchecker','slow']],['Ordering',['refill','dist']],['Visual Merchandising',['vmzones','zonestock','vm']],['Team & Access',['schedule','approvals','access','activity']]];
+  const GROUPS=[['Sales',['dashboards','staff','mysales','mysales2','storeteam','daily','film']],['Stock',['stock','stockcount','stockchecker','slow']],['Ordering',['refill','dist','recv']],['Visual Merchandising',['vmzones','zonestock','vm']],['Team & Access',['schedule','approvals','access','activity']]];
   const tile=a=>`<a class="app" href="${esc(a.href)}" title="${esc(a.desc||'')}"><span class="ic">${ICON[a.id]||DEF}</span><b>${esc(a.title)}</b><span class="d">${esc(a.desc||'')}</span><span class="go" aria-hidden="true">&rsaquo;</span></a>`;
   const used=new Set(),secs=[];
   GROUPS.forEach(([name,ids])=>{const list=ids.map(id=>apps.find(a=>a.id===id)).filter(Boolean);list.forEach(a=>used.add(a.id));if(list.length)secs.push([name,list])});

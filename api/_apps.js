@@ -24,6 +24,7 @@ const APPS = [
   { id: 'refill', title: 'Refill Order', desc: 'The suggested refill order to Pandora: stock, pipeline, sell out and budget, with the team feedback.', href: '/refill', allow: f => !!f.refill && f.refill !== 'none' },
   { id: 'slow', title: 'Slow Moving', desc: 'Slow moving items from ERP: where they sit, what they are worth, and what to do with them.', href: '/slow', allow: f => !!f.refill && f.refill !== 'none' },
   { id: 'dist', title: 'Orders Distribution', desc: 'Split a new shipment to the stores by stock, sell out and store priority, and scan it in the warehouse.', href: '/distribution', allow: f => !!f.dist && f.dist !== 'none' },
+  { id: 'recv', title: 'Shipment Receiving', desc: 'Upload the commercial invoice, count the shipment box by box (Accounts and Warehouse), and match the three.', href: '/receiving', allow: f => !!f.recv && f.recv !== 'none' },
   { id: 'vm', title: 'VM Report', desc: 'The Visual Merchandiser report.', href: '/vm', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') }
 ];
 
@@ -60,9 +61,10 @@ async function factsFromWho(who, dashOk, withOverrides) {
   const staff = who && !vm && !sc && !hr ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', overseer: !!who.info.overseer, who } : null;
   const refill = who ? await require('./_refill').levelFor(who) : 'none'; // Refill Order access level, set on Staff approvals
   const dist = who ? await require('./_dist').levelFor(who) : 'none'; // Orders Distribution access level, set on Staff approvals
+  const recv = who ? await require('./_recv').levelFor(who) : 'none'; // Shipment Receiving access level, set on Staff approvals
   const activity = who ? await require('./_activity').canView(who) : false; // the Activity page: super admin, or the Overseer once it is switched on
   const hidden = withOverrides ? await hiddenFor(who) : [];
-  return { dash, staff, vm, sc, hr, refill, dist, activity, hidden, vmName: vm || sc || hr ? who.user.name : '' };
+  return { dash, staff, vm, sc, hr, refill, dist, recv, activity, hidden, vmName: vm || sc || hr ? who.user.name : '' };
 }
 
 // Read the cookies of this request: which logins are valid?

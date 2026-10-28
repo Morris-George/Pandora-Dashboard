@@ -195,6 +195,7 @@ module.exports = async function handler(req, res) {
     else if (P === '/refill' || P === '/refill.html') id = 'refill';
     else if (P === '/slow' || P === '/slow.html') id = 'slow';
     else if (P === '/distribution' || P === '/distribution.html') id = 'dist';
+    else if (P === '/receiving' || P === '/receiving.html') id = 'recv';
     else if (P === '/vm' || P === '/vm.html') id = 'vm';
     if (id && facts.hidden.includes(id)) return requestedPath === '/' ? toHome() : toHome();
   }
@@ -342,6 +343,10 @@ module.exports = async function handler(req, res) {
     if (!facts.dist || facts.dist === 'none') return toHome();
     return sendFile(res, 'distribution.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
   }
+  if (requestedPath === '/receiving' || requestedPath === '/receiving/' || requestedPath === '/receiving.html') {
+    if (!facts.recv || facts.recv === 'none') return toHome();
+    return sendFile(res, 'receiving.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
+  }
   if (requestedPath === '/slow' || requestedPath === '/slow/' || requestedPath === '/slow.html') {
     if (!facts.refill || facts.refill === 'none') return toHome();
     return sendFile(res, 'slow.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
@@ -349,7 +354,7 @@ module.exports = async function handler(req, res) {
   // its product pictures, in pieces (one response may not pass 4.5 MB); super admin only, kept by the browser for a day
   const picPart = /^\/stockcount-pics-([1-9])\.js$/.exec(requestedPath);
   if (picPart) {
-    if (!(facts.staff && facts.staff.role === 'admin') && !facts.sc && !(facts.refill && facts.refill !== 'none') && !(facts.dist && facts.dist !== 'none')) return res.status(404).end();
+    if (!(facts.staff && facts.staff.role === 'admin') && !facts.sc && !(facts.refill && facts.refill !== 'none') && !(facts.dist && facts.dist !== 'none') && !(facts.recv && facts.recv !== 'none')) return res.status(404).end();
     try {
       const body = fs.readFileSync(path.join(PRIVATE_DIR, 'stockcount-pics-' + picPart[1] + '.js'));
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');

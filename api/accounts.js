@@ -82,7 +82,7 @@ module.exports = activity.wrap('accounts', async function handler(req, res) {
     const admins = [];
     for (const a of staffAccounts()) admins.push({ username: a.user, role: a.role, label: a.label, off: a.role !== 'admin' && await users.envOff(a.user) });
     return send(res, 200, {
-      ok: true, accounts: list, admins, resets, hasData: !!data, refill: (await store.getJSON(require('./_refill').ACCESS)) || {}, dist: (await store.getJSON(require('./_dist').ACCESS)) || {},
+      ok: true, accounts: list, admins, resets, hasData: !!data, refill: (await store.getJSON(require('./_refill').ACCESS)) || {}, dist: (await store.getJSON(require('./_dist').ACCESS)) || {}, recv: (await store.getJSON(require('./_recv').ACCESS)) || {},
       people: people.map(p => ({ ...p, takenBy: taken.get(p.store + '|' + p.name) || '' })).sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name))
     });
   }
@@ -100,9 +100,9 @@ module.exports = activity.wrap('accounts', async function handler(req, res) {
       await users.createSpecial({ username: uname, password: pw, name, role: b.role });
       return send(res, 200, { ok: true, username: uname });
     }
-    if (b.action === 'refillaccess' || b.action === 'distaccess') {
+    if (b.action === 'refillaccess' || b.action === 'distaccess' || b.action === 'recvaccess') {
       // Refill Order: none / view / input / manage; Orders Distribution: none / warehouse / manage ("env:<user>" for accounts kept in Vercel settings, "u:<username>" for the others)
-      const { LEVELS, ACCESS } = require(b.action === 'distaccess' ? './_dist' : './_refill');
+      const { LEVELS, ACCESS } = require(b.action === 'distaccess' ? './_dist' : b.action === 'recvaccess' ? './_recv' : './_refill');
       const k = String(b.key || '');
       const m = /^env:(.+)$/.exec(k), u = /^u:(.+)$/.exec(k);
       const real = m ? staffAccounts().some(a => a.role !== 'admin' && String(a.user).toLowerCase() === m[1]) : u ? !!(await users.getUser(u[1])) : false;

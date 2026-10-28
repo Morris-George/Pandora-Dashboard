@@ -75,20 +75,21 @@ function renderActive(){
   const rows=ACT.filter(x=>AF==='all'||x.g===AF).map(x=>x.h).join('');
   $('active').innerHTML=chips+(rows||'<div class="empty">Nobody here.</div>');
 }
-let RF={},DS={},RFP=[],RFPEND={};
+let RF={},DS={},RC={},RFP=[],RFPEND={};
 const RFL=[['none','No access'],['view','View'],['input','Input'],['manage','Manage']];
 const DSL=[['none','No access'],['warehouse','Warehouse'],['manage','Manage']];
+const RCL=[['none','No access'],['accounts','Accounts (scan)'],['warehouse','Warehouse (scan)'],['view','Report only'],['manage','Manage']];
 const cur=(m,k,K)=>(K in RFPEND?RFPEND[K]:m[k])||'none';
 function renderRf(){const q=($('rfq').value||'').trim().toLowerCase(),only=$('rfonly').checked;
-  const l=RFP.filter(p=>(!q||p.n.toLowerCase().includes(q))&&(!only||RF[p.k]||DS[p.k]));
-  $('rflist').innerHTML=l.length?l.map(p=>`<div class="row"><div class="who">${esc(p.n)}<small>${esc(p.s)}</small></div><div></div><div></div><div class="btns"><label class="note">Refill <select data-rf="${esc(p.k)}" style="width:auto;height:34px${'rf|'+p.k in RFPEND?';outline:2px solid var(--accent)':''}" aria-label="Refill Order access">${RFL.map(([v,t])=>`<option value="${v}" ${cur(RF,p.k,'rf|'+p.k)===v?'selected':''}>${t}</option>`).join('')}</select></label> <label class="note">Distribution <select data-ds="${esc(p.k)}" style="width:auto;height:34px${'ds|'+p.k in RFPEND?';outline:2px solid var(--accent)':''}" aria-label="Orders Distribution access">${DSL.map(([v,t])=>`<option value="${v}" ${cur(DS,p.k,'ds|'+p.k)===v?'selected':''}>${t}</option>`).join('')}</select></label></div></div>`).join(''):'<div class="empty">Nobody.</div>'}
+  const l=RFP.filter(p=>(!q||p.n.toLowerCase().includes(q))&&(!only||RF[p.k]||DS[p.k]||RC[p.k]));
+  $('rflist').innerHTML=l.length?l.map(p=>`<div class="row"><div class="who">${esc(p.n)}<small>${esc(p.s)}</small></div><div></div><div></div><div class="btns"><label class="note">Refill <select data-rf="${esc(p.k)}" style="width:auto;height:34px${'rf|'+p.k in RFPEND?';outline:2px solid var(--accent)':''}" aria-label="Refill Order access">${RFL.map(([v,t])=>`<option value="${v}" ${cur(RF,p.k,'rf|'+p.k)===v?'selected':''}>${t}</option>`).join('')}</select></label> <label class="note">Distribution <select data-ds="${esc(p.k)}" style="width:auto;height:34px${'ds|'+p.k in RFPEND?';outline:2px solid var(--accent)':''}" aria-label="Orders Distribution access">${DSL.map(([v,t])=>`<option value="${v}" ${cur(DS,p.k,'ds|'+p.k)===v?'selected':''}>${t}</option>`).join('')}</select></label> <label class="note">Receiving <select data-rc="${esc(p.k)}" style="width:auto;height:34px${'rc|'+p.k in RFPEND?';outline:2px solid var(--accent)':''}" aria-label="Shipment Receiving access">${RCL.map(([v,t])=>`<option value="${v}" ${cur(RC,p.k,'rc|'+p.k)===v?'selected':''}>${t}</option>`).join('')}</select></label></div></div>`).join(''):'<div class="empty">Nobody.</div>'}
 function rfState(){const n=Object.keys(RFPEND).length;$('rfsave').disabled=!n;$('rfundo').disabled=!n;$('rfsave').textContent=n?'Save changes ('+n+')':'Save changes';if(n)$('rfmsg').textContent='Not saved yet.'}
 document.addEventListener('click',async e=>{
   if(e.target.id==='rfundo'){RFPEND={};rfState();$('rfmsg').textContent='';renderRf();return}
   if(e.target.id!=='rfsave')return;
   const b=e.target;b.disabled=true;$('rfmsg').textContent='Saving…';let bad=0;
-  for(const [K,level] of Object.entries(RFPEND)){const ds=K.startsWith('ds|'),k=K.slice(3),M=ds?DS:RF;
-    try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:ds?'distaccess':'refillaccess',key:k,level})});const j=await r.json().catch(()=>({}));
+  for(const [K,level] of Object.entries(RFPEND)){const ds=K.startsWith('ds|'),rc=K.startsWith('rc|'),k=K.slice(3),M=ds?DS:rc?RC:RF;
+    try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:ds?'distaccess':rc?'recvaccess':'refillaccess',key:k,level})});const j=await r.json().catch(()=>({}));
       if(!r.ok||!j.ok){bad++;showErr(j.error||'That did not work.');continue}
       if(level==='none')delete M[k];else M[k]=level;delete RFPEND[K]}catch(_){bad++;showErr('No connection.')}}
   rfState();renderRf();$('rfmsg').textContent=bad?bad+' not saved.':'Saved.';
@@ -113,7 +114,7 @@ async function load(){
     const spaL=sp.filter(a=>a.status==='active').map(a=>({g:grp(a),h:`<div class="row"><div class="who">${esc(a.name)}<small>${a.role==='vm'?'VM Report':a.role==='stockcount'?'Stock Count only':a.role==='hr'?'HR: Weekly Schedule, view only':a.role==='overseer'?'Overseer':esc(a.role)}${a.title?' · '+esc(a.title):''} · active</small></div><div>${esc(a.username)}</div><div></div><div class="btns">${titleSel(a)}<button class="btn" data-act="pw" data-user="${esc(a.username)}">Change password</button><button class="btn" data-act="disable" data-user="${esc(a.username)}">Switch off</button><button class="btn bad" data-act="remove" data-user="${esc(a.username)}">Remove</button></div></div>`}));
     const staffL=by('active').map(a=>({g:'staff',h:rowHtml(a,a=>[['link','Save link'],a.storeManager?['setmanager','Remove store manager','','data-on="0"']:['setmanager','Make store manager','','data-on="1"'],['store','Change store'],['pw','Change password'],['disable','Switch off'],['remove','Remove','bad']],true)}));
     ACT=[...admL,...spaL,...staffL];renderActive();
-    RF=j.refill||{};DS=j.dist||{};RFP=[...(j.admins||[]).filter(a=>a.role!=='admin'&&!a.off).map(a=>({k:'env:'+String(a.username).toLowerCase(),n:a.username,s:a.label})),
+    RF=j.refill||{};DS=j.dist||{};RC=j.recv||{};RFP=[...(j.admins||[]).filter(a=>a.role!=='admin'&&!a.off).map(a=>({k:'env:'+String(a.username).toLowerCase(),n:a.username,s:a.label})),
       ...sp.filter(a=>a.status==='active').map(a=>({k:'u:'+a.username,n:a.name,s:a.role==='vm'?'VM Report':a.role==='stockcount'?'Stock Count only':a.role==='hr'?'HR: Weekly Schedule, view only':a.role==='overseer'?'Overseer':a.role})),
       ...by('active').map(a=>({k:'u:'+a.username,n:a.name,s:a.store+(a.storeManager?' · Store manager':'')}))];renderRf();
     fill('off',by('disabled'),[['enable','Switch on'],['store','Change store'],['pw','Change password'],['remove','Remove','bad']],'None.',false);
@@ -124,6 +125,8 @@ document.addEventListener('change',async e=>{
   if(e.target.id==='rfonly'){renderRf();return}
   const rf=e.target.closest&&e.target.closest('select[data-rf]');
   if(rf){const k=rf.dataset.rf;if((RF[k]||'none')===rf.value)delete RFPEND['rf|'+k];else RFPEND['rf|'+k]=rf.value;rfState();renderRf();return}
+  const rc=e.target.closest&&e.target.closest('select[data-rc]');
+  if(rc){const k=rc.dataset.rc;if((RC[k]||'none')===rc.value)delete RFPEND['rc|'+k];else RFPEND['rc|'+k]=rc.value;rfState();renderRf();return}
   const ds=e.target.closest&&e.target.closest('select[data-ds]');
   if(ds){const k=ds.dataset.ds;if((DS[k]||'none')===ds.value)delete RFPEND['ds|'+k];else RFPEND['ds|'+k]=ds.value;rfState();renderRf();return}
   const t=e.target.closest&&e.target.closest('select[data-title]'); if(!t)return; t.disabled=true;
