@@ -101,6 +101,8 @@ async function storeDaily(st) {
 
 // "395078C01-45" -> "395078C01": the design (DV) of a sized SKU
 const dvOf = sku => sku.replace(/-[^-]+$/, '');
+// "Moments Ring, 54" -> "Moments Ring": the size at the end of an item name is left off
+const noSize = n => String(n).replace(/[\s,\-–]*\b\d+(\.\d+)?\s*(cm|mm)?\s*$/i, '').trim() || String(n);
 // lower case, letters and digits only, single spaces: "Moments Snake-Chain, 18" -> "moments snake chain 18"
 const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, ' ').trim();
 // Which sales lines belong to a placement: a whole collection, or a list of SKUs / DVs / names / collections.
@@ -139,16 +141,17 @@ function placementStats(p, sd, avgStoreDay, money) {
       x.k.forEach((k, sku) => {
         if (!hit(sku)) return;
         c.net += k.net; c.qty += k.qty; k.inv.forEach(i => c.inv.add(i));
-        const it = byItem.get(sku) || { qty: 0, net: 0 }; it.qty += k.qty; it.net += k.net; byItem.set(sku, it);
+        const dv = dvOf(sku); // sizes are not counted apart: every size of a design adds to one line
+        const it = byItem.get(dv) || { qty: 0, net: 0, sku }; it.qty += k.qty; it.net += k.net; byItem.set(dv, it);
       });
       sNet += x.s.net; sInv += x.s.inv.size;
     }
     net += c.net; qty += c.qty; inv += c.inv.size;
     daily.push(money ? [d, c.qty, Math.round(c.net)] : [d, c.qty, avgStoreDay ? r2(c.net / avgStoreDay * 100) : 0]);
   }
-  // every item that sold, best first: [sku, name, pieces, sales EGP (super admin) or % of the placement's sales]
+  // every design that sold (all sizes together), best first: [dv, name, pieces, sales EGP (super admin) or % of the placement's sales]
   const items = [...byItem.entries()].sort((a, b) => b[1].net - a[1].net)
-    .map(([sku, it]) => [sku, sd.names.get(sku) || '', it.qty, money ? Math.round(it.net) : (net ? r2(it.net / net * 100) : 0)]);
+    .map(([dv, it]) => [dv, noSize(sd.names.get(it.sku) || ''), it.qty, money ? Math.round(it.net) : (net ? r2(it.net / net * 100) : 0)]);
   const o = {
     days: n, qty, qtyDay: n ? r2(qty / n) : 0,
     upt: inv ? r2(qty / inv) : 0, atv: inv ? Math.round(net / inv) : 0,
