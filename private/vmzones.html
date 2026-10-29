@@ -90,9 +90,10 @@ table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}th,td
       <div class="assign">
         <b style="font-size:13px;width:100%">Place a collection or a list of items</b>
         <select id="az"></select>
-        <select id="amode"><option value="col">Whole collection</option><option value="list">Items from an Excel list (SKU / DV)</option></select>
+        <select id="amode"><option value="col">Whole collection</option><option value="names">Names or collections (type them, no sizes)</option><option value="list">Items from an Excel list</option></select>
         <select id="ac"></select>
-        <span id="alist" hidden class="row"><button class="btn sm" id="afile" type="button">Choose Excel file</button><input type="text" id="aname" placeholder="Name for this list" maxlength="60"><span class="sub" id="ainfo">Columns: SKU and/or DV (first row = headings).</span></span>
+        <span id="anbox" hidden class="row" style="flex:1 1 320px"><input type="text" id="anames" list="acols" placeholder="e.g. Moments, Snake Chain Bracelet (separate with commas)" style="flex:1 1 260px;min-width:0"><datalist id="acols"></datalist><span class="sub">Any collection or part of an item name. Every size is counted.</span></span>
+        <span id="alist" hidden class="row"><button class="btn sm" id="afile" type="button">Choose Excel file</button><input type="text" id="aname" placeholder="Name for this list" maxlength="60"><span class="sub" id="ainfo">Columns: Name, Collection, SKU and/or DV (first row = headings). Sizes do not matter.</span></span>
         <input type="date" id="ad">
         <button class="btn go" id="ago" type="button">Start placement</button><span class="sub" id="amsg"></span>
       </div>
@@ -127,6 +128,7 @@ const VIS=[['zone','Zone performance panel'],['compare','Impact on sales (compar
 function showErr(t){$('err').hidden=!t;$('err').textContent=t||''}
 async function api(url,body){const r=await fetch(url,body?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{credentials:'same-origin',cache:'no-store'});if(r.status===401){location.replace('/login.html');throw new Error('sign in')}const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('error '+r.status));return j}
 const zoneById=id=>D.zones.find(z=>z.id===id);
+const listInfo=p=>[(p.list.names||[]).length?`${p.list.names.length} name${p.list.names.length==1?'':'s'} / collection${p.list.names.length==1?'':'s'}`:'',p.list.skus.length?`${p.list.skus.length} SKUs`:'',p.list.dvs.length?`${p.list.dvs.length} DVs`:''].filter(Boolean).join(', ');
 const zName=z=>z?'Zone #'+z.n:'?';
 
 async function boot(){
@@ -192,13 +194,14 @@ function renderTimeline(){
   $('tl').innerHTML=zs.map(zz=>`<div class="tlrow"><span style="font-weight:${zz.id===S.zone?800:500};cursor:pointer" data-zone="${zz.id}">${zName(zz)}</span><div class="bar">${D.placements.filter(p=>p.zone===zz.id).map(p=>{const a=pos(p.start),w=Math.max(1.5,pos(p.end||sp.b)-a+(p.end?0:100/sp.n));return`<div class="seg ${(p.id===S.pa||p.id===S.pb)?'on':''}" data-p="${p.id}" title="${esc(p.col)}: ${p.start} → ${p.end||'now'}" style="left:${a}%;width:${Math.min(w,100-a)}%;background:${colColor(p.col)};opacity:${zz.id===S.zone?1:.5}">${esc(p.col)}</div>`}).join('')}</div></div>`).join('');
   $('axis').innerHTML=[0,.5,1].map(t=>{const d=new Date(Date.parse(sp.a)+t*(sp.n-1)*864e5).toISOString().slice(5,10);return`<span>${d}</span>`}).join('');
   const hist=D.placements.filter(p=>p.zone===S.zone).slice().reverse();
-  $('plist').innerHTML=hist.length?hist.map(p=>`<div><span><span class="pill" style="background:${colColor(p.col)}">${esc(p.col)}</span>${p.list?` <span class="sub">(list: ${p.list.skus.length} SKUs, ${p.list.dvs.length} DVs)</span>`:''} ${p.start} → ${p.end||'now'} <span class="sub">· by ${esc(p.by||'')}</span></span><button class="btn sm" data-unplace="${p.id}" type="button">Remove</button></div>`).join(''):'';
+  $('plist').innerHTML=hist.length?hist.map(p=>`<div><span><span class="pill" style="background:${colColor(p.col)}">${esc(p.col)}</span>${p.list?` <span class="sub">(${listInfo(p)})</span>`:''} ${p.start} → ${p.end||'now'} <span class="sub">· by ${esc(p.by||'')}</span></span><button class="btn sm" data-unplace="${p.id}" type="button">Remove</button></div>`).join(''):'';
 }
 function renderAssign(){
   const zs=D.zones.slice().sort((a,b)=>a.n-b.n);
   $('az').innerHTML=zs.map(z=>`<option value="${z.id}" ${z.id===S.zone?'selected':''}>${zName(z)} · ${esc(z.where)}</option>`).join('');
   const cols=D.collections.length?D.collections:[];
   $('ac').innerHTML=cols.map(c=>`<option>${esc(c)}</option>`).join('')||'<option value="">No collections yet: run Sync from ERP</option>';
+  $('acols').innerHTML=cols.map(c=>`<option value="${esc(c)}">`).join('');
   if(!$('ad').value)$('ad').value=D.today;
 }
 function renderCompare(){
@@ -253,21 +256,22 @@ $('savez').onclick=async()=>{try{await api('/api/vmzones?op=layout',{store:S.sto
 // An Excel list of items: a SKU column (sized code, e.g. 395078C01-45) and/or a DV column (the design, e.g. 395078C01).
 // A DV counts every size of that design. Without headings the first column is read as SKUs.
 let LIST=null;
-$('amode').onchange=()=>{const l=$('amode').value==='list';$('ac').hidden=l;$('alist').hidden=!l};
+$('amode').onchange=()=>{const m=$('amode').value;$('ac').hidden=m!=='col';$('alist').hidden=m!=='list';$('anbox').hidden=m!=='names'};
+const splitNames=t=>[...new Set(String(t||'').split(/[,;\n\r]+/).map(x=>x.trim()).filter(x=>x.length>=2))];
 $('afile').onclick=()=>$('listfile').click();
 $('listfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
   try{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}),g=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,defval:''});
-    let h=-1,si=-1,di=-1;for(let i=0;i<Math.min(10,g.length)&&h<0;i++){const r=g[i].map(x=>String(x).trim().toLowerCase());si=r.findIndex(x=>/^(sku|item|item code|variant)$/.test(x));di=r.findIndex(x=>/^(dv|design|design variant)$/.test(x));if(si>=0||di>=0)h=i}
+    let h=-1,si=-1,di=-1,ni=[];for(let i=0;i<Math.min(10,g.length)&&h<0;i++){const r=g[i].map(x=>String(x).trim().toLowerCase());si=r.findIndex(x=>/^(sku|item code|variant)$/.test(x));di=r.findIndex(x=>/^(dv|design|design variant)$/.test(x));ni=r.map((x,k)=>/^(name|item name|item|product|product name|description|collection|collection name)$/.test(x)?k:-1).filter(k=>k>=0);if(si>=0||di>=0||ni.length)h=i}
     if(h<0){h=-1;si=0}
-    const code=v=>String(v||'').trim().toUpperCase(),skus=[],dvs=[];
-    g.slice(h+1).forEach(r=>{if(si>=0&&code(r[si]))skus.push(code(r[si]));if(di>=0&&code(r[di]))dvs.push(code(r[di]))});
-    if(!skus.length&&!dvs.length)throw new Error('no codes found');
-    LIST={file:f.name,skus:[...new Set(skus)],dvs:[...new Set(dvs)]};if(!$('aname').value)$('aname').value=f.name.replace(/\.[^.]+$/,'').slice(0,60);
-    $('ainfo').textContent=`${LIST.skus.length} SKUs · ${LIST.dvs.length} DVs from ${f.name}`;
+    const code=v=>String(v||'').trim().toUpperCase(),skus=[],dvs=[],names=[];
+    g.slice(h+1).forEach(r=>{if(si>=0&&code(r[si]))skus.push(code(r[si]));if(di>=0&&code(r[di]))dvs.push(code(r[di]));ni.forEach(k=>{const v=String(r[k]||'').trim();if(v.length>=2)names.push(v)})});
+    if(!skus.length&&!dvs.length&&!names.length)throw new Error('nothing found');
+    LIST={file:f.name,skus:[...new Set(skus)],dvs:[...new Set(dvs)],names:[...new Set(names)]};if(!$('aname').value)$('aname').value=f.name.replace(/\.[^.]+$/,'').slice(0,60);
+    $('ainfo').textContent=`${LIST.names.length} names / collections · ${LIST.skus.length} SKUs · ${LIST.dvs.length} DVs from ${f.name}`;
   }catch(x){LIST=null;$('ainfo').textContent='Could not read that file: '+x.message}};
-$('ago').onclick=async()=>{const isList=$('amode').value==='list',col=$('ac').value;
-  if(isList&&!LIST){$('amsg').textContent='Choose the Excel file first.';return}if(!isList&&!col){$('amsg').textContent='No collections yet.';return}
-  $('ago').disabled=true;try{await api('/api/vmzones?op=place',isList?{store:S.store,zone:$('az').value,start:$('ad').value,list:{...LIST,name:$('aname').value}}:{store:S.store,zone:$('az').value,col,start:$('ad').value});if(isList){LIST=null;$('aname').value='';$('ainfo').textContent='Columns: SKU and/or DV (first row = headings).'}const z=$('az').value;await load(S.store);S.zone=z;render();$('amsg').textContent=(D.placements.find(p=>p.zone===z&&!p.end)||{col}).col+' placed from '+$('ad').value+'.'}catch(e){$('amsg').textContent=e.message}$('ago').disabled=false};
+$('ago').onclick=async()=>{const mode=$('amode').value,isList=mode==='list',isNames=mode==='names',col=$('ac').value,typed=splitNames($('anames').value);
+  if(isList&&!LIST){$('amsg').textContent='Choose the Excel file first.';return}if(isNames&&!typed.length){$('amsg').textContent='Type at least one name or collection.';return}if(mode==='col'&&!col){$('amsg').textContent='No collections yet.';return}
+  $('ago').disabled=true;try{await api('/api/vmzones?op=place',isList?{store:S.store,zone:$('az').value,start:$('ad').value,list:{...LIST,name:$('aname').value}}:isNames?{store:S.store,zone:$('az').value,start:$('ad').value,list:{names:typed}}:{store:S.store,zone:$('az').value,col,start:$('ad').value});if(isList){LIST=null;$('aname').value='';$('ainfo').textContent='Columns: Name, Collection, SKU and/or DV (first row = headings). Sizes do not matter.'}if(isNames)$('anames').value='';const z=$('az').value;await load(S.store);S.zone=z;render();$('amsg').textContent=(D.placements.find(p=>p.zone===z&&!p.end)||{col}).col+' placed from '+$('ad').value+'.'}catch(e){$('amsg').textContent=e.message}$('ago').disabled=false};
 $('pa').onchange=()=>{S.pa=$('pa').value;render()};$('pb').onchange=()=>{S.pb=$('pb').value;render()};$('ctl').onchange=renderCompare;
 
 document.addEventListener('click',async e=>{const t=e.target;
@@ -304,15 +308,15 @@ $('file').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)r
 $('xlsx').onclick=()=>{if(!D)return;const m=money(),zs=id=>zoneById(id)||{};
   const head=['Store','Zone','Location','Collection / list','Type','Start date','End date','Days with sales','Pieces','Pieces / day','UPT','ATV (EGP)','Share of store sales %','Sales index',...(m?['Sales (EGP)','Sales / day (EGP)','Invoices']:[]),'Sales change vs previous in zone %','Trend-adjusted change %','Placed by'];
   const rows=D.placements.slice().sort((a,b)=>(zs(a.zone).n-zs(b.zone).n)||a.start.localeCompare(b.start)).map(p=>{const s=p.stats,prev=D.placements.filter(x=>x.zone===p.zone&&x.end===p.start)[0];
-    return[S.store,'Zone #'+zs(p.zone).n,zs(p.zone).where||'',p.col,p.list?`Excel list (${p.list.skus.length} SKUs, ${p.list.dvs.length} DVs)`:'Collection',p.start,p.end?new Date(Date.parse(p.end)-864e5).toISOString().slice(0,10):'(ongoing)',s.days,s.qty,s.qtyDay,s.upt,s.atv,s.share,s.index,...(m?[s.net,s.netDay,s.invoices]:[]),prev&&prev.stats.index?+((s.index/prev.stats.index-1)*100).toFixed(1):'',prev&&prev.stats.share?+((s.share/prev.stats.share-1)*100).toFixed(1):'',p.by||'']});
+    return[S.store,'Zone #'+zs(p.zone).n,zs(p.zone).where||'',p.col,p.list?`${p.list.file?'Excel list':'Names / collections'} (${listInfo(p)})`:'Collection',p.start,p.end?new Date(Date.parse(p.end)-864e5).toISOString().slice(0,10):'(ongoing)',s.days,s.qty,s.qtyDay,s.upt,s.atv,s.share,s.index,...(m?[s.net,s.netDay,s.invoices]:[]),prev&&prev.stats.index?+((s.index/prev.stats.index-1)*100).toFixed(1):'',prev&&prev.stats.share?+((s.share/prev.stats.share-1)*100).toFixed(1):'',p.by||'']});
   const daily=[['Store','Zone','Collection','Date','Pieces',m?'Sales (EGP)':'Sales index']];
   D.placements.forEach(p=>p.stats.daily.forEach(d=>daily.push([S.store,'Zone #'+zs(p.zone).n,p.col,d[0],d[1],d[2]])));
   const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([head,...rows]);ws['!cols']=head.map(h=>({wch:Math.max(10,Math.min(26,h.length+2))}));
   XLSX.utils.book_append_sheet(wb,ws,'Placements');
   const items=[['Store','Zone','Placement','Type','Start date','End date','SKU','Item','Pieces',m?'Sales (EGP)':'% of placement sales']];
-  D.placements.forEach(p=>(p.stats.items||[]).forEach(i=>items.push([S.store,'Zone #'+zs(p.zone).n,p.col,p.list?'Excel list':'Collection',p.start,p.end?new Date(Date.parse(p.end)-864e5).toISOString().slice(0,10):'(ongoing)',i[0],i[1],i[2],i[3]])));
+  D.placements.forEach(p=>(p.stats.items||[]).forEach(i=>items.push([S.store,'Zone #'+zs(p.zone).n,p.col,p.list?(p.list.file?'Excel list':'Names / collections'):'Collection',p.start,p.end?new Date(Date.parse(p.end)-864e5).toISOString().slice(0,10):'(ongoing)',i[0],i[1],i[2],i[3]])));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(items),'Items');
-  const lists=[['Zone','Placement','Start date','SKU','DV']];D.placements.filter(p=>p.list).forEach(p=>{const n=Math.max(p.list.skus.length,p.list.dvs.length);for(let i=0;i<n;i++)lists.push(['Zone #'+zs(p.zone).n,p.col,p.start,p.list.skus[i]||'',p.list.dvs[i]||''])});
+  const lists=[['Zone','Placement','Start date','Name / collection','SKU','DV']];D.placements.filter(p=>p.list).forEach(p=>{const nm=p.list.names||[],n=Math.max(nm.length,p.list.skus.length,p.list.dvs.length);for(let i=0;i<n;i++)lists.push(['Zone #'+zs(p.zone).n,p.col,p.start,nm[i]||'',p.list.skus[i]||'',p.list.dvs[i]||''])});
   if(lists.length>1)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(lists),'Lists');
   if(!hidden('daily'))XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(daily),'Daily');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['VM Zones report'],['Store',S.store],['Made on',D.today],['Sales data up to',D.lastSalesDay],[],['End date is the last day before the next collection went into the zone.'],['Results are the store’s sales of that collection while it was in the zone.'],['Sales index = the collection’s sales per day as % of an average day of the whole store.'],['Trend-adjusted change compares the share of store sales, so a busy or quiet week for the whole store does not count.']]),'Notes');

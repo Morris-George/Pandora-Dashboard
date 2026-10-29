@@ -101,11 +101,28 @@ async function storeDaily(st) {
 
 // "395078C01-45" -> "395078C01": the design (DV) of a sized SKU
 const dvOf = sku => sku.replace(/-[^-]+$/, '');
-// Which sales lines belong to a placement: a whole collection, or the SKUs / DVs of an uploaded list.
+// lower case, letters and digits only, single spaces: "Moments Snake-Chain, 18" -> "moments snake chain 18"
+const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, ' ').trim();
+// Which sales lines belong to a placement: a whole collection, or a list of SKUs / DVs / names / collections.
+// Sizes never matter in VM zones: a listed SKU counts every size of its design, and a listed name or collection
+// counts every item whose name contains it (or every item of that collection), whatever the size.
 function matcher(p, sd) {
   if (!p.list) return CAT_OPTIONS.includes(p.col) ? sku => sd.catOf(sku) === p.col : sku => sd.colOf(sku) === p.col;
   const skus = new Set(p.list.skus || []), dvs = new Set(p.list.dvs || []);
-  return sku => skus.has(sku) || dvs.has(sku) || dvs.has(dvOf(sku));
+  for (const s of skus) dvs.add(dvOf(s));
+  const names = (p.list.names || []).map(norm).filter(Boolean), nameSet = new Set(names);
+  const cache = new Map();
+  return sku => {
+    if (skus.has(sku) || dvs.has(sku) || dvs.has(dvOf(sku))) return true;
+    if (!names.length) return false;
+    let v = cache.get(sku);
+    if (v === undefined) {
+      const hay = ' ' + norm(sd.names.get(sku)) + ' ', col = norm(sd.colOf(sku));
+      v = (col && nameSet.has(col)) || names.some(n => hay.includes(' ' + n + ' '));
+      cache.set(sku, v);
+    }
+    return v;
+  };
 }
 
 // Results of one placement: [start, end) where end is the next placement's start (open = up to the last day with sales).
@@ -218,11 +235,12 @@ module.exports = async function handler(req, res) {
   } else if (op === 'place') {
     const z = layout.zones.find(z => z.id === b.zone);
     let col = String(b.col || '').trim().slice(0, 60), list = null;
-    if (b.list) { // an uploaded Excel list of SKUs and / or DVs instead of a whole collection
+    if (b.list) { // a list of SKUs / DVs / item names / collection names (typed or from Excel) instead of one whole collection
       const codes = v => Array.isArray(v) ? [...new Set(v.map(x => String(x || '').trim().toUpperCase()).filter(x => /^[A-Z0-9][A-Z0-9\-_.]{1,39}$/.test(x)))] : [];
-      list = { file: String(b.list.file || '').slice(0, 100), skus: codes(b.list.skus).slice(0, 5000), dvs: codes(b.list.dvs).slice(0, 5000) };
-      if (!list.skus.length && !list.dvs.length) return send(res, 400, { ok: false, error: 'No SKU or DV codes were found in that file.' });
-      col = String(b.list.name || list.file || 'SKU list').trim().slice(0, 60);
+      const names = v => Array.isArray(v) ? [...new Set(v.map(x => String(x || '').replace(/\s+/g, ' ').trim().slice(0, 80)).filter(x => x.length >= 2))] : [];
+      list = { file: String(b.list.file || '').slice(0, 100), skus: codes(b.list.skus).slice(0, 5000), dvs: codes(b.list.dvs).slice(0, 5000), names: names(b.list.names).slice(0, 300) };
+      if (!list.skus.length && !list.dvs.length && !list.names.length) return send(res, 400, { ok: false, error: 'No SKU, DV, name or collection was found.' });
+      col = String(b.list.name || list.file || list.names.slice(0, 3).join(', ') || 'SKU list').trim().slice(0, 60);
     }
     if (!z || !col || !isDay(b.start)) return send(res, 400, { ok: false, error: 'Pick a zone, a collection and a start date.' });
     const inZone = layout.placements.filter(p => p.zone === z.id);
