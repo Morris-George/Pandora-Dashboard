@@ -67,12 +67,15 @@ function rowHtml(a,btns0,pick){const btns=typeof btns0==='function'?btns0(a):btn
 const TITLES=['Finance','Brand manager'];
 const grp=a=>a.role==='hr'?'hr':a.title==='Finance'?'finance':a.title==='Brand manager'?'brand':'other';
 const titleSel=a=>`<select data-title="${esc(a.username)}" style="width:auto;height:34px" aria-label="Job title"><option value="">No title</option>${TITLES.map(t=>`<option ${a.title===t?'selected':''}>${t}</option>`).join('')}</select>`;
-let ACT=[],AF='all';
+let ACT=[],AF='all',TEAMS={list:[],of:{}};
+const teamSel=k=>`<select data-team="${esc(k)}" style="width:auto;height:34px" aria-label="Team"><option value="">No team</option>${TEAMS.list.map(t=>`<option ${TEAMS.of[k]===t?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
 const GROUPS=[['all','Everyone'],['staff','Staff'],['area','Area managers'],['finance','Finance'],['brand','Brand manager'],['hr','HR']];
 function renderActive(){
-  const cnt=k=>k==='all'?ACT.length:ACT.filter(x=>x.g===k).length;
-  const chips=`<div class="pwline" style="margin:0 0 8px">${GROUPS.map(([k,l])=>`<button type="button" class="btn${AF===k?' go':''}" data-filter="${k}">${l} · ${cnt(k)}</button>`).join('')}</div>`;
-  const rows=ACT.filter(x=>AF==='all'||x.g===AF).map(x=>x.h).join('');
+  const inF=(x,k)=>k==='all'||x.g===k||(k.startsWith('t:')&&TEAMS.of[x.k]===k.slice(2));
+  const cnt=k=>ACT.filter(x=>inF(x,k)).length;
+  const G=GROUPS.concat(TEAMS.list.filter(t=>!GROUPS.some(g=>g[1]===t)).map(t=>['t:'+t,t]));
+  const chips=`<div class="pwline" style="margin:0 0 8px">${G.map(([k,l])=>`<button type="button" class="btn${AF===k?' go':''}" data-filter="${esc(k)}">${esc(l)} · ${cnt(k)}</button>`).join('')}<button type="button" class="btn" id="newteam">+ New team</button></div>`;
+  const rows=ACT.filter(x=>inF(x,AF)).map(x=>x.h.replace('<div class="btns">','<div class="btns">'+(x.k?teamSel(x.k):''))).join('');
   $('active').innerHTML=chips+(rows||'<div class="empty">Nobody here.</div>');
 }
 let RF={},DS={},RC={},RFP=[],RFPEND={};
@@ -110,9 +113,10 @@ async function load(){
     $('splist').innerHTML=sp.length?sp.map(a=>`<div class="row"><div class="who">${esc(a.name)}<small>${a.role==='vm'?'VM Report':a.role==='stockcount'?'Stock Count only':a.role==='hr'?'HR: Weekly Schedule, view only':a.role==='overseer'?'Overseer':esc(a.role)}${a.title?' · '+esc(a.title):''}${a.status==='active'?'':' · switched off'}</small></div><div>${esc(a.username)}</div><div></div><div class="btns">${titleSel(a)}<button class="btn" data-act="pw" data-user="${esc(a.username)}">Change password</button><button class="btn" data-act="${a.status==='active'?'disable':'enable'}" data-user="${esc(a.username)}">${a.status==='active'?'Switch off':'Switch on'}</button><button class="btn bad" data-act="remove" data-user="${esc(a.username)}">Remove</button></div></div>`).join(''):'<div class="empty">None yet.</div>';
     const fill=(id,list,btns,none,pick)=>{$(id).innerHTML=list.length?list.map(a=>rowHtml(a,btns,pick)).join(''):`<div class="empty">${none}</div>`};
     fill('pending',by('pending'),[['approve','Approve','go'],['store','Change store'],['pw','Change password'],['remove','Reject','bad']],'Nobody is waiting.',true);
-    const admL=(j.admins||[]).map(a=>({g:a.role==='admin'?'admin':'area',h:`<div class="row"><div class="who">${esc(a.username)}<small>${esc(a.label)} · ${a.off?'switched off':'active'}</small></div><div></div><div></div><div class="btns">${a.role==='admin'?'':`<button class="btn" data-act="pw" data-env="1" data-user="${esc(a.username)}">Change password</button><button class="btn" data-act="${a.off?'envenable':'envdisable'}" data-user="${esc(a.username)}">${a.off?'Switch on':'Switch off'}</button>`}</div></div>`}));
-    const spaL=sp.filter(a=>a.status==='active').map(a=>({g:grp(a),h:`<div class="row"><div class="who">${esc(a.name)}<small>${a.role==='vm'?'VM Report':a.role==='stockcount'?'Stock Count only':a.role==='hr'?'HR: Weekly Schedule, view only':a.role==='overseer'?'Overseer':esc(a.role)}${a.title?' · '+esc(a.title):''} · active</small></div><div>${esc(a.username)}</div><div></div><div class="btns">${titleSel(a)}<button class="btn" data-act="pw" data-user="${esc(a.username)}">Change password</button><button class="btn" data-act="disable" data-user="${esc(a.username)}">Switch off</button><button class="btn bad" data-act="remove" data-user="${esc(a.username)}">Remove</button></div></div>`}));
-    const staffL=by('active').map(a=>({g:'staff',h:rowHtml(a,a=>[['link','Save link'],a.storeManager?['setmanager','Remove store manager','','data-on="0"']:['setmanager','Make store manager','','data-on="1"'],['store','Change store'],['pw','Change password'],['disable','Switch off'],['remove','Remove','bad']],true)}));
+    TEAMS={list:(j.teams&&j.teams.list)||[],of:(j.teams&&j.teams.of)||{}};
+    const admL=(j.admins||[]).map(a=>({k:a.role==='admin'?'':'env:'+String(a.username).toLowerCase(),g:a.role==='admin'?'admin':'area',h:`<div class="row"><div class="who">${esc(a.username)}<small>${esc(a.label)} · ${a.off?'switched off':'active'}</small></div><div></div><div></div><div class="btns">${a.role==='admin'?'':`<button class="btn" data-act="pw" data-env="1" data-user="${esc(a.username)}">Change password</button><button class="btn" data-act="${a.off?'envenable':'envdisable'}" data-user="${esc(a.username)}">${a.off?'Switch on':'Switch off'}</button>`}</div></div>`}));
+    const spaL=sp.filter(a=>a.status==='active').map(a=>({k:'u:'+a.username,g:grp(a),h:`<div class="row"><div class="who">${esc(a.name)}<small>${a.role==='vm'?'VM Report':a.role==='stockcount'?'Stock Count only':a.role==='hr'?'HR: Weekly Schedule, view only':a.role==='overseer'?'Overseer':esc(a.role)}${a.title?' · '+esc(a.title):''} · active</small></div><div>${esc(a.username)}</div><div></div><div class="btns">${titleSel(a)}<button class="btn" data-act="pw" data-user="${esc(a.username)}">Change password</button><button class="btn" data-act="disable" data-user="${esc(a.username)}">Switch off</button><button class="btn bad" data-act="remove" data-user="${esc(a.username)}">Remove</button></div></div>`}));
+    const staffL=by('active').map(a=>({k:'u:'+a.username,g:'staff',h:rowHtml(a,a=>[['link','Save link'],a.storeManager?['setmanager','Remove store manager','','data-on="0"']:['setmanager','Make store manager','','data-on="1"'],['store','Change store'],['pw','Change password'],['disable','Switch off'],['remove','Remove','bad']],true)}));
     ACT=[...admL,...spaL,...staffL];renderActive();
     RF=j.refill||{};DS=j.dist||{};RC=j.recv||{};RFP=[...(j.admins||[]).filter(a=>a.role!=='admin'&&!a.off).map(a=>({k:'env:'+String(a.username).toLowerCase(),n:a.username,s:a.label})),
       ...sp.filter(a=>a.status==='active').map(a=>({k:'u:'+a.username,n:a.name,s:a.role==='vm'?'VM Report':a.role==='stockcount'?'Stock Count only':a.role==='hr'?'HR: Weekly Schedule, view only':a.role==='overseer'?'Overseer':a.role})),
@@ -129,12 +133,17 @@ document.addEventListener('change',async e=>{
   if(rc){const k=rc.dataset.rc;if((RC[k]||'none')===rc.value)delete RFPEND['rc|'+k];else RFPEND['rc|'+k]=rc.value;rfState();renderRf();return}
   const ds=e.target.closest&&e.target.closest('select[data-ds]');
   if(ds){const k=ds.dataset.ds;if((DS[k]||'none')===ds.value)delete RFPEND['ds|'+k];else RFPEND['ds|'+k]=ds.value;rfState();renderRf();return}
+  const tm=e.target.closest&&e.target.closest('select[data-team]');
+  if(tm){tm.disabled=true;try{const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'setdept',key:tm.dataset.team,name:tm.value})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)showErr(j.error||'Could not save the team.')}catch(_){showErr('No connection.')}load();return}
   const t=e.target.closest&&e.target.closest('select[data-title]'); if(!t)return; t.disabled=true;
   try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'settitle',username:t.dataset.title,title:t.value})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)showErr(j.error||'That did not work.')}catch(_){showErr('No connection.')}
   load();
 });
 document.addEventListener('click',async e=>{
   const f=e.target.closest&&e.target.closest('button[data-filter]'); if(f){AF=f.dataset.filter;renderActive();return}
+  if(e.target.id==='newteam'){const n=(prompt('New team name (for example Warehouse):')||'').trim();if(!n)return;
+    try{const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'newdept',name:n})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok){showErr(j.error||'Could not add the team.');return}}catch(_){showErr('No connection.');return}
+    AF='t:'+n;load();return}
   const b=e.target.closest('button[data-act]'); if(!b)return;
   if(b.dataset.act==='mkspecial'){b.disabled=true;showErr('');
     try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'createspecial',name:$('spname').value,username:$('spuser').value,password:$('sppw').value,role:$('sprole').value})});const j=await r.json().catch(()=>({}));

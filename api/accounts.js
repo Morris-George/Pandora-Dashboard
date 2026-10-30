@@ -82,7 +82,7 @@ module.exports = activity.wrap('accounts', async function handler(req, res) {
     const admins = [];
     for (const a of staffAccounts()) admins.push({ username: a.user, role: a.role, label: a.label, off: a.role !== 'admin' && await users.envOff(a.user) });
     return send(res, 200, {
-      ok: true, accounts: list, admins, resets, hasData: !!data, refill: (await store.getJSON(require('./_refill').ACCESS)) || {}, dist: (await store.getJSON(require('./_dist').ACCESS)) || {}, recv: (await store.getJSON(require('./_recv').ACCESS)) || {},
+      ok: true, accounts: list, admins, resets, hasData: !!data, refill: (await store.getJSON(require('./_refill').ACCESS)) || {}, dist: (await store.getJSON(require('./_dist').ACCESS)) || {}, recv: (await store.getJSON(require('./_recv').ACCESS)) || {}, teams: (await store.getJSON('access/depts.json')) || {},
       people: people.map(p => ({ ...p, takenBy: taken.get(p.store + '|' + p.name) || '' })).sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name))
     });
   }
