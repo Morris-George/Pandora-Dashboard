@@ -157,9 +157,27 @@ function syncDates(){
 const isPandora=r=>/^\s*pandora\b/i.test(String(r[G]||''));
 /* Pandora is the default brand; if the data has no Pandora groups at all, show everything instead of an empty page */
 function brandNow(){return S.brand==='Pandora'&&S.rows.some(isPandora)?'Pandora':'ALL'}
+/* smart search: ignores case, accents, punctuation, plurals and word order; forgives small typos; a few everyday synonyms */
+const SYN={band:'ring',bangle:'bracelet',studs:'earring',stud:'earring',hoop:'earring',hoops:'earring',pendant:'necklace',collier:'necklace',gold:'rose',golden:'rose',sterling:'silver'};
+const stem=w=>{w=w.replace(/(ies)$/,'y').replace(/(es)$/,w.length>4?'':'es').replace(/s$/,w.length>3?'':'s');return SYN[w]||w};
+const toks=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').split(' ').filter(Boolean);
+function lev(a,b,max){if(Math.abs(a.length-b.length)>max)return max+1;let p=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){let c=[i],m=i;for(let j=1;j<=b.length;j++){const v=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));c.push(v);if(v<m)m=v}if(m>max)return max+1;p=c}return p[b.length]}
+function wordHit(w,words){/* 0 = no match, higher = better */
+  let best=0;const ws=stem(w),mx=ws.length>=7?2:ws.length>=4?1:0;
+  for(const x of words){if(x===w||x===ws)return 4;if(x.startsWith(ws)||x.startsWith(w))best=Math.max(best,3);else if(ws.length>=3&&x.includes(ws))best=Math.max(best,2);
+    else if(mx&&best<1&&lev(ws,x.slice(0,ws.length+1),mx)<=mx)best=1}
+  return best}
+function rowWords(r){return r._w||(r._w=[...new Set(toks(r[C]+' '+r[N]+' '+(r[D]||'')).flatMap(x=>[x,stem(x)]))])}
+function searchScore(r,q){let sc=0,hit=0;const words=rowWords(r);for(const w of q){const h=wordHit(w,words);if(h){hit++;sc+=h}}return{hit,sc}}
 function visibleRows(skipCat){
-  const q=S.q.trim().toLowerCase().split(/\s+/).filter(Boolean),bn=brandNow();
-  return S.rows.filter(r=>(bn==='ALL'||isPandora(r))&&(S.loc==='ALL'||r[W]===S.loc)&&(skipCat||S.cat==='ALL'||keyOf(r)===S.cat)&&(!q.length||q.every(w=>(r[C]+' '+r[N]+' '+(r[D]||'')).toLowerCase().includes(w))));
+  const q=toks(S.q),bn=brandNow();
+  const base=S.rows.filter(r=>(bn==='ALL'||isPandora(r))&&(S.loc==='ALL'||r[W]===S.loc)&&(skipCat||S.cat==='ALL'||keyOf(r)===S.cat));
+  if(!q.length)return base;
+  const sc=base.map(r=>[r,searchScore(r,q)]);
+  let out=sc.filter(x=>x[1].hit===q.length);
+  if(!out.length&&q.length>1){const need=Math.ceil(q.length/2);out=sc.filter(x=>x[1].hit>=need)}/* nothing has every word: show the closest matches */
+  return out.sort((a,b)=>b[1].sc-a[1].sc).map(x=>x[0]);
 }
 function agg(rows){
   const m=new Map();
