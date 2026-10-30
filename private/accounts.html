@@ -79,7 +79,8 @@ function pickHtml(a){
 function rowHtml(a,btns0,pick){const btns=typeof btns0==='function'?btns0(a):btns0;return `<div class="row"><div class="who">${esc(a.name)}<small>${esc(a.store)}${a.storeManager?' · Store manager':''}</small></div><div>${esc(a.username)}<br><small style="color:var(--ink2)">${esc(a.phone)} · ${esc((a.createdAt||'').slice(0,10))}</small></div><div>${pick?pickHtml(a):''}</div><div class="btns">${btns.map(b=>`<button class="btn ${b[2]||''}" data-act="${b[0]}" data-user="${esc(a.username)}"${b[3]?' '+b[3]:''}>${b[1]}</button>`).join('')}</div></div>`}
 const TITLES=['Finance','Brand manager'];
 const grp=a=>a.role==='hr'?'hr':a.title==='Finance'?'finance':a.title==='Brand manager'?'brand':'other';
-const titleSel=a=>`<select data-title="${esc(a.username)}" style="width:auto;height:34px" aria-label="Job title"><option value="">No title</option>${TITLES.map(t=>`<option ${a.title===t?'selected':''}>${t}</option>`).join('')}</select>`;
+const allTitles=()=>[...new Set(TITLES.concat(Object.values(ACCTS).map(a=>a.title).filter(Boolean)))];
+const titleSel=a=>`<select data-title="${esc(a.username)}" style="width:auto;height:34px" aria-label="Job title"><option value="">No title</option>${allTitles().map(t=>`<option ${a.title===t?'selected':''}>${esc(t)}</option>`).join('')}<option value="__new">+ Add title…</option></select>`;
 function repDefaults(){const v=$('sprole').value,t=v.startsWith('team:')?v.slice(5):'';$('sprep').hidden=!t;if(!t)return;
   $('rp-dist').value=/warehouse/i.test(t)?'warehouse':'none';$('rp-recv').value=/warehouse/i.test(t)?'warehouse':/finance|account/i.test(t)?'accounts':'none';$('rp-refill').value='none';}
 document.addEventListener('change',e=>{if(e.target.id==='sprole'&&e.target.value!=='newteam')repDefaults()});
@@ -157,8 +158,10 @@ document.addEventListener('change',async e=>{
   if(ds){const k=ds.dataset.ds;if((DS[k]||'none')===ds.value)delete RFPEND['ds|'+k];else RFPEND['ds|'+k]=ds.value;rfState();renderRf();return}
   const tm=e.target.closest&&e.target.closest('select[data-team]');
   if(tm){tm.disabled=true;try{const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'setdept',key:tm.dataset.team,name:tm.value})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)showErr(j.error||'Could not save the team.')}catch(_){showErr('No connection.')}load();return}
-  const t=e.target.closest&&e.target.closest('select[data-title]'); if(!t)return; t.disabled=true;
-  try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'settitle',username:t.dataset.title,title:t.value})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)showErr(j.error||'That did not work.')}catch(_){showErr('No connection.')}
+  const t=e.target.closest&&e.target.closest('select[data-title]'); if(!t)return;
+  let title=t.value;if(title==='__new'){title=(prompt('New title (for example Warehouse supervisor):')||'').trim();if(!title){load();return}}
+  t.disabled=true;
+  try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'settitle',username:t.dataset.title,title:title})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)showErr(j.error||'That did not work.')}catch(_){showErr('No connection.')}
   load();
 });
 document.addEventListener('click',async e=>{

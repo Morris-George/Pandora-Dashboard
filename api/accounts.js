@@ -190,8 +190,8 @@ module.exports = activity.wrap('accounts', async function handler(req, res) {
     if (b.action === 'enable') { rec.status = 'active'; rec.fails = 0; rec.lockUntil = 0; await users.putUser(rec); return send(res, 200, { ok: true }); }
     if (b.action === 'settitle') {
       if (!rec.role) return send(res, 400, { ok: false, error: 'Titles are for special accounts.' });
-      const t = String(b.title || '');
-      if (t && t !== 'Finance' && t !== 'Brand manager') return send(res, 400, { ok: false, error: 'Unknown title.' });
+      // Finance and Brand manager carry meaning (filters, groups); any other title is a free label such as "Warehouse supervisor"
+      const t = String(b.title || '').replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40);
       if (t) rec.title = t; else delete rec.title;
       await users.putUser(rec);
       return send(res, 200, { ok: true });
