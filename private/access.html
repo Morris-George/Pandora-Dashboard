@@ -94,7 +94,7 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ORDER=['Super admin','Brand manager and Overseer','Area managers','Store managers','Visual Merchandiser','Finance','Stock Count accounts','Sales people'];
+const ORDER=['Super admin','Brand manager and Overseer','Area managers','Store managers','Visual Merchandiser','Finance','Warehouse Users','Sales people'];
 let people=[],depts=[],names={},gorder=[];
 const GKEY={'Sales people':'g:staff','Area managers':'g:area','Finance':'g:finance','Brand manager and Overseer':'g:brand','HR':'g:hr'};
 const gname=g=>names[GKEY[g]]||g;
@@ -173,7 +173,7 @@ document.addEventListener('click',async e=>{
 // by hierarchy: super admin, overseer, area managers, store managers, VM, Finance, your teams, Stock Count, sales people; or your own order
 function allGroups(){
   const all=[...new Set(people.map(p=>p.group))];
-  const H=['Super admin','Brand manager and Overseer','Area managers','Store managers','Visual Merchandiser','Finance',...depts,'HR','Stock Count accounts','Sales people'];
+  const H=['Super admin','Brand manager and Overseer','Area managers','Store managers','Visual Merchandiser','Finance',...depts,'HR','Warehouse Users','Sales people'];
   const hier=H.filter((g,i)=>H.indexOf(g)===i&&all.includes(g)).concat(all.filter(g=>!H.includes(g)));
   if(!gorder.length)return hier;
   return gorder.filter(g=>hier.includes(g)).concat(hier.filter(g=>!gorder.includes(g)));

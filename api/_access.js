@@ -123,7 +123,7 @@ async function build() {
     if (rec.role === 'overseer') group = 'Brand manager and Overseer';
     else if (rec.role === 'vm') group = 'Visual Merchandiser';
     else if (rec.role === 'hr') group = 'HR';
-    else if (rec.role === 'stockcount') group = rec.title === 'Finance' ? 'Finance' : 'Stock Count accounts';
+    else if (rec.role === 'stockcount') group = rec.title === 'Finance' ? 'Finance' : 'Warehouse Users';
     else if (rec.storeManager) group = 'Store managers';
     out.push({
       key: 'u:' + rec.username, username: rec.username, name: rec.name || rec.username, group,
