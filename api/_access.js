@@ -49,10 +49,22 @@ function scopeOf(who) {
   return '';
 }
 
-const ADDABLE = { refill: 'refill', slow: 'refill', dist: 'dist' }; // reports that carry their own access level, so they can be given to anyone
+const ADDABLE = { refill: 'refill', slow: 'refill', dist: 'dist', recv: 'recv' }; // reports that carry their own access level, so they can be given to anyone
 const isSuperWho = who => !!who && who.kind === 'env' && who.info.role === 'admin' && !who.info.overseer;
 
 async function overrides() { return (await store.getJSON(OVERRIDES)) || {}; }
+// Departments the super admin makes (Finance, Warehouse ...) with the people in each: { list: [names], of: { <key>: name } }
+const DEPTS = 'access/depts.json';
+async function depts() { const d = (await store.getJSON(DEPTS)) || {}; return { list: Array.isArray(d.list) ? d.list : [], of: d.of || {} }; }
+async function deptOp(b, res) {
+  const d = await depts(), name = String(b.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 40);
+  if (b.op === 'newdept') { if (!name) return send(res, 400, { ok: false, error: 'Type a department name.' }); if (!d.list.some(x => x.toLowerCase() === name.toLowerCase())) d.list.push(name); }
+  else if (b.op === 'deldept') { d.list = d.list.filter(x => x !== name); for (const k of Object.keys(d.of)) if (d.of[k] === name) delete d.of[k]; }
+  else if (b.op === 'setdept') { const k = String(b.key || ''); if (!k) return send(res, 400, { ok: false, error: 'Pick a person.' }); if (name && d.list.includes(name)) d.of[k] = name; else delete d.of[k]; }
+  else return send(res, 400, { ok: false, error: 'Unknown action.' });
+  await store.putJSON(DEPTS, d);
+  return send(res, 200, { ok: true });
+}
 
 async function describe(who, key, ovr) {
   const f = await factsFromWho(who, isSuperWho(who)); // what their role gives them, before any switch-off
@@ -114,6 +126,7 @@ async function change(req, res) {
   let b = req.body;
   if (typeof b === 'string') { try { b = JSON.parse(b); } catch (_) { b = null; } }
   b = b || {};
+  if (b.op) return deptOp(b, res);
   const key = String(b.key || ''), app = APPS.find(a => a.id === b.app), on = b.on === true;
   if (!app || app.id === 'mysales2') return send(res, 400, { ok: false, error: 'Unknown report.' });
   let who = null;
@@ -127,7 +140,7 @@ async function change(req, res) {
   if (app.id === 'mysales') allowed = allowed || !!APPS.find(x => x.id === 'mysales2').allow(f);
   const ovr = await overrides(), cur = ovr[key] || { remove: [] }, rm = new Set(cur.remove || []);
   const level = async (kind, val) => {
-    const { ACCESS } = require(kind === 'dist' ? './_dist' : './_refill');
+    const { ACCESS } = require(kind === 'dist' ? './_dist' : kind === 'recv' ? './_recv' : './_refill');
     const acc = (await store.getJSON(ACCESS)) || {};
     if (val === 'none') delete acc[key]; else acc[key] = val;
     await store.putJSON(ACCESS, acc);
@@ -137,11 +150,13 @@ async function change(req, res) {
     if (!allowed) {
       if (ADDABLE[app.id] === 'refill') await level('refill', 'view');
       else if (ADDABLE[app.id] === 'dist') await level('dist', 'warehouse');
+      else if (ADDABLE[app.id] === 'recv') await level('recv', 'view');
       else return send(res, 400, { ok: false, error: 'This report is not part of this person\'s role, so it cannot be added here.' });
     }
   } else {
     if (app.id === 'refill') await level('refill', 'none');       // Slow Moving follows Refill Order access
     else if (app.id === 'dist') await level('dist', 'none');
+    else if (app.id === 'recv') await level('recv', 'none');
     else rm.add(app.id);
   }
   if (rm.size) ovr[key] = { remove: [...rm] }; else delete ovr[key];
@@ -156,6 +171,6 @@ module.exports = async function handler(req, res) {
   if (!(who.kind === 'env' && who.info.role === 'admin' && !who.info.overseer)) return send(res, 403, { ok: false, error: 'Only the super admin can see report access.' });
   if (req.method === 'POST') return change(req, res);
   if (req.method !== 'GET') { res.setHeader('Allow', 'GET, POST'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
-  try { return send(res, 200, { ok: true, people: await build() }); }
+  try { const d = await depts(), people = await build(); for (const p of people) p.dept = d.of[p.key] || ''; return send(res, 200, { ok: true, people, depts: d.list }); }
   catch (e) { return send(res, 500, { ok: false, error: String((e && e.message) || e).slice(0, 200) }); }
 };

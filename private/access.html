@@ -68,13 +68,19 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
     <div class="pick"><label for="who">Person</label><select id="who" disabled><option>Loading…</option></select></div>
     <div class="note" id="count">Only the super admin can open this page.</div>
   </section>
+  <section class="card">
+    <h2>Departments</h2>
+    <div class="meta">Make a department (Finance, Warehouse ...), then put people in it from their card below. The person list is grouped by department.</div>
+    <div class="pwline"><input id="dname" placeholder="New department name" maxlength="40"><button type="button" class="btn go" id="dadd">Add department</button></div>
+    <div id="dlist" class="pwline"></div>
+  </section>
   <section class="card" id="out" hidden></section>
 </div>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ORDER=['Super admin','Brand manager and Overseer','Area managers','Store managers','Visual Merchandiser','Finance','Stock Count accounts','Sales people'];
-let people=[];
+let people=[],depts=[];
 function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
 function status(p){return p.status==='active'?'':p.status==='pending'?'<span class="chip wait">Waiting for approval</span>':'<span class="chip off">Switched off</span>'}
 function draw(){
@@ -85,6 +91,7 @@ function draw(){
   const on=p.apps.filter(a=>a.on).length;
   box.innerHTML=`<div class="who2"><h2>${esc(p.name)}</h2><span class="chip">${esc(p.label)}</span>${status(p)}</div>
     <div class="meta">${esc(p.scope)}</div>
+    <div class="pwline" style="margin:0 0 10px"><label for="pdept" style="font-weight:700;font-size:13px">Department</label><select id="pdept" style="max-width:260px"><option value="">None (grouped by role)</option>${depts.map(d=>`<option${d===p.dept?' selected':''}>${esc(d)}</option>`).join('')}</select></div>
     ${note?`<div class="note" style="margin:0 0 8px">${esc(note)}</div>`:''}
     <div class="cnt">${on} of ${p.apps.length} reports on</div>
     ${p.apps.map(a=>`<div class="rep${a.on?'':' off'}"><b>${esc(a.title)}</b><span class="d">${esc(a.desc)}${a.why?`<br><span class="why">${esc(a.why)}</span>`:''}</span>${a.note?`<span class="nt">${esc(a.note)}</span>`:'<span></span>'}<button type="button" class="sw2${a.on?' on':''}" data-app="${esc(a.id)}" data-on="${a.on?1:0}" role="switch" aria-checked="${a.on}" aria-label="${esc(a.title)}"${a.locked?' disabled':''}></button></div>`).join('')}`;
@@ -99,14 +106,26 @@ document.addEventListener('click',async e=>{
     await load(key);
   }catch(_){showErr('Could not save. Please try again.');await load(key)}
 });
+async function post(body){
+  const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok){showErr(j.error||'Could not save.');return false}showErr('');return true;
+}
+function drawDepts(){
+  $('dlist').innerHTML=depts.length?depts.map(d=>`<span class="chip">${esc(d)} · ${people.filter(p=>p.dept===d).length} <button type="button" class="btn bad" data-deldept="${esc(d)}" style="padding:0 6px;border:0;background:none" aria-label="Remove ${esc(d)}">×</button></span>`).join(''):'<span class="note">No departments yet.</span>';
+}
+$('dadd').addEventListener('click',async()=>{const n=$('dname').value.trim();if(!n)return;if(await post({op:'newdept',name:n})){$('dname').value='';await load($('who').value)}});
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-deldept]');if(!b)return;if(!confirm('Remove the department "'+b.dataset.deldept+'"? The people in it go back to their role group.'))return;if(await post({op:'deldept',name:b.dataset.deldept}))await load($('who').value)});
+document.addEventListener('change',async e=>{if(e.target.id!=='pdept')return;if(await post({op:'setdept',key:$('who').value,name:e.target.value}))await load($('who').value)});
 async function load(keepKey){
   try{
     const r=await fetch('/api/access',{credentials:'same-origin',cache:'no-store'});
     if(r.status===401){location.replace('/login.html');return}
     const j=await r.json();
     if(!r.ok||!j.ok){showErr(j.error||'Could not load.');$('who').innerHTML='<option>Could not load</option>';return}
-    people=j.people;$('count').textContent=people.length+' people';
-    const groups=ORDER.concat([...new Set(people.map(p=>p.group))].filter(g=>!ORDER.includes(g)));
+    people=j.people;depts=j.depts||[];$('count').textContent=people.length+' people';
+    for(const p of people)if(p.dept){p.role_group=p.role_group||p.group;p.group=p.dept}
+    drawDepts();
+    const groups=depts.concat(ORDER.filter(g=>!depts.includes(g))).concat([...new Set(people.map(p=>p.group))].filter(g=>!ORDER.includes(g)&&!depts.includes(g)));
     let h='<option value="">Choose a person…</option>';
     for(const g of groups){
       const list=people.filter(p=>p.group===g).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
