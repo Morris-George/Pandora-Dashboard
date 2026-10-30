@@ -121,20 +121,14 @@ async function build() {
 }
 
 
-// switch one report on or off for one person
-async function change(req, res) {
-  let b = req.body;
-  if (typeof b === 'string') { try { b = JSON.parse(b); } catch (_) { b = null; } }
-  b = b || {};
-  if (b.op) return deptOp(b, res);
-  const key = String(b.key || ''), app = APPS.find(a => a.id === b.app), on = b.on === true;
-  if (!app || app.id === 'mysales2') return send(res, 400, { ok: false, error: 'Unknown report.' });
+// switch one report on or off for one person; returns an error text, or '' when done
+async function setOne(key, app, on) {
   let who = null;
   const m = /^env:(.+)$/.exec(key), u = /^u:(.+)$/.exec(key);
   if (m) { const a = staffAccounts().find(x => x.user.toLowerCase() === m[1]); if (a) who = { kind: 'env', account: a, info: roleInfo(a) }; }
   else if (u) { const rec = await users.getUser(u[1]); if (rec) who = whoFromRec(rec); }
-  if (!who) return send(res, 404, { ok: false, error: 'Person not found.' });
-  if (isSuperWho(who)) return send(res, 400, { ok: false, error: 'The super admin always keeps everything.' });
+  if (!who) return 'Person not found.';
+  if (isSuperWho(who)) return 'The super admin always keeps everything.';
   const f = await factsFromWho(who, false);
   let allowed = !!app.allow(f);
   if (app.id === 'mysales') allowed = allowed || !!APPS.find(x => x.id === 'mysales2').allow(f);
@@ -151,7 +145,7 @@ async function change(req, res) {
       if (ADDABLE[app.id] === 'refill') await level('refill', 'view');
       else if (ADDABLE[app.id] === 'dist') await level('dist', 'warehouse');
       else if (ADDABLE[app.id] === 'recv') await level('recv', 'view');
-      else return send(res, 400, { ok: false, error: 'This report is not part of this person\'s role, so it cannot be added here.' });
+      else return "This report is not part of this person's role, so it cannot be added here.";
     }
   } else {
     if (app.id === 'refill') await level('refill', 'none');       // Slow Moving follows Refill Order access
@@ -161,7 +155,27 @@ async function change(req, res) {
   }
   if (rm.size) ovr[key] = { remove: [...rm] }; else delete ovr[key];
   await store.putJSON(OVERRIDES, ovr);
-  return send(res, 200, { ok: true });
+  return '';
+}
+
+async function change(req, res) {
+  let b = req.body;
+  if (typeof b === 'string') { try { b = JSON.parse(b); } catch (_) { b = null; } }
+  b = b || {};
+  const app = APPS.find(a => a.id === b.app), on = b.on === true;
+  if (b.op === 'deptapp') {
+    // one report on or off for everyone in a department, one after the other (the files are shared)
+    if (!app || app.id === 'mysales2') return send(res, 400, { ok: false, error: 'Unknown report.' });
+    const d = await depts(), keys = Object.keys(d.of).filter(k => d.of[k] === b.name);
+    if (!keys.length) return send(res, 400, { ok: false, error: 'Nobody is in this department yet.' });
+    const skipped = [];
+    for (const k of keys) { const e = await setOne(k, app, on); if (e) skipped.push(k.replace(/^(u|env):/, '')); }
+    return send(res, 200, { ok: true, done: keys.length - skipped.length, skipped });
+  }
+  if (b.op) return deptOp(b, res);
+  if (!app || app.id === 'mysales2') return send(res, 400, { ok: false, error: 'Unknown report.' });
+  const e = await setOne(String(b.key || ''), app, on);
+  return e ? send(res, e === 'Person not found.' ? 404 : 400, { ok: false, error: e }) : send(res, 200, { ok: true });
 }
 
 module.exports = async function handler(req, res) {

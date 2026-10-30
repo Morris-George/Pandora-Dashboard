@@ -73,6 +73,8 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
     <div class="meta">Make a department (Finance, Warehouse ...), then put people in it from their card below. The person list is grouped by department.</div>
     <div class="pwline"><input id="dname" placeholder="New department name" maxlength="40"><button type="button" class="btn go" id="dadd">Add department</button></div>
     <div id="dlist" class="pwline"></div>
+    <div class="pick" style="margin-top:10px"><label for="dpick">Switch reports for a whole department</label><select id="dpick"><option value="">Choose a department…</option></select></div>
+    <div id="dapps"></div>
   </section>
   <section class="card" id="out" hidden></section>
 </div>
@@ -110,7 +112,31 @@ async function post(body){
   const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok){showErr(j.error||'Could not save.');return false}showErr('');return true;
 }
+function drawDeptApps(){
+  const d=$('dpick').value,box=$('dapps'),mem=people.filter(p=>p.dept===d);
+  if(!d){box.innerHTML='';return}
+  if(!mem.length){box.innerHTML='<div class="note">Nobody is in this department yet. Put people in it from their card.</div>';return}
+  const apps=mem[0].apps;
+  box.innerHTML=`<div class="cnt" style="margin-top:8px">${mem.length} ${mem.length===1?'person':'people'}: ${mem.map(p=>esc(p.name)).join(', ')}</div>`+apps.map(a=>{
+    const n=mem.filter(p=>(p.apps.find(x=>x.id===a.id)||{}).on).length,all=n===mem.length;
+    return `<div class="rep${n?'':' off'}"><b>${esc(a.title)}</b><span class="d">${esc(a.desc)}</span><span class="nt">${n} of ${mem.length} on</span><button type="button" class="sw2${all?' on':''}" data-dapp="${esc(a.id)}" data-on="${all?1:0}" role="switch" aria-checked="${all}" aria-label="${esc(a.title)} for ${esc(d)}"></button></div>`}).join('');
+}
+$('dpick').addEventListener('change',drawDeptApps);
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('button[data-dapp]');if(!b||b.disabled)return;
+  b.classList.add('busy');b.disabled=true;
+  try{
+    const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'deptapp',name:$('dpick').value,app:b.dataset.dapp,on:b.dataset.on!=='1'})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)showErr(j.error||'Could not save.');
+    else showErr(j.skipped&&j.skipped.length?'Not given to '+j.skipped.join(', ')+': this report is not part of their role.':'');
+  }catch(_){showErr('Could not save. Please try again.')}
+  await load($('who').value);
+});
 function drawDepts(){
+  const keep=$('dpick').value;
+  $('dpick').innerHTML='<option value="">Choose a department…</option>'+depts.map(d=>`<option${d===keep?' selected':''}>${esc(d)}</option>`).join('');
+  drawDeptApps();
   $('dlist').innerHTML=depts.length?depts.map(d=>`<span class="chip">${esc(d)} · ${people.filter(p=>p.dept===d).length} <button type="button" class="btn bad" data-deldept="${esc(d)}" style="padding:0 6px;border:0;background:none" aria-label="Remove ${esc(d)}">×</button></span>`).join(''):'<span class="note">No departments yet.</span>';
 }
 $('dadd').addEventListener('click',async()=>{const n=$('dname').value.trim();if(!n)return;if(await post({op:'newdept',name:n})){$('dname').value='';await load($('who').value)}});
