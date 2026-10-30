@@ -51,7 +51,7 @@ async function stock(file){
   if(hi<0)hi=g.findIndex(r=>r.some(c=>/^(itemgroup|group)$/.test(norm(c)))&&r.some(c=>/^(qty|quantity|actualqty)$/.test(norm(c))));
   if(hi<0)throw new Error('This does not look like the Stock Balance report. It needs the columns Item Group and Balance Qty.');
   const H=g[hi].map(norm), col=(...n)=>H.findIndex(h=>n.includes(h));
-  const c={code:col('item','itemcode','sku','code'),name:col('itemname','name','itemdescription','description'),group:col('itemgroup','group','category'),wh:col('warehouse','store','location'),
+  const c={code:col('item','itemcode','sku','code'),name:col('itemname','name','itemdescription','description'),desc:col('description','itemdescription'),group:col('itemgroup','group','category'),wh:col('warehouse','store','location'),
     open:col('openingqty','opening'),inn:col('inqty','received','receivedqty'),out:col('outqty','issued','issuedqty'),bal:col('balanceqty','balqty','qty','quantity','actualqty'),val:col('balancevalue','balval','stockvalue','value')};
   if(c.group<0||c.bal<0)throw new Error('The file needs the columns Item Group and Balance Qty.');
   const n=v=>{const x=typeof v==='number'?v:Number(String(v||'').replace(/,/g,''));return isFinite(x)?x:0};
@@ -61,7 +61,7 @@ async function stock(file){
     const code=at(r,c.code),name=at(r,c.name);
     if(!code&&!name)continue;
     if(/^total/i.test(String(code||name)))continue;
-    rows.push([String(code||'').trim(),String(name||code||'').trim(),String(r[c.group]||'').trim(),String(at(r,c.wh)||'All locations').trim(),n(at(r,c.open)),n(at(r,c.inn)),n(at(r,c.out)),n(r[c.bal]),n(at(r,c.val))]);
+    rows.push([String(code||'').trim(),String(name||code||'').trim(),String(r[c.group]||'').trim(),String(at(r,c.wh)||'All locations').trim(),n(at(r,c.open)),n(at(r,c.inn)),n(at(r,c.out)),n(r[c.bal]),n(at(r,c.val)),String(at(r,c.desc)||'').trim()]);
   }
   if(!rows.length)throw new Error('No stock lines were found in that file.');
   return{file:file.name.replace(/\.[^.]+$/,'').slice(0,70),rows};

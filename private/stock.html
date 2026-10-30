@@ -77,7 +77,7 @@ h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;co
     <div class="row"><span class="lbl">Store</span><div class="chips" id="locChips"></div></div>
     <div class="row"><span class="lbl" id="catLbl">Category</span><div class="chips" id="catChips"></div></div>
     <div class="row"><span class="lbl">Group by</span><div class="seg" id="grp" role="group" aria-label="Group by"><button type="button" data-g="cat" aria-pressed="true">Category</button><button type="button" data-g="fam" aria-pressed="false">Collection</button></div>
-      <input class="search" id="q" type="search" placeholder="Search an item or SKU" aria-label="Search an item or SKU"></div>
+      <input class="search" id="q" type="search" placeholder="Search SKU, item or description" aria-label="Search SKU, item or description"></div>
   </section>
 
   <section class="kpis" id="kpis" hidden></section>
@@ -107,8 +107,8 @@ const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','De
 const nice=s=>{const p=String(s).split('-');return p.length===3?(+p[2])+' '+MON[+p[1]-1]+' '+p[0]:s};
 const ISO=/^\d{4}-\d{2}-\d{2}$/;
 
-/* row: [code, name, group, warehouse, opening, in, out, balance, value] */
-const C=0,N=1,G=2,W=3,O=4,I=5,U=6,B=7,V=8;
+/* row: [code, name, group, warehouse, opening, in, out, balance, value, description] */
+const C=0,N=1,G=2,W=3,O=4,I=5,U=6,B=7,V=8,D=9;
 const S={rows:[],meta:null,loc:'ALL',group:'cat',q:'',sel:'',from:'',to:'',itemsN:100,brand:'Pandora',cat:'ALL'};
 {const u=new URLSearchParams(location.search),t=new Date();
  S.from=ISO.test(u.get('from')||'')?u.get('from'):lIso(new Date(t.getFullYear(),t.getMonth(),1));
@@ -159,7 +159,7 @@ const isPandora=r=>/^\s*pandora\b/i.test(String(r[G]||''));
 function brandNow(){return S.brand==='Pandora'&&S.rows.some(isPandora)?'Pandora':'ALL'}
 function visibleRows(skipCat){
   const q=S.q.trim().toLowerCase().split(/\s+/).filter(Boolean),bn=brandNow();
-  return S.rows.filter(r=>(bn==='ALL'||isPandora(r))&&(S.loc==='ALL'||r[W]===S.loc)&&(skipCat||S.cat==='ALL'||keyOf(r)===S.cat)&&(!q.length||q.every(w=>(r[C]+' '+r[N]).toLowerCase().includes(w))));
+  return S.rows.filter(r=>(bn==='ALL'||isPandora(r))&&(S.loc==='ALL'||r[W]===S.loc)&&(skipCat||S.cat==='ALL'||keyOf(r)===S.cat)&&(!q.length||q.every(w=>(r[C]+' '+r[N]+' '+(r[D]||'')).toLowerCase().includes(w))));
 }
 function agg(rows){
   const m=new Map();

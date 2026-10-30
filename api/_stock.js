@@ -5,7 +5,7 @@
 //        one fixed snapshot: its dates cannot be changed.
 //   POST /api/stock?op=upload   super admin: {file, rows:[[code, name, group, warehouse, opening, in, out, balance, value]]} (gzip or plain)
 //   POST /api/stock?op=delete   super admin: remove the uploaded Excel snapshot
-// Row: [item code, item name, item group, warehouse, opening qty, in qty, out qty, balance qty, balance value]
+// Row: [item code, item name, item group, warehouse, opening qty, in qty, out qty, balance qty, balance value, description (search only)]
 const zlib = require('zlib');
 const store = require('./_store');
 const { whoami } = require('./_auth');
@@ -39,7 +39,7 @@ function keep(r) {
   if (/l['\u2019`]?aderach|frisch|chocolate/i.test(r[2] + ' ' + r[3])) return false; // Laderach (also spelled L'Aderach) and its chocolate lines
   return !!(r[4] || r[5] || r[6] || r[7] || r[8]);
 }
-const toRow = a => [str(a[0], 40), str(a[1], 120), str(a[2], 80), cleanWarehouse(a[3]), num(a[4]), num(a[5]), num(a[6]), num(a[7]), num(a[8])];
+const toRow = a => [str(a[0], 40), str(a[1], 120), str(a[2], 80), cleanWarehouse(a[3]), num(a[4]), num(a[5]), num(a[6]), num(a[7]), num(a[8]), str(String(a[9] == null ? '' : a[9]).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' '), 200)];
 
 function fromErp(list) {
   const pick = (x, ...ks) => { for (const k of ks) if (x[k] != null && x[k] !== '') return x[k]; return null; };
@@ -48,7 +48,7 @@ function fromErp(list) {
       pick(x, 'item_code', 'sku', 'item'), pick(x, 'item_name', 'name', 'item'),
       pick(x, 'item_group', 'full_group', 'category', 'item_category') || '', x.warehouse,
       pick(x, 'opening_qty') || 0, pick(x, 'in_qty') || 0, pick(x, 'out_qty') || 0,
-      pick(x, 'bal_qty', 'balance_qty', 'balance') || 0, pick(x, 'bal_val', 'balance_value') || 0]))
+      pick(x, 'bal_qty', 'balance_qty', 'balance') || 0, pick(x, 'bal_val', 'balance_value') || 0, pick(x, 'description', 'item_description') || '']))
     .filter(keep);
 }
 
