@@ -34,6 +34,7 @@ body.go .grp{animation:rise .5s cubic-bezier(.2,.8,.2,1) forwards;animation-dela
 @keyframes pop{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:none}}
 @keyframes rise{to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.stage,.logo{transition:none;animation:none}.stage{padding-top:24px}.logo{width:64px}.greet,.grp{opacity:1;transform:none;animation:none!important}}
+.edrow{display:flex;align-items:center;gap:4px}.edrow .app{flex:1;pointer-events:none}.edrow button,.gh button,#edbar button{border:1px solid var(--line,#ddd);background:var(--surface,#fff);color:var(--text);border-radius:8px;padding:4px 9px;font:inherit;font-weight:600;cursor:pointer}
 </style></head>
 <body data-nopw><main class="stage"><img class="logo" src="/pandora-logo.png" alt="Pandora"><div class="greet"><h1 class="title" id="hello">&nbsp;</h1><p class="sub" id="sub">Choose what you want to open.</p></div>
 <div class="apps" id="apps"></div></main>
@@ -56,14 +57,33 @@ function paint(j){
   document.getElementById('hello').textContent=j.greet?'Hello '+j.greet:j.label?'Hello, '+j.label:'Welcome';
   if(j.apps.some(a=>a.id==='uploads')&&!document.querySelector('a.upl')){const u=document.createElement('a');u.className='pandora-fab upl';u.href='/uploads';u.innerHTML=ICON.uploads+'All Uploads';document.body.appendChild(u)}
   const apps=j.apps.filter(a=>a.id!=='uploads');
-  const GROUPS=[['Sales',['dashboards','staff','mysales','mysales2','storeteam','daily','film']],['Stock',['stock','stockcount','stockchecker','slow']],['Ordering',['refill','dist','recv']],['Visual Merchandising',['vmzones','zonestock','vm']],['Team & Access',['schedule','approvals','access','activity']]];
+  const BASE=[['Sales',['dashboards','staff','mysales','mysales2','storeteam','daily','film']],['Stock',['stock','stockcount','stockchecker','slow']],['Ordering',['refill','dist','recv']],['Visual Merchandising',['vmzones','zonestock','vm']],['Team & Access',['schedule','approvals','access','activity']]];
+  // the super admin's saved order, with anything newer kept at the end of its usual section
+  const saved=EDIT||j.homeOrder||[];
+  const GROUPS=saved.length?saved.map(([n,ids])=>{const b=BASE.find(x=>x[0]===n);return [n,ids.concat(b?b[1].filter(i=>!ids.includes(i)):[])]}).concat(BASE.filter(b=>!saved.some(x=>x[0]===b[0]))):BASE;
+  LAST=j;
   const tile=a=>`<a class="app" href="${esc(a.href)}" title="${esc(a.desc||'')}"><span class="ic">${ICON[a.id]||DEF}</span><b>${esc(a.title)}</b><span class="d">${esc(a.desc||'')}</span><span class="go" aria-hidden="true">&rsaquo;</span></a>`;
   const used=new Set(),secs=[];
   GROUPS.forEach(([name,ids])=>{const list=ids.map(id=>apps.find(a=>a.id===id)).filter(Boolean);list.forEach(a=>used.add(a.id));if(list.length)secs.push([name,list])});
   const rest=apps.filter(a=>!used.has(a.id));if(rest.length)secs.push(['More',rest]);
-  document.getElementById('apps').innerHTML=apps.length?secs.map(([name,list],g)=>`<section class="grp" style="--g:${g}"><h2 class="gh">${esc(name)}</h2>${list.map(tile).join('')}</section>`).join(''):'<div class="empty">There is nothing to open for your account yet. Please contact your manager.</div>';
+  document.getElementById('apps').innerHTML=apps.length?secs.map(([name,list],g)=>`<section class="grp" style="--g:${g}"><h2 class="gh">${esc(name)}${EDIT?` <button type="button" data-sec="${g}" data-d="-1">‹</button><button type="button" data-sec="${g}" data-d="1">›</button>`:''}</h2>${list.map(a=>EDIT?`<div class="edrow">${tile(a)}<button type="button" data-g="${g}" data-id="${esc(a.id)}" data-d="-1">↑</button><button type="button" data-g="${g}" data-id="${esc(a.id)}" data-d="1">↓</button></div>`:tile(a)).join('')}</section>`).join(''):'<div class="empty">There is nothing to open for your account yet. Please contact your manager.</div>';
+  VIS=secs.map(([n,l])=>[n,l.map(a=>a.id)]);
+  if(apps.some(a=>a.id==='access')&&!document.getElementById('edbar')){const d=document.createElement('div');d.id='edbar';d.style.cssText='display:flex;gap:8px;justify-content:center;margin:16px 0';document.getElementById('apps').after(d)}
+  const bar=document.getElementById('edbar');if(bar)bar.innerHTML=EDIT?'<button type="button" id="edsave">Save order</button><button type="button" id="edcancel">Cancel</button><button type="button" id="edreset">Standard order</button>':'<button type="button" id="edopen">Edit cards order</button>';
   return apps;
 }
+let EDIT=null,LAST=null,VIS=[];
+document.addEventListener('click',async e=>{
+  const t=e.target,mv=(l,i,d)=>{const j=i+d;if(j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]]};
+  if(t.id==='edopen'){e.preventDefault();EDIT=VIS.filter(v=>v[0]!=='More');paint(LAST);return}
+  if(t.id==='edcancel'){EDIT=null;paint(LAST);return}
+  if(t.dataset&&t.dataset.sec){mv(EDIT,+t.dataset.sec,+t.dataset.d);paint(LAST);return}
+  if(t.dataset&&t.dataset.id){const l=EDIT[+t.dataset.g][1];mv(l,l.indexOf(t.dataset.id),+t.dataset.d);paint(LAST);return}
+  if(t.id==='edsave'||t.id==='edreset'){const home=t.id==='edsave'?EDIT:[];
+    const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'homeorder',home})}).catch(()=>null);
+    if(!r||!r.ok){alert('Could not save the order.');return}
+    LAST.homeOrder=home;EDIT=null;paint(LAST)}
+});
 // the logo shows alone and centred first, then glides up and the pages appear one by one
 const reveal=()=>document.body.classList.add('go');
 if(matchMedia('(prefers-reduced-motion: reduce)').matches)reveal();else setTimeout(reveal,1500);

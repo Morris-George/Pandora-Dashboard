@@ -60,6 +60,12 @@ async function depts() { const d = (await store.getJSON(DEPTS)) || {}; return { 
 async function deptOp(b, res) {
   const d = await depts(), name = String(b.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 40);
   if (b.op === 'newdept') { if (!name) return send(res, 400, { ok: false, error: 'Type a department name.' }); if (!d.list.some(x => x.toLowerCase() === name.toLowerCase())) d.list.push(name); }
+  else if (b.op === 'homeorder') {
+    // the order of the Home sections and cards, for everyone: [[section, [report ids]], ...]; empty = the standard order
+    const h = (Array.isArray(b.home) ? b.home : []).slice(0, 12).map(x => [String(x[0]).slice(0, 40), (Array.isArray(x[1]) ? x[1] : []).map(String).slice(0, 40)]);
+    await store.putJSON('access/home.json', h);
+    return send(res, 200, { ok: true });
+  }
   else if (b.op === 'order') d.order = (Array.isArray(b.order) ? b.order : []).map(x => String(x).slice(0, 60)).slice(0, 60); // the super admin's own order of the groups
   else if (b.op === 'renamedept') {
     // a team of your own gets the new name; a built-in group (g:staff, g:area ...) only gets a new label
