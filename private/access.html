@@ -90,7 +90,9 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ORDER=['Super admin','Brand manager and Overseer','Area managers','Store managers','Visual Merchandiser','Finance','Stock Count accounts','Sales people'];
-let people=[],depts=[];
+let people=[],depts=[],names={};
+const GKEY={'Sales people':'g:staff','Area managers':'g:area','Finance':'g:finance','Brand manager and Overseer':'g:brand','HR':'g:hr'};
+const gname=g=>names[GKEY[g]]||g;
 function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
 function status(p){return p.status==='active'?'':p.status==='pending'?'<span class="chip wait">Waiting for approval</span>':'<span class="chip off">Switched off</span>'}
 function draw(){
@@ -99,7 +101,7 @@ function draw(){
   box.hidden=false;
   const note=p.status==='active'?'':p.status==='pending'?'Not approved yet, so they cannot sign in. These switches apply once they are approved.':'This account is switched off. These switches apply when it is switched on.';
   const on=p.apps.filter(a=>a.on).length;
-  box.innerHTML=`<div class="who2"><h2>${esc(p.name)}</h2><span class="chip">Team: ${esc(p.dept||p.role_group||p.group)}</span><span class="chip off">${esc(p.label)}</span>${status(p)}</div>
+  box.innerHTML=`<div class="who2"><h2>${esc(p.name)}</h2><span class="chip">Team: ${esc(p.dept||gname(p.role_group||p.group))}</span><span class="chip off">${esc(p.label)}</span>${status(p)}</div>
     <div class="meta">${esc(p.scope)}</div>
     <div class="pwline" style="margin:0 0 10px"><label for="pdept" style="font-weight:700;font-size:13px">Team</label><select id="pdept" style="max-width:260px"><option value="">No team (grouped by role)</option>${depts.map(d=>`<option${d===p.dept?' selected':''}>${esc(d)}</option>`).join('')}</select><button type="button" class="btn go" id="psave">Save</button></div>
     ${note?`<div class="note" style="margin:0 0 8px">${esc(note)}</div>`:''}
@@ -164,7 +166,7 @@ document.addEventListener('click',async e=>{
 function drawDepts(){
   const keep=$('dpick').value;
   const rg=ORDER.filter(g=>g!=='Super admin'&&people.some(p=>p.role_group===g));
-  $('dpick').innerHTML='<option value="">Choose a team…</option>'+(depts.length?'<optgroup label="Your teams">'+depts.map(d=>`<option value="${esc(d)}"${d===keep?' selected':''}>${esc(d)}</option>`).join('')+'</optgroup>':'')+'<optgroup label="From Staff Approvals / New Users">'+rg.map(g=>`<option value="r:${esc(g)}"${'r:'+g===keep?' selected':''}>${esc(g)} · ${people.filter(p=>p.role_group===g).length}</option>`).join('')+'</optgroup>';
+  $('dpick').innerHTML='<option value="">Choose a team…</option>'+(depts.length?'<optgroup label="Your teams">'+depts.map(d=>`<option value="${esc(d)}"${d===keep?' selected':''}>${esc(d)}</option>`).join('')+'</optgroup>':'')+'<optgroup label="From Staff Approvals / New Users">'+rg.map(g=>`<option value="r:${esc(g)}"${'r:'+g===keep?' selected':''}>${esc(gname(g))} · ${people.filter(p=>p.role_group===g).length}</option>`).join('')+'</optgroup>';
   drawDeptApps();
   $('dlist').innerHTML=depts.length?depts.map(d=>`<span class="chip">${esc(d)} · ${people.filter(p=>p.dept===d).length} <button type="button" class="btn bad" data-deldept="${esc(d)}" style="padding:0 6px;border:0;background:none" aria-label="Remove ${esc(d)}">×</button></span>`).join(''):'<span class="note">No teams of your own yet. The teams from Staff Approvals / New Users are in the list below.</span>';
 }
@@ -177,7 +179,7 @@ async function load(keepKey){
     if(r.status===401){location.replace('/login.html');return}
     const j=await r.json();
     if(!r.ok||!j.ok){showErr(j.error||'Could not load.');$('who').innerHTML='<option>Could not load</option>';return}
-    people=j.people;depts=j.depts||[];$('count').textContent=people.length+' people';
+    people=j.people;depts=j.depts||[];names=j.names||{};$('count').textContent=people.length+' people';
     for(const p of people){p.role_group=p.group;if(p.dept)p.group=p.dept}
     drawDepts();
     const groups=depts.concat(ORDER.filter(g=>!depts.includes(g))).concat([...new Set(people.map(p=>p.group))].filter(g=>!ORDER.includes(g)&&!depts.includes(g)));
@@ -185,7 +187,7 @@ async function load(keepKey){
     for(const g of groups){
       const list=people.filter(p=>p.group===g).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
       if(!list.length)continue;
-      h+=`<optgroup label="${esc(g)}">`+list.map(p=>`<option value="${esc(p.key)}">${esc(p.name)}${p.store&&g==='Sales people'||p.store&&g==='Store managers'?' · '+esc(p.store):''}${p.status==='active'?'':p.status==='pending'?' (waiting)':' (off)'}</option>`).join('')+'</optgroup>';
+      h+=`<optgroup label="${esc(gname(g))}">`+list.map(p=>`<option value="${esc(p.key)}">${esc(p.name)}${p.store&&g==='Sales people'||p.store&&g==='Store managers'?' · '+esc(p.store):''}${p.status==='active'?'':p.status==='pending'?' (waiting)':' (off)'}</option>`).join('')+'</optgroup>';
     }
     $('who').innerHTML=h;$('who').disabled=false;
     let keep=keepKey||sessionStorage.getItem('accessWho');

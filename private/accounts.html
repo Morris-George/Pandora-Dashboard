@@ -72,14 +72,14 @@ const titleSel=a=>`<select data-title="${esc(a.username)}" style="width:auto;hei
 document.addEventListener('change',async e=>{if(e.target.id!=='sprole'||e.target.value!=='newteam')return;const n=(prompt('New team name (for example Warehouse):')||'').trim();if(!n){e.target.value='vm';return}
   try{const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'newdept',name:n})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok){showErr(j.error||'Could not add the team.');e.target.value='vm';return}}catch(_){showErr('No connection.');e.target.value='vm';return}
   e.target.innerHTML+=`<option value="team:${esc(n)}">${esc(n)}</option>`;e.target.value='team:'+n;load()});
-let ACT=[],AF='all',TEAMS={list:[],of:{}};
+let ACT=[],AF='all',TEAMS={list:[],of:{},names:{}};
 const teamSel=k=>`<select data-team="${esc(k)}" style="width:auto;height:34px" aria-label="Team"><option value="">No team</option>${TEAMS.list.map(t=>`<option ${TEAMS.of[k]===t?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
 const GROUPS=[['all','Everyone'],['staff','Staff'],['area','Area managers'],['finance','Finance'],['brand','Brand manager'],['hr','HR']];
 function renderActive(){
   const inF=(x,k)=>k==='all'||x.g===k||(k.startsWith('t:')&&TEAMS.of[x.k]===k.slice(2));
   const cnt=k=>ACT.filter(x=>inF(x,k)).length;
-  const G=GROUPS.concat(TEAMS.list.filter(t=>!GROUPS.some(g=>g[1]===t)).map(t=>['t:'+t,t]));
-  const chips=`<div class="pwline" style="margin:0 0 8px">${G.map(([k,l])=>`<button type="button" class="btn${AF===k?' go':''}" data-filter="${esc(k)}">${esc(l)} · ${cnt(k)}</button>`).join('')}<button type="button" class="btn" id="newteam">+ New team</button></div>`;
+  const G=GROUPS.map(([k,l])=>[k,TEAMS.names['g:'+k]||l]).concat(TEAMS.list.filter(t=>!GROUPS.some(g=>g[1]===t)).map(t=>['t:'+t,t]));
+  const chips=`<div class="pwline" style="margin:0 0 8px">${G.map(([k,l])=>`<button type="button" class="btn${AF===k?' go':''}" data-filter="${esc(k)}">${esc(l)} · ${cnt(k)}</button>`).join('')}<button type="button" class="btn" id="newteam">+ New team</button>${AF!=='all'?`<button type="button" class="btn" id="renteam" title="Rename this team">✎ Rename</button>`:''}</div>`;
   const rows=ACT.filter(x=>inF(x,AF)).map(x=>x.h.replace('<div class="btns">','<div class="btns">'+(x.k?teamSel(x.k):''))).join('');
   $('active').innerHTML=chips+(rows||'<div class="empty">Nobody here.</div>');
 }
@@ -118,7 +118,7 @@ async function load(){
     $('splist').innerHTML=sp.length?sp.map(a=>`<div class="row"><div class="who">${esc(a.name)}<small>${a.role==='vm'?'VM Report':a.role==='stockcount'?'Stock Count only':a.role==='hr'?'HR: Weekly Schedule, view only':a.role==='overseer'?'Overseer':esc(a.role)}${a.title?' · '+esc(a.title):''}${a.status==='active'?'':' · switched off'}</small></div><div>${esc(a.username)}</div><div></div><div class="btns">${titleSel(a)}<button class="btn" data-act="pw" data-user="${esc(a.username)}">Change password</button><button class="btn" data-act="${a.status==='active'?'disable':'enable'}" data-user="${esc(a.username)}">${a.status==='active'?'Switch off':'Switch on'}</button><button class="btn bad" data-act="remove" data-user="${esc(a.username)}">Remove</button></div></div>`).join(''):'<div class="empty">None yet.</div>';
     const fill=(id,list,btns,none,pick)=>{$(id).innerHTML=list.length?list.map(a=>rowHtml(a,btns,pick)).join(''):`<div class="empty">${none}</div>`};
     fill('pending',by('pending'),[['approve','Approve','go'],['store','Change store'],['pw','Change password'],['remove','Reject','bad']],'Nobody is waiting.',true);
-    TEAMS={list:(j.teams&&j.teams.list)||[],of:(j.teams&&j.teams.of)||{}};
+    TEAMS={list:(j.teams&&j.teams.list)||[],of:(j.teams&&j.teams.of)||{},names:(j.teams&&j.teams.names)||{}};
     {const k=$('sprole').value||'vm',tl=['Finance'].concat(TEAMS.list.filter(t=>t!=='Finance'));
      $('sprole').innerHTML='<optgroup label="Account type"><option value="vm">VM Report</option><option value="stockcount">Stock Count only</option><option value="overseer">Overseer (sees everything, no account control)</option><option value="hr">HR (Weekly Schedule, view only)</option></optgroup><optgroup label="Team">'+tl.map(t=>`<option value="team:${esc(t)}">${esc(t)}</option>`).join('')+'<option value="newteam">+ New team…</option></optgroup>';
      $('sprole').value=[...$('sprole').options].some(o=>o.value===k)?k:'vm'}
@@ -149,6 +149,10 @@ document.addEventListener('change',async e=>{
 });
 document.addEventListener('click',async e=>{
   const f=e.target.closest&&e.target.closest('button[data-filter]'); if(f){AF=f.dataset.filter;renderActive();return}
+  if(e.target.id==='renteam'){const from=AF.startsWith('t:')?AF.slice(2):'g:'+AF,cur=AF.startsWith('t:')?AF.slice(2):(TEAMS.names['g:'+AF]||(GROUPS.find(g=>g[0]===AF)||[])[1]);
+    const n=(prompt('New name for "'+cur+'":',cur)||'').trim();if(!n||n===cur)return;
+    try{const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'renamedept',from,name:n})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok){showErr(j.error||'Could not rename.');return}}catch(_){showErr('No connection.');return}
+    if(AF.startsWith('t:'))AF='t:'+n;load();return}
   if(e.target.id==='newteam'){const n=(prompt('New team name (for example Warehouse):')||'').trim();if(!n)return;
     try{const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'newdept',name:n})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok){showErr(j.error||'Could not add the team.');return}}catch(_){showErr('No connection.');return}
     AF='t:'+n;load();return}
