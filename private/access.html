@@ -78,9 +78,8 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
   <div id="tab-teams" hidden>
   <section class="card">
     <h2>Teams</h2>
-    <div class="meta">Make a team (Finance, Warehouse ...), then move people into it or create a new user straight in it.</div>
-    <div class="pwline"><input id="dname" placeholder="New team name" maxlength="40"><button type="button" class="btn go" id="dadd">Add team</button></div>
-    <div id="dlist" class="pwline"></div>
+    <div class="meta">Pick a team to see its people and switch reports on or off for all of them. Teams, titles and new users are made on Staff Approvals / New Users.</div>
+    <div id="dlist" hidden></div>
     <div class="pick" style="margin-top:12px"><label for="dpick">Team</label><select id="dpick"><option value="">Choose a team…</option></select></div>
     <div id="dteam"></div>
   </section>
@@ -103,7 +102,6 @@ function draw(){
   const on=p.apps.filter(a=>a.on).length;
   box.innerHTML=`<div class="who2"><h2>${esc(p.name)}</h2><span class="chip">Team: ${esc(p.dept||gname(p.role_group||p.group))}</span><span class="chip off">${esc(p.label)}</span>${status(p)}</div>
     <div class="meta">${esc(p.scope)}</div>
-    <div class="pwline" style="margin:0 0 10px"><label for="pdept" style="font-weight:700;font-size:13px">Team</label><select id="pdept" style="max-width:260px"><option value="">No team (grouped by role)</option>${depts.map(d=>`<option${d===p.dept?' selected':''}>${esc(d)}</option>`).join('')}</select><button type="button" class="btn go" id="psave">Save</button></div>
     ${note?`<div class="note" style="margin:0 0 8px">${esc(note)}</div>`:''}
     <div class="cnt">${on} of ${p.apps.length} reports on</div>
     ${p.apps.map(a=>`<div class="rep${a.on?'':' off'}"><b>${esc(a.title)}</b><span class="d">${esc(a.desc)}${a.why?`<br><span class="why">${esc(a.why)}</span>`:''}</span>${a.note?`<span class="nt">${esc(a.note)}</span>`:'<span></span>'}<button type="button" class="sw2${a.on?' on':''}" data-app="${esc(a.id)}" data-on="${a.on?1:0}" role="switch" aria-checked="${a.on}" aria-label="${esc(a.title)}"${a.locked?' disabled':''}></button></div>`).join('')}`;
@@ -133,9 +131,7 @@ function drawDeptApps(){
   if(!v){box.innerHTML='';return}
   if(role){box.innerHTML=`<div class="sec"><h3>People in ${esc(d)} (${mem.length})</h3><div class="note">This team comes from each person's account type or title on Staff Approvals / New Users.</div>`+mem.map(p=>`<div class="mem"><div><b>${esc(p.name)}</b><small>${esc(p.username)} · ${esc(p.label)}</small></div></div>`).join('')+'</div>'+teamApps(mem,d);return}
   const others=people.filter(p=>p.dept!==d&&p.group!=='Super admin').sort((a,b)=>String(a.name).localeCompare(String(b.name)));
-  let h=`<div class="sec"><h3>People in ${esc(d)} (${mem.length})</h3>`+(mem.length?mem.map(p=>`<div class="mem"><div><b>${esc(p.name)}</b><small>${esc(p.username)} · ${esc(p.label)}</small></div><button type="button" class="btn bad" data-out="${esc(p.key)}">Take out of team</button></div>`).join(''):'<div class="note">Nobody yet.</div>')+`</div>
-  <div class="sec"><h3>Move people into ${esc(d)}</h3><div class="pwline"><select id="mvwho" style="max-width:340px"><option value="">Choose a person…</option>${others.map(p=>`<option value="${esc(p.key)}">${esc(p.name)} · ${esc(p.dept||p.group)}</option>`).join('')}</select><button type="button" class="btn go" id="mvgo">Move to ${esc(d)}</button></div></div>
-  <div class="sec"><h3>Create a new user in ${esc(d)}</h3><div class="pwline"><input id="nuname" placeholder="Full name" maxlength="60"><input id="nuuser" placeholder="Username" maxlength="30" autocomplete="off"><input id="nupw" placeholder="Password (8+ characters)" maxlength="100" autocomplete="new-password"><select id="nurole" style="max-width:220px"><option value="stockcount">Stock Count / back office</option><option value="vm">Visual Merchandiser</option><option value="hr">HR</option><option value="overseer">Overseer</option></select><button type="button" class="btn go" id="nugo">Create user</button></div><div class="note" id="numsg">They start with the reports of the type you pick; switch more on below.</div></div>`;
+  let h=`<div class="sec"><h3>People in ${esc(d)} (${mem.length})</h3>`+(mem.length?mem.map(p=>`<div class="mem"><div><b>${esc(p.name)}</b><small>${esc(p.username)} · ${esc(p.label)}</small></div></div>`).join(''):'<div class="note">Nobody yet.</div>')+'</div>';
   h+=teamApps(mem,d);
   box.innerHTML=h;
 }
@@ -170,7 +166,7 @@ function drawDepts(){
   drawDeptApps();
   $('dlist').innerHTML=depts.length?depts.map(d=>`<span class="chip">${esc(d)} · ${people.filter(p=>p.dept===d).length} <button type="button" class="btn bad" data-deldept="${esc(d)}" style="padding:0 6px;border:0;background:none" aria-label="Remove ${esc(d)}">×</button></span>`).join(''):'<span class="note">No teams of your own yet. The teams from Staff Approvals / New Users are in the list below.</span>';
 }
-$('dadd').addEventListener('click',async()=>{const n=$('dname').value.trim();if(!n)return;if(await post({op:'newdept',name:n})){$('dname').value='';await load($('who').value)}});
+void 0&&$('dadd').addEventListener('click',async()=>{const n=$('dname').value.trim();if(!n)return;if(await post({op:'newdept',name:n})){$('dname').value='';await load($('who').value)}});
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-deldept]');if(!b)return;if(!confirm('Remove the team "'+b.dataset.deldept+'"? The people in it go back to their role group.'))return;if(await post({op:'deldept',name:b.dataset.deldept}))await load($('who').value)});
 document.addEventListener('click',async e=>{if(e.target.id!=='psave')return;const b=e.target;b.disabled=true;b.textContent='Saving…';if(await post({op:'setdept',key:$('who').value,name:$('pdept').value})){await load($('who').value);const n=$('psave');if(n){n.textContent='Saved ✓';setTimeout(()=>{if($('psave'))$('psave').textContent='Save'},1800)}}else{b.disabled=false;b.textContent='Save'}});
 async function load(keepKey){
