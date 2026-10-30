@@ -15,6 +15,7 @@ export type Session = {
   fullAccess: boolean; // Super Admin not viewing as another role: every screen and store
   viewingAs: AppRole | null;
   mustChangePassword: boolean;
+  training: boolean; // training account: sees only the training store
   branches: { id: string; code: string; name: string }[];
 };
 
@@ -29,7 +30,7 @@ export const requireSession = cache(async (): Promise<Session> => {
   const user = { id: userId };
 
   const [{ data: profile }, { data: links }, { data: twoStep }] = await Promise.all([
-    supabase.from("profiles").select("full_name, email, role, acting_role, active, must_change_password").eq("id", user.id).single(),
+    supabase.from("profiles").select("full_name, email, role, acting_role, active, must_change_password, is_training").eq("id", user.id).single(),
     supabase.from("user_branches").select("branches(id, code, name)").eq("user_id", user.id),
     supabase.from("app_settings").select("value").eq("key", "admin_two_step").maybeSingle(),
   ]);
@@ -44,7 +45,7 @@ export const requireSession = cache(async (): Promise<Session> => {
   const viewingAs = isAdmin ? ((profile.acting_role as AppRole | null) ?? null) : null;
   const role = (viewingAs ?? profile.role) as AppRole;
   const fullAccess = isAdmin && !viewingAs;
-  const base = { userId: user.id, fullName: profile.full_name, email: profile.email, role, isAdmin, fullAccess, viewingAs, mustChangePassword: profile.must_change_password };
+  const base = { userId: user.id, fullName: profile.full_name, email: profile.email, role, isAdmin, fullAccess, viewingAs, mustChangePassword: profile.must_change_password, training: !!profile.is_training };
   // Super Admin works across every store (also when viewing as a store role)
   if (isAdmin) {
     const { data: all } = await supabase.from("branches").select("id, code, name").eq("active", true).eq("is_hq", false).order("name");

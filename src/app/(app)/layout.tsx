@@ -20,6 +20,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen text-stone-900">
+      {session.training && (
+        <div role="status" className="no-print bg-amber-400 text-amber-950 text-center text-sm font-bold py-2 px-4">{t.shell.training}</div>
+      )}
       <div className="no-print mx-auto max-w-7xl px-4 sm:px-6 pt-4">
         <header className="hdr relative overflow-hidden rounded-[22px] px-5 sm:px-7 py-5 flex flex-wrap items-center gap-4 sm:gap-5">
           {/* Decorative rings, as on the Dashboards header */}

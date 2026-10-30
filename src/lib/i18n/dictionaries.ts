@@ -16,7 +16,7 @@ const en = {
     inactive: "Your account is deactivated. Contact your administrator.",
     help: "Accounts are created by the administrator. Forgot your password? Ask your administrator to reset it.",
   },
-  shell: { done: "Done ✓", fullAccess: "Full access · all stores", search: "Search ticket no., mobile or name…", viewAs: "View as", viewingAs: (r: string) => `Super Admin viewing as ${r}`, useAs: "Use this screen as:",
+  shell: { training: "TRAINING MODE — practice only. Nothing here is a real customer or ticket.", done: "Done ✓", fullAccess: "Full access · all stores", search: "Search ticket no., mobile or name…", viewAs: "View as", viewingAs: (r: string) => `Super Admin viewing as ${r}`, useAs: "Use this screen as:",
     signOut: "Sign out", allBranches: "All branches", adminScope: "Users & settings", soon: "Coming soon" },
   mfa: {
     title: "Two-step login",
@@ -713,7 +713,7 @@ const ar: Dict = {
     inactive: "حسابك موقوف. تواصل مع مسؤول النظام.",
     help: "الحسابات يُنشئها مسؤول النظام. نسيت كلمة المرور؟ اطلب من المسؤول إعادة تعيينها.",
   },
-  shell: { done: "تم ✓", fullAccess: "صلاحية كاملة · كل الفروع", search: "دوّر برقم التيكيت أو الموبايل أو الاسم…", viewAs: "عرض كـ", viewingAs: (r: string) => `مدير النظام بيشوف كـ ${r}`, useAs: "استخدم الشاشة كـ:",
+  shell: { training: "وضع التدريب — للتجربة فقط. مفيش أي عميل أو تيكيت هنا حقيقي.", done: "تم ✓", fullAccess: "صلاحية كاملة · كل الفروع", search: "دوّر برقم التيكيت أو الموبايل أو الاسم…", viewAs: "عرض كـ", viewingAs: (r: string) => `مدير النظام بيشوف كـ ${r}`, useAs: "استخدم الشاشة كـ:",
     signOut: "تسجيل الخروج", allBranches: "كل الفروع", adminScope: "المستخدمون والإعدادات", soon: "قريبًا" },
   mfa: {
     title: "التحقق بخطوتين",
