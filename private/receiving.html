@@ -52,7 +52,7 @@ td.d0{color:var(--ink2)}td.dn{color:var(--bad);font-weight:700}td.dp{color:var(-
 </style>
 </head>
 <body><div class="wrap">
-<header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Shipment Receiving</h1><div class="sub">Upload the commercial invoice, let Accounts and the Warehouse each count the shipment box by box, then match the three.</div></div><div class="actions"></div></header>
+<header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Shipment Receiving</h1><div class="sub">Upload the commercial invoice, let Finance and the Warehouse each count the shipment box by box, then match the three.</div></div><div class="actions"></div></header>
 <div class="err" id="err" hidden></div>
 <div class="row" style="justify-content:space-between">
   <div class="tabs" id="tabs"><button class="btn tab" data-tab="ship" id="tShip" hidden>Shipments</button><button class="btn tab" data-tab="scan" id="tScan" hidden>Scan</button><button class="btn tab" data-tab="rep" id="tRep" hidden>Report</button></div>
@@ -70,7 +70,7 @@ td.d0{color:var(--ink2)}td.dn{color:var(--bad);font-weight:700}td.dp{color:var(-
 <div class="card"><h2>Shipments</h2><div class="tw"><table id="shipT"></table></div></div>
 </div>
 
-<!-- scan (Accounts, Warehouse, or the admin for either) -->
+<!-- scan (Finance, Warehouse, or the admin for either) -->
 <div id="pScan" hidden>
 <div class="card">
   <div class="row" style="justify-content:space-between"><div class="row"><select id="scSel" aria-label="Shipment" style="min-width:240px"></select><span id="teamBox"></span></div><span class="note" id="scInfo"></span></div>
@@ -93,7 +93,7 @@ td.d0{color:var(--ink2)}td.dn{color:var(--bad);font-weight:700}td.dp{color:var(-
   <div class="note" id="rpMeta" style="margin-top:6px"></div></div>
 <div class="kpis" id="kpis"></div>
 <div class="card"><h2>Quick Read</h2><div id="quick"></div></div>
-<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Invoice vs Accounts vs Warehouse</h2><span class="row"><input type="search" id="q" placeholder="Search SKU or EAN" style="width:200px"><span class="chips" id="flt"></span><span class="note" id="cnt"></span></span></div>
+<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Invoice vs Finance vs Warehouse</h2><span class="row"><input type="search" id="q" placeholder="Search SKU or EAN" style="width:200px"><span class="chips" id="flt"></span><span class="note" id="cnt"></span></span></div>
   <div class="tw" style="margin-top:8px"><table id="recT"></table></div></div>
 <div class="card"><h2>By Box</h2><div class="note">Pieces each team put in each box. A box where the teams differ is marked.</div><div class="tw" style="max-height:50vh"><table id="boxT"></table></div></div>
 <div class="card"><h2>Who Scanned</h2><div class="tw"><table id="pplT"></table></div><div class="note" id="logL" style="margin-top:8px"></div></div>
@@ -249,12 +249,12 @@ function drawRep(){if(!R)return;const rows=recRows(),inv=R.lines.reduce((a,l)=>a
   $('rpStatus').className='status '+R.status;$('rpStatus').textContent=R.status;
   $('rpClose').hidden=!mg();$('rpClose').textContent=R.status==='Open'?'Close shipment':'Open again';
   $('rpMeta').textContent=`${R.invoice?'Invoice '+R.invoice+' · ':''}uploaded ${new Date(R.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} by ${R.by} · ${R.boxes} boxes${R.status==='Open'?' · refreshes every 30 seconds':''}`;
-  $('kpis').innerHTML=[['Invoice',fmt(inv)+' pcs',usd(val)],['Accounts counted',fmt(A)+' pcs',(A-inv?(A>inv?'+':'')+fmt(A-inv)+' vs invoice':'= invoice')],['Warehouse counted',fmt(W)+' pcs',(W-inv?(W>inv?'+':'')+fmt(W-inv)+' vs invoice':'= invoice')],['SKUs matching',fmt(cnt('ok'))+' / '+fmt(R.lines.length),''],['SKUs with differences',fmt(rows.length-cnt('ok')),usd(dv('dw'))+' (warehouse)'],['Teams differ',fmt(cnt('dis'))+' SKUs','']]
+  $('kpis').innerHTML=[['Invoice',fmt(inv)+' pcs',usd(val)],['Finance counted',fmt(A)+' pcs',(A-inv?(A>inv?'+':'')+fmt(A-inv)+' vs invoice':'= invoice')],['Warehouse counted',fmt(W)+' pcs',(W-inv?(W>inv?'+':'')+fmt(W-inv)+' vs invoice':'= invoice')],['SKUs matching',fmt(cnt('ok'))+' / '+fmt(R.lines.length),''],['SKUs with differences',fmt(rows.length-cnt('ok')),usd(dv('dw'))+' (warehouse)'],['Teams differ',fmt(cnt('dis'))+' SKUs','']]
     .map(k=>`<div class="kpi"><small>${k[0]}</small><b>${k[1]}</b>${k[2]?`<small>${k[2]}</small>`:''}</div>`).join('');
   const Q=[];
   if(!A&&!W)Q.push('Nobody has scanned yet.');
-  else if(rows.every(r=>r.st==='ok'))Q.push(`<b class="good">Everything matches:</b> invoice, Accounts and Warehouse all have ${fmt(inv)} pieces.`);
-  else{if(cnt('dis'))Q.push(`<b class="bad">${cnt('dis')} SKUs</b> where Accounts and Warehouse disagree: recount those boxes first.`);
+  else if(rows.every(r=>r.st==='ok'))Q.push(`<b class="good">Everything matches:</b> invoice, Finance and Warehouse all have ${fmt(inv)} pieces.`);
+  else{if(cnt('dis'))Q.push(`<b class="bad">${cnt('dis')} SKUs</b> where Finance and Warehouse disagree: recount those boxes first.`);
     if(cnt('short'))Q.push(`<b>${cnt('short')} SKUs short</b> (both teams agree): ${fmt(-rows.filter(r=>r.st==='short').reduce((a,r)=>a+r.dw,0))} pcs, ${usd(-rows.filter(r=>r.st==='short').reduce((a,r)=>a+r.dw*r.cost,0))} to claim from the supplier.`);
     if(cnt('over'))Q.push(`<b>${cnt('over')} SKUs over</b> (both teams agree): ${fmt(rows.filter(r=>r.st==='over').reduce((a,r)=>a+r.dw,0))} pcs more than invoiced.`);
     if(cnt('unk'))Q.push(`<b>${cnt('unk')} codes not on the invoice</b> were scanned: check the barcode or a wrong item in the shipment.`)}
@@ -264,13 +264,13 @@ function drawRep(){if(!R)return;const rows=recRows(),inv=R.lines.reduce((a,l)=>a
   const l=rows.filter(r=>(!F||(F==='diff'?r.st!=='ok':r.st===F))&&(!q||r.sku.includes(q)||r.ean.includes(q))).sort((a,b)=>order[a.st]-order[b.st]||Math.abs(b.dw)-Math.abs(a.dw)||a.sku.localeCompare(b.sku));
   $('cnt').textContent=fmt(l.length)+' rows';
   const d=n=>`<td class="${n<0?'dn':n>0?'dp':'d0'}">${n>0?'+':''}${fmt(n)}</td>`;
-  $('recT').innerHTML=`<tr><th></th><th class="l">SKU</th><th class="l">EAN</th><th>Cost $</th><th>Invoice</th><th>Accounts</th><th>Warehouse</th><th>Accounts vs invoice</th><th>Warehouse vs invoice</th><th>Difference $</th><th class="l">Status</th></tr>`+
+  $('recT').innerHTML=`<tr><th></th><th class="l">SKU</th><th class="l">EAN</th><th>Cost $</th><th>Invoice</th><th>Finance</th><th>Warehouse</th><th>Finance vs invoice</th><th>Warehouse vs invoice</th><th>Difference $</th><th class="l">Status</th></tr>`+
     l.slice(0,1500).map(r=>`<tr><td>${box(r.code)}</td><td class="l"><b>${esc(r.sku)}</b></td><td class="l">${esc(r.ean)}</td><td>${r.cost?r.cost.toFixed(2):''}</td><td>${fmt(r.inv)}</td><td>${fmt(r.a)}</td><td>${fmt(r.w)}</td>${d(r.da)}${d(r.dw)}<td>${r.dw&&r.cost?usd(r.dw*r.cost):''}</td><td class="l"><span class="tag ${ST_T[r.st][1]}">${ST_T[r.st][0]}</span></td></tr>`).join('');
   // by box
   const bset=new Set();Object.keys(TEAMS).forEach(t=>Object.keys((R.counts[t]||{boxes:{}}).boxes).forEach(b=>bset.add(+b)));
   const bp=(t,b)=>Object.values(((R.counts[t]||{boxes:{}}).boxes[b])||{}).reduce((a,n)=>a+n,0);
   const bxs=[...bset].sort((a,b)=>a-b);
-  $('boxT').innerHTML=bxs.length?`<tr><th class="l">Box</th><th>Accounts</th><th>Warehouse</th><th>Difference</th><th class="l"></th></tr>`+bxs.map(b=>{const a=bp('accounts',b),w=bp('warehouse',b);return `<tr><td class="l"><b>Box ${b}</b></td><td>${fmt(a)}</td><td>${fmt(w)}</td>${d(w-a)}<td class="l">${a===w?'<span class="tag t-ok">same</span>':'<span class="tag t-dis">teams differ</span>'}</td></tr>`}).join(''):'<tr><td class="l note">No box scanned yet.</td></tr>';
+  $('boxT').innerHTML=bxs.length?`<tr><th class="l">Box</th><th>Finance</th><th>Warehouse</th><th>Difference</th><th class="l"></th></tr>`+bxs.map(b=>{const a=bp('accounts',b),w=bp('warehouse',b);return `<tr><td class="l"><b>Box ${b}</b></td><td>${fmt(a)}</td><td>${fmt(w)}</td>${d(w-a)}<td class="l">${a===w?'<span class="tag t-ok">same</span>':'<span class="tag t-dis">teams differ</span>'}</td></tr>`}).join(''):'<tr><td class="l note">No box scanned yet.</td></tr>';
   const ppl=Object.entries(TEAMS).flatMap(([t,n])=>((R.counts[t]||{}).people||[]).map(p=>({...p,team:n}))).sort((a,b)=>b.pcs-a.pcs);
   $('pplT').innerHTML=ppl.length?`<tr><th class="l">Person</th><th class="l">Team</th><th>Pieces</th><th class="l">Last scan</th></tr>`+ppl.map(p=>`<tr><td class="l">${esc(p.by)}</td><td class="l">${esc(p.team)}</td><td>${fmt(p.pcs)}</td><td class="l">${p.at?new Date(p.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''}</td></tr>`).join(''):'<tr><td class="l note">Nobody has scanned yet.</td></tr>';
   $('logL').innerHTML=(R.log||[]).map(x=>`${esc(x.what)} · ${esc(x.by)} · ${new Date(x.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`).join('<br>')}
@@ -279,8 +279,8 @@ $('q').oninput=drawRep;
 $('rpClose').onclick=async()=>{const to=R.status==='Open'?'Closed':'Open';if(to==='Closed'&&!confirm('Close this shipment? Scanning stops and the report is frozen. You can open it again later.'))return;
   try{await api('/api/recv?op=status',{id:R.id,status:to});await boot();$('rpSel').value=R.id;tab('rep')}catch(e){showErr(e.message)}};
 $('rpX').onclick=()=>{if(!R)return;const rows=recRows(),wb=XLSX.utils.book_new(),inv=R.lines.reduce((a,l)=>a+l[2],0);
-  const one=r=>({SKU:r.sku,EAN:r.ean,'Sales pool':r.pool,'Cost USD':r.cost,Invoice:r.inv,Accounts:r.a,Warehouse:r.w,'Accounts vs invoice':r.da,'Warehouse vs invoice':r.dw,'Difference USD':Math.round(r.dw*r.cost*100)/100,Status:ST_T[r.st][0]});
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Shipment:R.name,'Invoice #':R.invoice,Status:R.status,'Invoice pcs':inv,'Invoice USD':Math.round(R.lines.reduce((a,l)=>a+l[2]*l[3],0)*100)/100,'Accounts pcs':rows.reduce((a,r)=>a+r.a,0),'Warehouse pcs':rows.reduce((a,r)=>a+r.w,0),'SKUs matching':rows.filter(r=>r.st==='ok').length,'SKUs with differences':rows.filter(r=>r.st!=='ok').length}]),'Summary');
+  const one=r=>({SKU:r.sku,EAN:r.ean,'Sales pool':r.pool,'Cost USD':r.cost,Invoice:r.inv,Finance:r.a,Warehouse:r.w,'Finance vs invoice':r.da,'Warehouse vs invoice':r.dw,'Difference USD':Math.round(r.dw*r.cost*100)/100,Status:ST_T[r.st][0]});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Shipment:R.name,'Invoice #':R.invoice,Status:R.status,'Invoice pcs':inv,'Invoice USD':Math.round(R.lines.reduce((a,l)=>a+l[2]*l[3],0)*100)/100,'Finance pcs':rows.reduce((a,r)=>a+r.a,0),'Warehouse pcs':rows.reduce((a,r)=>a+r.w,0),'SKUs matching':rows.filter(r=>r.st==='ok').length,'SKUs with differences':rows.filter(r=>r.st!=='ok').length}]),'Summary');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.map(one)),'Reconciliation');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.filter(r=>r.st!=='ok').map(one)),'Differences');
   const bx=[];for(const [t,n] of Object.entries(TEAMS))for(const [b,m] of Object.entries((R.counts[t]||{boxes:{}}).boxes))for(const [c,q] of Object.entries(m))bx.push({Team:n,Box:+b,SKU:c.replace(/^\?/,''),'On the invoice':c.startsWith('?')?'No':'Yes',Pieces:q});

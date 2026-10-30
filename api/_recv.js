@@ -18,7 +18,7 @@ const { keyOf } = require('./_refill');
 const ACCESS = 'rc/access.json';
 const INDEX = 'rc/index.json';
 const LEVELS = ['none', 'accounts', 'warehouse', 'view', 'manage'];
-const TEAMS = { accounts: 'Accounts', warehouse: 'Warehouse' };
+const TEAMS = { accounts: 'Finance', warehouse: 'Warehouse' };
 const MAX_BOXES = 50;
 
 function send(res, code, obj) {

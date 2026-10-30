@@ -44,7 +44,7 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
     <div class="pwline" style="margin-top:12px"><input id="spname" placeholder="Full name" maxlength="60"><input id="spuser" placeholder="Username" maxlength="30" autocapitalize="none" spellcheck="false"><input id="sppw" placeholder="Password (8+ characters)" maxlength="100" autocomplete="off"><select id="sprole" style="max-width:240px" aria-label="Account type or team"></select><button class="btn go" data-act="mkspecial" type="button">Create account</button></div>
     <div id="sprep" class="pwline" style="margin-top:6px" hidden>
       <label>Orders Distribution <select id="rp-dist" style="width:auto;height:34px"><option value="none">No access</option><option value="warehouse">Warehouse scanning</option><option value="manage">Manage</option></select></label>
-      <label>Shipment Receiving <select id="rp-recv" style="width:auto;height:34px"><option value="none">No access</option><option value="warehouse">Warehouse scanning</option><option value="accounts">Accounts scanning</option><option value="view">Report only</option><option value="manage">Manage</option></select></label>
+      <label>Shipment Receiving <select id="rp-recv" style="width:auto;height:34px"><option value="none">No access</option><option value="warehouse">Warehouse scanning</option><option value="accounts">Finance scanning</option><option value="view">Report only</option><option value="manage">Manage</option></select></label>
       <label>Refill Order &amp; Slow Moving <select id="rp-refill" style="width:auto;height:34px"><option value="none">No access</option><option value="view">View</option><option value="input">Input</option><option value="manage">Manage</option></select></label>
       <label><input type="checkbox" id="rp-stockcount" checked> Stock Count</label>
       <label><input type="checkbox" data-give="stock"> Stock balance</label>
@@ -101,7 +101,7 @@ function renderActive(){
 let RF={},DS={},RC={},RFP=[],RFPEND={};
 const RFL=[['none','No access'],['view','View'],['input','Input'],['manage','Manage']];
 const DSL=[['none','No access'],['warehouse','Warehouse'],['manage','Manage']];
-const RCL=[['none','No access'],['accounts','Accounts (scan)'],['warehouse','Warehouse (scan)'],['view','Report only'],['manage','Manage']];
+const RCL=[['none','No access'],['accounts','Finance (scan)'],['warehouse','Warehouse (scan)'],['view','Report only'],['manage','Manage']];
 const cur=(m,k,K)=>(K in RFPEND?RFPEND[K]:m[k])||'none';
 function renderRf(){const q=($('rfq').value||'').trim().toLowerCase(),only=$('rfonly').checked;
   const l=RFP.filter(p=>(!q||p.n.toLowerCase().includes(q))&&(!only||RF[p.k]||DS[p.k]||RC[p.k]));
