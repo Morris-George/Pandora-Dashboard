@@ -56,16 +56,18 @@ const isSuperWho = who => !!who && who.kind === 'env' && who.info.role === 'admi
 async function overrides() { return (await store.getJSON(OVERRIDES)) || {}; }
 // Departments the super admin makes (Finance, Warehouse ...) with the people in each: { list: [names], of: { <key>: name } }
 const DEPTS = 'access/depts.json';
-async function depts() { const d = (await store.getJSON(DEPTS)) || {}; return { list: Array.isArray(d.list) ? d.list : [], of: d.of || {}, names: d.names || {} }; }
+async function depts() { const d = (await store.getJSON(DEPTS)) || {}; return { list: Array.isArray(d.list) ? d.list : [], of: d.of || {}, names: d.names || {}, order: Array.isArray(d.order) ? d.order : [] }; }
 async function deptOp(b, res) {
   const d = await depts(), name = String(b.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 40);
   if (b.op === 'newdept') { if (!name) return send(res, 400, { ok: false, error: 'Type a department name.' }); if (!d.list.some(x => x.toLowerCase() === name.toLowerCase())) d.list.push(name); }
+  else if (b.op === 'order') d.order = (Array.isArray(b.order) ? b.order : []).map(x => String(x).slice(0, 60)).slice(0, 60); // the super admin's own order of the groups
   else if (b.op === 'renamedept') {
     // a team of your own gets the new name; a built-in group (g:staff, g:area ...) only gets a new label
     const from = String(b.from || '');
     if (!name) return send(res, 400, { ok: false, error: 'Type the new name.' });
     if (/^g:(staff|area|finance|brand|hr)$/.test(from)) d.names[from] = name;
     else if (d.list.includes(from)) {
+      d.order = d.order.map(x => x === from ? name : x);
       if (d.list.some(x => x !== from && x.toLowerCase() === name.toLowerCase())) return send(res, 409, { ok: false, error: 'There is already a team with that name.' });
       d.list = d.list.map(x => x === from ? name : x);
       for (const k of Object.keys(d.of)) if (d.of[k] === from) d.of[k] = name;
@@ -199,6 +201,6 @@ module.exports = async function handler(req, res) {
   if (!(who.kind === 'env' && who.info.role === 'admin' && !who.info.overseer)) return send(res, 403, { ok: false, error: 'Only the super admin can see report access.' });
   if (req.method === 'POST') return change(req, res);
   if (req.method !== 'GET') { res.setHeader('Allow', 'GET, POST'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
-  try { const d = await depts(), people = await build(); for (const p of people) p.dept = d.of[p.key] || ''; return send(res, 200, { ok: true, people, depts: d.list, names: d.names }); }
+  try { const d = await depts(), people = await build(); for (const p of people) p.dept = d.of[p.key] || ''; return send(res, 200, { ok: true, people, depts: d.list, names: d.names, order: d.order }); }
   catch (e) { return send(res, 500, { ok: false, error: String((e && e.message) || e).slice(0, 200) }); }
 };

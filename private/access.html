@@ -83,13 +83,19 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
     <div class="pick" style="margin-top:12px"><label for="dpick">Team</label><select id="dpick"><option value="">Choose a team…</option></select></div>
     <div id="dteam"></div>
   </section>
+  <section class="card" style="margin-top:16px">
+    <h2>Order of the list</h2>
+    <div class="meta">The person list follows the hierarchy. Use the arrows to put the groups in your own order.</div>
+    <div id="gorder"></div>
+    <div class="pwline"><button type="button" class="btn" id="greset">Back to hierarchy</button></div>
+  </section>
   </div>
 </div>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ORDER=['Super admin','Brand manager and Overseer','Area managers','Store managers','Visual Merchandiser','Finance','Stock Count accounts','Sales people'];
-let people=[],depts=[],names={};
+let people=[],depts=[],names={},gorder=[];
 const GKEY={'Sales people':'g:staff','Area managers':'g:area','Finance':'g:finance','Brand manager and Overseer':'g:brand','HR':'g:hr'};
 const gname=g=>names[GKEY[g]]||g;
 function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
@@ -159,6 +165,22 @@ document.addEventListener('click',async e=>{
   }catch(_){showErr('Could not save. Please try again.')}
   await load($('who').value);
 });
+// by hierarchy: super admin, overseer, area managers, store managers, VM, Finance, your teams, Stock Count, sales people; or your own order
+function allGroups(){
+  const all=[...new Set(people.map(p=>p.group))];
+  const H=['Super admin','Brand manager and Overseer','Area managers','Store managers','Visual Merchandiser','Finance',...depts,'HR','Stock Count accounts','Sales people'];
+  const hier=H.filter((g,i)=>H.indexOf(g)===i&&all.includes(g)).concat(all.filter(g=>!H.includes(g)));
+  if(!gorder.length)return hier;
+  return gorder.filter(g=>hier.includes(g)).concat(hier.filter(g=>!gorder.includes(g)));
+}
+function drawOrder(groups){
+  $('gorder').innerHTML=groups.map((g,i)=>`<div class="mem"><b>${i+1}. ${esc(gname(g))}</b><span><button type="button" class="btn" data-mv="${i}" data-d="-1"${i?'':' disabled'} aria-label="Move up">↑</button> <button type="button" class="btn" data-mv="${i}" data-d="1"${i<groups.length-1?'':' disabled'} aria-label="Move down">↓</button></span></div>`).join('');
+}
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-mv]');const r=e.target.id==='greset';if(!b&&!r)return;
+  let g=allGroups();if(b){const i=+b.dataset.mv,j=i+ +b.dataset.d;[g[i],g[j]]=[g[j],g[i]]}else g=[];
+  if(await post({op:'order',order:g}))await load($('who').value);
+});
 function drawDepts(){
   const keep=$('dpick').value;
   const rg=ORDER.filter(g=>g!=='Super admin'&&people.some(p=>p.role_group===g));
@@ -175,10 +197,10 @@ async function load(keepKey){
     if(r.status===401){location.replace('/login.html');return}
     const j=await r.json();
     if(!r.ok||!j.ok){showErr(j.error||'Could not load.');$('who').innerHTML='<option>Could not load</option>';return}
-    people=j.people;depts=j.depts||[];names=j.names||{};$('count').textContent=people.length+' people';
+    people=j.people;depts=j.depts||[];names=j.names||{};gorder=j.order||[];$('count').textContent=people.length+' people';
     for(const p of people){p.role_group=p.group;if(p.dept)p.group=p.dept}
     drawDepts();
-    const groups=depts.concat(ORDER.filter(g=>!depts.includes(g))).concat([...new Set(people.map(p=>p.group))].filter(g=>!ORDER.includes(g)&&!depts.includes(g)));
+    const groups=allGroups();drawOrder(groups);
     let h='<option value="">Choose a person…</option>';
     for(const g of groups){
       const list=people.filter(p=>p.group===g).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
