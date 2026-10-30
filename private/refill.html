@@ -212,6 +212,20 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="/stockcount-pics-1.js" async></script><script src="/stockcount-pics-2.js" async></script><script src="/stockcount-pics-3.js" async></script><script src="/stockcount-pics-4.js" async></script>
 <script>
+/* Sharp pictures: the small built-in picture shows first, the full-size one (from pandoraeg.com, found by our server at /api/pic) replaces it whenever a picture is shown big. */
+window.HD=(function(){const KEY='pandora-hd-v1',M=new Map();let c={};try{c=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+const base=s=>String(s||'').trim().toUpperCase().split('-')[0];
+const big=u=>{try{const x=new URL(String(u).replace(/^http:/,'https:'),location.href);x.searchParams.set('width','900');return x.href}catch(e){return u}};
+function url(sku){const b=base(sku);if(!b||b[0]==='?')return Promise.resolve('');if(c[b])return Promise.resolve(c[b]);
+  if(!M.has(b))M.set(b,fetch('/api/pic?sku='+encodeURIComponent(b),{credentials:'same-origin'}).then(r=>r.json()).then(j=>{const u=j&&j.url||'';if(u){c[b]=u;try{localStorage.setItem(KEY,JSON.stringify(c))}catch(e){}}return u}).catch(()=>''));return M.get(b)}
+function up(img,sku){if(!img||!sku)return;const t=(img._hd=(img._hd||0)+1);url(sku).then(u=>{if(!u||img._hd!==t)return;const im=new Image();im.referrerPolicy='no-referrer';im.onload=()=>{if(img._hd===t)img.src=im.src};im.src=big(u)})}
+const dvOf=img=>{const e=img.closest&&img.closest('[data-hd]');return e?e.dataset.hd:''};
+let q=0;function scan(){q=0;document.querySelectorAll('.ovp img,#hitPic img').forEach(i=>{if(i._hdSeen)return;i._hdSeen=1;up(i,dvOf(i))})}
+try{new MutationObserver(()=>{if(!q)q=requestAnimationFrame(scan)}).observe(document.documentElement,{childList:true,subtree:true})}catch(e){}
+return {up,url,big,dvOf}})();
+</script>
+
+<script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Math.round(n||0).toLocaleString('en-US'),usd=n=>'$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),m1=n=>n>=99?'99+':(Math.round(n*10)/10).toFixed(1);
@@ -221,8 +235,8 @@ const SITE='https://pandoraeg.com',WEB={map:null,state:'idle'};
 try{const c=JSON.parse(localStorage.getItem('rf.webpics2')||'null');if(c&&Date.now()-c.at<7*864e5)WEB.map=c.map}catch(_){}
 const small=u=>u?(u.startsWith('//')?'https:'+u:u)+(u.includes('?')?'&':'?')+'width=200':'';
 const webPic=dv=>{const k=String(dv||'').toUpperCase();return WEB.map&&(WEB.map[k]||'')};
-const pic=dv=>{const v=PICS[String(dv||'').toUpperCase()]||PICS[String(dv||'')];if(v)return `<span class="img"><img src="data:image/jpeg;base64,${v}" alt="" loading="lazy"></span>`;
-  return `<span class="img" data-dv="${esc(String(dv||'').toUpperCase())}">no<br>image</span>`};
+const pic=dv=>{const v=PICS[String(dv||'').toUpperCase()]||PICS[String(dv||'')];if(v)return `<span class="img" data-hd="${esc(String(dv||'').toUpperCase())}"><img src="data:image/jpeg;base64,${v}" alt="" loading="lazy"></span>`;
+  return `<span class="img" data-hd="${esc(String(dv||'').toUpperCase())}" data-dv="${esc(String(dv||'').toUpperCase())}">no<br>image</span>`};
 async function loadWeb(){
   if(WEB.map)return;if(WEB.state==='loading')return WEB.wait;WEB.state='loading';let done;WEB.wait=new Promise(r=>done=r);const map={};
   let whole=false;
@@ -903,4 +917,4 @@ function syncPics(){document.querySelectorAll('.picSw input').forEach(i=>i.check
 document.addEventListener('change',e=>{const i=e.target.closest&&e.target.closest('.picSw input');if(!i)return;$('showPics').checked=i.checked;$('showPics').onchange()});
 boot();
 </script>
-<script>document.addEventListener("click",e=>{const z=document.getElementById("zoom");if(z){z.remove();return}const im=e.target.closest&&e.target.closest(".img img");if(!im)return;e.stopPropagation();e.preventDefault();const d=document.createElement("div");d.id="zoom";d.innerHTML="<img alt=\"\">";d.firstChild.src=im.src;document.body.appendChild(d)},true);</script></body></html>
+<script>document.addEventListener("click",e=>{const z=document.getElementById("zoom");if(z){z.remove();return}const im=e.target.closest&&e.target.closest(".img img");if(!im)return;e.stopPropagation();e.preventDefault();const d=document.createElement("div");d.id="zoom";d.innerHTML="<img alt=\"\">";d.firstChild.src=im.src;HD.up(d.firstChild,HD.dvOf(im));document.body.appendChild(d)},true);</script></body></html>

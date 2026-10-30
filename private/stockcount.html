@@ -459,6 +459,20 @@ td .t1{max-width:360px}
 </style>
 
 <script src="/stockcount-pics-1.js" async></script><script src="/stockcount-pics-2.js" async></script><script src="/stockcount-pics-3.js" async></script><script src="/stockcount-pics-4.js" async></script>
+<script>
+/* Sharp pictures: the small built-in picture shows first, the full-size one (from pandoraeg.com, found by our server at /api/pic) replaces it whenever a picture is shown big. */
+window.HD=(function(){const KEY='pandora-hd-v1',M=new Map();let c={};try{c=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+const base=s=>String(s||'').trim().toUpperCase().split('-')[0];
+const big=u=>{try{const x=new URL(String(u).replace(/^http:/,'https:'),location.href);x.searchParams.set('width','900');return x.href}catch(e){return u}};
+function url(sku){const b=base(sku);if(!b||b[0]==='?')return Promise.resolve('');if(c[b])return Promise.resolve(c[b]);
+  if(!M.has(b))M.set(b,fetch('/api/pic?sku='+encodeURIComponent(b),{credentials:'same-origin'}).then(r=>r.json()).then(j=>{const u=j&&j.url||'';if(u){c[b]=u;try{localStorage.setItem(KEY,JSON.stringify(c))}catch(e){}}return u}).catch(()=>''));return M.get(b)}
+function up(img,sku){if(!img||!sku)return;const t=(img._hd=(img._hd||0)+1);url(sku).then(u=>{if(!u||img._hd!==t)return;const im=new Image();im.referrerPolicy='no-referrer';im.onload=()=>{if(img._hd===t)img.src=im.src};im.src=big(u)})}
+const dvOf=img=>{const e=img.closest&&img.closest('[data-hd]');return e?e.dataset.hd:''};
+let q=0;function scan(){q=0;document.querySelectorAll('.ovp img,#hitPic img').forEach(i=>{if(i._hdSeen)return;i._hdSeen=1;up(i,dvOf(i))})}
+try{new MutationObserver(()=>{if(!q)q=requestAnimationFrame(scan)}).observe(document.documentElement,{childList:true,subtree:true})}catch(e){}
+return {up,url,big,dvOf}})();
+</script>
+
 </head>
 <body>
 <div class="wrap">
@@ -893,7 +907,7 @@ function fillPic(it,scanT){
     if(!u){box.textContent="No picture for this item";return;}
     box.innerHTML="";const im=new Image();im.alt=it.title;im.referrerPolicy="no-referrer";
     im.onerror=()=>{box.textContent="Image blocked ("+(picState==="ok"?"site list ok":"site list failed")+")";};
-    im.src=picSmall(u);box.appendChild(im);
+    im.src=picSmall(u);box.appendChild(im);HD.up(im,it.sku);
   };
   const k=skuKey(it.sku);const bi=builtinPic(it.sku);
   if(bi)set(bi);else if(pics[k])set(pics[k]);else if(pics[baseOf(it.sku)])set(pics[baseOf(it.sku)]);else findPic(it).then(set);
@@ -924,7 +938,7 @@ async function openPic(i,withRecount){
   const u=picNow(it)||await findPic(it);
   if(picOpen!==i)return;
   if(!u){big.textContent="No picture for this item";}
-  else{big.textContent="";const im=new Image();im.alt=it.title;im.referrerPolicy="no-referrer";im.onerror=()=>{big.textContent="No picture for this item";};im.src=picSmall(u);big.appendChild(im);}
+  else{big.textContent="";const im=new Image();im.alt=it.title;im.referrerPolicy="no-referrer";im.onerror=()=>{big.textContent="No picture for this item";};im.src=picSmall(u);big.appendChild(im);HD.up(im,it.sku);}
   if(!rc.hidden)setTimeout(()=>inp.focus(),30);
 }
 function closePic(){picOpen=-1;$("#picModal").hidden=true;}

@@ -57,6 +57,7 @@
 .xtop5 .xp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
 .xtop5 .xp{grid-template-columns:42px minmax(0,1fr) auto;align-items:center}
 .pthumb{width:42px;height:42px;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--surface2);color:var(--muted);font-size:15px;line-height:1;display:grid;place-items:center;overflow:hidden;cursor:zoom-in;transition:transform .15s,border-color .15s}
+.xtop5 .xp .pthumb+span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pthumb:hover,.pthumb:focus-visible{transform:scale(1.08);border-color:var(--accent);outline:none}
 .pthumb img{width:100%;height:100%;object-fit:cover;display:block}
 .pmodal{position:fixed;inset:0;z-index:60;background:rgba(20,12,14,.45);display:grid;place-items:center;padding:20px}.pmodal[hidden]{display:none}

@@ -101,6 +101,20 @@ video{width:100%;max-width:420px;border-radius:12px;background:#000}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="/stockcount-pics-1.js" async></script><script src="/stockcount-pics-2.js" async></script><script src="/stockcount-pics-3.js" async></script><script src="/stockcount-pics-4.js" async></script>
 <script>
+/* Sharp pictures: the small built-in picture shows first, the full-size one (from pandoraeg.com, found by our server at /api/pic) replaces it whenever a picture is shown big. */
+window.HD=(function(){const KEY='pandora-hd-v1',M=new Map();let c={};try{c=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+const base=s=>String(s||'').trim().toUpperCase().split('-')[0];
+const big=u=>{try{const x=new URL(String(u).replace(/^http:/,'https:'),location.href);x.searchParams.set('width','900');return x.href}catch(e){return u}};
+function url(sku){const b=base(sku);if(!b||b[0]==='?')return Promise.resolve('');if(c[b])return Promise.resolve(c[b]);
+  if(!M.has(b))M.set(b,fetch('/api/pic?sku='+encodeURIComponent(b),{credentials:'same-origin'}).then(r=>r.json()).then(j=>{const u=j&&j.url||'';if(u){c[b]=u;try{localStorage.setItem(KEY,JSON.stringify(c))}catch(e){}}return u}).catch(()=>''));return M.get(b)}
+function up(img,sku){if(!img||!sku)return;const t=(img._hd=(img._hd||0)+1);url(sku).then(u=>{if(!u||img._hd!==t)return;const im=new Image();im.referrerPolicy='no-referrer';im.onload=()=>{if(img._hd===t)img.src=im.src};im.src=big(u)})}
+const dvOf=img=>{const e=img.closest&&img.closest('[data-hd]');return e?e.dataset.hd:''};
+let q=0;function scan(){q=0;document.querySelectorAll('.ovp img,#hitPic img').forEach(i=>{if(i._hdSeen)return;i._hdSeen=1;up(i,dvOf(i))})}
+try{new MutationObserver(()=>{if(!q)q=requestAnimationFrame(scan)}).observe(document.documentElement,{childList:true,subtree:true})}catch(e){}
+return {up,url,big,dvOf}})();
+</script>
+
+<script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Math.round(n||0).toLocaleString('en-US');
@@ -113,8 +127,8 @@ let H=null,O=null,ST=[],LVL='none';const mg=()=>LVL==='manage';
 const PICS=(window.__PICS=window.__PICS||{});
 const dvOf=sku=>String(sku).split('-')[0];
 function pic(sku,big){const dv=dvOf(sku),v=PICS[dv];
-  if(v)return `<img src="data:image/jpeg;base64,${v}" alt="">`;
-  return `<img src="/api/refill?img=${encodeURIComponent(dv)}" alt="" loading="lazy" data-dv="${esc(dv)}" onerror="webPic(this)">`}
+  if(v)return `<img src="data:image/jpeg;base64,${v}" alt="" data-hd="${esc(dv)}">`;
+  return `<img src="/api/refill?img=${encodeURIComponent(dv)}" alt="" loading="lazy" data-dv="${esc(dv)}" data-hd="${esc(dv)}" onerror="webPic(this)">`}
 const WEBQ=new Map();
 async function webPic(im){const dv=im.dataset.dv;im.onerror=null;if(!dv){im.remove();return}
   try{if(!WEBQ.has(dv))WEBQ.set(dv,fetch('/api/refill?pics='+encodeURIComponent(dv),{credentials:'same-origin'}).then(r=>r.json()).catch(()=>({})));
@@ -258,6 +272,6 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 boot();
 </script>
 <style>#zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out}#zoom img{max-width:90vw;max-height:90vh;border-radius:10px;background:#fff}.img img,#hitPic img{cursor:zoom-in}</style>
-<script>document.addEventListener("click",e=>{const z=document.getElementById("zoom");if(z){z.remove();return}const im=e.target.closest&&e.target.closest(".img img,#hitPic img");if(!im)return;e.stopPropagation();e.preventDefault();const d=document.createElement("div");d.id="zoom";d.innerHTML="<img alt=\"\">";d.firstChild.src=im.src;document.body.appendChild(d)},true);document.addEventListener("keydown",e=>{if(e.key==="Escape"){const z=document.getElementById("zoom");if(z)z.remove()}});</script>
+<script>document.addEventListener("click",e=>{const z=document.getElementById("zoom");if(z){z.remove();return}const im=e.target.closest&&e.target.closest(".img img,#hitPic img");if(!im)return;e.stopPropagation();e.preventDefault();const d=document.createElement("div");d.id="zoom";d.innerHTML="<img alt=\"\">";d.firstChild.src=im.src;HD.up(d.firstChild,HD.dvOf(im));document.body.appendChild(d)},true);document.addEventListener("keydown",e=>{if(e.key==="Escape"){const z=document.getElementById("zoom");if(z)z.remove()}});</script>
 </body>
 </html>
