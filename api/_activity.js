@@ -289,7 +289,7 @@ async function canView(who) {
 
 // ---- reading ----
 const PAGES = {
-  '/': 'Home', '/dashboards': 'Pandora Dashboards', '/staff': 'Staff Performance', '/staff/person': 'A sales person page', '/staff/me': 'My sales', '/staff/accounts': 'Staff approvals',
+  '/': 'Home', '/dashboards': 'Pandora Dashboards', '/staff': 'Staff Performance', '/staff/person': 'A sales person page', '/staff/me': 'My sales', '/staff/accounts': 'Staff Approvals / New Users',
   '/uploads': 'All Uploads', '/film': 'Launch Film', '/daily': 'Daily Store Report', '/schedule': 'Weekly Schedule', '/vm': 'VM Report', '/vm/zones': 'VM Zones', '/vm/stock': 'Zone Stock', '/stock': 'Stock balance',
   '/stockcount': 'Stock Count', '/stockchecker': 'Stock Checker', '/refill': 'Refill Order', '/slow': 'Slow Moving', '/distribution': 'Orders Distribution', '/activity': 'Activity', '/access': 'User Access Privileges'
 };
