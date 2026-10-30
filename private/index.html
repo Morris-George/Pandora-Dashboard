@@ -195,14 +195,22 @@ window.PPic=(function(){
   }
   function thumb(p,info){return `<button type="button" class="pthumb" data-sku="${esc(p.sku)}" data-name="${esc(p.name)}" data-info="${esc(info||'')}" title="Click to enlarge" aria-label="Enlarge picture of ${esc(p.name)}">◇</button>`}
   const modal=()=>document.getElementById('pModal');
+  function big(u){try{const x=new URL(https(u),location.href);if(/shopify|pandoraeg/i.test(x.hostname)){x.searchParams.set('width','900');x.searchParams.delete('height')}return x.href}catch(e){return https(u)}}
   async function open(btn){
-    const m=modal(),big=document.getElementById('pBig');
+    const m=modal(),box=document.getElementById('pBig');
     document.getElementById('pName').textContent=btn.dataset.name||'';
     document.getElementById('pInfo').textContent=[btn.dataset.sku,btn.dataset.info].filter(Boolean).join(' · ');
-    const mine=btn.querySelector('img');big.textContent=mine?'':'Looking for the picture…';
-    if(mine){const im=new Image();im.alt=btn.dataset.name||'';im.src=mine.src;big.textContent='';big.appendChild(im)}
-    m.hidden=false;const token=btn;open.t=token;
-    if(!mine){const u=await get(btn.dataset.sku);if(open.t!==token)return;if(!u){big.textContent='No picture for this item';return}const im=new Image();im.alt=btn.dataset.name||'';im.referrerPolicy='no-referrer';im.onerror=()=>{big.textContent='No picture for this item'};im.onload=()=>{big.textContent='';big.appendChild(im);show(btn,u)};im.src=https(u)}
+    const mine=btn.querySelector('img'),token=btn;open.t=token;
+    box.textContent='';
+    if(mine){const im=new Image();im.alt=btn.dataset.name||'';im.src=mine.src;box.appendChild(im)}else box.textContent='Looking for the picture…';
+    m.hidden=false;
+    /* the small icon picture is only 150px: fetch the full-size one from the site and swap it in when it has loaded */
+    const u=await lookup(btn.dataset.sku);if(open.t!==token)return;
+    if(!u){if(!mine)box.textContent='No picture for this item';return}
+    const im=new Image();im.alt=btn.dataset.name||'';im.referrerPolicy='no-referrer';
+    im.onload=()=>{if(open.t!==token)return;box.textContent='';box.appendChild(im);show(btn,u)};
+    im.onerror=()=>{if(!mine&&open.t===token)box.textContent='No picture for this item'};
+    im.src=big(u);
   }
   function close(){open.t=null;modal().hidden=true}
   document.addEventListener('click',e=>{const b=e.target.closest('.pthumb');if(b){e.preventDefault();open(b);return}if(e.target.id==='pModal'||e.target.id==='pClose')close()});
