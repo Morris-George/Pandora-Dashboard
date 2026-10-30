@@ -66,18 +66,41 @@ function whoami(req) {
   }
   return whoamiNow(req);
 }
+// Which report a request belongs to: the page itself, or (for its data calls) the page it came from
+const REPORT_PATHS = { '/dashboards': 'dashboards', '/index.html': 'dashboards', '/staff': 'staff', '/staff.html': 'staff', '/staff/index.html': 'staff', '/staff/person': 'staff',
+  '/uploads': 'uploads', '/uploads.html': 'uploads', '/activity': 'activity', '/activity.html': 'activity', '/daily': 'daily', '/daily.html': 'daily', '/schedule': 'schedule', '/schedule.html': 'schedule',
+  '/vm/zones': 'vmzones', '/vmzones.html': 'vmzones', '/vm/stock': 'zonestock', '/zonestock.html': 'zonestock', '/stock': 'stock', '/stock.html': 'stock', '/stockcount': 'stockcount', '/stockcount.html': 'stockcount',
+  '/stockchecker': 'stockchecker', '/stockchecker.html': 'stockchecker', '/vm': 'vm', '/vm.html': 'vm' };
+function reportOf(req) {
+  const one = u => { try { return REPORT_PATHS[new URL(u, 'https://x.invalid').pathname.replace(/\/+$/, '') || '/'] || ''; } catch (_) { return ''; } };
+  const path = String(req.url || '');
+  // the page itself, or a data call (/api/...) made from that page
+  return one(path) || (path.startsWith('/api/') ? one((req.headers && req.headers.referer) || '') : '');
+}
+// Reports the super admin gave this person beyond their role (User Access Privileges): on those pages, and their data calls,
+// the person is treated as an Overseer (every store, never accounts or passwords). Everywhere else they keep their own role.
+async function lift(req, who, key, user) {
+  if (!who || !store.configured()) return who;
+  const id = reportOf(req); if (!id) return who;
+  const o = ((await store.getJSON('access/overrides.json')) || {})[key];
+  if (!o || !Array.isArray(o.add) || !o.add.includes(id)) return who;
+  const account = { role: 'admin', label: 'Overseer', user, overseer: true };
+  return { kind: 'env', account, user: who.user, lifted: id, info: { ...roleInfo(account), overseer: true } };
+}
+
 async function whoamiNow(req) {
   const secret = process.env.PANDORA_AUTH_SECRET;
   const account = staffSession(readCookie(req, PROJECTS.staff.cookie), secret);
   if (account) {
     // a switched-off area manager is signed out at once (the super admin can never be switched off)
     if (account.role !== 'admin' && store.configured() && await users.envOff(account.user)) return null;
-    return { kind: 'env', account, info: roleInfo(account) };
+    const who = { kind: 'env', account, info: roleInfo(account) };
+    return account.role === 'admin' ? who : lift(req, who, 'env:' + String(account.user).toLowerCase(), account.user);
   }
   const u = stafferUsername(readCookie(req, STAFFER_COOKIE), secret);
   if (u && store.configured()) {
     const rec = await users.getUser(u);
-    if (rec && rec.status === 'active') return whoFromRec(rec);
+    if (rec && rec.status === 'active') return rec.role === 'overseer' ? whoFromRec(rec) : lift(req, whoFromRec(rec), 'u:' + rec.username, rec.username);
   }
   return null;
 }

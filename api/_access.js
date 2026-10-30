@@ -50,6 +50,7 @@ function scopeOf(who) {
 }
 
 const ADDABLE = { refill: 'refill', slow: 'refill', dist: 'dist', recv: 'recv' }; // reports that carry their own access level, so they can be given to anyone
+const NEVER = ['approvals', 'access']; // accounts and passwords: the super admin only, never given to anyone
 const isSuperWho = who => !!who && who.kind === 'env' && who.info.role === 'admin' && !who.info.overseer;
 
 async function overrides() { return (await store.getJSON(OVERRIDES)) || {}; }
@@ -68,7 +69,7 @@ async function deptOp(b, res) {
 
 async function describe(who, key, ovr) {
   const f = await factsFromWho(who, isSuperWho(who)); // what their role gives them, before any switch-off
-  const removed = (ovr[key] && ovr[key].remove) || [];
+  const removed = (ovr[key] && ovr[key].remove) || [], added = (ovr[key] && ovr[key].add) || [];
   const locked = isSuperWho(who);
   const list = [];
   for (const a of APPS) {
@@ -132,7 +133,7 @@ async function setOne(key, app, on) {
   const f = await factsFromWho(who, false);
   let allowed = !!app.allow(f);
   if (app.id === 'mysales') allowed = allowed || !!APPS.find(x => x.id === 'mysales2').allow(f);
-  const ovr = await overrides(), cur = ovr[key] || { remove: [] }, rm = new Set(cur.remove || []);
+  const ovr = await overrides(), cur = ovr[key] || { remove: [] }, rm = new Set(cur.remove || []), ad = new Set(cur.add || []);
   const level = async (kind, val) => {
     const { ACCESS } = require(kind === 'dist' ? './_dist' : kind === 'recv' ? './_recv' : './_refill');
     const acc = (await store.getJSON(ACCESS)) || {};
@@ -145,15 +146,17 @@ async function setOne(key, app, on) {
       if (ADDABLE[app.id] === 'refill') await level('refill', 'view');
       else if (ADDABLE[app.id] === 'dist') await level('dist', 'warehouse');
       else if (ADDABLE[app.id] === 'recv') await level('recv', 'view');
-      else return "This report is not part of this person's role, so it cannot be added here.";
+      else if (!NEVER.includes(app.id)) ad.add(app.id); // opened as an Overseer would see it (api/_auth.js)
+      else return 'Accounts and passwords stay with the super admin only.';
     }
   } else {
     if (app.id === 'refill') await level('refill', 'none');       // Slow Moving follows Refill Order access
     else if (app.id === 'dist') await level('dist', 'none');
     else if (app.id === 'recv') await level('recv', 'none');
+    else if (ad.has(app.id)) ad.delete(app.id);
     else rm.add(app.id);
   }
-  if (rm.size) ovr[key] = { remove: [...rm] }; else delete ovr[key];
+  if (rm.size || ad.size) ovr[key] = { remove: [...rm], add: [...ad] }; else delete ovr[key];
   await store.putJSON(OVERRIDES, ovr);
   return '';
 }
