@@ -148,7 +148,7 @@
 <script>
 /* Product thumbnails beside product rows: built-in pictures first (super admin), then the pandoraeg.com site; click a thumbnail to enlarge it. */
 window.PPic=(function(){
-  const SITE='https://pandoraeg.com',KEY='pandora-pics-v1',D=(window.__PICS=window.__PICS||{});
+  const KEY='pandora-pics-v1',D=(window.__PICS=window.__PICS||{});
   let cache={};try{cache=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
   const key=s=>String(s||'').trim().toUpperCase(),base=s=>key(s).split('-')[0];
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -164,10 +164,8 @@ window.PPic=(function(){
     const b=base(sku);if(!b||b==='—')return '';
     if(cache[key(sku)])return cache[key(sku)];if(cache[b])return cache[b];
     try{
-      const r=await fetch(SITE+'/search/suggest.json?q='+encodeURIComponent(b)+'&resources[type]=product&resources[limit]=4');
-      const j=await r.json();const list=(j.resources&&j.resources.results&&j.resources.results.products)||[];
-      const hit=list.find(p=>String(p.handle||p.url||'').toLowerCase().includes(b.toLowerCase()))||list[0];
-      const u=hit&&(hit.image||(hit.featured_image&&hit.featured_image.url));
+      const r=await fetch('/api/pic?sku='+encodeURIComponent(b),{credentials:'same-origin'}); /* the server asks pandoraeg.com: the browser is not allowed to */
+      const j=await r.json();const u=j&&j.url;
       if(u){cache[b]=u;save();return u}
     }catch(e){}
     return '';
