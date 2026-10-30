@@ -101,6 +101,7 @@ const gname=g=>names[GKEY[g]]||g;
 function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
 function status(p){return p.status==='active'?'':p.status==='pending'?'<span class="chip wait">Waiting for approval</span>':'<span class="chip off">Switched off</span>'}
 function draw(){
+  PEND={};
   const p=people.find(x=>x.key===$('who').value),box=$('out');
   if(!p){box.hidden=true;return}
   box.hidden=false;
@@ -109,18 +110,22 @@ function draw(){
   box.innerHTML=`<div class="who2"><h2>${esc(p.name)}</h2><span class="chip">Team: ${esc(p.dept||gname(p.role_group||p.group))}</span><span class="chip off">${esc(p.label)}</span>${status(p)}</div>
     <div class="meta">${esc(p.scope)}</div>
     ${note?`<div class="note" style="margin:0 0 8px">${esc(note)}</div>`:''}
-    <div class="cnt">${on} of ${p.apps.length} reports on</div>
+    <div class="cnt">${on} of ${p.apps.length} reports on <span id="savedmsg" class="chip" hidden>Saved ✓</span></div>
+    <div id="savebar" class="pwline" hidden style="position:sticky;top:8px;z-index:2;background:var(--fill-soft);border-radius:12px;padding:8px 12px;margin:6px 0"><b id="savecnt"></b><button type="button" class="btn go" id="psave2">Save</button><button type="button" class="btn" id="pcancel">Cancel</button></div>
     ${p.apps.map(a=>`<div class="rep${a.on?'':' off'}"><b>${esc(a.title)}</b><span class="d">${esc(a.desc)}${a.why?`<br><span class="why">${esc(a.why)}</span>`:''}</span>${a.note?`<span class="nt">${esc(a.note)}</span>`:'<span></span>'}<button type="button" class="sw2${a.on?' on':''}" data-app="${esc(a.id)}" data-on="${a.on?1:0}" role="switch" aria-checked="${a.on}" aria-label="${esc(a.title)}"${a.locked?' disabled':''}></button></div>`).join('')}`;
 }
+let PEND={};
+function pendBar(){const n=Object.keys(PEND).length,el=$('savebar');if(!el)return;el.hidden=!n;$('savecnt').textContent=n+' change'+(n===1?'':'s')+' not saved yet';}
 document.addEventListener('click',async e=>{
-  const b=e.target.closest('button.sw2');if(!b||b.disabled)return;
-  const key=$('who').value;b.classList.add('busy');b.disabled=true;
-  try{
-    const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,app:b.dataset.app,on:b.dataset.on!=='1'})});
-    const j=await r.json();
-    if(!r.ok||!j.ok){showErr(j.error||'Could not save.')}else showErr('');
-    await load(key);
-  }catch(_){showErr('Could not save. Please try again.');await load(key)}
+  const b=e.target.closest('button.sw2:not([data-dapp])');
+  if(b&&!b.disabled){const on=!b.classList.contains('on');b.classList.toggle('on',on);b.setAttribute('aria-checked',on);
+    if(on===(b.dataset.on==='1'))delete PEND[b.dataset.app];else PEND[b.dataset.app]=on;pendBar();return}
+  if(e.target.id==='pcancel'){draw();return}
+  if(e.target.id!=='psave2')return;
+  const key=$('who').value,sb=e.target;sb.disabled=true;sb.textContent='Saving…';const bad=[];
+  for(const [app,on] of Object.entries(PEND)){try{const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,app,on})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)bad.push(j.error||app)}catch(_){bad.push(app)}}
+  showErr(bad.length?'Not saved: '+bad.join(' · '):'');await load(key);
+  const n=$('savedmsg');if(n&&!bad.length){n.hidden=false;setTimeout(()=>{if($('savedmsg'))$('savedmsg').hidden=true},2000)}
 });
 async function post(body){
   const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});

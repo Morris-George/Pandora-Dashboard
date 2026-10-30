@@ -89,14 +89,14 @@ async function describe(who, key, ovr) {
     if (a.id === 'mysales2') continue; // the twin of "My sales"
     let allowed = !!a.allow(f);
     if (a.id === 'mysales') allowed = allowed || !!APPS.find(x => x.id === 'mysales2').allow(f);
-    const off = removed.includes(a.id);
-    const canAdd = !allowed && !!ADDABLE[a.id];
+    const off = removed.includes(a.id), given = !allowed && added.includes(a.id);
+    const canAdd = !allowed && !NEVER.includes(a.id);
     list.push({
       id: a.id, title: a.title, desc: a.desc, href: a.href,
-      on: allowed && !off,
-      note: allowed && !off ? noteFor(a, f, who) : '',
+      on: (allowed || given) && !off,
+      note: given && !off ? 'given: every store' : allowed && !off ? noteFor(a, f, who) : '',
       locked: locked || (!allowed && !canAdd),
-      why: locked ? 'The super admin always keeps everything.' : (!allowed && !canAdd) ? 'Not part of this person\'s role.' : ''
+      why: locked ? 'The super admin always keeps everything.' : (!allowed && !canAdd) ? 'Accounts and passwords: the super admin only.' : ''
     });
   }
   return { scope: scopeOf(who), apps: list };
