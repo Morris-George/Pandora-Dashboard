@@ -55,6 +55,17 @@
 .xallbtn{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:3px 10px;font:inherit;font-size:11px;font-weight:700;letter-spacing:0;text-transform:none;cursor:pointer}.xallbtn:hover{border-color:var(--accent);background:var(--fill-soft,transparent)}.xhrow{display:flex;justify-content:space-between;align-items:center}.xrank{color:var(--muted);font-weight:700;margin-right:8px}
 .xtop5{display:flex;flex-direction:column;gap:8px;font-size:12px}
 .xtop5 .xp{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+.xtop5 .xp{grid-template-columns:42px minmax(0,1fr) auto;align-items:center}
+.pthumb{width:42px;height:42px;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--surface2);color:var(--muted);font-size:15px;line-height:1;display:grid;place-items:center;overflow:hidden;cursor:zoom-in;transition:transform .15s,border-color .15s}
+.pthumb:hover,.pthumb:focus-visible{transform:scale(1.08);border-color:var(--accent);outline:none}
+.pthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.pmodal{position:fixed;inset:0;z-index:60;background:rgba(20,12,14,.45);display:grid;place-items:center;padding:20px}.pmodal[hidden]{display:none}
+.pmodal .pcard{background:var(--surface);color:var(--text);border-radius:18px;padding:14px 14px 16px;width:min(340px,100%);box-shadow:0 18px 50px rgba(0,0,0,.28);animation:ppop .16s ease-out}
+.pmodal .pbig{width:100%;aspect-ratio:1/1;border-radius:12px;background:var(--surface2);display:grid;place-items:center;overflow:hidden;color:var(--muted);font-size:12px;text-align:center}
+.pmodal .pbig img{width:100%;height:100%;object-fit:contain;display:block}
+.pmodal .pname{margin:12px 2px 2px;font-weight:700;font-size:13px;line-height:1.35}.pmodal .pinfo{margin:0 2px;color:var(--muted);font-size:11.5px}
+.pmodal .pclose{float:right;border:0;background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;margin:-4px -2px 4px 8px}
+@keyframes ppop{from{transform:scale(.92);opacity:0}to{transform:none;opacity:1}}
 .xtop5 .xp span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .xtop5 .xp em{font-style:normal;color:var(--muted);font-size:10.5px;display:block}
 .xsku{font-style:normal;font-weight:700;color:var(--text);letter-spacing:.01em}
@@ -133,6 +144,72 @@
 <div class="footer"><span>PRIVATE WORKSPACE · Saved data stays until you remove it in All Uploads.</span><span id="lastUpdated">Calculated from current report</span></div>
 </main></div>
 <script src="/parsers.js"></script>
+<div class="pmodal" id="pModal" hidden><div class="pcard" role="dialog" aria-modal="true" aria-label="Product picture"><button type="button" class="pclose" id="pClose" aria-label="Close">&times;</button><div class="pbig" id="pBig"></div><div class="pname" id="pName"></div><div class="pinfo" id="pInfo"></div></div></div>
+<script>
+/* Product thumbnails beside product rows: built-in pictures first (super admin), then the pandoraeg.com site; click a thumbnail to enlarge it. */
+window.PPic=(function(){
+  const SITE='https://pandoraeg.com',KEY='pandora-pics-v1',D=(window.__PICS=window.__PICS||{});
+  let cache={};try{cache=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+  const key=s=>String(s||'').trim().toUpperCase(),base=s=>key(s).split('-')[0];
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const https=u=>u?String(u).replace(/^http:/,'https:'):u;
+  const tried=new Map(); let loadedPack=false, queue=[], busy=0;
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(cache))}catch(e){}}
+  function builtin(sku){const v=D[base(sku)];return v?'data:image/jpeg;base64,'+v:''}
+  function loadPack(){ /* the 4 picture files only open for the super admin; for anyone else they are simply refused */
+    if(loadedPack)return;loadedPack=true;let left=4;
+    for(let i=1;i<=4;i++){const sc=document.createElement('script');sc.src='/stockcount-pics-'+i+'.js';sc.async=true;sc.onload=sc.onerror=()=>{if(--left===0)fill(document)};document.head.appendChild(sc)}
+  }
+  async function lookup(sku){
+    const b=base(sku);if(!b||b==='—')return '';
+    if(cache[key(sku)])return cache[key(sku)];if(cache[b])return cache[b];
+    try{
+      const r=await fetch(SITE+'/search/suggest.json?q='+encodeURIComponent(b)+'&resources[type]=product&resources[limit]=4');
+      const j=await r.json();const list=(j.resources&&j.resources.results&&j.resources.results.products)||[];
+      const hit=list.find(p=>String(p.handle||p.url||'').toLowerCase().includes(b.toLowerCase()))||list[0];
+      const u=hit&&(hit.image||(hit.featured_image&&hit.featured_image.url));
+      if(u){cache[b]=u;save();return u}
+    }catch(e){}
+    return '';
+  }
+  function pump(){
+    while(busy<3&&queue.length){const job=queue.shift();busy++;lookup(job.sku).then(job.done).finally(()=>{busy--;pump()})}
+  }
+  function get(sku){
+    const bi=builtin(sku);if(bi)return Promise.resolve(bi);
+    const b=base(sku);if(cache[key(sku)])return Promise.resolve(cache[key(sku)]);if(cache[b])return Promise.resolve(cache[b]);
+    if(!tried.has(b))tried.set(b,new Promise(res=>{queue.push({sku,done:res});pump()}));
+    return tried.get(b);
+  }
+  function show(btn,u){if(!u||btn.querySelector('img'))return;const im=new Image();im.alt='';im.referrerPolicy='no-referrer';im.onload=()=>{btn.textContent='';btn.appendChild(im)};im.src=https(u)}
+  let io=null;
+  function fill(root){
+    loadPack();
+    const btns=(root||document).querySelectorAll('.pthumb:not(:has(img))');
+    btns.forEach(b=>{
+      const bi=builtin(b.dataset.sku);if(bi){show(b,bi);return}
+      if(!('IntersectionObserver' in window)){get(b.dataset.sku).then(u=>show(b,u));return}
+      if(!io)io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);get(e.target.dataset.sku).then(u=>show(e.target,u))}),{rootMargin:'120px'});
+      io.observe(b);
+    });
+  }
+  function thumb(p,info){return `<button type="button" class="pthumb" data-sku="${esc(p.sku)}" data-name="${esc(p.name)}" data-info="${esc(info||'')}" title="Click to enlarge" aria-label="Enlarge picture of ${esc(p.name)}">◇</button>`}
+  const modal=()=>document.getElementById('pModal');
+  async function open(btn){
+    const m=modal(),big=document.getElementById('pBig');
+    document.getElementById('pName').textContent=btn.dataset.name||'';
+    document.getElementById('pInfo').textContent=[btn.dataset.sku,btn.dataset.info].filter(Boolean).join(' · ');
+    const mine=btn.querySelector('img');big.textContent=mine?'':'Looking for the picture…';
+    if(mine){const im=new Image();im.alt=btn.dataset.name||'';im.src=mine.src;big.textContent='';big.appendChild(im)}
+    m.hidden=false;const token=btn;open.t=token;
+    if(!mine){const u=await get(btn.dataset.sku);if(open.t!==token)return;if(!u){big.textContent='No picture for this item';return}const im=new Image();im.alt=btn.dataset.name||'';im.referrerPolicy='no-referrer';im.onerror=()=>{big.textContent='No picture for this item'};im.onload=()=>{big.textContent='';big.appendChild(im);show(btn,u)};im.src=https(u)}
+  }
+  function close(){open.t=null;modal().hidden=true}
+  document.addEventListener('click',e=>{const b=e.target.closest('.pthumb');if(b){e.preventDefault();open(b);return}if(e.target.id==='pModal'||e.target.id==='pClose')close()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal().hidden)close()});
+  return {thumb,fill};
+})();
+</script>
 <script>
 const SAMPLE = []; // no built-in sales data: upload the sales export each time
 const COL = {date:0,invoice:1,qty:2,net:3,gross:4,sku:5,name:6,branch:7,category:8,payment:9};
@@ -255,13 +332,14 @@ function renderExplorer(){
   const pm={};selRows.forEach(r=>{const k=(r.sku||'—')+'|'+(r.name||'Unspecified');const o=pm[k]||(pm[k]={sku:r.sku||'—',name:r.name||'Unspecified',value:0,units:0});o.value+=rev(r);o.units+=r.qty});const allProds=Object.values(pm).sort((a,b)=>b.value-a.value),prods=allProds.slice(0,5);
   const br=group(selRows,r=>r.branch||'Unspecified').slice(0,5);
   if(ex.all&&!selRows.length)ex.all=false;
-  const prodRow=(p,i)=>`<div class="xp"><span title="${esc(p.sku)} · ${esc(p.name)}"><b class="xrank">${i+1}</b>${esc(p.name)}<em><i class="xsku">${esc(p.sku)}</i> · ${num(p.units)} units</em></span><b>${money(p.value)}</b></div>`;
-  if(ex.all){$('xDetail').innerHTML=`<h4>${esc(title)}</h4><div class="xh xhrow"><span>All products (${num(allProds.length)})</span><button type="button" class="xallbtn" data-all="0">← Back</button></div><div class="xtop5">${allProds.map(prodRow).join('')}</div>`;return}
+  const prodRow=(p,i)=>`<div class="xp">${PPic.thumb(p,num(p.units)+' units · '+money(p.value))}<span title="${esc(p.sku)} · ${esc(p.name)}"><b class="xrank">${i+1}</b>${esc(p.name)}<em><i class="xsku">${esc(p.sku)}</i> · ${num(p.units)} units</em></span><b>${money(p.value)}</b></div>`;
+  if(ex.all){$('xDetail').innerHTML=`<h4>${esc(title)}</h4><div class="xh xhrow"><span>All products (${num(allProds.length)})</span><button type="button" class="xallbtn" data-all="0">← Back</button></div><div class="xtop5">${allProds.map(prodRow).join('')}</div>`;PPic.fill($('xDetail'));return}
   $('xDetail').innerHTML=selRows.length?`<h4>${esc(title)}</h4>
    <div class="xk"><div><span>Revenue</span><b>${money(rv)}</b></div><div><span>Units</span><b>${num(un)}</b></div><div><span>Share</span><b>${pct(rv,totalAll)}</b><small>of all sales${ex.cat!=='All'?' · '+pct(rv,totalCat)+' of '+esc(ex.cat.toLowerCase()):''}</small></div></div>
    <div class="xh xhrow"><span>Top products</span>${allProds.length>prods.length?`<button type="button" class="xallbtn" data-all="1">View all (${num(allProds.length)})</button>`:''}</div><div class="xtop5">${prods.map(prodRow).join('')}</div>
    <div class="xh">By branch</div><div class="bars" id="xBranch"></div>`:'<div class="xempty">No sales to show.</div>';
   if($('xBranch'))bars('xBranch',br);
+  PPic.fill($('xDetail'));
 }
 document.addEventListener('click',e=>{
   const c=e.target.closest('#xChips [data-cat]'),g=e.target.closest('#xGroup [data-g]'),s=e.target.closest('#xList [data-sel]'),a=e.target.closest('#xDetail [data-all]');
@@ -464,7 +542,7 @@ function renderCollections(){
   const c=by.get(sel.name), cats=tally(c.rows,catOf), brs=tally(c.rows,r=>r.branch||'Unspecified');
   const pm={};c.rows.forEach(r=>{const k=(r.sku||'—')+'|'+(r.name||'Unspecified');const o=pm[k]||(pm[k]={sku:r.sku||'—',name:r.name||'Unspecified',value:0,units:0});o.value+=rev(r);o.units+=r.qty});
   const prods=Object.values(pm).sort((a,b)=>b.value-a.value).slice(0,8);
-  const prodRow=(p,i)=>`<div class="xp"><span title="${esc(p.sku)} · ${esc(p.name)}"><b class="xrank">${i+1}</b>${esc(p.name)}<em><i class="xsku">${esc(p.sku)}</i> · ${num(p.units)} units</em></span><b>${money(p.value)}</b></div>`;
+  const prodRow=(p,i)=>`<div class="xp">${PPic.thumb(p,num(p.units)+' units · '+money(p.value))}<span title="${esc(p.sku)} · ${esc(p.name)}"><b class="xrank">${i+1}</b>${esc(p.name)}<em><i class="xsku">${esc(p.sku)}</i> · ${num(p.units)} units</em></span><b>${money(p.value)}</b></div>`;
   $('colDetail').innerHTML=`<h4>${esc(c.name)}</h4>
    <div class="xk"><div><span>Revenue</span><b>${money(c.value)}</b></div><div><span>Units</span><b>${num(c.units)}</b></div><div><span>Share</span><b>${pct(c.value,total)}</b><small>of all sales</small></div></div>
    <div class="xk" style="margin-top:-6px"><div><span>Orders</span><b>${num(c.inv.size)}</b></div><div><span>Avg price per unit</span><b>${c.units>0?money(c.value/c.units):'—'}</b></div><div><span>Best branch</span><b title="${esc(brs[0]?brs[0].name:'')}">${esc(brs[0]?brs[0].name:'—')}</b><small>${brs[0]?pct(brs[0].value,c.value)+' of it':''}</small></div></div>
@@ -472,6 +550,7 @@ function renderCollections(){
    <div class="xh">Top products</div><div class="xtop5">${prods.map(prodRow).join('')}</div>
    <div class="xh">By branch</div><div class="bars" id="colBranch"></div>`;
   bars('colCat',cats.slice(0,8)); bars('colBranch',brs.slice(0,6));
+  PPic.fill($('colDetail'));
 }
 document.addEventListener('click',e=>{const b=e.target.closest('#colList [data-col]');if(b){sel.name=b.dataset.col;renderCollections()}});
 const baseRender=render; render=function(){baseRender.apply(this,arguments);renderCollections()};
