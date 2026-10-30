@@ -120,17 +120,21 @@ async function post(body){
   const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok){showErr(j.error||'Could not save.');return false}showErr('');return true;
 }
+function teamApps(mem,d){
+  if(!mem.length)return '';const apps=mem[0].apps;
+  return `<div class="sec"><h3>Reports for everyone in ${esc(d)}</h3>`+apps.map(a=>{
+    const n=mem.filter(p=>(p.apps.find(x=>x.id===a.id)||{}).on).length,all=n===mem.length;
+    return `<div class="rep${n?'':' off'}"><b>${esc(a.title)}</b><span class="d">${esc(a.desc)}</span><span class="nt">${n} of ${mem.length} on</span><button type="button" class="sw2${all?' on':''}" data-dapp="${esc(a.id)}" data-on="${all?1:0}" role="switch" aria-checked="${all}" aria-label="${esc(a.title)} for ${esc(d)}"></button></div>`}).join('')+'</div>';
+}
 function drawDeptApps(){
-  const d=$('dpick').value,box=$('dteam'),mem=people.filter(p=>p.dept===d);
-  if(!d){box.innerHTML='';return}
+  const v=$('dpick').value,box=$('dteam'),role=v.startsWith('r:'),d=role?v.slice(2):v,mem=people.filter(p=>role?p.role_group===d:p.dept===d);
+  if(!v){box.innerHTML='';return}
+  if(role){box.innerHTML=`<div class="sec"><h3>People in ${esc(d)} (${mem.length})</h3><div class="note">This team comes from each person's account type or title on Staff Approvals / New Users.</div>`+mem.map(p=>`<div class="mem"><div><b>${esc(p.name)}</b><small>${esc(p.username)} · ${esc(p.label)}</small></div></div>`).join('')+'</div>'+teamApps(mem,d);return}
   const others=people.filter(p=>p.dept!==d&&p.group!=='Super admin').sort((a,b)=>String(a.name).localeCompare(String(b.name)));
   let h=`<div class="sec"><h3>People in ${esc(d)} (${mem.length})</h3>`+(mem.length?mem.map(p=>`<div class="mem"><div><b>${esc(p.name)}</b><small>${esc(p.username)} · ${esc(p.label)}</small></div><button type="button" class="btn bad" data-out="${esc(p.key)}">Take out of team</button></div>`).join(''):'<div class="note">Nobody yet.</div>')+`</div>
   <div class="sec"><h3>Move people into ${esc(d)}</h3><div class="pwline"><select id="mvwho" style="max-width:340px"><option value="">Choose a person…</option>${others.map(p=>`<option value="${esc(p.key)}">${esc(p.name)} · ${esc(p.dept||p.group)}</option>`).join('')}</select><button type="button" class="btn go" id="mvgo">Move to ${esc(d)}</button></div></div>
   <div class="sec"><h3>Create a new user in ${esc(d)}</h3><div class="pwline"><input id="nuname" placeholder="Full name" maxlength="60"><input id="nuuser" placeholder="Username" maxlength="30" autocomplete="off"><input id="nupw" placeholder="Password (8+ characters)" maxlength="100" autocomplete="new-password"><select id="nurole" style="max-width:220px"><option value="stockcount">Stock Count / back office</option><option value="vm">Visual Merchandiser</option><option value="hr">HR</option><option value="overseer">Overseer</option></select><button type="button" class="btn go" id="nugo">Create user</button></div><div class="note" id="numsg">They start with the reports of the type you pick; switch more on below.</div></div>`;
-  if(mem.length){const apps=mem[0].apps;
-    h+=`<div class="sec"><h3>Reports for everyone in ${esc(d)}</h3>`+apps.map(a=>{
-      const n=mem.filter(p=>(p.apps.find(x=>x.id===a.id)||{}).on).length,all=n===mem.length;
-      return `<div class="rep${n?'':' off'}"><b>${esc(a.title)}</b><span class="d">${esc(a.desc)}</span><span class="nt">${n} of ${mem.length} on</span><button type="button" class="sw2${all?' on':''}" data-dapp="${esc(a.id)}" data-on="${all?1:0}" role="switch" aria-checked="${all}" aria-label="${esc(a.title)} for ${esc(d)}"></button></div>`}).join('')+'</div>'}
+  h+=teamApps(mem,d);
   box.innerHTML=h;
 }
 document.addEventListener('click',async e=>{
@@ -150,7 +154,7 @@ document.addEventListener('click',async e=>{
   const b=e.target.closest('button[data-dapp]');if(!b||b.disabled)return;
   b.classList.add('busy');b.disabled=true;
   try{
-    const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'deptapp',name:$('dpick').value,app:b.dataset.dapp,on:b.dataset.on!=='1'})});
+    const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'deptapp',name:$('dpick').value,keys:(()=>{const v=$('dpick').value;return v.startsWith('r:')?people.filter(p=>p.role_group===v.slice(2)).map(p=>p.key):undefined})(),app:b.dataset.dapp,on:b.dataset.on!=='1'})});
     const j=await r.json().catch(()=>({}));
     if(!r.ok||!j.ok)showErr(j.error||'Could not save.');
     else showErr(j.skipped&&j.skipped.length?'Not given to '+j.skipped.join(', ')+': this report is not part of their role.':'');
@@ -159,9 +163,10 @@ document.addEventListener('click',async e=>{
 });
 function drawDepts(){
   const keep=$('dpick').value;
-  $('dpick').innerHTML='<option value="">Choose a team…</option>'+depts.map(d=>`<option${d===keep?' selected':''}>${esc(d)}</option>`).join('');
+  const rg=ORDER.filter(g=>g!=='Super admin'&&people.some(p=>p.role_group===g));
+  $('dpick').innerHTML='<option value="">Choose a team…</option>'+(depts.length?'<optgroup label="Your teams">'+depts.map(d=>`<option value="${esc(d)}"${d===keep?' selected':''}>${esc(d)}</option>`).join('')+'</optgroup>':'')+'<optgroup label="From Staff Approvals / New Users">'+rg.map(g=>`<option value="r:${esc(g)}"${'r:'+g===keep?' selected':''}>${esc(g)} · ${people.filter(p=>p.role_group===g).length}</option>`).join('')+'</optgroup>';
   drawDeptApps();
-  $('dlist').innerHTML=depts.length?depts.map(d=>`<span class="chip">${esc(d)} · ${people.filter(p=>p.dept===d).length} <button type="button" class="btn bad" data-deldept="${esc(d)}" style="padding:0 6px;border:0;background:none" aria-label="Remove ${esc(d)}">×</button></span>`).join(''):'<span class="note">No teams yet.</span>';
+  $('dlist').innerHTML=depts.length?depts.map(d=>`<span class="chip">${esc(d)} · ${people.filter(p=>p.dept===d).length} <button type="button" class="btn bad" data-deldept="${esc(d)}" style="padding:0 6px;border:0;background:none" aria-label="Remove ${esc(d)}">×</button></span>`).join(''):'<span class="note">No teams of your own yet. The teams from Staff Approvals / New Users are in the list below.</span>';
 }
 $('dadd').addEventListener('click',async()=>{const n=$('dname').value.trim();if(!n)return;if(await post({op:'newdept',name:n})){$('dname').value='';await load($('who').value)}});
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-deldept]');if(!b)return;if(!confirm('Remove the team "'+b.dataset.deldept+'"? The people in it go back to their role group.'))return;if(await post({op:'deldept',name:b.dataset.deldept}))await load($('who').value)});
@@ -173,7 +178,7 @@ async function load(keepKey){
     const j=await r.json();
     if(!r.ok||!j.ok){showErr(j.error||'Could not load.');$('who').innerHTML='<option>Could not load</option>';return}
     people=j.people;depts=j.depts||[];$('count').textContent=people.length+' people';
-    for(const p of people)if(p.dept){p.role_group=p.role_group||p.group;p.group=p.dept}
+    for(const p of people){p.role_group=p.group;if(p.dept)p.group=p.dept}
     drawDepts();
     const groups=depts.concat(ORDER.filter(g=>!depts.includes(g))).concat([...new Set(people.map(p=>p.group))].filter(g=>!ORDER.includes(g)&&!depts.includes(g)));
     let h='<option value="">Choose a person…</option>';

@@ -169,7 +169,7 @@ async function change(req, res) {
   if (b.op === 'deptapp') {
     // one report on or off for everyone in a department, one after the other (the files are shared)
     if (!app || app.id === 'mysales2') return send(res, 400, { ok: false, error: 'Unknown report.' });
-    const d = await depts(), keys = Object.keys(d.of).filter(k => d.of[k] === b.name);
+    const d = await depts(), keys = Array.isArray(b.keys) ? b.keys.map(String).slice(0, 500) : Object.keys(d.of).filter(k => d.of[k] === b.name);
     if (!keys.length) return send(res, 400, { ok: false, error: 'Nobody is in this department yet.' });
     const skipped = [];
     for (const k of keys) { const e = await setOne(k, app, on); if (e) skipped.push(k.replace(/^(u|env):/, '')); }
