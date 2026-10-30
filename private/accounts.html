@@ -42,6 +42,17 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
   <section class="card"><h2>Waiting for approval</h2><div class="meta">Choose who this person is in the sales file, then press Approve.</div><div id="pending"></div></section>
   <section class="card" id="newuser"><h2>Create a new user</h2><div class="meta">A sign-in for someone outside the sales file: VM, Stock Count / back office, Overseer or HR. Pick an account type, or a team (Finance, Warehouse ...) to make a back-office sign-in in that team.</div>
     <div class="pwline" style="margin-top:12px"><input id="spname" placeholder="Full name" maxlength="60"><input id="spuser" placeholder="Username" maxlength="30" autocapitalize="none" spellcheck="false"><input id="sppw" placeholder="Password (8+ characters)" maxlength="100" autocomplete="off"><select id="sprole" style="max-width:240px" aria-label="Account type or team"></select><button class="btn go" data-act="mkspecial" type="button">Create account</button></div>
+    <div id="sprep" class="pwline" style="margin-top:6px" hidden>
+      <label>Orders Distribution <select id="rp-dist" style="width:auto;height:34px"><option value="none">No access</option><option value="warehouse">Warehouse scanning</option><option value="manage">Manage</option></select></label>
+      <label>Shipment Receiving <select id="rp-recv" style="width:auto;height:34px"><option value="none">No access</option><option value="warehouse">Warehouse scanning</option><option value="accounts">Accounts scanning</option><option value="view">Report only</option><option value="manage">Manage</option></select></label>
+      <label>Refill Order &amp; Slow Moving <select id="rp-refill" style="width:auto;height:34px"><option value="none">No access</option><option value="view">View</option><option value="input">Input</option><option value="manage">Manage</option></select></label>
+      <label><input type="checkbox" id="rp-stockcount" checked> Stock Count</label>
+      <label><input type="checkbox" data-give="stock"> Stock balance</label>
+      <label><input type="checkbox" data-give="dashboards"> Pandora Dashboards</label>
+      <label><input type="checkbox" data-give="staff"> Staff Performance</label>
+      <label><input type="checkbox" data-give="daily"> Daily Store Report</label>
+      <label><input type="checkbox" data-give="schedule"> Weekly Schedule</label>
+    </div>
     <div id="spmsg" class="note" style="font-weight:700;margin:8px 0" role="status"></div>
     <div class="note">Send the username and password to the person yourself. You can change the password here any time.</div></section>
   <section class="card"><h2>Active people</h2><div class="meta">Everyone who can sign in right now. Use the buttons to show only staff, area managers, finance or the brand manager.</div><div id="active"></div></section>
@@ -69,9 +80,12 @@ function rowHtml(a,btns0,pick){const btns=typeof btns0==='function'?btns0(a):btn
 const TITLES=['Finance','Brand manager'];
 const grp=a=>a.role==='hr'?'hr':a.title==='Finance'?'finance':a.title==='Brand manager'?'brand':'other';
 const titleSel=a=>`<select data-title="${esc(a.username)}" style="width:auto;height:34px" aria-label="Job title"><option value="">No title</option>${TITLES.map(t=>`<option ${a.title===t?'selected':''}>${t}</option>`).join('')}</select>`;
+function repDefaults(){const v=$('sprole').value,t=v.startsWith('team:')?v.slice(5):'';$('sprep').hidden=!t;if(!t)return;
+  $('rp-dist').value=/warehouse/i.test(t)?'warehouse':'none';$('rp-recv').value=/warehouse/i.test(t)?'warehouse':/finance|account/i.test(t)?'accounts':'none';$('rp-refill').value='none';}
+document.addEventListener('change',e=>{if(e.target.id==='sprole'&&e.target.value!=='newteam')repDefaults()});
 document.addEventListener('change',async e=>{if(e.target.id!=='sprole'||e.target.value!=='newteam')return;const n=(prompt('New team name (for example Warehouse):')||'').trim();if(!n){e.target.value='vm';return}
   try{const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'newdept',name:n})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok){showErr(j.error||'Could not add the team.');e.target.value='vm';return}}catch(_){showErr('No connection.');e.target.value='vm';return}
-  e.target.innerHTML+=`<option value="team:${esc(n)}">${esc(n)}</option>`;e.target.value='team:'+n;load()});
+  e.target.innerHTML+=`<option value="team:${esc(n)}">${esc(n)}</option>`;e.target.value='team:'+n;repDefaults();load()});
 let ACT=[],AF='all',TEAMS={list:[],of:{},names:{}};
 const teamSel=k=>`<select data-team="${esc(k)}" style="width:auto;height:34px" aria-label="Team"><option value="">No team</option>${TEAMS.list.map(t=>`<option ${TEAMS.of[k]===t?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
 const GROUPS=[['all','Everyone'],['staff','Staff'],['area','Area managers'],['finance','Finance'],['brand','Brand manager'],['hr','HR']];
@@ -162,7 +176,11 @@ document.addEventListener('click',async e=>{
       const m=$('spmsg');
       if(!r.ok||!j.ok){m.textContent='Not created: '+(j.error||'that did not work.')}
       else{const v=$('sprole').value,tm=v.startsWith('team:')?v.slice(5):'';const P=(u,b)=>fetch(u,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).catch(()=>{});
-        if(tm==='Finance')await P('/api/accounts',{action:'settitle',username:j.username,title:'Finance'});else if(tm)await P('/api/access',{op:'setdept',key:'u:'+j.username,name:tm});m.textContent='Created. Username: '+j.username+(tm?'  ·  Team: '+tm:'')+'  ·  Password: the one you typed.';$('spname').value=$('spuser').value=$('sppw').value=''}}catch(_){$('spmsg').textContent='Not created: no connection.'}
+        if(tm==='Finance')await P('/api/accounts',{action:'settitle',username:j.username,title:'Finance'});else if(tm)await P('/api/access',{op:'setdept',key:'u:'+j.username,name:tm});if(tm){const key='u:'+j.username;
+          for(const [a,id] of [['distaccess','rp-dist'],['recvaccess','rp-recv'],['refillaccess','rp-refill']])if($(id).value!=='none')await P('/api/accounts',{action:a,key,level:$(id).value});
+          for(const c of document.querySelectorAll('#sprep input[data-give]:checked'))await P('/api/access',{key,app:c.dataset.give,on:true});
+          if(!$('rp-stockcount').checked)await P('/api/access',{key,app:'stockcount',on:false});}
+        m.textContent='Created. Username: '+j.username+(tm?'  ·  Team: '+tm:'')+'  ·  Password: the one you typed.';$('spname').value=$('spuser').value=$('sppw').value=''}}catch(_){$('spmsg').textContent='Not created: no connection.'}
     b.disabled=false;load();return}
   if(b.dataset.act==='pw'){openPw(b.dataset.user,b.dataset.env==='1');return}
   if(b.dataset.act==='store'){openStore(b.dataset.user);return}
