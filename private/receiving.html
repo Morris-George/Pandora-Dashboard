@@ -216,13 +216,19 @@ function scan(code,n=1,bx=BOX){code=String(code||'').trim();if(!code||!S)return;
       const all=Object.values(tb()).reduce((a,m)=>a+(m[j.code]||0),0),l=S.lines.find(x=>x[0]===j.code);
       $('scanMsg').innerHTML=j.known?`${n>0?'Scanned':'Taken back'} <b>${esc(j.code)}</b> · box ${bx}`:`<b class="bad">Not on the invoice: ${esc(code)}</b> · kept in box ${bx} so it shows on the report`;
       $('hitCard').hidden=false;$('hitPic').innerHTML=j.known&&$('pics').checked?pic(j.code):'';{const sp=$('sidePic'),h=j.known&&$('pics').checked?pic(j.code):'';sp.innerHTML=h;sp.hidden=!h}$('hitSku').textContent=j.code.replace(/^\?/,'');$('hitEan').textContent=l?l[1]:'not on the invoice';
-      $('hitBox').textContent=fmt(B[j.code]||0);$('hitAll').textContent=fmt(all);$('hitCard').classList.remove('flash');void $('hitCard').offsetWidth;$('hitCard').classList.add('flash');drawScan()}
+      if(!all){$('hitCard').hidden=true;$('sidePic').hidden=true;$('sidePic').innerHTML=''}$('hitBox').textContent=fmt(B[j.code]||0);$('hitAll').textContent=fmt(all);$('hitCard').classList.remove('flash');void $('hitCard').offsetWidth;$('hitCard').classList.add('flash');drawScan()}
     catch(er){$('scanMsg').innerHTML=`<b class="bad">${esc(er.message)}</b>`;beep(false)}})}
-$('scanIn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const v=$('scanIn').value;$('scanIn').value='';scan(v)}};
+// no Enter needed: a scanner types fast, so a pause ends the code; typing by hand goes in once the whole EAN or SKU is there
+let SCT=0,SCL=0,SCFAST=0;
+const scanNow=()=>{clearTimeout(SCT);const v=$('scanIn').value;$('scanIn').value='';SCFAST=0;if(v.trim())scan(v)};
+$('scanIn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();scanNow()}};
+$('scanIn').oninput=()=>{const t=performance.now(),v=$('scanIn').value.trim().toUpperCase();SCFAST=t-SCL<50?SCFAST+1:0;SCL=t;clearTimeout(SCT);
+  const known=S&&S.lines&&S.lines.some(l=>l[0]===v||l[1]===v);
+  if(SCFAST>=4&&v.length>=5)SCT=setTimeout(scanNow,150);else if(known)SCT=setTimeout(scanNow,600)};
 $('undo').onclick=()=>{const u=UNDO.pop();if(u)scan(u[1],-1,u[0]);$('scanIn').focus()};
 $('clrBox').onclick=async()=>{if(!BOX)return;const p=boxPcs(BOX);
   if(!confirm(`Clear box ${BOX}?\n\nThis removes all ${fmt(p)} pieces your team (${TEAMS[teamOf()]}) scanned into box ${BOX}, by everyone. The other team's count is not touched.`))return;
-  try{const j=await api('/api/recv?op=clearbox',{id:S.id,box:BOX,team:teamOf()});UNDO=UNDO.filter(u=>u[0]!==BOX);$('scanMsg').innerHTML=`Box ${BOX} cleared (${fmt(j.cleared)} pcs). Scan it again.`;await loadScan()}catch(er){showErr(er.message)}};
+  try{const j=await api('/api/recv?op=clearbox',{id:S.id,box:BOX,team:teamOf()});UNDO=UNDO.filter(u=>u[0]!==BOX);$('hitCard').hidden=true;$('sidePic').hidden=true;$('sidePic').innerHTML='';$('scanMsg').innerHTML=`Box ${BOX} cleared (${fmt(j.cleared)} pcs). Scan it again.`;await loadScan()}catch(er){showErr(er.message)}};
 let STREAM=null;
 $('cam').onclick=async()=>{const v=$('vid');
   if(STREAM){STREAM.getTracks().forEach(t=>t.stop());STREAM=null;v.hidden=true;$('cam').textContent='Use the camera';return}
