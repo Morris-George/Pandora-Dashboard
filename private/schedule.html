@@ -28,6 +28,7 @@ h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.sub{color:var(
 .bar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
 .bar label,.dlg label.f{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);font-weight:700;display:flex;flex-direction:column;gap:6px}
 select,input[type=text],input[type=time],input[type=date]{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:9px 11px;font:inherit;font-size:15px;font-weight:600;text-transform:none;letter-spacing:0;max-width:100%;min-width:0}
+time-12{display:block;min-width:0}time-12 input{width:100%;box-sizing:border-box}
 .storefix{font-weight:800;font-size:15px;padding:9px 0}
 .weeknav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .weeknav .label{font-weight:800;font-size:16px;min-width:210px;text-align:center}
@@ -65,7 +66,7 @@ button.lv{cursor:pointer}button.lv:hover,button.lv:focus-visible{border-color:va
 .pn b{font-weight:750;font-size:13.5px;display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pn:hover b{text-decoration:underline}
 .tt{display:flex;align-items:center;gap:3px;font-size:12.5px;color:var(--ink2)}
-.tt input{flex:1;min-width:0;width:100%;border:1px solid transparent;background:transparent;color:var(--ink);border-radius:6px;padding:2px 2px;font:inherit;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.tt:not(.rt){flex-direction:column;align-items:stretch;gap:1px}.tt>span{display:none}.tt time-12{flex:none}.tt input{flex:1;min-width:0;width:100%;border:1px solid transparent;background:transparent;color:var(--ink);border-radius:6px;padding:2px 2px;font:inherit;font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
 .tt input:hover{border-color:var(--line);background:var(--surface)}
 .tt input:focus{border-color:var(--accent);background:var(--surface)}
 .pp.clash{border-color:#E0526A;background:color-mix(in srgb,#E0526A 12%,transparent)}
@@ -163,7 +164,7 @@ dialog::backdrop{background:rgba(20,10,14,.45)}
   <div class="hint" style="font-weight:700">Who works this shift? <span id="dCap">Up to 3 people per shift.</span></div>
   <div id="dPeople" class="people"></div>
   <button type="button" class="btn" id="dMore">+ Add another person</button>
-  <div class="row"><label class="f">From <input type="time" id="dFrom" required></label><label class="f">To <input type="time" id="dTo" required></label></div>
+  <div class="row"><label class="f">From <time-12 id="dFrom" label="From time"></time-12></label><label class="f">To <time-12 id="dTo" label="To time"></time-12></label></div>
   <div class="hint" id="dHint">If the To time is earlier than the From time, the shift ends after midnight.</div>
   <div id="dDaysWrap"><div class="hint" style="margin-bottom:6px;font-weight:700">Which days?</div><div class="days" id="dDays"></div></div>
   <div class="err" id="dErr" hidden></div>
@@ -226,6 +227,34 @@ function dates(w){var o=[];for(var i=0;i<7;i++)o.push(add(w,i));return o}
 function dnum(d){return +d.slice(8,10)}
 function fmtShort(d){return dnum(d)+' '+MON[+d.slice(5,7)-1]}
 function fmtLong(d){return fmtShort(d)+' '+d.slice(0,4)}
+function fmt12(t){if(!t)return '';var h=+t.slice(0,2);return ((h%12)||12)+':'+t.slice(3,5)+' '+(h<12?'AM':'PM')}
+function fmt12r(a){return fmt12(a[0])+' – '+fmt12(a[1])}
+function parse12(x,prev){ // "6pm", "6:30 pm", "1830" -> "18:30" (24h, how it is saved)
+  var m=/^\s*(\d{1,2})(?:[:.]?(\d{2}))?\s*(?:([ap])\.?\s*m?\.?)?\s*$/i.exec(x||'');if(!m)return null;
+  var h=+m[1],mi=m[2]?+m[2]:0,ap=m[3]?m[3].toLowerCase():'';if(mi>59)return null;
+  if(ap){if(h<1||h>12)return null;h=h%12+(ap==='p'?12:0)}
+  else{if(h>23)return null;if(h>=1&&h<=12){var pm=prev&&+prev.slice(0,2)>=12;h=h%12+(pm?12:0)}}
+  return (h<10?'0':'')+h+':'+(mi<10?'0':'')+mi;
+}
+/* <time-12>: a time box that shows 12-hour AM/PM but keeps 24-hour HH:MM as .value */
+class Time12 extends HTMLElement{
+  connectedCallback(){
+    if(this._i)return;var me=this,i=document.createElement('input');
+    i.type='text';i.autocomplete='off';i.placeholder='10:00 AM';i.setAttribute('aria-label',this.getAttribute('label')||'Time');
+    if(this._v==null)this._v=this.getAttribute('value')||'';
+    this.appendChild(i);this._i=i;this._show();
+    i.addEventListener('change',function(ev){
+      var p=parse12(i.value,me._v);
+      if(p===null){ev.stopPropagation();me._show();i.title='Type a time like 10:00 AM or 6:30 PM';return}
+      me._v=p;me._show();
+    });
+    i.addEventListener('focus',function(){i.select()});
+  }
+  _show(){if(this._i)this._i.value=fmt12(this._v)}
+  get value(){return this._v||''}
+  set value(v){this._v=v||'';this._show()}
+}
+if(!customElements.get('time-12'))customElements.define('time-12',Time12);
 function mins(t){return +t.slice(0,2)*60+ +t.slice(3,5)}
 function span(e){var s=mins(e.f),x=mins(e.t);if(x<=s)x+=1440;return[s,x]}
 function hrs(e){var p=span(e);return (p[1]-p[0])/60}
@@ -289,15 +318,15 @@ function render(){
   $('jump').value=ds[0];
   $('printHead').textContent=st.store+' · Weekly schedule · '+fmtShort(ds[0])+' – '+fmtLong(ds[6]);
   var h='';
-  SH.forEach(function(s){h+=st.canEdit?'<button type="button" class="rl '+s.k+'" data-usual="1" title="Change the usual times">'+s.name+'<small>usually '+st.times[s.k][0]+' – '+st.times[s.k][1]+' · change</small></button>':'<div class="rl '+s.k+'">'+s.name+'</div>'});
+  SH.forEach(function(s){h+=st.canEdit?'<button type="button" class="rl '+s.k+'" data-usual="1" title="Change the usual times">'+s.name+'<small>usually '+fmt12r(st.times[s.k])+' · change</small></button>':'<div class="rl '+s.k+'">'+s.name+'</div>'});
   h+='<div class="rl o">On vacation<small>not working</small></div>';
   ds.forEach(function(d,c){
     h+='<div class="day" style="--c:'+(c+1)+'"><div class="dh'+(d===today?' today':'')+'">'+WD[dow(d)]+'<small>'+fmtShort(d)+'</small></div>';
     SH.forEach(function(s){
       h+='<div class="cell '+s.k+'" data-label="'+s.name+'">';
       dayShifts(d,s.k).forEach(function(e,i){
-        if(!st.canEdit)h+='<div class="pp ro"><b class="rn">'+esc(e.n)+'</b><div class="tt rt">'+e.f+' – '+e.t+'</div></div>';
-        else h+='<div class="pp'+(cl.bad[d+s.k+i]?' clash':'')+'" data-d="'+d+'" data-s="'+s.k+'" data-i="'+i+'"><button type="button" class="pn" title="Edit or remove"><b>'+esc(e.n)+'</b></button><div class="tt"><input type="time" class="tf" value="'+e.f+'" aria-label="From time for '+esc(e.n)+'"><span>–</span><input type="time" class="tx" value="'+e.t+'" aria-label="To time for '+esc(e.n)+'"></div></div>';
+        if(!st.canEdit)h+='<div class="pp ro"><b class="rn">'+esc(e.n)+'</b><div class="tt rt">'+fmt12r([e.f,e.t])+'</div></div>';
+        else h+='<div class="pp'+(cl.bad[d+s.k+i]?' clash':'')+'" data-d="'+d+'" data-s="'+s.k+'" data-i="'+i+'"><button type="button" class="pn" title="Edit or remove"><b>'+esc(e.n)+'</b></button><div class="tt"><time-12 class="tf" value="'+e.f+'" label="From time for '+esc(e.n)+'"></time-12><span>–</span><time-12 class="tx" value="'+e.t+'" label="To time for '+esc(e.n)+'"></time-12></div></div>';
       });
       if(!st.canEdit){}else if(dayShifts(d,s.k).length<3)h+='<button type="button" class="add" data-d="'+d+'" data-s="'+s.k+'" aria-label="Add a person to '+s.name+' on '+WD[dow(d)]+' '+fmtShort(d)+'">+ Add</button>';else h+='<div class="full">Full · 3 of 3</div>';h+='</div>';
     });
@@ -483,14 +512,14 @@ $('lCancel').addEventListener('click',function(){$('ldlg').close()});
 /* ---------- usual times ---------- */
 $('times').addEventListener('click',function(){
   $('tErr').hidden=true;
-  $('tsets').innerHTML=SH.map(function(s){return '<div class="trow"><span>'+s.name+'</span><input type="time" data-s="'+s.k+'" data-p="0" value="'+st.times[s.k][0]+'" aria-label="'+s.name+' from"><input type="time" data-s="'+s.k+'" data-p="1" value="'+st.times[s.k][1]+'" aria-label="'+s.name+' to"></div>'}).join('');
+  $('tsets').innerHTML=SH.map(function(s){return '<div class="trow"><span>'+s.name+'</span><time-12 data-s="'+s.k+'" data-p="0" value="'+st.times[s.k][0]+'" label="'+s.name+' from"></time-12><time-12 data-s="'+s.k+'" data-p="1" value="'+st.times[s.k][1]+'" label="'+s.name+' to"></time-12></div>'}).join('');
   $('tdlg').showModal();
 });
 $('tCancel').addEventListener('click',function(){$('tdlg').close()});
 $('tform').addEventListener('submit',async function(ev){
   ev.preventDefault();
   var t={m:['',''],b:['',''],n:['','']};
-  [].slice.call($('tsets').querySelectorAll('input')).forEach(function(i){t[i.dataset.s][+i.dataset.p]=i.value});
+  [].slice.call($('tsets').querySelectorAll('time-12')).forEach(function(i){t[i.dataset.s][+i.dataset.p]=i.value});
   try{var r=await post('times',{store:st.store,times:t});st.times=r.times;$('tdlg').close();render();setStatus('Saved ✓',true);setTimeout(function(){setStatus('')},2500)}
   catch(e){if(e.message!=='signed out'){$('tErr').textContent=e.message;$('tErr').hidden=false}}
 });
@@ -505,7 +534,7 @@ $('board').addEventListener('click',function(ev){
   else if(b.classList.contains('pn')){var pp=b.closest('.pp');openDlg(pp.dataset.d,pp.dataset.s,+pp.dataset.i)}
 });
 $('board').addEventListener('change',async function(ev){
-  var inp=ev.target;if(!inp.matches||!inp.matches('.tt input'))return;
+  var inp=ev.target.closest&&ev.target.closest('.tt time-12');if(!inp)return;
   var pp=inp.closest('.pp'),d=pp.dataset.d,sk=pp.dataset.s,i=+pp.dataset.i,row=pp.querySelector('.tf').value+'|'+pp.querySelector('.tx').value;
   var f=pp.querySelector('.tf').value,t=pp.querySelector('.tx').value;
   if(!f||!t){render();showErr('Choose both a From and a To time.');return}
