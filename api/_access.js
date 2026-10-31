@@ -164,7 +164,11 @@ async function setOne(key, app, on) {
     if (!allowed) {
       if (ADDABLE[app.id] === 'refill') await level('refill', 'view');
       else if (ADDABLE[app.id] === 'dist') await level('dist', 'warehouse');
-      else if (ADDABLE[app.id] === 'recv') await level('recv', 'view');
+      else if (ADDABLE[app.id] === 'recv') {
+        // Finance and Warehouse people get the Scan tab; anyone else the report only
+        const team = (await depts()).of[key] || '', title = (who.user && who.user.title) || '';
+        await level('recv', /finance|account/i.test(team + ' ' + title) ? 'accounts' : /warehouse/i.test(team + ' ' + title) || who.kind === 'sc' ? 'warehouse' : 'view');
+      }
       else if (!NEVER.includes(app.id)) ad.add(app.id); // opened as an Overseer would see it (api/_auth.js)
       else return 'Accounts and passwords stay with the super admin only.';
     }
