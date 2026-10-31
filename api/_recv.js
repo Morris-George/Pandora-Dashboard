@@ -6,7 +6,7 @@
 //   POST /api/recv?op=status   manage  {id, status: Open|Closed}
 //   POST /api/recv?op=delete   manage  {id}
 //   POST /api/recv?op=scan     team    {id, box, code (EAN or SKU), n: 1|-1}
-//   POST /api/recv?op=clearbox team    {id, box}   wipes what the caller's team scanned into that box
+//   POST /api/recv?op=clearbox team    {id, box, item?}   wipes what the caller's team scanned into that box (or only that item)
 // Each person's scans live in their own file (rc/x/<id>/<team>/<person>.json), so people scanning at the same time never
 // overwrite each other; the report adds the files up.
 // /api/recv is rewritten to /api/erp?recv=1 (vercel.json): the Hobby plan allows 12 functions.
@@ -107,6 +107,12 @@ module.exports = async function handler(req, res) {
       // the whole team's scans in that box, whoever scanned them
       const files = (await scansOf(id)).filter(f => f.team === t);
       let gone = 0;
+      if (b.item != null) {
+        // only one item of the box, whoever of the team scanned it
+        const item = str(b.item, 41);
+        for (const f of files) { const m = (f.data.boxes || {})[box]; if (!m || !m[item]) continue; gone += m[item]; delete m[item]; if (!Object.keys(m).length) delete f.data.boxes[box]; f.data.at = new Date().toISOString(); await store.putJSON(f.file, f.data); }
+        return send(res, 200, { ok: true, box, cleared: gone });
+      }
       for (const f of files) { const m = (f.data.boxes || {})[box]; if (!m) continue; gone += Object.values(m).reduce((a, n) => a + n, 0); delete f.data.boxes[box]; f.data.at = new Date().toISOString(); await store.putJSON(f.file, f.data); }
       return send(res, 200, { ok: true, box, cleared: gone });
     }

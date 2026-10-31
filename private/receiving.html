@@ -203,7 +203,7 @@ function drawScan(){if(!S){$('boxes').innerHTML='';$('scInfo').textContent='No o
   $('curBox').textContent=BOX||'—';$('curPcs').textContent=BOX?fmt(boxPcs(BOX))+' pcs':'pick a box';$('clrBox').disabled=!BOX||!boxPcs(BOX);$('undo').disabled=!UNDO.length;
   $('bxTitle').textContent=BOX?'In box '+BOX+' ('+(TEAMS[teamOf()]||'')+')':'In this box';
   const m=Object.entries(tb()[BOX]||{}).sort((a,b)=>b[1]-a[1]),ean=new Map(S.lines.map(l=>[l[0],l[1]]));
-  $('bxT').innerHTML=BOX?(m.length?`<tr><th></th><th class="l">SKU</th><th class="l">EAN</th><th>Pieces</th></tr>`+m.map(([c,n])=>`<tr><td>${box(c)}</td><td class="l"><b>${esc(c.replace(/^\?/,''))}</b>${c.startsWith('?')?' <span class="tag t-unk">not on the invoice</span>':''}</td><td class="l">${esc(ean.get(c)||'')}</td><td>${fmt(n)}</td></tr>`).join(''):'<tr><td class="l note">Nothing scanned in this box yet.</td></tr>'):'<tr><td class="l note">Pick a box above.</td></tr>'}
+  $('bxT').innerHTML=BOX?(m.length?`<tr><th></th><th class="l">SKU</th><th class="l">EAN</th><th>Pieces</th><th></th></tr>`+m.map(([c,n])=>`<tr><td>${box(c)}</td><td class="l"><b>${esc(c.replace(/^\?/,''))}</b>${c.startsWith('?')?' <span class="tag t-unk">not on the invoice</span>':''}</td><td class="l">${esc(ean.get(c)||'')}</td><td>${fmt(n)}</td><td><button class="btn" style="color:#C0392B" data-delitem="${esc(c)}">Delete</button></td></tr>`).join(''):'<tr><td class="l note">Nothing scanned in this box yet.</td></tr>'):'<tr><td class="l note">Pick a box above.</td></tr>'}
 $('boxes').onclick=e=>{const b=e.target.closest('[data-box]');if(!b)return;BOX=+b.dataset.box;try{localStorage.setItem('rc.box.'+S.id,BOX)}catch(_){}drawScan();$('scanIn').focus()};
 $('scSel').onchange=()=>{BOX=0;UNDO=[];loadScan()};
 $('scRef').onclick=()=>loadScan();
@@ -226,6 +226,10 @@ $('scanIn').oninput=()=>{const t=performance.now(),v=$('scanIn').value.trim().to
   const known=S&&S.lines&&S.lines.some(l=>l[0]===v||l[1]===v);
   if(SCFAST>=4&&v.length>=5)SCT=setTimeout(scanNow,150);else if(known)SCT=setTimeout(scanNow,600)};
 $('undo').onclick=()=>{const u=UNDO.pop();if(u)scan(u[1],-1,u[0]);$('scanIn').focus()};
+$('bxT').addEventListener('click',async e=>{const b=e.target.closest('[data-delitem]');if(!b)return;const c=b.dataset.delitem,n=(tb()[BOX]||{})[c]||0;
+  if(!confirm(`Delete ${c.replace(/^\?/,'')} from box ${BOX}?\n\nThis removes all ${fmt(n)} pieces of it your team (${TEAMS[teamOf()]}) scanned into this box. The other team's count is not touched.`))return;
+  try{await api('/api/recv?op=clearbox',{id:S.id,box:BOX,item:c,team:teamOf()});UNDO=UNDO.filter(u=>!(u[0]===BOX&&u[1]===c));$('hitCard').hidden=true;$('sidePic').hidden=true;$('sidePic').innerHTML='';$('scanMsg').innerHTML=`Deleted <b>${esc(c.replace(/^\?/,''))}</b> from box ${BOX} (${fmt(n)} pcs).`;await loadScan()}catch(er){showErr(er.message)}
+  $('scanIn').focus()});
 $('clrBox').onclick=async()=>{if(!BOX)return;const p=boxPcs(BOX);
   if(!confirm(`Clear box ${BOX}?\n\nThis removes all ${fmt(p)} pieces your team (${TEAMS[teamOf()]}) scanned into box ${BOX}, by everyone. The other team's count is not touched.`))return;
   try{const j=await api('/api/recv?op=clearbox',{id:S.id,box:BOX,team:teamOf()});UNDO=UNDO.filter(u=>u[0]!==BOX);$('hitCard').hidden=true;$('sidePic').hidden=true;$('sidePic').innerHTML='';$('scanMsg').innerHTML=`Box ${BOX} cleared (${fmt(j.cleared)} pcs). Scan it again.`;await loadScan()}catch(er){showErr(er.message)}};
