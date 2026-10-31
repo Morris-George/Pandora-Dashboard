@@ -78,7 +78,7 @@ async function writeDoc(path, data) {
 module.exports = async function handler(req, res) {
   const who = await whoami(req);
   const isAdmin = !!who && who.kind === 'env' && who.info.role === 'admin';
-  // a phone paired from the super admin's screen may use the count too (see api/_pair.js), but never make pairing links
+  // a phone paired from a signed-in screen (super admin or Stock Count account) may use the count too (see api/_pair.js), but a paired phone can never make pairing links
   const paired = !isAdmin && pair.hasPair(req);
   const counter = !!who && who.kind === 'sc'; // a Stock Count only account
   if (!isAdmin && !paired && !counter) {
@@ -97,7 +97,7 @@ module.exports = async function handler(req, res) {
         // the signed-in person's own name, so the page never has to ask who is scanning (a paired phone has none)
         return send(res, 200, { ok: true, me: isAdmin || counter ? String((who.user && (who.user.name || who.user.username)) || (who.account && who.account.user) || '').trim().slice(0, 30) : '' });
       case 'pair': {
-        if (!isAdmin) return send(res, 403, { error: 'Only the super admin can pair a phone.' });
+        if (!isAdmin && !counter) return send(res, 403, { error: 'Only a signed-in Stock Count user can pair a phone.' });
         const secret = process.env.PANDORA_AUTH_SECRET;
         if (!secret || secret.length < 32) return send(res, 503, { error: 'not configured' });
         return send(res, 200, { token: pair.makeToken(secret) });
