@@ -808,7 +808,7 @@ async function flushBlock(b){
 function pendingBlocks(){let n=0;blocks.forEach(b=>{if(b.dirty||b.busy)n++;});return n;}
 
 /* zones are picked from a fixed list, nobody types them */
-const ZONES=[...Array.from({length:100},(_,k)=>"Tray "+(k+1)),"Defected items",...Array.from({length:6},(_,k)=>"Service tray "+(k+1)),"Reserved Items","Maintenance","Transfered Items"];
+const ZONES=[...Array.from({length:100},(_,k)=>"Tray "+(k+1)),...Array.from({length:5},(_,k)=>"WID "+(k+1)),...Array.from({length:15},(_,k)=>"Window display "+(k+1)),...Array.from({length:5},(_,k)=>"Unit corner "+(k+1)),...Array.from({length:70},(_,k)=>"Stock "+(k+1)),"Defected items",...Array.from({length:6},(_,k)=>"Service tray "+(k+1)),"Reserved Items","Maintenance","Transfered Items"];
 (function(){const h='<option value="">Choose zone (required)</option>'+ZONES.map(z=>`<option value="${z}">${z}</option>`).join("");$("#zone").innerHTML=h;$("#camZone").innerHTML=h;})();
 function zoneOk(){return !!($("#zone").value||"").trim();}
 function zoneNeeded(){const el=$("#zone");el.classList.add("need");try{el.focus();}catch(e){}beep("bad");toast("Choose the zone first, then scan");}
