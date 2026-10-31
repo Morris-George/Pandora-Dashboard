@@ -1,5 +1,4 @@
 const { PROJECTS, safeEqual, signingKey, sign, staffAccounts, normName } = require('./_projects');
-const { appsFor } = require('./_apps');
 const users = require('./_users');
 const store = require('./_store');
 const { stafferCookie } = require('./_auth');
@@ -39,8 +38,7 @@ module.exports = async function handler(req, res) {
   };
   const finish = (cookies, facts) => {
     res.setHeader('Set-Cookie', cookies);
-    const apps = appsFor(facts);
-    return res.status(200).json({ ok: true, next: apps.length === 1 ? apps[0].href : '/' });
+    return res.status(200).json({ ok: true, next: '/' });
   };
 
   if (matched) {
