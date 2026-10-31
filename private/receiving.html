@@ -50,6 +50,7 @@ td.d0{color:var(--ink2)}td.dn{color:var(--bad);font-weight:700}td.dp{color:var(-
 .status{font-weight:800}.status.Open{color:var(--good)}.status.Closed{color:var(--ink2)}
 .team{display:inline-block;padding:4px 12px;border-radius:99px;background:var(--soft);font-weight:800}
 #sidePic{flex:0 0 120px;width:120px;height:120px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;cursor:zoom-in}#sidePic img{width:100%;height:100%;object-fit:contain;display:block}.scanbox{align-items:center}body.nopic #sidePic{display:none}
+.bx.unk{border:2px solid #E0A100!important;background:#FFF1C9!important;color:#5A4200!important}
 </style>
 </head>
 <body><div class="wrap">
@@ -199,7 +200,7 @@ const boxPcs=b=>Object.values(tb()[b]||{}).reduce((a,n)=>a+n,0);
 function drawScan(){if(!S){$('boxes').innerHTML='';$('scInfo').textContent='No open shipment. The admin opens one on Shipments.';$('bxT').innerHTML='';return}
   const all=Object.keys(tb()).reduce((a,b)=>a+boxPcs(b),0);
   $('scInfo').textContent=`${S.name}${S.invoice?' · '+S.invoice:''} · your team scanned ${fmt(all)} pcs`;
-  $('boxes').innerHTML=Array.from({length:S.boxes},(_,i)=>i+1).map(b=>{const p=boxPcs(b);return `<button class="bx ${b===BOX?'on':''} ${p?'has':''}" data-box="${b}"><b>${b}</b><small>${p?fmt(p)+' pcs':'empty'}</small></button>`}).join('');
+  $('boxes').innerHTML=Array.from({length:S.boxes},(_,i)=>i+1).map(b=>{const p=boxPcs(b);const un=Object.keys(tb()[b]||{}).filter(c=>c.startsWith('?')).length;return `<button class="bx ${b===BOX?'on':''} ${p?'has':''} ${un?'unk':''}" data-box="${b}" title="${un?un+' item(s) not on the invoice':''}"><b>${b}${un?' ⚠':''}</b><small>${p?fmt(p)+' pcs':'empty'}</small></button>`}).join('');
   $('curBox').textContent=BOX||'—';$('curPcs').textContent=BOX?fmt(boxPcs(BOX))+' pcs':'pick a box';$('clrBox').disabled=!BOX||!boxPcs(BOX);$('undo').disabled=!UNDO.length;
   $('bxTitle').textContent=BOX?'In box '+BOX+' ('+(TEAMS[teamOf()]||'')+')':'In this box';
   const m=Object.entries(tb()[BOX]||{}).sort((a,b)=>b[1]-a[1]),ean=new Map(S.lines.map(l=>[l[0],l[1]]));
@@ -281,7 +282,7 @@ function drawRep(){if(!R)return;const rows=recRows(),inv=R.lines.reduce((a,l)=>a
   const bset=new Set();Object.keys(TEAMS).forEach(t=>Object.keys((R.counts[t]||{boxes:{}}).boxes).forEach(b=>bset.add(+b)));
   const bp=(t,b)=>Object.values(((R.counts[t]||{boxes:{}}).boxes[b])||{}).reduce((a,n)=>a+n,0);
   const bxs=[...bset].sort((a,b)=>a-b);
-  $('boxT').innerHTML=bxs.length?`<tr><th class="l">Box</th><th>Finance</th><th>Warehouse</th><th>Difference</th><th class="l"></th></tr>`+bxs.map(b=>{const a=bp('accounts',b),w=bp('warehouse',b);return `<tr><td class="l"><b>Box ${b}</b></td><td>${fmt(a)}</td><td>${fmt(w)}</td>${d(w-a)}<td class="l">${a===w?'<span class="tag t-ok">same</span>':'<span class="tag t-dis">teams differ</span>'}</td></tr>`}).join(''):'<tr><td class="l note">No box scanned yet.</td></tr>';
+  $('boxT').innerHTML=bxs.length?`<tr><th class="l">Box</th><th>Finance</th><th>Warehouse</th><th>Difference</th><th class="l"></th></tr>`+bxs.map(b=>{const a=bp('accounts',b),w=bp('warehouse',b);return `<tr><td class="l"><b>Box ${b}</b>${['accounts','warehouse'].some(t=>Object.keys(((R.counts||{})[t]||{boxes:{}}).boxes[b]||{}).some(c=>c.startsWith('?')))?' <span class="tag t-unk">⚠ not on the invoice</span>':''}</td><td>${fmt(a)}</td><td>${fmt(w)}</td>${d(w-a)}<td class="l">${a===w?'<span class="tag t-ok">same</span>':'<span class="tag t-dis">teams differ</span>'}</td></tr>`}).join(''):'<tr><td class="l note">No box scanned yet.</td></tr>';
   const ppl=Object.entries(TEAMS).flatMap(([t,n])=>((R.counts[t]||{}).people||[]).map(p=>({...p,team:n}))).sort((a,b)=>b.pcs-a.pcs);
   $('pplT').innerHTML=ppl.length?`<tr><th class="l">Person</th><th class="l">Team</th><th>Pieces</th><th class="l">Last scan</th></tr>`+ppl.map(p=>`<tr><td class="l">${esc(p.by)}</td><td class="l">${esc(p.team)}</td><td>${fmt(p.pcs)}</td><td class="l">${p.at?new Date(p.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''}</td></tr>`).join(''):'<tr><td class="l note">Nobody has scanned yet.</td></tr>';
   $('logL').innerHTML=(R.log||[]).map(x=>`${esc(x.what)} · ${esc(x.by)} · ${new Date(x.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`).join('<br>')}
