@@ -19,7 +19,8 @@ const ACCESS = 'rc/access.json';
 const INDEX = 'rc/index.json';
 const LEVELS = ['none', 'accounts', 'warehouse', 'view', 'manage'];
 const TEAMS = { accounts: 'Finance', warehouse: 'Warehouse' };
-const MAX_BOXES = 50;
+const MAX_BOXES = 20;
+const MAX_BAGS = 20; // optional bags inside a box are stored as box*100+bag: box 3 bag 7 = 307
 
 function send(res, code, obj) {
   res.setHeader('Cache-Control', 'no-store');
@@ -107,7 +108,8 @@ module.exports = async function handler(req, res) {
     if (!o) return send(res, 404, { ok: false, error: 'Not found.' });
     if (o.status !== 'Open') return send(res, 409, { ok: false, error: 'This shipment is closed. Ask the admin to open it again.' });
     const box = Math.round(num(b.box));
-    if (!(box >= 1 && box <= (o.boxes || MAX_BOXES))) return send(res, 400, { ok: false, error: 'Pick a box first.' });
+    const base = box >= 100 ? Math.floor(box / 100) : box, bag = box >= 100 ? box % 100 : 0;
+    if (!(base >= 1 && base <= (o.boxes || MAX_BOXES) && bag <= MAX_BAGS && (box < 100 || bag >= 1))) return send(res, 400, { ok: false, error: 'Pick a box first.' });
     if (op === 'clearbox') {
       // the whole team's scans in that box, whoever scanned them
       const files = (await scansOf(id)).filter(f => f.team === t);

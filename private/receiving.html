@@ -65,7 +65,7 @@ td.d0{color:var(--ink2)}td.dn{color:var(--bad);font-weight:700}td.dp{color:var(-
 <div id="pShip" hidden>
 <div class="card" id="upCard" hidden><h2>New shipment</h2>
   <div class="row"><input id="nName" placeholder="Shipment name (e.g. October Pandora order)" style="min-width:260px"><input id="nInv" placeholder="Invoice #" style="width:150px">
-    <label class="note">Boxes <input type="number" id="nBoxes" min="1" max="50" value="50" style="width:70px"></label>
+    <label class="note">Boxes <input type="number" id="nBoxes" min="1" max="20" value="20" style="width:70px"></label>
     <label class="btn go">Upload invoice (Excel)<input type="file" id="upFile" accept=".xlsx,.xls,.csv" hidden></label></div>
   <div class="note" style="margin-top:6px">The sheet needs <b>SKU</b> and <b>Quantity</b>; <b>EAN</b> (barcode) and <b>Per unit</b> (cost in USD) are read too. Same layout as the Pandora invoice export.</div>
 </div>
@@ -79,6 +79,7 @@ td.d0{color:var(--ink2)}td.dn{color:var(--bad);font-weight:700}td.dp{color:var(-
   <div class="row" style="margin-top:10px;justify-content:space-between"><div><span class="note">Box</span> <span class="curbox" id="curBox">—</span> <span class="note" id="curPcs"></span></div>
     <div class="row"><button class="btn" id="undo" disabled>Undo last</button><button class="btn del" id="clrBox" disabled>Clear this box</button></div></div>
   <div class="boxes" id="boxes" style="margin-top:8px"></div>
+  <div class="row" style="margin-top:8px"><label class="note">Bag # (optional) <select id="bagSel" aria-label="Bag number"></select></label></div>
   <div class="scanbox" style="margin-top:12px"><input id="scanIn" placeholder="Pick a box, then scan the barcode (EAN) or type the SKU" autocomplete="off"><div id="sidePic" hidden></div><button class="btn" id="cam">Use the camera</button></div>
   <video id="vid" hidden playsinline muted style="margin-top:8px"></video>
   <div class="note" id="scanMsg" style="margin-top:6px"></div>
@@ -181,11 +182,12 @@ $('upFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f
       lines=rows.slice(hi+1).filter(r=>U(r[c.s])&&+r[c.q]>0).map(r=>[U(r[c.s]),c.e>=0?String(r[c.e]).replace(/\.0$/,'').replace(/\D/g,''):'',+r[c.q],c.c>=0?+r[c.c]||0:0,c.p>=0?String(r[c.p]):'']);break}
     if(!lines||!lines.length)throw new Error('The file needs a SKU column and a Quantity column (like the Pandora invoice export).');
     const pcs=lines.reduce((a,l)=>a+l[2],0),v=lines.reduce((a,l)=>a+l[2]*l[3],0),name=$('nName').value.trim()||f.name.replace(/\.[^.]+$/,'');
-    if(!confirm(`${name}\n${lines.length} lines · ${fmt(pcs)} pieces · ${usd(v)}\n${+$('nBoxes').value||50} boxes\n\nCreate this shipment?`))return;
-    const j=await api('/api/recv?op=new',{name,invoice:$('nInv').value.trim()||(f.name.match(/\d{5,}/)||[''])[0],boxes:+$('nBoxes').value||50,lines});
+    if(!confirm(`${name}\n${lines.length} lines · ${fmt(pcs)} pieces · ${usd(v)}\n${+$('nBoxes').value||20} boxes\n\nCreate this shipment?`))return;
+    const j=await api('/api/recv?op=new',{name,invoice:$('nInv').value.trim()||(f.name.match(/\d{5,}/)||[''])[0],boxes:+$('nBoxes').value||20,lines});
     $('nName').value=$('nInv').value='';await boot();$('rpSel').value=j.id}catch(er){showErr(er.message)}};
 
 /* ---------- scan ---------- */
+const bxBase=b=>b>=100?Math.floor(b/100):b,bxBag=b=>b>=100?b%100:0,bxName=b=>'Box '+bxBase(b)+(bxBag(b)?' · Bag '+bxBag(b):'');
 let S=null,BOX=0,UNDO=[],QUEUE=Promise.resolve();
 const teamOf=()=>TEAM||$('teamSel')?.value||'warehouse';
 async function openScan(){const id=$('scSel').value;
@@ -194,17 +196,18 @@ async function openScan(){const id=$('scSel').value;
   if(!id){S=null;drawScan();return}await loadScan()}
 async function loadScan(){const id=$('scSel').value;if(!id)return;
   try{const j=await api('/api/recv?id='+id);S={...j.shipment,counts:j.counts};
-    if(!(BOX>=1&&BOX<=S.boxes))BOX=+(localStorage.getItem('rc.box.'+id)||0)||0;drawScan()}catch(e){showErr(e.message)}}
+    if(!(bxBase(BOX)>=1&&bxBase(BOX)<=S.boxes))BOX=+(localStorage.getItem('rc.box.'+id)||0)||0;drawScan()}catch(e){showErr(e.message)}}
 const tb=()=>(S&&S.counts[teamOf()]||{boxes:{}}).boxes;
 const boxPcs=b=>Object.values(tb()[b]||{}).reduce((a,n)=>a+n,0);
 function drawScan(){if(!S){$('boxes').innerHTML='';$('scInfo').textContent='No open shipment. The admin opens one on Shipments.';$('bxT').innerHTML='';return}
   const all=Object.keys(tb()).reduce((a,b)=>a+boxPcs(b),0);
   $('scInfo').textContent=`${S.name}${S.invoice?' · '+S.invoice:''} · your team scanned ${fmt(all)} pcs`;
-  $('boxes').innerHTML=Array.from({length:S.boxes},(_,i)=>i+1).map(b=>{const p=boxPcs(b);const un=Object.keys(tb()[b]||{}).filter(c=>c.startsWith('?')).length;return `<button class="bx ${b===BOX?'on':''} ${p?'has':''} ${un?'unk':''}" data-box="${b}" title="${un?un+' item(s) not on the invoice':''}"><b>${b}${un?' ⚠':''}</b><small>${p?fmt(p)+' pcs':'empty'}</small></button>`}).join('');
-  $('curBox').textContent=BOX||'—';$('curPcs').textContent=BOX?fmt(boxPcs(BOX))+' pcs':'pick a box';$('clrBox').disabled=!BOX||!boxPcs(BOX);$('undo').disabled=!UNDO.length;
-  $('bxTitle').textContent=BOX?'In box '+BOX+' ('+(TEAMS[teamOf()]||'')+')':'In this box';
+  $('boxes').innerHTML=Array.from({length:S.boxes},(_,i)=>i+1).map(b=>{const ks=Object.keys(tb()).map(Number).filter(k=>bxBase(k)===b),p=ks.reduce((a,k)=>a+boxPcs(k),0);const un=ks.reduce((a,k)=>a+Object.keys(tb()[k]||{}).filter(c=>c.startsWith('?')).length,0);return `<button class="bx ${b===bxBase(BOX)?'on':''} ${p?'has':''} ${un?'unk':''}" data-box="${b}" title="${un?un+' item(s) not on the invoice':''}"><b>${b}${un?' ⚠':''}</b><small>${p?fmt(p)+' pcs':'empty'}</small></button>`}).join('');
+  $('curBox').textContent=BOX?bxName(BOX).replace('Box ',''):'—';$('bagSel').disabled=!BOX;$('bagSel').innerHTML='<option value="0">No bag</option>'+Array.from({length:20},(_,i)=>i+1).map(g=>`<option value="${g}" ${g===bxBag(BOX)?'selected':''}>Bag ${g}${boxPcs(bxBase(BOX)*100+g)?' · '+fmt(boxPcs(bxBase(BOX)*100+g))+' pcs':''}</option>`).join('');$('curPcs').textContent=BOX?fmt(boxPcs(BOX))+' pcs':'pick a box';$('clrBox').disabled=!BOX||!boxPcs(BOX);$('undo').disabled=!UNDO.length;
+  $('bxTitle').textContent=BOX?'In '+bxName(BOX)+' ('+(TEAMS[teamOf()]||'')+')':'In this box';
   const m=Object.entries(tb()[BOX]||{}).sort((a,b)=>b[1]-a[1]),ean=new Map(S.lines.map(l=>[l[0],l[1]]));
   $('bxT').innerHTML=BOX?(m.length?`<tr><th></th><th class="l">SKU</th><th class="l">EAN</th><th>Pieces</th><th></th></tr>`+m.map(([c,n])=>`<tr><td>${box(c)}</td><td class="l"><b>${esc(c.replace(/^\?/,''))}</b>${c.startsWith('?')?' <span class="tag t-unk">not on the invoice</span>':''}</td><td class="l">${esc(ean.get(c)||'')}</td><td>${fmt(n)}</td><td><button class="btn" style="color:#C0392B" data-delitem="${esc(c)}">Delete</button></td></tr>`).join(''):'<tr><td class="l note">Nothing scanned in this box yet.</td></tr>'):'<tr><td class="l note">Pick a box above.</td></tr>'}
+$('bagSel').onchange=()=>{const g=+$('bagSel').value,b=bxBase(BOX);if(!b)return;BOX=g?b*100+g:b;try{localStorage.setItem('rc.box.'+S.id,BOX)}catch(_){}drawScan();$('scanIn').focus()};
 $('boxes').onclick=e=>{const b=e.target.closest('[data-box]');if(!b)return;BOX=+b.dataset.box;try{localStorage.setItem('rc.box.'+S.id,BOX)}catch(_){}drawScan();$('scanIn').focus()};
 $('scSel').onchange=()=>{BOX=0;UNDO=[];loadScan()};
 $('scRef').onclick=()=>loadScan();
@@ -215,7 +218,7 @@ function scan(code,n=1,bx=BOX){code=String(code||'').trim();if(!code||!S)return;
       const B=tb()[bx]||(tb()[bx]={});B[j.code]=(B[j.code]||0)+n;if(!B[j.code])delete B[j.code];
       if(n>0)UNDO.push([bx,j.code]);beep(j.known||n<0);
       const all=Object.values(tb()).reduce((a,m)=>a+(m[j.code]||0),0),l=S.lines.find(x=>x[0]===j.code);
-      $('scanMsg').innerHTML=j.known?`${n>0?'Scanned':'Taken back'} <b>${esc(j.code)}</b> · box ${bx}`:`<b class="bad">Not on the invoice: ${esc(code)}</b> · kept in box ${bx} so it shows on the report`;
+      $('scanMsg').innerHTML=j.known?`${n>0?'Scanned':'Taken back'} <b>${esc(j.code)}</b> · ${bxName(bx)}`:`<b class="bad">Not on the invoice: ${esc(code)}</b> · kept in ${bxName(bx)} so it shows on the report`;
       $('hitCard').hidden=false;$('hitPic').innerHTML=j.known&&$('pics').checked?pic(j.code):'';{const sp=$('sidePic'),h=j.known&&$('pics').checked?pic(j.code):'';sp.innerHTML=h;sp.hidden=!h}$('hitSku').textContent=j.code.replace(/^\?/,'');$('hitEan').textContent=l?l[1]:'not on the invoice';
       if(!all){$('hitCard').hidden=true;$('sidePic').hidden=true;$('sidePic').innerHTML=''}$('hitBox').textContent=fmt(B[j.code]||0);$('hitAll').textContent=fmt(all);$('hitCard').classList.remove('flash');void $('hitCard').offsetWidth;$('hitCard').classList.add('flash');drawScan()}
     catch(er){$('scanMsg').innerHTML=`<b class="bad">${esc(er.message)}</b>`;beep(false)}})}
@@ -228,12 +231,12 @@ $('scanIn').oninput=()=>{const t=performance.now(),v=$('scanIn').value.trim().to
   if(SCFAST>=4&&v.length>=5)SCT=setTimeout(scanNow,150);else if(known)SCT=setTimeout(scanNow,600)};
 $('undo').onclick=()=>{const u=UNDO.pop();if(u)scan(u[1],-1,u[0]);$('scanIn').focus()};
 $('bxT').addEventListener('click',async e=>{const b=e.target.closest('[data-delitem]');if(!b)return;const c=b.dataset.delitem,n=(tb()[BOX]||{})[c]||0;
-  if(!confirm(`Delete ${c.replace(/^\?/,'')} from box ${BOX}?\n\nThis removes all ${fmt(n)} pieces of it your team (${TEAMS[teamOf()]}) scanned into this box. The other team's count is not touched.`))return;
-  try{await api('/api/recv?op=clearbox',{id:S.id,box:BOX,item:c,team:teamOf()});UNDO=UNDO.filter(u=>!(u[0]===BOX&&u[1]===c));$('hitCard').hidden=true;$('sidePic').hidden=true;$('sidePic').innerHTML='';$('scanMsg').innerHTML=`Deleted <b>${esc(c.replace(/^\?/,''))}</b> from box ${BOX} (${fmt(n)} pcs).`;await loadScan()}catch(er){showErr(er.message)}
+  if(!confirm(`Delete ${c.replace(/^\?/,'')} from ${bxName(BOX)}?\n\nThis removes all ${fmt(n)} pieces of it your team (${TEAMS[teamOf()]}) scanned here. The other team's count is not touched.`))return;
+  try{await api('/api/recv?op=clearbox',{id:S.id,box:BOX,item:c,team:teamOf()});UNDO=UNDO.filter(u=>!(u[0]===BOX&&u[1]===c));$('hitCard').hidden=true;$('sidePic').hidden=true;$('sidePic').innerHTML='';$('scanMsg').innerHTML=`Deleted <b>${esc(c.replace(/^\?/,''))}</b> from ${bxName(BOX)} (${fmt(n)} pcs).`;await loadScan()}catch(er){showErr(er.message)}
   $('scanIn').focus()});
 $('clrBox').onclick=async()=>{if(!BOX)return;const p=boxPcs(BOX);
-  if(!confirm(`Clear box ${BOX}?\n\nThis removes all ${fmt(p)} pieces your team (${TEAMS[teamOf()]}) scanned into box ${BOX}, by everyone. The other team's count is not touched.`))return;
-  try{const j=await api('/api/recv?op=clearbox',{id:S.id,box:BOX,team:teamOf()});UNDO=UNDO.filter(u=>u[0]!==BOX);$('hitCard').hidden=true;$('sidePic').hidden=true;$('sidePic').innerHTML='';$('scanMsg').innerHTML=`Box ${BOX} cleared (${fmt(j.cleared)} pcs). Scan it again.`;await loadScan()}catch(er){showErr(er.message)}};
+  if(!confirm(`Clear ${bxName(BOX)}?\n\nThis removes all ${fmt(p)} pieces your team (${TEAMS[teamOf()]}) scanned into ${bxName(BOX)}, by everyone. The other team's count is not touched.`))return;
+  try{const j=await api('/api/recv?op=clearbox',{id:S.id,box:BOX,team:teamOf()});UNDO=UNDO.filter(u=>u[0]!==BOX);$('hitCard').hidden=true;$('sidePic').hidden=true;$('sidePic').innerHTML='';$('scanMsg').innerHTML=`${bxName(BOX)} cleared (${fmt(j.cleared)} pcs). Scan it again.`;await loadScan()}catch(er){showErr(er.message)}};
 let STREAM=null;
 $('cam').onclick=async()=>{const v=$('vid');
   if(STREAM){STREAM.getTracks().forEach(t=>t.stop());STREAM=null;v.hidden=true;$('cam').textContent='Use the camera';return}
@@ -281,8 +284,8 @@ function drawRep(){if(!R)return;const rows=recRows(),inv=R.lines.reduce((a,l)=>a
   // by box
   const bset=new Set();Object.keys(TEAMS).forEach(t=>Object.keys((R.counts[t]||{boxes:{}}).boxes).forEach(b=>bset.add(+b)));
   const bp=(t,b)=>Object.values(((R.counts[t]||{boxes:{}}).boxes[b])||{}).reduce((a,n)=>a+n,0);
-  const bxs=[...bset].sort((a,b)=>a-b);
-  $('boxT').innerHTML=bxs.length?`<tr><th class="l">Box</th><th>Finance</th><th>Warehouse</th><th>Difference</th><th class="l"></th></tr>`+bxs.map(b=>{const a=bp('accounts',b),w=bp('warehouse',b);return `<tr><td class="l"><b>Box ${b}</b>${['accounts','warehouse'].some(t=>Object.keys(((R.counts||{})[t]||{boxes:{}}).boxes[b]||{}).some(c=>c.startsWith('?')))?' <span class="tag t-unk">⚠ not on the invoice</span>':''}</td><td>${fmt(a)}</td><td>${fmt(w)}</td>${d(w-a)}<td class="l">${a===w?'<span class="tag t-ok">same</span>':'<span class="tag t-dis">teams differ</span>'}</td></tr>`}).join(''):'<tr><td class="l note">No box scanned yet.</td></tr>';
+  const bxs=[...bset].sort((a,b)=>(a<100?a*100:a)-(b<100?b*100:b));
+  $('boxT').innerHTML=bxs.length?`<tr><th class="l">Box</th><th>Finance</th><th>Warehouse</th><th>Difference</th><th class="l"></th></tr>`+bxs.map(b=>{const a=bp('accounts',b),w=bp('warehouse',b);return `<tr><td class="l"><b>${bxName(b)}</b>${['accounts','warehouse'].some(t=>Object.keys(((R.counts||{})[t]||{boxes:{}}).boxes[b]||{}).some(c=>c.startsWith('?')))?' <span class="tag t-unk">⚠ not on the invoice</span>':''}</td><td>${fmt(a)}</td><td>${fmt(w)}</td>${d(w-a)}<td class="l">${a===w?'<span class="tag t-ok">same</span>':'<span class="tag t-dis">teams differ</span>'}</td></tr>`}).join(''):'<tr><td class="l note">No box scanned yet.</td></tr>';
   const ppl=Object.entries(TEAMS).flatMap(([t,n])=>((R.counts[t]||{}).people||[]).map(p=>({...p,team:n}))).sort((a,b)=>b.pcs-a.pcs);
   $('pplT').innerHTML=ppl.length?`<tr><th class="l">Person</th><th class="l">Team</th><th>Pieces</th><th class="l">Last scan</th></tr>`+ppl.map(p=>`<tr><td class="l">${esc(p.by)}</td><td class="l">${esc(p.team)}</td><td>${fmt(p.pcs)}</td><td class="l">${p.at?new Date(p.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''}</td></tr>`).join(''):'<tr><td class="l note">Nobody has scanned yet.</td></tr>';
   $('logL').innerHTML=(R.log||[]).map(x=>`${esc(x.what)} · ${esc(x.by)} · ${new Date(x.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`).join('<br>')}
@@ -295,8 +298,8 @@ $('rpX').onclick=()=>{if(!R)return;const rows=recRows(),wb=XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Shipment:R.name,'Invoice #':R.invoice,Status:R.status,'Invoice pcs':inv,'Invoice USD':Math.round(R.lines.reduce((a,l)=>a+l[2]*l[3],0)*100)/100,'Finance pcs':rows.reduce((a,r)=>a+r.a,0),'Warehouse pcs':rows.reduce((a,r)=>a+r.w,0),'SKUs matching':rows.filter(r=>r.st==='ok').length,'SKUs with differences':rows.filter(r=>r.st!=='ok').length}]),'Summary');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.map(one)),'Reconciliation');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.filter(r=>r.st!=='ok').map(one)),'Differences');
-  const bx=[];for(const [t,n] of Object.entries(TEAMS))for(const [b,m] of Object.entries((R.counts[t]||{boxes:{}}).boxes))for(const [c,q] of Object.entries(m))bx.push({Team:n,Box:+b,SKU:c.replace(/^\?/,''),'On the invoice':c.startsWith('?')?'No':'Yes',Pieces:q});
-  bx.sort((a,b)=>a.Box-b.Box||a.Team.localeCompare(b.Team)||a.SKU.localeCompare(b.SKU));
+  const bx=[];for(const [t,n] of Object.entries(TEAMS))for(const [b,m] of Object.entries((R.counts[t]||{boxes:{}}).boxes))for(const [c,q] of Object.entries(m))bx.push({Team:n,Box:bxBase(+b),Bag:bxBag(+b)||'',SKU:c.replace(/^\?/,''),'On the invoice':c.startsWith('?')?'No':'Yes',Pieces:q});
+  bx.sort((a,b)=>a.Box-b.Box||(a.Bag||0)-(b.Bag||0)||a.Team.localeCompare(b.Team)||a.SKU.localeCompare(b.SKU));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(bx.length?bx:[{Note:'Nothing scanned yet'}]),'By box');
   XLSX.writeFile(wb,'Receiving '+(R.invoice||R.name).replace(/[\\/:*?"<>|]/g,' ')+' '+new Date().toISOString().slice(0,10)+'.xlsx')};
 boot();
