@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="icon" type="image/png" href="/favicon.png?v=2">
+<link rel="manifest" href="/stockcount.webmanifest">
+<meta name="theme-color" content="#FF93A0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Stock Count">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <title>Pandora Stock Count</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1188,10 +1194,10 @@ function setLive(){
   chip.hidden=false;
   const dot=$("#saveDot"),tx=$("#saveTxt");
   if(net.mode==="shared"){
-    const p=pendingBlocks();
-    if(net.failed>0){dot.className="dot off";tx.textContent="Offline, retrying. Scans are kept on this device.";}
-    else if(p>0){dot.className="dot off";tx.textContent="Syncing…";}
-    else{dot.className="dot";const n=ST?ST.team.length:1;tx.textContent=net.canWrite?"Live · "+n+(n===1?" person":" people"):"Live · view only";}
+    const p=pendingBlocks(),wq=net.db&&net.db.pending?net.db.pending():0,dn=net.db&&net.db.down?net.db.down():false;
+    if(dn||net.failed>0){dot.className="dot off";tx.textContent="Offline · "+(wq||p?"saved on this device, syncs when the internet is back":"working from the saved count");}
+    else if(p>0||wq>0){dot.className="dot off";tx.textContent="Syncing…";}
+    else{dot.className="dot";const n=ST?ST.team.length:1;tx.textContent=(net.canWrite?"Live · "+n+(n===1?" person":" people"):"Live · view only")+(lsGet(SWKEY)?" · works offline":"");}
   }else{
     dot.className="dot"+(localFail?" off":"");
     tx.textContent=localFail?"Not saved here. Export before closing.":"Auto-saved on this device";
@@ -1323,11 +1329,33 @@ function addScans(list){
 function netErr(e){console.warn("shared count",e);net.failed++;setLive();}
 /* ---------- shared database on this website (when not running inside Claude) ---------- */
 const CODEKEY="pandora-stock-access";
+/* ---------- offline: everything the count needs is kept on this device (IndexedDB) ---------- */
+const SHAREDKEY="pandora-stock-shared-before",MEKEY="pandora-stock-me",SWKEY="pandora-stock-offline-ready";
+const idb=(function(){
+  let dbp=null;const mem=new Map();
+  function open(){
+    if(dbp)return dbp;
+    dbp=new Promise((res,rej)=>{try{const r=indexedDB.open("pandora-stock-offline",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);r.onblocked=()=>rej(new Error("blocked"));}catch(e){rej(e);}}).catch(()=>null);
+    return dbp;
+  }
+  async function get(k){
+    const d=await open();if(!d)return mem.get(k);
+    return new Promise(res=>{try{const q=d.transaction("kv").objectStore("kv").get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(undefined);}catch(e){res(undefined);}});
+  }
+  async function set(k,v){
+    mem.set(k,v);const d=await open();if(!d)return false;
+    return new Promise(res=>{try{const t=d.transaction("kv","readwrite");t.objectStore("kv").put(v,k);t.oncomplete=()=>res(true);t.onerror=()=>res(false);t.onabort=()=>res(false);}catch(e){res(false);}});
+  }
+  return {get,set};
+})();
 async function rawCall(body,code){
   let r;
-  try{r=await fetch("/api/stockcount",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify(body)});}
+  const ac=typeof AbortController==="function"?new AbortController():null;
+  const tm=ac?setTimeout(()=>ac.abort(),15000):0; /* a wifi with no internet must fail fast, not hang */
+  try{r=await fetch("/api/stockcount",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify(body),signal:ac?ac.signal:undefined});}
   catch(e){const er=new Error("offline");er.code="unavailable";throw er;}
-  /* signed out (or not the super admin): go back to the sign-in page */
+  finally{clearTimeout(tm);}
+  /* signed out (or not allowed): go back to the sign-in page */
   if(r.status===401||r.status===403){location.replace("/login.html");const er=new Error("sign-in needed");er.status=r.status;er.code="unauthorized";throw er;}
   let j=null;try{j=await r.json();}catch(e){}
   if(!r.ok){
@@ -1350,31 +1378,131 @@ function askAccessCode(wrong){
   });
 }
 function makeServerDb(code){
-  const subs=new Set();let ver=-1,timer=0,busy=false,bad=false;const db={onRecover:null};
-  const call=b=>rawCall(b,code);
+  const subs=new Set();let ver=-1,timer=0,busy=false,bad=false,isDown=!!(typeof navigator!=="undefined"&&navigator.onLine===false);
+  const db={onRecover:null,onState:null};
+  const setDown=v=>{if(v!==isDown){isDown=v;if(db.onState)db.onState();}};
+  const call=b=>rawCall(b,code).then(r=>{setDown(false);return r;},e=>{if(!e.status)setDown(true);throw e;});
+  const transient=e=>!e||!e.status||e.status>=500||e.status===429||e.status===408;
   const mkDoc=(id,x)=>({id,exists:true,data:()=>x});
-  function applyTo(s,r){
+  const parentOf=p=>p.slice(0,p.lastIndexOf("/")),idOf=p=>p.slice(p.lastIndexOf("/")+1);
+
+  /* writes are saved on the device first, then sent in order. Nothing is lost if there is no internet or the page is closed. */
+  let q=[],fly=null,flushing=false,flushT=0,fullToast=false;
+  const qReady=idb.get("outbox").then(v=>{if(Array.isArray(v)&&v.length)q=v.concat(q);if(q.length&&db.onState)db.onState();}).catch(()=>{});
+  const saveQ=()=>idb.set("outbox",q.map(x=>({op:x.op,path:x.path,data:x.data,t:x.t})));
+  let tick=0;const nowT=()=>{const t=Date.now()*1000+(tick=(tick+1)%1000);return t/1000;};
+  function applyPending(path,base){
+    let r=base?{t:base.t,d:base.d}:null;
+    for(const it of q){
+      if(it.path!==path)continue;
+      r=it.op==="set"?{t:it.t,d:it.data,l:true}:{t:it.t,d:Object.assign({},r?r.d:{},it.data),l:true};
+    }
+    return r;
+  }
+  async function enqueue(op,path,data){
+    await qReady;
+    let carry=data;
+    for(let k=q.length-1;k>=0;k--){
+      const it=q[k];if(it===fly||it.path!==path)continue;
+      if(op==="set"){q.splice(k,1);}
+      else if(it.op==="set"){carry=Object.assign({},it.data,data);op="set";q.splice(k,1);}
+      else{carry=Object.assign({},it.data,data);q.splice(k,1);}
+      break;
+    }
+    const it={op,path,data:carry,t:nowT()};
+    q.push(it);
+    await saveQ();
+    echo(path,it);
+    if(db.onState)db.onState();
+    flush();
+  }
+  async function flush(){
+    if(flushing)return;
+    await qReady;if(!q.length||flushing)return;
+    flushing=true;clearTimeout(flushT);
+    try{
+      while(q.length){
+        const it=q[0];fly=it;
+        try{await call({op:it.op,path:it.path,data:it.data});}
+        catch(e){
+          fly=null;
+          if(e&&e.code==="quota_exceeded"){if(!fullToast){fullToast=true;toast("The shared database is full. Export the count now.");}}
+          else if(!transient(e)&&e.code!=="unauthorized"){q.shift();await saveQ();continue;} /* a request the server will never accept: drop it, do not block the rest */
+          flushT=setTimeout(flush,5000);break;
+        }
+        fly=null;
+        const k=q.indexOf(it);if(k>=0)q.splice(k,1);
+        await saveQ();
+      }
+    }finally{flushing=false;}
+    if(db.onState)db.onState();
+  }
+
+  /* what this device last saw, kept so the page opens and works with no internet */
+  const timers=new Map();
+  function later(key,fn,ms){clearTimeout(timers.get(key));timers.set(key,setTimeout(()=>{timers.delete(key);fn();},ms));}
+  function persist(s){
+    if(s.k==="d")later("d:"+s.path,()=>{if(s.has)idb.set("d:"+s.path,{t:s.t,d:s.lastD});},300);
+    else later("c:"+s.path,()=>idb.set("c:"+s.path,[...s.raw.values()]),3000);
+  }
+  async function cachedDoc(path){const c=await idb.get("d:"+path);return c&&c.d!==undefined?c:null;}
+  async function cachedColl(path){const a=await idb.get("c:"+path);return Array.isArray(a)?a:null;}
+  async function fromCache(s){
+    if(s.k==="d"){
+      const o=applyPending(s.path,await cachedDoc(s.path));
+      return o?{doc:o}:null;
+    }
+    const arr=await cachedColl(s.path);
+    const m=new Map((arr||[]).map(o=>[o.id,o]));
+    const ids=new Set();for(const it of q)if(parentOf(it.path)===s.path)ids.add(idOf(it.path));
+    for(const id of ids){const o=applyPending(s.path+"/"+id,m.get(id));if(o)m.set(id,{id,t:o.t,d:o.d,l:o.l});}
+    return arr||ids.size?{docs:[...m.values()]}:null;
+  }
+
+  function applyTo(s,r,local){
     if(s.k==="d"){
       const o=r&&r.doc;
-      if(o){if(!s.sent||s.t!==o.t){s.t=o.t;s.sent=true;s.cb({exists:true,id:s.id,data:()=>o.d});}}
+      if(o){if(!s.sent||s.t!==o.t){s.t=o.t;s.sent=true;s.lastD=o.d;s.has=true;if(!local)persist(s);s.cb({exists:true,id:s.id,data:()=>o.d});}}
       else if(!s.sent){s.sent=true;s.cb({exists:false,id:s.id,data:()=>undefined});}
     }else{
-      const docs=(r&&r.docs)||[];const ch=[];
+      const docs=(r&&r.docs)||[];const ch=[];let real=false;
       for(const o of docs){
         if(s.seen.get(o.id)===o.t)continue;
         const had=s.seen.has(o.id);s.seen.set(o.id,o.t);
         const d=mkDoc(o.id,o.d);s.all.set(o.id,d);
+        if(!o.l){real=true;s.raw.set(o.id,{id:o.id,t:o.t,d:o.d});}
         ch.push({type:had?"modified":"added",doc:d});
-        if(o.t>s.since)s.since=o.t;
+        if(!o.l&&o.t>s.since)s.since=o.t;
       }
+      if(real&&!local)persist(s);
       if(ch.length||!s.sent){s.sent=true;s.cb({docs:[...s.all.values()],docChanges:()=>ch});}
     }
   }
+  /* an own write shows on this device straight away, even with no internet */
+  async function echo(path,it){
+    for(const s of subs){
+      if(s.k==="d"&&s.path===path){
+        const base=s.has?{t:s.t,d:s.lastD}:await cachedDoc(path);
+        const o=applyPending(path,base);if(o)applyTo(s,{doc:{t:it.t,d:o.d}},true);
+      }else if(s.k==="c"&&s.path===parentOf(path)){
+        applyTo(s,{docs:[{id:idOf(path),t:it.t,d:it.op==="set"?it.data:applyPending(path,null).d,l:true}]},true);
+      }
+    }
+  }
+
   async function first(s){
     try{const r=await call({op:"sync",ver:-1,subs:[{k:s.k,path:s.path,since:0}]});if(subs.has(s))applyTo(s,r.res[0]);}
-    catch(e){if(s.err)s.err(e);}
+    catch(e){
+      if(transient(e)){
+        await qReady;
+        const c=await fromCache(s);
+        if(c){if(subs.has(s))applyTo(s,c,true);return;}
+      }
+      if(s.err)s.err(e);
+    }
   }
   async function poll(){
+    if(q.length&&!flushing)flush();
     if(busy||document.hidden||!subs.size)return;
     busy=true;
     const list=[...subs];
@@ -1385,20 +1513,39 @@ function makeServerDb(code){
     }catch(e){bad=true;list.forEach(s=>s.err&&s.err(e));}
     busy=false;
   }
+  db.poll=poll;db.flush=flush;
+  db.pending=()=>q.length;
+  db.down=()=>isDown||(typeof navigator!=="undefined"&&navigator.onLine===false);
+  db.goDown=()=>setDown(true);
   function start(){if(!timer){timer=setInterval(poll,4000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)poll();});}}
   function sub(k,path,cb,err){
-    const s={k,path,cb,err,sent:false,t:-1,since:0,seen:new Map(),all:new Map(),id:path.slice(path.lastIndexOf("/")+1)};
+    const s={k,path,cb,err,sent:false,t:-1,since:0,seen:new Map(),all:new Map(),raw:new Map(),has:false,lastD:undefined,id:idOf(path)};
     subs.add(s);start();first(s);
     return ()=>{subs.delete(s);};
   }
   db.doc=path=>({
-    async get(){const r=await call({op:"get",path});return {exists:!!r.exists,id:path.slice(path.lastIndexOf("/")+1),data:()=>r.d};},
-    async set(data){await call({op:"set",path,data});},
-    async update(data){await call({op:"update",path,data});},
+    async get(){
+      await qReady;
+      let r=null;
+      try{r=await call({op:"get",path});if(r&&r.exists)idb.set("d:"+path,{t:r.t,d:r.d});}
+      catch(e){if(!transient(e))throw e;const c=await cachedDoc(path);r=c?{exists:true,d:c.d,t:c.t}:null;if(!r&&!q.some(x=>x.path===path))throw e;}
+      const o=applyPending(path,r&&r.exists?{t:r.t,d:r.d}:null);
+      return {exists:!!o,id:idOf(path),data:()=>o?o.d:undefined};
+    },
+    set(data){return enqueue("set",path,data);},
+    update(data){return enqueue("update",path,data);},
     onSnapshot(cb,err){return sub("d",path,cb,err);}
   });
   db.collection=path=>({
-    async get(){const r=await call({op:"list",path});return {docs:r.docs.map(o=>mkDoc(o.id,o.d))};},
+    async get(){
+      await qReady;
+      let docs=null;
+      try{const r=await call({op:"list",path});docs=(r&&r.docs)||[];idb.set("c:"+path,docs.map(o=>({id:o.id,t:o.t,d:o.d})));}
+      catch(e){if(!transient(e))throw e;docs=await cachedColl(path);if(!docs)throw e;}
+      const m=new Map(docs.map(o=>[o.id,o]));
+      for(const it of q)if(parentOf(it.path)===path){const id=idOf(it.path);const o=applyPending(it.path,m.get(id));if(o)m.set(id,{id,t:o.t,d:o.d});}
+      return {docs:[...m.values()].map(o=>mkDoc(o.id,o.d))};
+    },
     onSnapshot(cb,err){return sub("c",path,cb,err);}
   });
   return db;
@@ -1407,12 +1554,15 @@ async function connectServer(){
   /* no access code here: the page is only served to the signed-in super admin, and the API checks the same login */
   try{
     await rawCall({op:"ping"},"");
-    const db=makeServerDb("");
-    db.onRecover=()=>{net.failed=0;setLive();};
-    return db;
+    lsSet(SHAREDKEY,"1");
   }catch(e){
-    return null;
+    /* no internet (or the server is down) but this device has used the shared count before: open from the saved copy */
+    if(!((!e||!e.status||e.status>=500)&&lsGet(SHAREDKEY)))return null;
   }
+  const db=makeServerDb("");
+  db.onRecover=()=>{net.failed=0;setLive();};
+  db.onState=()=>setLive();
+  return db;
 }
 async function connect(){
   let db=null,user=null;
@@ -1458,7 +1608,7 @@ async function joinCount(sid){
     if(switching)toast((meta.by||"Someone")+" started a new count. You are on it now.");
     else toast("Joined the count started by "+(meta.by||"a teammate"));
   }catch(e){
-    showLanding();showErr((e&&e.message)||"The shared count could not be opened.");
+    showLanding();showErr(e&&e.code==="unavailable"?"No internet, and this count is not saved on this device yet. Connect once to download it.":((e&&e.message)||"The shared count could not be opened."));
   }finally{joining=null;}
 }
 let countUnsubs=[];
@@ -2055,7 +2205,7 @@ async function start(){
   if(ph){phoneMode=true;let hn="";try{hn=decodeURIComponent(ph[1]).trim().replace(/\s+/g," ").slice(0,30);}catch(e){}if(hn)name=hn;}
   /* every device is asked who is scanning each time it opens the site (a paired phone gets the name from its link) */
   /* signed in: the scanner is the signed-in user, nobody is asked for a name */
-  if(!name){try{const r=await fetch("/api/stockcount",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({op:"ping"})});const j=r.ok?await r.json():null;if(j&&j.me){name=String(j.me).trim().replace(/\s+/g," ").slice(0,30);signedName=name;}}catch(e){}}
+  if(!name){try{const r=await fetch("/api/stockcount",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({op:"ping"})});const j=r.ok?await r.json():null;if(j&&j.me){name=String(j.me).trim().replace(/\s+/g," ").slice(0,30);signedName=name;lsSet(MEKEY,name);}}catch(e){const c=(lsGet(MEKEY)||"").trim();if(c){name=c;signedName=c;}}}
   if(!name){if(last)myName=last;name=await openGate(false);}
   rememberName(name);
   if(signedName){$("#meChip").style.cursor="default";$("#meChip").title="Signed in as "+signedName;}
@@ -2068,6 +2218,20 @@ async function start(){
     $("#boot").hidden=true;showLanding();
   }
 }
+/* ---------- works without internet: saved page + automatic sync ---------- */
+function setupOffline(){
+  window.addEventListener("online",()=>{const d=net.db;if(d&&d.flush){if(d.poll)d.poll();d.flush();}setLive();});
+  window.addEventListener("offline",()=>{if(net.db&&net.db.goDown)net.db.goDown();setLive();});
+  if(!("serviceWorker" in navigator)||!(location.protocol==="https:"||location.hostname==="localhost"))return;
+  navigator.serviceWorker.addEventListener("message",e=>{
+    const d=e.data||{};
+    if(d.type==="warm-done"&&d.ok){const first=!lsGet(SWKEY);lsSet(SWKEY,"1");setLive();if(first)toast("Ready for offline use. Scans are saved here and sync when the internet is back.");}
+  });
+  navigator.serviceWorker.register("/sw.js",{scope:"/"}).then(()=>navigator.serviceWorker.ready).then(reg=>{
+    if(navigator.onLine&&reg&&reg.active)reg.active.postMessage({type:"warm"});
+  }).catch(()=>{});
+}
+setupOffline();
 start();
 })();
 </script>

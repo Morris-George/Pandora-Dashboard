@@ -1,0 +1,15 @@
+{
+  "name": "Pandora Stock Count",
+  "short_name": "Stock Count",
+  "description": "Count stock with a scanner or phone camera. Works without internet and syncs when you are back online.",
+  "start_url": "/stockcount",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FAF6F5",
+  "theme_color": "#FF93A0",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

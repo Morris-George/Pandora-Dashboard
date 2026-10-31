@@ -73,6 +73,20 @@ function withChrome(kind, multi) {
   };
 }
 
+// The service worker's cache name carries a fingerprint of the product-picture files and of the worker itself,
+// so a new version of either makes every device fetch fresh copies.
+let SW_CACHE = null;
+function swSource() {
+  if (!SW_CACHE) {
+    const crypto = require('crypto');
+    const raw = fs.readFileSync(path.join(PRIVATE_DIR, 'sw.js'), 'utf8');
+    const h = crypto.createHash('md5').update(raw);
+    for (let i = 1; i <= 4; i++) { try { h.update(fs.readFileSync(path.join(PRIVATE_DIR, 'stockcount-pics-' + i + '.js'))); } catch (_) {} }
+    SW_CACHE = raw.replace('__BUILD__', h.digest('hex').slice(0, 10));
+  }
+  return SW_CACHE;
+}
+
 function sendFile(res, filename, contentType, transform) {
   try {
     let content = fs.readFileSync(
@@ -116,6 +130,23 @@ module.exports = async function handler(req, res) {
 
   if (requestedPath === '/favicon.png' || requestedPath === '/favicon.ico') {
     return sendFile(res, 'favicon.png', 'image/png');
+  }
+
+  // Offline support for Stock Count (public files: no data in them, and the page itself still needs the sign-in).
+  if (requestedPath === '/sw.js') {
+    try {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Service-Worker-Allowed', '/');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      return res.status(200).send(swSource());
+    } catch (_) { return res.status(500).send('Site file unavailable.'); }
+  }
+  if (requestedPath === '/stockcount.webmanifest') {
+    return sendFile(res, 'stockcount.webmanifest', 'application/manifest+json; charset=utf-8');
+  }
+  if (requestedPath === '/icon-192.png' || requestedPath === '/icon-512.png') {
+    return sendFile(res, requestedPath.slice(1), 'image/png');
   }
 
   // A phone paired from Stock Count: the link carries a signed token. Valid -> keep it in a cookie that opens only
