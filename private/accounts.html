@@ -90,12 +90,13 @@ document.addEventListener('change',async e=>{if(e.target.id!=='sprole'||e.target
 let ACT=[],AF='all',TEAMS={list:[],of:{},names:{}};
 const teamSel=k=>`<select data-team="${esc(k)}" style="width:auto;height:34px" aria-label="Team"><option value="">No team</option>${TEAMS.list.map(t=>`<option ${TEAMS.of[k]===t?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
 const GROUPS=[['all','Everyone'],['staff','Staff'],['area','Area managers'],['finance','Finance'],['brand','Brand manager'],['hr','HR']];
+const lvSel=k=>[['refillaccess','Refill',RFL,RF],['distaccess','Distribution',DSL,DS],['recvaccess','Receiving',RCL,RC]].map(([a,t,l,m])=>`<label class="note">${t} <select data-lv="${a}" data-key="${esc(k)}" style="width:auto;height:34px" aria-label="${t} access">${l.map(([v,x])=>`<option value="${v}" ${(m[k]||'none')===v?'selected':''}>${x}</option>`).join('')}</select></label>`).join(' ');
 function renderActive(){
   const inF=(x,k)=>k==='all'||x.g===k||(k.startsWith('t:')&&TEAMS.of[x.k]===k.slice(2));
   const cnt=k=>ACT.filter(x=>inF(x,k)).length;
   const G=GROUPS.map(([k,l])=>[k,TEAMS.names['g:'+k]||l]).concat(TEAMS.list.filter(t=>!GROUPS.some(g=>g[1]===t)).map(t=>['t:'+t,t]));
   const chips=`<div class="pwline" style="margin:0 0 8px">${G.map(([k,l])=>`<button type="button" class="btn${AF===k?' go':''}" data-filter="${esc(k)}">${esc(l)} · ${cnt(k)}</button>`).join('')}<button type="button" class="btn" id="newteam">+ New team</button>${AF!=='all'?`<button type="button" class="btn" id="renteam" title="Rename this team">✎ Rename</button>`:''}</div>`;
-  const rows=ACT.filter(x=>inF(x,AF)).map(x=>x.h.replace('<div class="btns">','<div class="btns">'+(x.k?teamSel(x.k):''))).join('');
+  const rows=ACT.filter(x=>inF(x,AF)).map(x=>x.h.replace('<div class="btns">','<div class="btns">'+(x.k?teamSel(x.k)+lvSel(x.k):''))).join('');
   $('active').innerHTML=chips+(rows||'<div class="empty">Nobody here.</div>');
 }
 let RF={},DS={},RC={},RFP=[],RFPEND={};
@@ -108,7 +109,7 @@ function renderRf(){const q=($('rfq').value||'').trim().toLowerCase(),only=$('rf
   $('rflist').innerHTML=l.length?l.map(p=>`<div class="row"><div class="who">${esc(p.n)}<small>${esc(p.s)}</small></div><div></div><div></div><div class="btns"><label class="note">Refill <select data-rf="${esc(p.k)}" style="width:auto;height:34px${'rf|'+p.k in RFPEND?';outline:2px solid var(--accent)':''}" aria-label="Refill Order access">${RFL.map(([v,t])=>`<option value="${v}" ${cur(RF,p.k,'rf|'+p.k)===v?'selected':''}>${t}</option>`).join('')}</select></label> <label class="note">Distribution <select data-ds="${esc(p.k)}" style="width:auto;height:34px${'ds|'+p.k in RFPEND?';outline:2px solid var(--accent)':''}" aria-label="Orders Distribution access">${DSL.map(([v,t])=>`<option value="${v}" ${cur(DS,p.k,'ds|'+p.k)===v?'selected':''}>${t}</option>`).join('')}</select></label> <label class="note">Receiving <select data-rc="${esc(p.k)}" style="width:auto;height:34px${'rc|'+p.k in RFPEND?';outline:2px solid var(--accent)':''}" aria-label="Shipment Receiving access">${RCL.map(([v,t])=>`<option value="${v}" ${cur(RC,p.k,'rc|'+p.k)===v?'selected':''}>${t}</option>`).join('')}</select></label></div></div>`).join(''):'<div class="empty">Nobody.</div>'}
 function rfState(){const n=Object.keys(RFPEND).length;$('rfsave').disabled=!n;$('rfundo').disabled=!n;$('rfsave').textContent=n?'Save changes ('+n+')':'Save changes';if(n)$('rfmsg').textContent='Not saved yet.'}
 document.addEventListener('click',async e=>{
-  if(e.target.id==='rfundo'){RFPEND={};rfState();$('rfmsg').textContent='';renderRf();return}
+  if(e.target.id==='rfundo'){RFPEND={};rfState();$('rfmsg').textContent='';renderRf();renderActive();return}
   if(e.target.id!=='rfsave')return;
   const b=e.target;b.disabled=true;$('rfmsg').textContent='Saving…';let bad=0;
   for(const [K,level] of Object.entries(RFPEND)){const ds=K.startsWith('ds|'),rc=K.startsWith('rc|'),k=K.slice(3),M=ds?DS:rc?RC:RF;
@@ -157,6 +158,8 @@ document.addEventListener('change',async e=>{
   if(rc){const k=rc.dataset.rc;if((RC[k]||'none')===rc.value)delete RFPEND['rc|'+k];else RFPEND['rc|'+k]=rc.value;rfState();renderRf();return}
   const ds=e.target.closest&&e.target.closest('select[data-ds]');
   if(ds){const k=ds.dataset.ds;if((DS[k]||'none')===ds.value)delete RFPEND['ds|'+k];else RFPEND['ds|'+k]=ds.value;rfState();renderRf();return}
+  const lv=e.target.closest&&e.target.closest('select[data-lv]');
+  if(lv){lv.disabled=true;try{const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:lv.dataset.lv,key:lv.dataset.key,level:lv.value})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)showErr(j.error||'Could not save the access.')}catch(_){showErr('No connection.')}load();return}
   const tm=e.target.closest&&e.target.closest('select[data-team]');
   if(tm){tm.disabled=true;try{const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'setdept',key:tm.dataset.team,name:tm.value})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)showErr(j.error||'Could not save the team.')}catch(_){showErr('No connection.')}load();return}
   const t=e.target.closest&&e.target.closest('select[data-title]'); if(!t)return;
