@@ -41,7 +41,12 @@ async function levelFor(who) {
   if (!who) return 'none';
   if (isAdmin(who)) return 'manage';
   const acc = (await store.getJSON(ACCESS)) || {};
-  return LEVELS.includes(acc[keyOf(who)]) ? acc[keyOf(who)] : 'none';
+  const lvl = LEVELS.includes(acc[keyOf(who)]) ? acc[keyOf(who)] : 'none';
+  if (lvl !== 'view') return lvl;
+  // report-only Finance and Warehouse people still scan for their team
+  const d = (await store.getJSON('access/depts.json')) || {}, u = who.user || {}, info = who.info || {};
+  const tag = [(d.of || {})[keyOf(who)], u.title, u.role, info.role, who.kind].join(' ');
+  return /finance|account/i.test(tag) ? 'accounts' : /warehouse/i.test(tag) || who.kind === 'sc' ? 'warehouse' : 'view';
 }
 const nameOf = who => who.kind === 'env' ? String((who.user && who.user.name) || who.account.user || 'Admin') : String((who.user && (who.user.name || who.user.username)) || '');
 const personKey = who => crypto.createHash('sha1').update(keyOf(who)).digest('hex').slice(0, 12);
