@@ -146,10 +146,10 @@ $('pics').onchange=()=>{try{localStorage.setItem('rc.pics',$('pics').checked?'1'
 /* ---------- start ---------- */
 async function boot(){showErr('');
   try{L=await api('/api/recv');LVL=L.level;TEAM=L.team;TEAMS=L.teams||{}}catch(e){showErr(e.message);return}
-  $('tShip').hidden=!mg();$('upCard').hidden=!mg();$('tRep').hidden=!sees();$('tScan').hidden=!(mg()||TEAM);
+  $('tShip').hidden=!mg();$('upCard').hidden=!mg();$('tRep').hidden=false;$('tScan').hidden=!(mg()||TEAM);
   drawShips();fillSel();
   const want=(()=>{try{return localStorage.getItem('rc.tab')}catch(_){return ''}})();
-  tab(want&&!$('t'+want[0].toUpperCase()+want.slice(1)).hidden?want:(mg()?'ship':sees()?'rep':'scan'))}
+  tab(want&&!$('t'+want[0].toUpperCase()+want.slice(1)).hidden?want:(mg()?'ship':TEAM?'scan':'rep'))}
 function fillSel(){const open=L.shipments.filter(s=>s.status==='Open'),opt=l=>l.map(s=>`<option value="${s.id}">${esc(s.name)}${s.invoice?' · '+esc(s.invoice):''}${s.status==='Closed'?' (closed)':''}</option>`).join('');
   const a=$('scSel').value,b=$('rpSel').value;
   $('scSel').innerHTML=open.length?opt(open):'<option value="">No open shipment</option>';$('rpSel').innerHTML=L.shipments.length?opt(L.shipments):'<option value="">No shipment yet</option>';

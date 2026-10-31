@@ -1,7 +1,7 @@
 // Shipment Receiving: the admin uploads the commercial invoice (SKU, EAN, quantity, cost in USD), then two teams count the
 // same shipment box by box, each on its own: Accounts and Warehouse. The report lines up invoice, accounts and warehouse.
-//   GET  /api/recv                     shipments (scanners see only the open ones)
-//   GET  /api/recv?id=<id>             one shipment: the manager gets every count; a scanner gets only the codes and its own team
+//   GET  /api/recv                     shipments
+//   GET  /api/recv?id=<id>             one shipment with every team's counts (Finance and Warehouse see the report too)
 //   POST /api/recv?op=new      manage  {name, invoice, boxes, lines:[[sku, ean, qty, cost, pool]]}
 //   POST /api/recv?op=status   manage  {id, status: Open|Closed}
 //   POST /api/recv?op=delete   manage  {id}
@@ -72,7 +72,7 @@ module.exports = async function handler(req, res) {
   if (!who) return send(res, 401, { ok: false, error: 'sign-in-required' });
   const lvl = await levelFor(who);
   if (lvl === 'none') return send(res, 403, { ok: false, error: 'No access to Shipment Receiving. Ask the super admin.' });
-  const url = new URL(req.url, 'https://x.invalid'), by = nameOf(who), mg = lvl === 'manage', sees = mg || lvl === 'view', team = TEAMS[lvl] ? lvl : '';
+  const url = new URL(req.url, 'https://x.invalid'), by = nameOf(who), mg = lvl === 'manage', sees = true, team = TEAMS[lvl] ? lvl : '';
 
   if (req.method === 'GET') {
     const idx = (await store.getJSON(INDEX)) || [];
