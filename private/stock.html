@@ -61,6 +61,16 @@ tr.cat[aria-selected="true"] .cellbar i{background:var(--accent);opacity:.45}
 h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink2);font-weight:800}
 .pagefoot{color:var(--ink2);font-size:12px}
 @media (max-width:760px){.two{grid-template-columns:1fr}.kpi .v{font-size:20px}}
+:root{--text:var(--ink);--muted:var(--ink2);--surface2:var(--fill-soft)}
+.pthumb{width:42px;height:42px;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--surface2);color:var(--muted);font-size:15px;line-height:1;display:grid;place-items:center;overflow:hidden;cursor:zoom-in;transition:transform .15s,border-color .15s}
+.pthumb:hover,.pthumb:focus-visible{transform:scale(1.08);border-color:var(--accent);outline:none}
+.pthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.pmodal{position:fixed;inset:0;z-index:60;background:rgba(20,12,14,.45);display:grid;place-items:center;padding:20px}.pmodal[hidden]{display:none}
+.pmodal .pcard{background:var(--surface);color:var(--text);border-radius:18px;padding:14px 14px 16px;width:min(340px,100%);box-shadow:0 18px 50px rgba(0,0,0,.28);animation:ppop .16s ease-out}
+.pmodal .pbig{width:100%;aspect-ratio:1/1;border-radius:12px;background:var(--surface2);display:grid;place-items:center;overflow:hidden;color:var(--muted);font-size:12px;text-align:center}
+.pmodal .pbig img{width:100%;height:100%;object-fit:contain;display:block}
+.pmodal .pname{margin:12px 2px 2px;font-weight:700;font-size:13px;line-height:1.35}.pmodal .pinfo{margin:0 2px;color:var(--muted);font-size:11.5px}
+.pmodal .pclose{float:right;border:0;background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;margin:-4px -2px 4px 8px}
 </style>
 </head>
 <body>
@@ -94,8 +104,80 @@ h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;co
     <div class="tablewrap"><table><thead id="ithead"></thead><tbody id="itbody"></tbody></table></div>
     <div style="margin-top:12px;text-align:center"><button class="btn" type="button" id="itMore" hidden>Show more items</button></div>
   </section>
-  <footer class="pagefoot" id="foot"></footer>
+  <div class="pmodal" id="pModal" hidden><div class="pcard" role="dialog" aria-modal="true" aria-label="Product picture"><button type="button" class="pclose" id="pClose" aria-label="Close">&times;</button><div class="pbig" id="pBig"></div><div class="pname" id="pName"></div><div class="pinfo" id="pInfo"></div></div></div>
+<footer class="pagefoot" id="foot"></footer>
 </div>
+<script>
+/* Product thumbnails beside product rows: built-in pictures first (super admin), then the pandoraeg.com site; click a thumbnail to enlarge it. */
+window.PPic=(function(){
+  const KEY='pandora-pics-v1',D=(window.__PICS=window.__PICS||{});
+  let cache={};try{cache=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+  const key=s=>String(s||'').trim().toUpperCase(),base=s=>key(s).split('-')[0];
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const https=u=>u?String(u).replace(/^http:/,'https:'):u;
+  const tried=new Map(); let loadedPack=false, queue=[], busy=0;
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(cache))}catch(e){}}
+  function builtin(sku){const v=D[base(sku)];return v?'data:image/jpeg;base64,'+v:''}
+  function loadPack(){ /* the 4 picture files only open for the super admin; for anyone else they are simply refused */
+    if(loadedPack)return;loadedPack=true;let left=4;
+    for(let i=1;i<=4;i++){const sc=document.createElement('script');sc.src='/stockcount-pics-'+i+'.js';sc.async=true;sc.onload=sc.onerror=()=>{if(--left===0)fill(document)};document.head.appendChild(sc)}
+  }
+  async function lookup(sku){
+    const b=base(sku);if(!b||b==='—')return '';
+    if(cache[key(sku)])return cache[key(sku)];if(cache[b])return cache[b];
+    try{
+      const r=await fetch('/api/pic?sku='+encodeURIComponent(b),{credentials:'same-origin'}); /* the server asks pandoraeg.com: the browser is not allowed to */
+      const j=await r.json();const u=j&&j.url;
+      if(u){cache[b]=u;save();return u}
+    }catch(e){}
+    return '';
+  }
+  function pump(){
+    while(busy<3&&queue.length){const job=queue.shift();busy++;lookup(job.sku).then(job.done).finally(()=>{busy--;pump()})}
+  }
+  function get(sku){
+    const bi=builtin(sku);if(bi)return Promise.resolve(bi);
+    const b=base(sku);if(cache[key(sku)])return Promise.resolve(cache[key(sku)]);if(cache[b])return Promise.resolve(cache[b]);
+    if(!tried.has(b))tried.set(b,new Promise(res=>{queue.push({sku,done:res});pump()}));
+    return tried.get(b);
+  }
+  function show(btn,u){if(!u||btn.querySelector('img'))return;const im=new Image();im.alt='';im.referrerPolicy='no-referrer';im.onload=()=>{btn.textContent='';btn.appendChild(im)};im.src=https(u)}
+  let io=null;
+  function fill(root){
+    loadPack();
+    const btns=(root||document).querySelectorAll('.pthumb:not(:has(img))');
+    btns.forEach(b=>{
+      const bi=builtin(b.dataset.sku);if(bi){show(b,bi);return}
+      if(!('IntersectionObserver' in window)){get(b.dataset.sku).then(u=>show(b,u));return}
+      if(!io)io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);get(e.target.dataset.sku).then(u=>show(e.target,u))}),{rootMargin:'120px'});
+      io.observe(b);
+    });
+  }
+  function thumb(p,info){return `<button type="button" class="pthumb" data-sku="${esc(p.sku)}" data-name="${esc(p.name)}" data-info="${esc(info||'')}" title="Click to enlarge" aria-label="Enlarge picture of ${esc(p.name)}">◇</button>`}
+  const modal=()=>document.getElementById('pModal');
+  function big(u){try{const x=new URL(https(u),location.href);if(/shopify|pandoraeg/i.test(x.hostname)){x.searchParams.set('width','900');x.searchParams.delete('height')}return x.href}catch(e){return https(u)}}
+  async function open(btn){
+    const m=modal(),box=document.getElementById('pBig');
+    document.getElementById('pName').textContent=btn.dataset.name||'';
+    document.getElementById('pInfo').textContent=[btn.dataset.sku,btn.dataset.info].filter(Boolean).join(' · ');
+    const mine=btn.querySelector('img'),token=btn;open.t=token;
+    box.textContent='';
+    if(mine){const im=new Image();im.alt=btn.dataset.name||'';im.src=mine.src;box.appendChild(im)}else box.textContent='Looking for the picture…';
+    m.hidden=false;
+    /* the small icon picture is only 150px: fetch the full-size one from the site and swap it in when it has loaded */
+    const u=await lookup(btn.dataset.sku);if(open.t!==token)return;
+    if(!u){if(!mine)box.textContent='No picture for this item';return}
+    const im=new Image();im.alt=btn.dataset.name||'';im.referrerPolicy='no-referrer';
+    im.onload=()=>{if(open.t!==token)return;box.textContent='';box.appendChild(im);show(btn,u)};
+    im.onerror=()=>{if(!mine&&open.t===token)box.textContent='No picture for this item'};
+    im.src=big(u);
+  }
+  function close(){open.t=null;modal().hidden=true}
+  document.addEventListener('click',e=>{const b=e.target.closest('.pthumb');if(b){e.preventDefault();open(b);return}if(e.target.id==='pModal'||e.target.id==='pClose')close()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal().hidden)close()});
+  return {thumb,fill};
+})();
+</script>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -251,9 +333,10 @@ function itemsTable(rows){
   const q=v=>`<td${v<0?' class="neg"':''}>${pcs(v)}</td>`;
   card.hidden=false;
   $('itemsMeta').textContent=(S.sel?S.sel+' · ':'')+(S.loc==='ALL'?'All locations':S.loc)+' · '+nf0.format(all.length)+' item'+(all.length===1?'':'s');
-  $('ithead').innerHTML='<tr><th class="l">Item</th><th class="l">Category</th>'+locs.map(l=>`<th title="${esc(l)}">${esc(shortWh(l))}</th>`).join('')+'<th>Balance Qty</th></tr>';
-  $('itbody').innerHTML=shown.map(i=>`<tr><td class="l">${esc(i.name||i.code)}<small>${esc(i.code)}</small></td><td class="l">${esc(i.cat)}</td>`+locs.map(l=>q(i.w.get(l)||0)).join('')+`<td${i.b<0?' class="neg"':''}><b>${pcs(i.b)}</b></td></tr>`).join('')
-    +`<tr class="total"><td class="l">Total</td><td class="l"></td>`+locs.map(l=>`<td>${pcs(all.reduce((t,i)=>t+(i.w.get(l)||0),0))}</td>`).join('')+`<td>${pcs(all.reduce((t,i)=>t+i.b,0))}</td></tr>`;
+  $('ithead').innerHTML='<tr><th></th><th class="l">Item</th><th class="l">Category</th>'+locs.map(l=>`<th title="${esc(l)}">${esc(shortWh(l))}</th>`).join('')+'<th>Balance Qty</th></tr>';
+  $('itbody').innerHTML=shown.map(i=>`<tr><td>${PPic.thumb({sku:i.code,name:i.name||i.code},pcs(i.b)+' pieces')}</td><td class="l">${esc(i.name||i.code)}<small>${esc(i.code)}</small></td><td class="l">${esc(i.cat)}</td>`+locs.map(l=>q(i.w.get(l)||0)).join('')+`<td${i.b<0?' class="neg"':''}><b>${pcs(i.b)}</b></td></tr>`).join('')
+    +`<tr class="total"><td></td><td class="l">Total</td><td class="l"></td>`+locs.map(l=>`<td>${pcs(all.reduce((t,i)=>t+(i.w.get(l)||0),0))}</td>`).join('')+`<td>${pcs(all.reduce((t,i)=>t+i.b,0))}</td></tr>`;
+  PPic.fill($('itbody'));
   $('itMore').hidden=all.length<=S.itemsN;
   $('itMore').textContent='Show more items ('+nf0.format(all.length-S.itemsN)+' left)';
 }
@@ -267,12 +350,13 @@ function detail(list,showVal){
   const byItem=new Map();
   x.rows.forEach(r=>{let o=byItem.get(r[C]);if(!o)byItem.set(r[C],o={code:r[C],name:r[N],b:0,v:0,l:new Set()});o.b+=r[B];o.v+=r[V];if(r[B]!==0)o.l.add(r[W])});
   const its=[...byItem.values()].sort((a,b)=>b.b-a.b),top=its.slice(0,10),neg=its.filter(i=>i.b<0).slice(-5).reverse();
-  const itemRow=i=>`<tr><td class="l">${esc(i.name||i.code)}<small>${esc(i.code)}</small></td><td>${pcs(i.b)}</td>${showVal?`<td>${egp(i.v)}</td>`:''}<td>${nf0.format(i.l.size)}</td></tr>`;
-  const head=`<tr><th class="l">Item</th><th>Pieces</th>${showVal?'<th>Value</th>':''}<th>Locations</th></tr>`;
+  const itemRow=i=>`<tr><td>${PPic.thumb({sku:i.code,name:i.name||i.code},pcs(i.b)+' pieces')}</td><td class="l">${esc(i.name||i.code)}<small>${esc(i.code)}</small></td><td>${pcs(i.b)}</td>${showVal?`<td>${egp(i.v)}</td>`:''}<td>${nf0.format(i.l.size)}</td></tr>`;
+  const head=`<tr><th></th><th class="l">Item</th><th>Pieces</th>${showVal?'<th>Value</th>':''}<th>Locations</th></tr>`;
   el.innerHTML=`<div class="cardhead"><h2>${esc(x.name)}</h2><span class="meta">${pcs(x.b)} pieces in ${nf0.format(byLoc.size)} location${byLoc.size===1?'':'s'}${showVal?' · '+egp(x.v):''}</span></div>
    <div class="two"><div><h3>By location</h3>${locs.map(l=>`<div class="bar"><span class="n" title="${esc(l[0])}">${esc(l[0])}</span><span class="t"><i style="width:${Math.max(1,Math.abs(l[1])/lmax*100)}%"></i></span><span class="v${l[1]<0?' neg':''}">${pcs(l[1])}</span></div>`).join('')}</div>
    <div><h3>Most stock by item</h3><div class="tablewrap"><table style="min-width:0"><thead>${head}</thead><tbody>${top.map(itemRow).join('')}</tbody></table></div>
    ${neg.length?`<h3 style="margin-top:14px">Negative balances to check</h3><div class="tablewrap"><table style="min-width:0"><thead>${head}</thead><tbody>${neg.map(itemRow).join('')}</tbody></table></div>`:''}</div></div>`;
+  PPic.fill(el);
 }
 
 document.addEventListener('click',e=>{
