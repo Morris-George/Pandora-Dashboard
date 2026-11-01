@@ -73,6 +73,13 @@ h2{font-size:13px;font-family:var(--mono);letter-spacing:.1em;text-transform:upp
 .storebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.storebar .lbl{font:700 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:999px;padding:6px 12px;font:600 13px var(--ui);cursor:pointer;box-shadow:none}.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#2A1018}
 .err{background:#FFE4E8;color:#8A1F33;border-radius:12px;padding:10px 14px;font-weight:600;margin:10px 0}
+.item span.by{display:block;color:var(--mute);font:600 11px var(--ui);margin-top:2px}.item span{display:block}
+.daybar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.daybar .lbl{font:700 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}.daybar input[type=date]{width:auto;font:600 13px var(--ui);padding:7px 10px}
+.monitor{background:var(--panel);border-radius:16px;padding:14px;margin-top:18px}.monitor h2{margin-top:0}
+.monitor table{width:100%;border-collapse:collapse;font-size:13px}.monitor th{font:700 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mute);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line)}.monitor td{padding:8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}.monitor th.l,.monitor td.l{text-align:left}
+.monitor tr.mrow{cursor:pointer}.monitor tr.mrow:hover td{background:var(--hover)}.monitor tr.cur td{font-weight:800}.monitor tr.zero td{color:var(--mute)}
+.hrow{display:grid;grid-template-columns:96px minmax(0,1fr) 90px;gap:10px;align-items:center;padding:5px 0;font-size:13px;cursor:pointer}.hrow:hover{background:var(--hover)}.hrow.cur{font-weight:800}
+.hbar{height:10px;border-radius:10px;background:var(--thumb);overflow:hidden}.hbar i{display:block;height:100%;border-radius:10px;background:var(--accent)}.hrow span.n{text-align:right;font-family:var(--mono);font-size:12px;color:var(--mute)}
 details{background:var(--panel);border-radius:14px;padding:12px 14px;margin-top:16px}
 summary{cursor:pointer;font-weight:600}
 textarea,input[type=text]{width:100%;font:14px var(--mono);color:var(--fg);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:10px}
@@ -83,23 +90,32 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 </style>
 </head>
 <body>
-<header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Stock Checker</h1><div class="sub" id="subline">Count your stock: scan each barcode and compare the item in your hand with its picture. Your count stays on this device.</div></div><div class="actions"></div></header>
-<div class="err" id="err" hidden></div>
+<header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Stock Checker</h1><div class="sub" id="subline">Scan each barcode in the store and compare the item in your hand with its picture.</div></div><div class="actions"></div></header>
+
 <div class="storebar" id="storeBar" hidden><span class="lbl">Store</span><div class="chips" id="storeChips"></div></div>
-<div class="tots tot"><span id="whoLine"></span>Scans <b id="totScans">0</b> · SKUs <b id="totSkus">0</b> <a href="#" id="chgName" class="chg">Change name</a></div>
+<div class="daybar" id="dayBar" hidden><span class="lbl">Day</span><input type="date" id="dayPick" aria-label="Day"><button type="button" class="chip" id="dayToday">Today</button><span class="sub" id="dayNote"></span></div>
+<div class="tots tot"><span id="whoLine"></span>My scans <b id="totScans">0</b> · SKUs <b id="totSkus">0</b> · <span id="storeTotWrap">Store total <b id="totStore">0</b></span> <a href="#" id="chgName" class="chg" hidden>Change name</a></div>
+<div class="err" id="err" hidden></div>
 
 <section class="whobox" id="whoBox" hidden>
   <h3>Who is scanning?</h3>
-  <p class="hint">Your scans and your total for <b id="whoStore"></b> are saved on this phone only, under your name. The next person types their own name to keep a separate count. Nothing is sent anywhere.</p>
+  <p class="hint" id="whoHint">Type your name. Your scans are saved for <b id="whoStore"></b> under this name, and the store's staff and area manager can see them. Nobody from another store can.</p>
   <form id="whoForm" class="manual"><input type="text" id="whoName" maxlength="40" autocomplete="off" placeholder="Your name"><button type="submit">Start</button></form>
   <div id="whoPick"></div>
+</section>
+
+<section class="monitor" id="monitor" hidden>
+  <h2>Monitor <span id="monDay" class="sub"></span></h2>
+  <div class="tablewrap"><table><thead><tr><th class="l">Store</th><th>People</th><th>Scans</th><th>SKUs</th><th>Last scan</th></tr></thead><tbody id="monBody"></tbody></table></div>
+  <h2 style="margin-top:18px">Last 30 days <span id="histFor" class="sub"></span></h2>
+  <div id="hist"></div>
 </section>
 
 <section class="qrcard" id="qrCard" hidden>
   <div class="qrbox" id="qrBox" role="img" aria-label="QR code that opens Stock Checker on a phone"></div>
   <div>
     <h3>Scan with your phone</h3>
-    <p class="hint">Point the phone camera at this code and open the link. It opens straight to the scanner for <b id="qrStore"></b>, with no login. Type your name, tap Start camera and scan. Each person's scans and total are kept on that phone only, under their name.</p>
+    <p class="hint" id="qrHint">Point the phone camera at this code and open the link. It opens straight to the scanner for <b id="qrStore"></b>, with no login. Type your name, tap Start camera and scan. Everything is saved for this store only.</p>
     <div class="sku" id="qrUrl"></div>
     <button id="useHere" type="button" class="sec">Use this device's camera instead</button>
   </div>
@@ -125,17 +141,20 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
   <div class="empty">No scans yet. The product picture and running count appear here after each scan.</div>
 </div>
 
+
+
 <h2>Scanned items <span id="itemsFor" class="sub"></span></h2>
+<div class="chips" id="whoFilter" style="margin:0 0 8px" hidden></div>
 <div class="list" id="list"></div>
 
 <details open id="peopleBox">
-  <summary>Saved on this device for <span id="peopleStore"></span></summary>
+  <summary>People scanning in <span id="peopleStore"></span></summary>
   <div id="peopleList"></div>
 </details>
 
 <details>
   <summary>Product catalog (barcode → name and picture)</summary>
-  <p class="hint">One product per line: <b>barcode, name, picture link</b>. Copy it from Excel (tab-separated also works). The picture link must be a direct image URL. A barcode that is not listed still counts and is flagged “Not in catalog”.</p>
+  <p class="hint">One product per line: <b>barcode, name, picture link</b>. Copy it from Excel (tab-separated also works). The picture link must be a direct image URL. A barcode that is not listed still counts and is flagged “Not in catalog”. The catalog is kept on this device.</p>
   <textarea id="catText" placeholder="6224000000011, Charm bracelet silver, https://example.com/img/1.jpg&#10;6224000000028, Heart ring, https://example.com/img/2.jpg"></textarea>
   <div class="row">
     <button id="saveCat" type="button">Save catalog</button>
@@ -155,9 +174,10 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 </details>
 
 <div class="row" style="margin-top:18px">
-  <button id="csvBtn" type="button" class="sec">Copy results (CSV)</button>
-  <button id="undoBtn" type="button" class="sec">Undo last scan</button>
+  <button id="csvBtn" type="button" class="sec">Copy store results (CSV)</button>
+  <button id="undoBtn" type="button" class="sec">Undo my last scan</button>
   <button id="resetBtn" type="button" class="sec">Reset my scan</button>
+  <button id="resetAll" type="button" class="sec" hidden>Reset the whole store</button>
 </div>
 <p class="hint" id="note"></p>
 
@@ -165,28 +185,48 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 (function(){
-'use strict';
 var COOLDOWN=2000;
 var $=function(i){return document.getElementById(i)};
 var video=$('video'),cam=$('cam'),stateEl=$('state'),camMsg=$('camMsg'),fill=$('coolFill');
-var catalog={},counts={},log=[],stream=null,facing='environment',coolUntil=0,running=false,rafId=0,zxReader=null,detector=null;
+var catalog={},stream=null,facing='environment',coolUntil=0,running=false,rafId=0,zxReader=null,detector=null;
 
 function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 catalog=load('sc_catalog',{});
-/* each person who scans on this device has their own saved scans, kept under their name */
-var name='',store='',ctx=null;
-/* scans live on this device only, one set per store and per person. Nothing is sent to the server. */
-function K(t,n){return 'sc_'+t+':'+encodeURIComponent(store.toLowerCase())+':'+encodeURIComponent((n==null?name:n).toLowerCase())}
-function persist(){save(K('c'),counts);save(K('l'),log);touchPerson()}
-function people(){return load('sc_people:'+encodeURIComponent(store.toLowerCase()),[])}
-function touchPerson(){if(!name)return;var a=people().filter(function(p){return p.name.toLowerCase()!==name.toLowerCase()});a.push({name:name,last:Date.now()});save('sc_people:'+encodeURIComponent(store.toLowerCase()),a)}
-function adoptName(n){
-  name=n;save('sc_name:'+encodeURIComponent(store.toLowerCase()),n);
-  counts=load(K('c'),{});log=load(K('l'),[]);
-  touchPerson();persist();
-}
 
+/* ---- who / which store ----
+   Signed-in people: the name comes from their account and the store from their role (own store; zone for area managers; every store for the super admin).
+   A phone opened from a store's QR code: the store is inside the signed link, the person types their name once. */
+var ctx=null,store='',name='',view=null,lastScan=null,pending=[],filterBy='ALL',polling=0,day='',today='';
+function Q(){return load('sc_queue:'+encodeURIComponent(store),[])}
+function api(path,opt){opt=opt||{};opt.credentials='same-origin';opt.cache='no-store';return fetch(path,opt).then(function(r){return r.json().catch(function(){return{}}).then(function(j){return{ok:r.ok&&j.ok!==false,status:r.status,j:j}})})}
+function post(op,body){body.store=store;if(!body.day)body.day=day||today;if(ctx&&ctx.role==='phone')body.by=name;return api('/api/checker?op='+op,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})}
+function showErr(t){$('err').hidden=!t;$('err').textContent=t||''}
+
+/* ---- catalog ---- */
+function splitLine(l){
+  var sep=l.indexOf('\t')>-1?'\t':(l.indexOf(';')>-1&&l.indexOf(',')<0?';':',');
+  var out=[],cur='',q=false;
+  for(var i=0;i<l.length;i++){var c=l[i];
+    if(c==='"'){q=!q}else if(c===sep&&!q){out.push(cur.trim());cur=''}else cur+=c}
+  out.push(cur.trim());return out;
+}
+function parseCatalog(text){
+  var cat={},n=0;
+  text.split(/\r?\n/).forEach(function(l){
+    if(!l.trim())return;
+    var p=splitLine(l);
+    if(!p[0]||/^(barcode|sku|code)$/i.test(p[0]))return;
+    cat[p[0]]={name:p[1]||'',img:p[2]||''};n++;
+  });
+  return cat;
+}
+function catToText(){return Object.keys(catalog).map(function(k){var c=catalog[k];return [k,c.name,c.img].join(', ')}).join('\n')}
+function refreshCatInfo(){var n=Object.keys(catalog).length;$('catInfo').textContent=n?n+' products in catalog.':'No catalog yet. Scans will show the barcode only.'}
+$('catText').value=catToText();refreshCatInfo();
+$('saveCat').onclick=function(){catalog=parseCatalog($('catText').value);save('sc_catalog',catalog);refreshCatInfo();renderAll()};
+$('addPhotos').onclick=function(){$('catFile').click()};
+$('catFile').onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){$('catText').value=r.result;catalog=parseCatalog(r.result);save('sc_catalog',catalog);refreshCatInfo();renderAll()};r.readAsText(f)};
 
 /* ---- catalog ---- */
 function splitLine(l){
@@ -216,91 +256,137 @@ $('catFile').onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new
 /* ---- rendering ---- */
 function esc(s){var d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML}
 function imgTag(code){var c=catalog[code];return c&&c.img?'<img alt="" src="'+esc(c.img)+'" onerror="this.replaceWith(document.createTextNode(\'Picture not found\'))">':'No picture'}
+
+/* ---- store view (from the server) ---- */
+function myCount(code){var it=view&&view.items.find(function(x){return x.c===code});return it?(it.by[name]||0):0}
+function storeCount(code){var it=view&&view.items.find(function(x){return x.c===code});return it?it.n:0}
 function renderLast(){
   var el=$('last');
-  if(!log.length){el.innerHTML='<div class="empty">No scans yet. The product picture and running count appear here after each scan.</div>';return}
-  var e=log[log.length-1],c=catalog[e.code],n=(counts[e.code]||{}).n||0;
+  if(!lastScan){el.innerHTML='<div class="empty">No scans yet. The product picture and running count appear here after each scan.</div>';return}
+  var e=lastScan,c=catalog[e.code],n=storeCount(e.code),mine=myCount(e.code);
   var flag=!c?'<span class="flag unk">Not in catalog</span>':'';
   if(e.verdict==='swapped')flag+=' <span class="flag sw">Marked swapped</span>';
   if(e.verdict==='ok')flag+=' <span class="flag okk">Matches</span>';
-  el.innerHTML='<div class="pic">'+imgTag(e.code)+'</div><div><div class="name">'+esc(c&&c.name?c.name:'Unknown item')+'</div><div class="sku">'+esc(e.code)+'</div><div class="count">'+n+'<small>scanned</small></div>'+flag+
+  el.innerHTML='<div class="pic">'+imgTag(e.code)+'</div><div><div class="name">'+esc(c&&c.name?c.name:'Unknown item')+'</div><div class="sku">'+esc(e.code)+'</div><div class="count">'+n+'<small>scanned in '+esc(store)+(mine!==n?' · '+mine+' by you':'')+'</small></div>'+flag+
    '<div class="verdict"><button type="button" class="ok" data-v="ok">Matches</button><button type="button" class="bad" data-v="swapped">Swapped</button></div></div>';
   [].forEach.call(el.querySelectorAll('[data-v]'),function(b){b.onclick=function(){setVerdict(b.getAttribute('data-v'))}});
 }
 function renderList(){
-  var keys=Object.keys(counts).sort(function(a,b){return counts[b].last-counts[a].last});
-  $('list').innerHTML=keys.length?keys.map(function(k){var c=catalog[k],o=counts[k];
-    return '<div class="item"><div class="th">'+imgTag(k)+'</div><div><b>'+esc(c&&c.name?c.name:'Not in catalog')+'</b><span>'+esc(k)+'</span>'+(o.sw?'<span class="sw">'+o.sw+' marked swapped</span>':'')+'</div><em>'+o.n+'</em></div>'}).join(''):'<p class="hint">Nothing scanned yet.</p>';
-  var t=0;keys.forEach(function(k){t+=counts[k].n});$('totScans').textContent=t;$('totSkus').textContent=keys.length;
+  var items=(view?view.items:[]).filter(function(it){return filterBy==='ALL'||(it.by[filterBy]||0)>0}).sort(function(a,b){return b.last-a.last});
+  $('itemsFor').textContent=store?'· '+store:'';
+  $('list').innerHTML=items.length?items.map(function(it){var c=catalog[it.c],cnt=filterBy==='ALL'?it.n:(it.by[filterBy]||0),who=Object.keys(it.by).sort(function(a,b){return it.by[b]-it.by[a]}).map(function(k){return esc(k)+' '+it.by[k]}).join(' · ');
+    return '<div class="item"><div class="th">'+imgTag(it.c)+'</div><div><b>'+esc(c&&c.name?c.name:'Not in catalog')+'</b><span>'+esc(it.c)+'</span>'+(it.sw?'<span class="sw">'+it.sw+' marked swapped</span>':'')+'<span class="by">'+who+'</span></div><em>'+cnt+'</em></div>'}).join(''):'<div class="empty">Nothing scanned yet in this store.</div>';
+  var mineN=0,mineSk=0;if(view)view.items.forEach(function(it){if(it.by[name]){mineN+=it.by[name];mineSk++}});
+  $('totScans').textContent=mineN;$('totSkus').textContent=mineSk;$('totStore').textContent=view?view.total:0;
+  var ppl=view?view.people:[];
+  var f=$('whoFilter');f.hidden=ppl.length<2;
+  f.innerHTML=ppl.length<2?'':['ALL'].concat(ppl.map(function(p){return p.name})).map(function(n){return '<button type="button" class="chip" data-filter="'+esc(n)+'" aria-pressed="'+(n===filterBy)+'">'+(n==='ALL'?'Everyone':esc(n))+'</button>'}).join('');
 }
-function renderWho(){$('whoLine').innerHTML=(store?'<b>'+esc(store)+'</b> · ':'')+(name?'<b>'+esc(name)+'</b> · ':'');$('chgName').hidden=!(ctx&&ctx.role==='phone'&&name);$('whoStore').textContent=store;$('peopleStore').textContent=store;$('qrStore').textContent=store}
+function renderWho(){$('whoLine').innerHTML=(store?'<b>'+esc(store)+'</b> · ':'')+(name?'<b>'+esc(name)+'</b> · ':'');$('chgName').hidden=!(ctx&&ctx.role==='phone'&&name)}
 function renderPeople(){
-  var a=people().slice().sort(function(x,y){return y.last-x.last});
-  $('peopleList').innerHTML=a.length?a.map(function(p){
-    var c=load(K('c',p.name),{}),ks=Object.keys(c),t=0;ks.forEach(function(k){t+=c[k].n});
-    var me=p.name.toLowerCase()===name.toLowerCase();
-    return '<div class="prow"><div><b'+(me?' class="me"':'')+'>'+esc(p.name)+(me?' (you)':'')+'</b><small>'+t+' scans · '+ks.length+' SKUs · last '+new Date(p.last).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'</small></div>'+
-      '<button type="button" data-reset="'+esc(p.name)+'">Reset</button></div>'}).join(''):'<p class="hint">Nobody has scanned on this device yet.</p>';
+  $('peopleStore').textContent=store;
+  var ppl=view?view.people:[],mgr=isMgr();
+  $('peopleList').innerHTML=ppl.length?ppl.map(function(p){var me=p.name.toLowerCase()===name.toLowerCase();
+    return '<div class="prow"><div><b'+(me?' class="me"':'')+'>'+esc(p.name)+(me?' (you)':'')+'</b><small>'+p.scans+' scans · '+p.skus+' SKUs · last '+new Date(p.last).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'</small></div>'+
+      ((me||mgr)?'<button type="button" data-reset="'+esc(p.name)+'">Reset</button>':'')+'</div>'}).join(''):'<p class="hint">Nobody has scanned in this store yet.</p>';
+  $('resetAll').hidden=!mgr;
 }
-function showWho(){
-  if(!ctx||ctx.role!=='phone')return;
-  $('whoBox').hidden=false;var a=people();
-  $('whoPick').innerHTML=a.length?'<div class="hint" style="margin-top:10px">Already scanned on this phone? Tap your name:</div><div class="pickrow">'+a.map(function(p){return '<button type="button" data-pick="'+esc(p.name)+'">'+esc(p.name)+'</button>'}).join('')+'</div>':'';
-  setTimeout(function(){$('whoName').focus()},50);
+function isMgr(){return !!(ctx&&ctx.manager)}
+function fmtDay(d){var p=String(d||'').split('-');return p.length===3?new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString([],{weekday:'short',day:'numeric',month:'short'}):d}
+function renderDay(){
+  var mgr=isMgr();$('dayBar').hidden=!mgr;$('storeTotWrap').hidden=!mgr;
+  if(!mgr)return;
+  $('dayPick').value=day||today;$('dayPick').max=today;
+  var past=day&&today&&day!==today;$('dayToday').setAttribute('aria-pressed',!past);
+  $('dayNote').textContent=past?'Past day: read only. Switch to Today to scan.':'';
 }
-function useName(n){n=String(n||'').replace(/\s+/g,' ').trim().slice(0,40);if(!n)return;if(running){stopCam();$('startBtn').textContent='Start camera'}adoptName(n);$('whoBox').hidden=true;$('whoName').value='';renderWho();renderAll();renderPeople()}
-$('whoForm').onsubmit=function(e){e.preventDefault();useName($('whoName').value)};
-$('chgName').onclick=function(e){e.preventDefault();showWho()};
-document.addEventListener('click',function(e){
-  var pk=e.target.closest('[data-pick]');if(pk){useName(pk.getAttribute('data-pick'));return}
-  var rs=e.target.closest('[data-reset]');if(rs){
-    var n=rs.getAttribute('data-reset');
-    if(rs.getAttribute('data-armed')!=='1'){rs.setAttribute('data-armed','1');rs.textContent='Tap again to erase';setTimeout(function(){rs.setAttribute('data-armed','');rs.textContent='Reset'},3000);return}
-    try{localStorage.setItem(K('c',n),'{}');localStorage.setItem(K('l',n),'[]')}catch(x){}
-    if(n.toLowerCase()===name.toLowerCase()){counts={};log=[]}
-    renderAll();renderPeople()}
-});
-function renderAll(){renderLast();renderList();renderWho()}
+var histDays=[],daysAt=0,daysStore='',monAt=0,monDayKey='';
+function loadMonitor(){
+  if(!isMgr()){$('monitor').hidden=true;return}
+  $('monitor').hidden=false;
+  var d=day||today;
+  var key=d+'|'+store;if(Date.now()-monAt>30000||monDayKey!==key){monAt=Date.now();monDayKey=key;
+  api('/api/checker?overview=1&day='+encodeURIComponent(d)).then(function(o){
+    if(!o.ok)return;
+    $('monDay').textContent='· '+fmtDay(o.j.day);
+    $('monBody').innerHTML=o.j.stores.map(function(r){
+      return '<tr class="mrow'+(r.name===store?' cur':'')+(r.scans?'':' zero')+'" data-store="'+esc(r.name)+'"><td class="l">'+esc(r.name)+'</td><td>'+r.people+'</td><td><b>'+r.scans+'</b></td><td>'+r.skus+'</td><td>'+(r.last?new Date(r.last).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—')+'</td></tr>'}).join('')||'<tr><td colspan="5" class="empty">No stores.</td></tr>';
+  })}
+  var days=histDays.slice(),lastIdx=-1;days.forEach(function(x,i){if(x.scans)lastIdx=i});days=days.slice(0,Math.max(7,lastIdx+1));
+  var mx=Math.max(1,Math.max.apply(null,days.map(function(x){return x.scans})));
+  $('histFor').textContent=store?'· '+store:'';
+  $('hist').innerHTML=days.map(function(x){return '<div class="hrow'+(x.day===d?' cur':'')+'" data-day="'+x.day+'"><span>'+fmtDay(x.day)+'</span><span class="hbar"><i style="width:'+(x.scans?Math.max(2,x.scans/mx*100):0)+'%"></i></span><span class="n">'+(x.scans?x.scans+' scans · '+x.people+'p':'—')+'</span></div>'}).join('');
+}
+function setDay(d){day=d||today;lastScan=null;renderDay();refresh()}
+$('dayPick').onchange=function(){setDay(this.value)};
+$('dayToday').onclick=function(){setDay(today)};
+document.addEventListener('click',function(e){var h=e.target.closest('[data-day]');if(h){setDay(h.getAttribute('data-day'));return}var m=e.target.closest('tr.mrow');if(m&&m.getAttribute('data-store')!==store){chooseStore(m.getAttribute('data-store'))}});
+function renderAll(){renderLast();renderList();renderWho();renderPeople();renderDay();$('whoStore').textContent=store;$('qrStore').textContent=store}
+
+function refresh(){
+  if(!store)return Promise.resolve();
+  var by=ctx&&ctx.role==='phone'?'&by='+encodeURIComponent(name):'';
+  var st=store;
+  var wantDays=isMgr()&&(Date.now()-daysAt>120000||daysStore!==st);
+  return api('/api/checker?store='+encodeURIComponent(st)+'&day='+encodeURIComponent(day||today)+(wantDays?'&days=1':'')+by).then(function(o){
+    if(st!==store)return;
+    if(o.status===401){showErr('Please sign in again (or open the QR code again).');return}
+    if(!o.ok){showErr(o.j.error||'Could not load this store.');return}
+    showErr('');view=o.j;if(o.j.today)today=o.j.today;if(o.j.days){histDays=o.j.days;daysAt=Date.now();daysStore=st}renderAll();loadMonitor();
+  }).catch(function(){showErr('No connection. Scans are kept on this device and sent when it is back.')});
+}
+function flush(){
+  var q=Q();if(!q.length||!store)return;
+  var job=q[0];
+  post('scan',{code:job.code,t:job.t}).then(function(o){
+    if(o.ok||o.status===400||o.status===429&&false){var q2=Q();q2.shift();save('sc_queue:'+encodeURIComponent(store),q2);flush();refresh()}
+  }).catch(function(){});
+}
 
 /* ---- scan handling ---- */
 function beep(){try{var a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=880;g.gain.value=.12;o.connect(g);g.connect(a.destination);o.start();setTimeout(function(){o.stop();a.close()},110)}catch(e){}if(navigator.vibrate)navigator.vibrate(60)}
 function handleCode(raw,source){
   var code=String(raw||'').trim();if(!code)return false;
-  if(!store)return false;
+  if(!store){return false}
   if(!name){showWho();return false}
+  if(day&&today&&day!==today){$('note').textContent='You are looking at '+day+'. Switch to Today to scan.';return false}
   var now=Date.now();if(now<coolUntil)return false;
   coolUntil=now+COOLDOWN;
-  var o=counts[code]||(counts[code]={n:0,sw:0,last:0});o.n++;o.last=now;
-  log.push({code:code,t:now,verdict:'',by:name});if(log.length>500)log.shift();
-  persist();
+  /* show it at once, then save it for this store */
+  if(view){var it=view.items.find(function(x){return x.c===code});if(!it){it={c:code,n:0,sw:0,last:0,by:{}};view.items.unshift(it)}it.n++;it.last=now;it.by[name]=(it.by[name]||0)+1;view.total++;
+    var p=view.people.find(function(x){return x.name===name});if(p){p.scans++;p.last=now}else view.people.unshift({name:name,scans:1,skus:1,last:now})}
+  lastScan={code:code,t:now,verdict:''};
   beep();cam.classList.add('hit');setTimeout(function(){cam.classList.remove('hit')},350);
-  renderAll();renderPeople();return true;
+  renderAll();
+  post('scan',{code:code,t:now}).then(function(o){
+    if(!o.ok&&o.status!==403){var q=Q();q.push({code:code,t:now});save('sc_queue:'+encodeURIComponent(store),q);showErr('Saved on this device. It will be sent when the connection is back.')}
+    else if(o.ok){if(lastScan&&lastScan.code===code)lastScan.t=o.j.t||now;showErr('');refresh()}
+    else showErr(o.j.error||'That scan could not be saved.');
+  }).catch(function(){var q=Q();q.push({code:code,t:now});save('sc_queue:'+encodeURIComponent(store),q)});
+  return true;
 }
 function setVerdict(v){
-  if(!log.length)return;var e=log[log.length-1];
-  if(e.verdict==='swapped'&&counts[e.code])counts[e.code].sw=Math.max(0,counts[e.code].sw-1);
-  e.verdict=v;if(v==='swapped')counts[e.code].sw=(counts[e.code].sw||0)+1;
-  persist();renderAll();
+  if(!lastScan)return;lastScan.verdict=v;renderLast();
+  post('verdict',{t:lastScan.t,v:v}).then(function(){refresh()});
 }
 $('undoBtn').onclick=function(){
-  if(!log.length)return;var e=log.pop(),o=counts[e.code];
-  if(o){o.n--;if(e.verdict==='swapped')o.sw=Math.max(0,o.sw-1);if(o.n<=0)delete counts[e.code]}
-  persist();renderAll();
+  post('undo',{}).then(function(o){if(o.ok&&o.j.removed&&lastScan&&lastScan.code===o.j.removed)lastScan=null;refresh()});
 };
-var armed=false;
-$('resetBtn').onclick=function(){
-  var b=$('resetBtn');
-  if(!armed){armed=true;b.textContent='Tap again to erase my scan';setTimeout(function(){armed=false;b.textContent='Reset my scan'},3000);return}
-  armed=false;b.textContent='Reset my scan';counts={};log=[];persist();renderAll();renderPeople();
-};
+var armed='';
+function armed2(btn,label,fn,id){
+  if(armed!==id){armed=id;var old=btn.textContent;btn.textContent='Tap again to erase';setTimeout(function(){if(armed===id){armed='';btn.textContent=old}},3000);return}
+  armed='';fn();
+}
+$('resetBtn').onclick=function(){var b=this,old='Reset my scan';armed2(b,old,function(){b.textContent=old;lastScan=null;post('reset',{person:name}).then(function(){refresh()})},'me')};
+$('resetAll').onclick=function(){var b=this,old='Reset the whole store';armed2(b,old,function(){b.textContent=old;lastScan=null;post('reset',{person:'*'}).then(function(){refresh()})},'all')};
 $('csvBtn').onclick=function(){
-  var rows=['scanned_by,barcode,name,count,marked_swapped'];
-  Object.keys(counts).forEach(function(k){var c=catalog[k];rows.push(['"'+name.replace(/"/g,'""')+'"',k,'"'+(c&&c.name?c.name.replace(/"/g,'""'):'NOT IN CATALOG')+'"',counts[k].n,counts[k].sw||0].join(','))});
+  var rows=['store,barcode,name,count,marked_swapped,scanned_by'];
+  (view?view.items:[]).forEach(function(it){var c=catalog[it.c];rows.push([ '"'+store.replace(/"/g,'""')+'"',it.c,'"'+(c&&c.name?c.name.replace(/"/g,'""'):'NOT IN CATALOG')+'"',it.n,it.sw||0,'"'+Object.keys(it.by).map(function(k){return k+' '+it.by[k]}).join('; ').replace(/"/g,'""')+'"'].join(','))});
   var txt=rows.join('\n');
   var done=function(m){$('note').textContent=m};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){done('Copied. Paste into Excel or Sheets.')},function(){done(txt)})}else done(txt);
 };
-$('manual').onsubmit=function(e){e.preventDefault();var i=$('manualCode');if(handleCode(i.value,'manual'))i.value='';else $('note').textContent='Wait for the 2-second cooldown.'};
+$('manual').onsubmit=function(e){e.preventDefault();var i=$('manualCode');if(handleCode(i.value,'manual'))i.value='';else $('note').textContent=store?(name?'Wait for the 2-second cooldown.':'Type your name first.'):'Pick a store first.'};
 
 /* ---- cooldown ui ---- */
 function tickUI(){
@@ -354,14 +440,37 @@ function camError(err){
   running=false;stateEl.textContent='Camera off';camMsg.hidden=false;
   camMsg.textContent=(err&&err.name==='NotAllowedError')?'Camera permission was blocked. Allow the camera for this site in the browser settings, then tap Start camera.':'Could not start the camera ('+(err&&err.name||'error')+').';
 }
-$('startBtn').onclick=function(){if(!running&&!name){showWho();return}if(running){stopCam();stateEl.textContent='Camera off';camMsg.hidden=false;camMsg.textContent='Camera stopped.';this.textContent='Start camera'}else{startCam();this.textContent='Stop camera'}};
-$('flipBtn').onclick=function(){facing=facing==='environment'?'user':'environment';if(running)startCam()};
-document.addEventListener('visibilitychange',function(){if(document.hidden&&running){stopCam();$('startBtn').textContent='Start camera';stateEl.textContent='Camera off';camMsg.hidden=false;camMsg.textContent='Camera paused. Tap Start camera.'}});
 
-/* ---- computer: show a QR code to open this page on a phone; phone: show the camera ---- */
-var qrCard=$('qrCard'),camBlock=$('camBlock'),qrBox=$('qrBox');
+$('startBtn').onclick=function(){if(!running&&(!store||!name)){if(store)showWho();return}if(running){stopCam();stateEl.textContent='Camera off';camMsg.hidden=false;camMsg.textContent='Camera stopped.';this.textContent='Start camera'}else{startCam();this.textContent='Stop camera'}};
+$('flipBtn').onclick=function(){facing=facing==='environment'?'user':'environment';if(running)startCam()};
+document.addEventListener('visibilitychange',function(){if(document.hidden&&running){stopCam();$('startBtn').textContent='Start camera';stateEl.textContent='Camera off';camMsg.hidden=false;camMsg.textContent='Camera paused. Tap Start camera.'}else if(!document.hidden){refresh();flush()}});
+
+/* ---- name (phones opened from a QR code) ---- */
+function peopleHere(){return view?view.people.map(function(p){return p.name}):[]}
+function showWho(){
+  if(!ctx||ctx.role!=='phone')return;
+  $('whoBox').hidden=false;var a=peopleHere();
+  $('whoPick').innerHTML=a.length?'<div class="hint" style="margin-top:10px">Already scanned here? Tap your name:</div><div class="pickrow">'+a.map(function(n){return '<button type="button" data-pick="'+esc(n)+'">'+esc(n)+'</button>'}).join('')+'</div>':'';
+  setTimeout(function(){$('whoName').focus()},50);
+}
+function useName(n){n=String(n||'').replace(/\s+/g,' ').trim().slice(0,40);if(!n)return;if(running){stopCam();$('startBtn').textContent='Start camera'}name=n;save('sc_name:'+encodeURIComponent(store),n);$('whoBox').hidden=true;$('whoName').value='';renderAll();refresh();flush()}
+$('whoForm').onsubmit=function(e){e.preventDefault();useName($('whoName').value)};
+$('chgName').onclick=function(e){e.preventDefault();showWho()};
+document.addEventListener('click',function(e){
+  var pk=e.target.closest('[data-pick]');if(pk){useName(pk.getAttribute('data-pick'));return}
+  var fl=e.target.closest('[data-filter]');if(fl){filterBy=fl.getAttribute('data-filter');renderList();return}
+  var sc=e.target.closest('[data-store]');if(sc){chooseStore(sc.getAttribute('data-store'));return}
+  var rs=e.target.closest('[data-reset]');if(rs){
+    var n=rs.getAttribute('data-reset');
+    if(rs.getAttribute('data-armed')!=='1'){rs.setAttribute('data-armed','1');rs.textContent='Tap again to erase';setTimeout(function(){rs.setAttribute('data-armed','');rs.textContent='Reset'},3000);return}
+    if(n.toLowerCase()===name.toLowerCase())lastScan=null;
+    post('reset',{person:n}).then(function(o){if(!o.ok)showErr(o.j.error||'Could not erase.');refresh()})}
+});
+
+/* ---- computer / tablet: show a QR code for the chosen store; phone: show the camera ---- */
+var qrCard=$('qrCard'),camBlock=$('camBlock'),qrBox=$('qrBox'),paired=!!window.__PAIRED;
 function drawQR(link){
-  $('qrUrl').textContent='Opens the camera on the phone, no login needed (valid 12 hours)';
+  $('qrUrl').textContent='Opens the camera on the phone for '+store+', no login needed (valid 12 hours)';
   try{
     var q=qrcode(0,'M');q.addData(link);q.make();
     var n=q.getModuleCount(),m=4,d='';
@@ -370,39 +479,42 @@ function drawQR(link){
     qrBox.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+w+' '+w+'" shape-rendering="crispEdges"><rect width="'+w+'" height="'+w+'" fill="#fff"/><path d="'+d+'" fill="#2A1F24"/></svg>';
   }catch(e){qrBox.textContent='The QR code could not load. Open the link below on your phone.'}
 }
-var onPhone=!!window.__PAIRED; /* the QR code opens first everywhere; the camera only starts on the paired phone or when asked */
-if(window.__PAIRED){var cr=document.querySelector('.crumb');if(cr)cr.hidden=true}
-function showQrView(on){qrCard.hidden=!on;camBlock.hidden=on;if(on&&running){stopCam();$('startBtn').textContent='Start camera'}}
 function makeQR(){
-  if(onPhone||!store)return;
+  if(paired||!store)return;
   qrBox.textContent='Making the phone link…';var st=store;
-  fetch('/api/checkerpair',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({store:st})}).then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j}})}).then(function(o){
+  api('/api/checkerpair',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({store:st})}).then(function(o){
     if(st!==store)return;
     if(o.ok&&o.j&&o.j.token)drawQR(location.origin+'/stockchecker?pair='+encodeURIComponent(o.j.token));
-    else qrBox.textContent=(o.j&&o.j.error)||'The phone link could not be made. Reload the page and try again.';
+    else qrBox.textContent=(o.j&&(o.j.error))||'The phone link could not be made. Reload the page and try again.';
   }).catch(function(){qrBox.textContent='The phone link could not be made. Reload the page and try again.'});
 }
-$('useHere').onclick=function(){showQrView(false);if(!name)showWho()};
+function showQrView(on){qrCard.hidden=!on;camBlock.hidden=on;if(on&&running){stopCam();$('startBtn').textContent='Start camera'}}
+$('useHere').onclick=function(){showQrView(false);if(ctx&&ctx.role==='phone'&&!name)showWho()};
 $('showQr').onclick=function(){showQrView(true)};
-function chooseStore(st){
-  if(running){stopCam();$('startBtn').textContent='Start camera'}
-  store=st;counts={};log=[];
-  name=ctx.role==='phone'?String(load('sc_name:'+encodeURIComponent(store.toLowerCase()),'')||''):ctx.by;
-  if(name){counts=load(K('c'),{});log=load(K('l'),[]);if(ctx.role!=='phone')touchPerson()}
-  $('storeChips').innerHTML=ctx.stores.map(function(x){return '<button type="button" class="chip" data-store="'+esc(x)+'" aria-pressed="'+(x===store)+'">'+esc(x)+'</button>'}).join('');
-  renderAll();renderPeople();makeQR();
-  if(ctx.role==='phone'&&!name)showWho();
-}
-document.addEventListener('click',function(e){var sc=e.target.closest('[data-store]');if(sc&&sc.getAttribute('data-store')!==store)chooseStore(sc.getAttribute('data-store'))});
-fetch('/api/checker',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j}})}).then(function(o){
-  if(!o.ok||!o.j||!o.j.stores){$('err').hidden=false;$('err').textContent=(o.j&&o.j.error)||'You do not have access to Stock Checker.';return}
-  ctx=o.j;if(ctx.stores.length>1)$('storeBar').hidden=false;
-  if(ctx.role==='phone'){showQrView(false);$('showQr').hidden=true;$('subline').textContent='Scanning for '+ctx.own+'. Your scans stay on this phone.'}
-  else{$('showQr').hidden=false;showQrView(true)}
-  chooseStore(ctx.own||ctx.stores[0]);
-}).catch(function(){$('err').hidden=false;$('err').textContent='Could not load. Check your connection.'});
 
-renderAll();renderPeople();
+/* ---- start ---- */
+function chooseStore(st){
+  if(st===store)return;
+  if(running){stopCam();$('startBtn').textContent='Start camera'}
+  store=st;view=null;lastScan=null;filterBy='ALL';
+  name=ctx.role==='phone'?String(load('sc_name:'+encodeURIComponent(store),'')||''):ctx.by;
+  var chips=$('storeChips');
+  chips.innerHTML=ctx.stores.map(function(s){return '<button type="button" class="chip" data-store="'+esc(s)+'" aria-pressed="'+(s===store)+'">'+esc(s)+'</button>'}).join('');
+  renderAll();refresh().then(function(){if(ctx.role==='phone'&&!name)showWho()});flush();makeQR();
+  try{history.replaceState(null,'','?store='+encodeURIComponent(st))}catch(e){}
+}
+api('/api/checker').then(function(o){
+  if(!o.ok){showErr(o.j.error||'You do not have access to Stock Checker.');return}
+  ctx=o.j;today=ctx.today||'';day=today;
+  if(ctx.stores.length>1)$('storeBar').hidden=false;
+  if(ctx.role==='phone'){$('subline').textContent='Scanning for '+ctx.own+'. Your scans are saved for this store only.';showQrView(false);$('showQr').hidden=true}
+  else{$('showQr').hidden=false;showQrView(true)}
+  var want=new URLSearchParams(location.search).get('store');
+  chooseStore(ctx.own||(want&&ctx.stores.indexOf(want)>-1?want:ctx.stores[0]));
+  $('chgName').hidden=!(ctx.role==='phone');
+  setInterval(function(){if(!document.hidden){refresh();flush()}},15000);
+});
+renderAll();
 })();
 </script>
 </body>
