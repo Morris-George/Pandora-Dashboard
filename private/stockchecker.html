@@ -72,6 +72,9 @@ summary{cursor:pointer;font-weight:600}
 textarea,input[type=text]{width:100%;font:14px var(--mono);color:var(--fg);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:10px}
 textarea{min-height:120px;margin:10px 0}
 p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
+.scanbox{background:var(--panel);border:2px solid var(--accent,#FF93A0);border-radius:16px;padding:14px;margin-top:14px}
+.scanhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.scanhead .ready{font-size:12px;font-weight:700;color:#1F7A4D;background:#E3F4EA;border-radius:999px;padding:3px 10px}.scanhead .ready.off{color:#8A5A00;background:#FFF1D6}
+.scanbox .manual input{font-size:18px;padding:12px 14px}
 .manual{display:flex;gap:8px}
 .manual input{flex:1;min-width:0}
 </style>
@@ -80,11 +83,21 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 <header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Stock Checker</h1><div class="sub">Scan each barcode in the store and compare the item in your hand with its picture.</div></div><div class="actions"></div></header>
 <div class="tots tot">Scans <b id="totScans">0</b> · SKUs <b id="totSkus">0</b></div>
 
+<section class="scanbox" id="scanBox">
+  <div class="scanhead"><b>Barcode scanner</b><span class="ready" id="scanReady">Ready – scan now</span></div>
+  <form class="manual" id="manual">
+    <input type="text" id="manualCode" inputmode="none" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Scan or type a barcode" autofocus>
+    <button type="submit">Add</button>
+    <button type="button" class="sec" id="kbBtn" title="Show the on-screen keyboard">Keyboard</button>
+  </form>
+  <p class="hint">Point a handheld or USB scanner at the barcode: this box is always ready, so there is nothing to tap. The camera stays off until you press <b>Start camera</b>. Same 2-second cooldown between scans.</p>
+</section>
+
 <section class="qrcard" id="qrCard" hidden>
   <div class="qrbox" id="qrBox" role="img" aria-label="QR code that opens Stock Checker on a phone"></div>
   <div>
     <h3>Scan with your phone</h3>
-    <p class="hint">Point the phone camera at this code and open the link. It opens straight to the scanner, with no login. Tap Start camera and scan the barcodes. Counts are kept on the phone doing the scanning.</p>
+    <p class="hint">Point the phone camera at this code and open the link. It opens straight to the scanner, with no login. Tap Start camera and scan the barcodes (or use a handheld scanner). Counts are kept on the phone doing the scanning.</p>
     <div class="sku" id="qrUrl"></div>
     <button id="useHere" type="button" class="sec">Use this computer's camera instead</button>
   </div>
@@ -125,14 +138,7 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
   <p class="hint" id="catInfo"></p>
 </details>
 
-<details>
-  <summary>Type a code / USB scanner</summary>
-  <p class="hint">Useful for testing at a desk. Obeys the same 2-second cooldown.</p>
-  <form class="manual" id="manual">
-    <input type="text" id="manualCode" inputmode="numeric" autocomplete="off" placeholder="Barcode">
-    <button type="submit">Add</button>
-  </form>
-</details>
+
 
 <div class="row" style="margin-top:18px">
   <button id="csvBtn" type="button" class="sec">Copy results (CSV)</button>
@@ -238,7 +244,18 @@ $('csvBtn').onclick=function(){
   var done=function(m){$('note').textContent=m};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){done('Copied. Paste into Excel or Sheets.')},function(){done(txt)})}else done(txt);
 };
-$('manual').onsubmit=function(e){e.preventDefault();var i=$('manualCode');if(handleCode(i.value,'manual'))i.value='';else $('note').textContent='Wait for the 2-second cooldown.'};
+$('manual').onsubmit=function(e){e.preventDefault();var i=$('manualCode');if(handleCode(i.value,'manual'))i.value='';else $('note').textContent='Wait for the 2-second cooldown.';focusScan()};
+/* the barcode box is always ready: focused on open, after every scan, when the tab comes back and when tapping empty space */
+var scanIn=$('manualCode'),scanReady=$('scanReady');
+function focusScan(){var a=document.activeElement;if(a&&a!==document.body&&a!==scanIn&&(a.tagName==='TEXTAREA'||a.tagName==='INPUT'||a.tagName==='SELECT'))return;try{scanIn.focus({preventScroll:true})}catch(e){scanIn.focus()}}
+scanIn.addEventListener('focus',function(){scanReady.textContent='Ready – scan now';scanReady.classList.remove('off')});
+scanIn.addEventListener('blur',function(){setTimeout(function(){if(document.activeElement!==scanIn){scanReady.textContent='Tap here to scan';scanReady.classList.add('off')}},50)});
+$('kbBtn').onclick=function(){var on=scanIn.getAttribute('inputmode')==='none';scanIn.setAttribute('inputmode',on?'numeric':'none');this.textContent=on?'Scanner only':'Keyboard';scanIn.blur();scanIn.focus()};
+document.addEventListener('click',function(e){if(!e.target.closest('button,a,input,textarea,select,summary,label'))focusScan()});
+document.addEventListener('visibilitychange',function(){if(!document.hidden)focusScan()});
+window.addEventListener('focus',focusScan);
+window.addEventListener('load',function(){focusScan();setTimeout(focusScan,300)});
+$('scanBox').addEventListener('click',function(e){if(!e.target.closest('button'))focusScan()});
 
 /* ---- cooldown ui ---- */
 function tickUI(){
@@ -322,7 +339,7 @@ if(!onPhone){
   $('showQr').onclick=function(){showQrView(true)};
 }
 
-renderAll();
+renderAll();focusScan();
 })();
 </script>
 </body>
