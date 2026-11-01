@@ -138,3 +138,11 @@ WEEKLY SCHEDULE (/schedule, private/schedule.html, API /api/schedule -> /api/vm?
 - Storage: sched/<store>/<week start>.json {store, week, days{date:{m:[{n,f,t}],b:[],n:[]}}, updated, log}; sched/<store>/settings.json {times, names (remembered for the name suggestions)}. Each change saves one day; two managers editing the same day: last save wins.
 - No new API function (Hobby limit of 12): /api/schedule is a rewrite to api/vm.js. Activity log + page label added in api/_activity.js.
 - Tests: scratchpad only (handler checks and a headless-browser run).
+
+SALES INTELLIGENCE (page /insights, private/insights.html; API /api/insights -> api/erp.js?insights=1, helper api/_insights.js)
+- Who: super admin, brand manager (Overseer) and area managers (their zone only: sales, staff and stores are filtered on the server). Home screen: first card in "Sales".
+- Reads what the site already keeps: Pandora Dashboards sales lines (dash/), Staff Performance months (data/m/ via data.js loadData) and the newest Stock balance read (stock/index.json -> stock/r/...). Nothing new to upload.
+- Period: any dates (default last 30 days of data), compared with the previous period of the same length. Store chips. Items are grouped by design (the SKU before the dash).
+- Sections: key findings, "sales on the table" (value of the action plan), KPIs, daily revenue vs previous, Action plan (restock, transfers, range gaps, under-selling, coaching, charm attach, bundles, each with an EGP estimate; Done ticks kept in the browser), stores, items (best / rising / falling with pictures), stock (run-out risk with source, transfers, range gaps, under-selling, not selling), charm-with-bracelet attach per store, pairs bought together, sales team coaching cards + leaderboard, category / collection mix, payment, weekday index.
+- AI brief: set ANTHROPIC_API_KEY in Vercel (optional INSIGHTS_MODEL, default claude-sonnet-5-5) and redeploy; the page then asks Claude to write the brief from the computed numbers (cached in insights/ai/). Without the key everything else works.
+- Results cached 20 minutes in insights/c/ (Refresh on the page rebuilds).

@@ -36,6 +36,10 @@
       "destination": "/api/erp?pic=1"
     },
     {
+      "source": "/api/insights",
+      "destination": "/api/erp?insights=1"
+    },
+    {
       "source": "/api/slow",
       "destination": "/api/erp?slow=1"
     },

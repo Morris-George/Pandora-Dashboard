@@ -225,6 +225,7 @@ module.exports = async function handler(req, res) {
     else if (P === '/stockchecker' || P === '/stockchecker.html') id = 'stockchecker';
     else if (P === '/refill' || P === '/refill.html') id = 'refill';
     else if (P === '/slow' || P === '/slow.html') id = 'slow';
+    else if (P === '/insights' || P === '/insights.html') id = 'insights';
     else if (P === '/distribution' || P === '/distribution.html') id = 'dist';
     else if (P === '/receiving' || P === '/receiving.html') id = 'recv';
     else if (P === '/vm' || P === '/vm.html') id = 'vm';
@@ -378,6 +379,11 @@ module.exports = async function handler(req, res) {
   if (requestedPath === '/receiving' || requestedPath === '/receiving/' || requestedPath === '/receiving.html') {
     if (!facts.recv || facts.recv === 'none') return toHome();
     return sendFile(res, 'receiving.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
+  }
+  // Sales Intelligence: super admin, brand manager and area managers (the server keeps area managers to their zone)
+  if (requestedPath === '/insights' || requestedPath === '/insights/' || requestedPath === '/insights.html') {
+    if (!facts.dash) return toHome();
+    return sendFile(res, 'insights.html', 'text/html; charset=utf-8', withChrome('staff', multi));
   }
   if (requestedPath === '/slow' || requestedPath === '/slow/' || requestedPath === '/slow.html') {
     if (!facts.refill || facts.refill === 'none') return toHome();
