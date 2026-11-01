@@ -63,9 +63,30 @@ function scope(rows, who) {
   return out;
 }
 
-// The stock report only knows the design code as the item name. The sales lines know the real product name ("Moments Heart Charm"),
-// so lines with no description borrow it by design code (the part before the dash). Used for the name on the item card and for keyword search.
+// The stock report only knows the design code as the item name. Real product names come from ERPNext's Item list (its description),
+// read once per fresh stock read; lines ERP has no description for borrow the name from the saved sales lines.
+const cleanName = v => String(v == null ? '' : v).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/[|]/g, ' ').replace(/---/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+async function erpItemNames() {
+  const base = String(process.env.ERP_URL || '').replace(/\/+$/, '');
+  const auth = { Authorization: `token ${process.env.ERP_API_KEY}:${process.env.ERP_API_SECRET}`, Accept: 'application/json' };
+  const names = new Map();
+  for (let start = 0; start < 60000; start += 5000) {
+    const q = 'fields=' + encodeURIComponent('["name","item_name","description"]') + '&limit_page_length=5000&limit_start=' + start;
+    const r = await fetch(base + '/api/resource/Item?' + q, { headers: auth, signal: AbortSignal.timeout(25000) });
+    if (!r.ok) throw new Error('ERP Item list answered ' + r.status);
+    const list = ((await r.json()).data) || [];
+    for (const x of list) { const n = cleanName(x.description); if (n && x.name) names.set(String(x.name).trim().toUpperCase(), n); }
+    if (list.length < 5000) break;
+  }
+  return names;
+}
 async function addNames(rows) {
+  if (!rows.some(r => !r[9])) return;
+  let err = '';
+  try {
+    const names = await erpItemNames();
+    for (const r of rows) if (!r[9]) { const n = names.get(String(r[0]).trim().toUpperCase()) || names.get(String(r[1]).trim().toUpperCase()); if (n) r[9] = n; }
+  } catch (e) { err = String(e && e.message || e).slice(0, 160); }
   try {
     if (!rows.some(r => !r[9])) return;
     const { dashRows } = require('./_sales');
@@ -80,6 +101,7 @@ async function addNames(rows) {
       if (n) r[9] = n;
     }
   } catch (_) { /* names are a bonus: the stock itself is still shown */ }
+  addNames.err = err;
 }
 
 async function erpStock(from, to, fresh) {
@@ -88,14 +110,18 @@ async function erpStock(from, to, fresh) {
   {
     const c = await store.getJSON(key);
     // a Sync press is honoured unless the same dates were read less than a minute ago; an empty answer is never trusted from the cache
-    if (c && c.rows && c.rows.length && Date.now() - Date.parse(c.at) < (fresh ? 60 * 1000 : ttl)) return c;
+    if (c && c.rows && c.rows.length && Date.now() - Date.parse(c.at) < (fresh ? 60 * 1000 : ttl)) {
+      // a copy saved before names existed: add them once and save it again
+      if (!c.named && c.rows.some(r => !r[9])) { await addNames(c.rows); c.named = true; await store.putJSON(key, c).catch(() => {}); }
+      return c;
+    }
   }
   const { runReport } = require('./erp');
   // "Branches Stock Balance" is a Custom Report with saved filters; runReport asks ERPNext for our dates instead.
   const list = await runReport(process.env.ERP_STOCK_REPORT || 'Branches Stock Balance', { from_date: from, to_date: to });
   const rec = { at: new Date().toISOString(), from, to, rows: fromErp(list) };
-  await addNames(rec.rows);
-  rec.diag = { company: 'Branches Stock Balance', raw: list.length, keys: list[0] ? Object.keys(list[0]).slice(0, 25) : [], kept: rec.rows.length };
+  await addNames(rec.rows); rec.named = true;
+  rec.diag = { names: addNames.err || undefined, company: 'Branches Stock Balance', raw: list.length, keys: list[0] ? Object.keys(list[0]).slice(0, 25) : [], kept: rec.rows.length };
   await store.putJSON(STATUS, { ok: true, at: rec.at, from, to, lines: rec.rows.length, raw: list.length });
   if (!rec.rows.length) return rec; // nothing to cache: show what ERP said instead
   await store.putJSON(key, rec);
@@ -172,7 +198,7 @@ module.exports = async function handler(req, res) {
   if (erpOn) {
     try {
       const d = await erpStock(from, to, url.searchParams.get('fresh') === '1');
-      return send(res, 200, { ...base, source: 'erp', from, to, fetchedAt: d.at, diag: d.rows.length ? undefined : d.diag, canChangeDates: true, hasExcel: !!snap, rows: scope(d.rows, who) });
+      return send(res, 200, { ...base, source: 'erp', from, to, fetchedAt: d.at, diag: d.rows.length ? undefined : d.diag, namesNote: who.kind === 'env' && who.info.role === 'admin' && d.diag && d.diag.names ? d.diag.names : undefined, canChangeDates: true, hasExcel: !!snap, rows: scope(d.rows, who) });
     } catch (e) {
       if (!snap) await store.putJSON(STATUS, { ok: false, at: new Date().toISOString(), error: String(e && e.message || e).slice(0, 200) }).catch(() => {});
       if (!snap) return send(res, 502, { ok: false, error: 'ERP could not give the stock balance: ' + String(e && e.message || e).slice(0, 240) });
