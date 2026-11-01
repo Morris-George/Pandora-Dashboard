@@ -107,6 +107,10 @@ td small{display:block;color:var(--ink2);font-size:11.5px}
 .note{color:var(--ink2);font-size:12.5px;margin:0 0 10px}
 .empty{color:var(--ink2);padding:20px;text-align:center;font-size:13px}
 .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.stk{display:inline-block;margin-top:3px;font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;white-space:nowrap}.stk i{font-style:normal;font-weight:600;opacity:.75}
+.stk.o{background:var(--good-bg);color:var(--good)}.stk.l{background:#FFF1D6;color:#8A5A00}.stk.z{background:var(--bad-bg);color:var(--bad)}
+:root[data-theme="dark"] .stk.l{background:#3A2E14;color:#F2C46B}
+.why{font-size:12px;white-space:normal;min-width:200px;text-align:left}.why b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em}.why.stock b{color:var(--bad)}.why.display b{color:var(--info)}
 .itemcell{display:flex;align-items:center;gap:10px;text-align:left}.itemcell .nm{font-weight:700;white-space:normal;line-height:1.3}.itemcell small{display:block;color:var(--ink2);font-weight:500}
 /* team */
 .coachgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));gap:12px;margin-bottom:18px}
@@ -121,7 +125,7 @@ td small{display:block;color:var(--ink2);font-size:11.5px}
 /* attach */
 .hbar{display:grid;grid-template-columns:140px 1fr 56px;gap:10px;align-items:center;font-size:13px;margin:6px 0}.hbar .t{position:relative;height:12px;border-radius:12px;background:var(--fill-soft)}.hbar .t i{position:absolute;left:0;top:0;bottom:0;border-radius:12px;background:var(--accent)}.hbar .t u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);opacity:.6}
 .hbar .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink2);font-weight:600}.hbar b{text-align:right}
-.pairs{display:flex;flex-direction:column;gap:8px}.pair{display:grid;grid-template-columns:1fr auto;gap:8px;border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:13px}.pair .pp{font-weight:700}.pair .pp i{font-style:normal;color:var(--accent-text);margin:0 6px}.pair small{color:var(--ink2)}
+.pairs{display:flex;flex-direction:column;gap:8px}.pair{display:grid;grid-template-columns:1fr auto;gap:8px;border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:13px}.pair .pp{font-weight:700}.pair .pp>i{font-style:normal;color:var(--accent-text);margin:0 6px}.pair .pp{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}.pair .pp .stk{margin-top:0}.pair small{color:var(--ink2)}
 /* heat */
 .heat td{min-width:52px;font-weight:700;font-size:12px}.heat td.l{font-weight:600}
 .stat{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px}.stat div span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:700}.stat div b{font-size:22px;font-weight:800}
@@ -336,7 +340,11 @@ function growth(g){if(g==null)return '<span class="sub">new</span>';const c=Math
 function spark(v){if(!v||!v.length)return '';const w=90,h=26,m=Math.max(1,...v);const pts=v.map((x,i)=>`${(i/(v.length-1)*w).toFixed(1)},${(h-2-x/m*(h-4)).toFixed(1)}`).join(' ');return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(--accent-strong)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
 function bar(v,max){return `<div class="bar"><i style="width:${Math.max(2,Math.min(100,v/(max||1)*100))}%"></i></div>`}
 const thumb=(key,name,info)=>PPic.thumb({sku:key,name},info);
-function itemCell(i,info){return `<div class="itemcell">${thumb(i.key,i.name,info)}<div><div class="nm">${esc(i.name)}</div><small>${esc(i.key)}${i.cat?' · '+esc(i.cat):''}${i.coll?' · '+esc(i.coll):''}</small></div></div>`}
+function stockTag(o){
+  if(!o||o.pcs==null)return '';
+  const z=o.pcs===0,low=!z&&o.pcs<=3;
+  return `<span class="stk ${z?'z':low?'l':'o'}" title="Pieces in all stores now${o.wh?' · '+o.wh+' more in the warehouse':''}">${z?'No stock in stores':'Stock '+nf.format(o.pcs)+(low?' · low':'')}${o.wh?` <i>+${nf.format(o.wh)} wh</i>`:''}</span>`}
+function itemCell(i,info){return `<div class="itemcell">${thumb(i.key,i.name,info)}<div><div class="nm">${esc(i.name)}</div><small>${esc(i.key)}${i.cat?' · '+esc(i.cat):''}${i.coll?' · '+esc(i.coll):''}</small>${stockTag(i)}</div></div>`}
 
 async function load(fresh){
   $('err').hidden=true;$('loading').hidden=false;$('report').hidden=true;
@@ -359,7 +367,7 @@ function render(){
   $('subtitle').textContent=`${nice(d.from)} – ${nice(d.to)} (${d.days} days) · ${d.store==='ALL'?(d.zone||'All stores'):ps(d.store)}`;
   $('pvnote').hidden=false;$('pvnote').innerHTML=`<b>What “vs previous” means:</b> every change on this page compares <b>${nice(d.from)} – ${nice(d.to)}</b> with the <b>${d.days} days right before it</b> (<b>${nice(d.prevFrom)} – ${nice(d.prevTo)}</b>). ▲ green = more than before, ▼ red = less. A store, item or person showing ▼ sold less than in that earlier period.`;
   // findings
-  $('heads').innerHTML=d.headlines.map(h=>`<li><span class="tone ${h.tone}">${h.tone==='good'?'▲':h.tone==='bad'?'!':'i'}</span><span class="htxt">${esc(h.text)}${h.item?` <span class="inl">${thumb(h.item.key,h.item.name,'')}</span>`:''}</span></li>`).join('');
+  $('heads').innerHTML=d.headlines.map(h=>`<li><span class="tone ${h.tone}">${h.tone==='good'?'▲':h.tone==='bad'?'!':'i'}</span><span class="htxt">${esc(h.text)}${h.item?` <span class="inl">${thumb(h.item.key,h.item.name,'')} ${stockTag(h.item)}</span>`:''}</span></li>`).join('');
   $('aiBox').hidden=true;$('heads').hidden=false;$('briefTitle').textContent='Key findings';$('briefMeta').textContent='';
   $('aiBar').innerHTML=d.aiReady?`<button class="btn pri" type="button" id="aiBtn">✦ Write the AI brief</button><span>Claude reads every number on this page and writes the story and this week's moves.</span>`:(d.isAdmin?`<span>Want a written AI brief? Add an <b>ANTHROPIC_API_KEY</b> in Vercel → Settings → Environment Variables, then redeploy. Everything else on this page already works without it.</span>`:'<span>Findings are worked out from your sales, stock and staff data.</span>');
   if(d.aiReady)setTimeout(()=>ai(false),50);
@@ -405,7 +413,7 @@ function plan(){
   const list=d.actions.map((a,i)=>({...a,n:i+1})).filter(a=>S.kind==='ALL'||a.kind===S.kind);
   $('planMeta').textContent=`${d.actions.length} moves · worth about ${short(d.actionsValue)} · tick them off as you go`;
   $('plan').innerHTML=list.map(a=>{const id=a.kind+'|'+a.title;return `<article class="act${done.has(id)?' done':''}"><div class="top"><span class="num">#${a.n}</span><span class="badge ${a.kind}">${KIND[a.kind]||a.kind}</span></div>
-    <div class="arow">${(a.items||[]).length?`<div class="aimgs">${a.items.map(i=>thumb(i.key,i.name,'')).join('')}</div>`:''}<div><div class="atitle">${esc(a.title)}</div><div class="awhy">${esc(a.why)}</div></div></div><div class="atodo">→ ${esc(a.todo)}</div>
+    <div class="arow">${(a.items||[]).length?`<div class="aimgs">${a.items.map(i=>thumb(i.key,i.name,'')).join('')}</div>`:''}<div><div class="atitle">${esc(a.title)}</div><div class="awhy">${esc(a.why)}</div>${(a.items||[]).filter(i=>i.pcs!=null).map(i=>`<div>${a.items.length>1?'<small class="sub">'+esc(i.name.split(' ').slice(0,2).join(' '))+':</small> ':''}${stockTag(i)}</div>`).join('')}</div></div><div class="atodo">→ ${esc(a.todo)}</div>
     <div class="top"><span class="aval">${short(a.value)} <small>possible sales</small></span><label class="donebox"><input type="checkbox" data-done="${esc(id)}"${done.has(id)?' checked':''}> Done</label></div></article>`}).join('')||'<div class="empty">No moves found for this period – nothing urgent.</div>';
 }
 
@@ -426,9 +434,9 @@ function items(){
     $('itemHead').innerHTML='<tr><th class="l">Item</th><th>Trend</th><th>Units now</th><th>Before</th><th>Change</th><th>Revenue</th></tr>';
     $('itemBody').innerHTML=d.items.rising.map((i,n)=>`<tr class="irow" data-tab="rising" data-n="${n}"><td class="l">${itemCell(i,i.units+' sold')}</td><td>${spark(i.spark)}</td><td><b>${nf.format(i.units)}</b></td><td>${nf.format(i.prevUnits)}</td><td>${growth(i.growth)}</td><td>${short(i.rev)}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No clear risers in this period.</td></tr>';
   }else{
-    $('itemNote').textContent='Selling clearly less than before. Check stock first (a run-out looks like a fall), then display and price.';
-    $('itemHead').innerHTML='<tr><th class="l">Item</th><th>Units now</th><th>Before</th><th>Change</th><th>Sales lost</th></tr>';
-    $('itemBody').innerHTML=d.items.falling.map((i,n)=>`<tr class="irow" data-tab="falling" data-n="${n}"><td class="l">${itemCell(i,i.units+' sold')}</td><td><b>${nf.format(i.units)}</b></td><td>${nf.format(i.prevUnits)}</td><td>${growth(i.growth)}</td><td class="down">${short(i.loss*i.asp)}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">Nothing is falling sharply.</td></tr>';
+    $('itemNote').textContent='Selling clearly less than before. The last column checks the stock for you: a run-out looks like a fall, so fix that first; if the stock is there, it is display, price or the team\'s pitch.';
+    $('itemHead').innerHTML='<tr><th class="l">Item</th><th>Units now</th><th>Before</th><th>Change</th><th>Sales lost</th><th class="l">Where is the problem?</th></tr>';
+    $('itemBody').innerHTML=d.items.falling.map((i,n)=>`<tr class="irow" data-tab="falling" data-n="${n}"><td class="l">${itemCell(i,i.units+' sold')}</td><td><b>${nf.format(i.units)}</b></td><td>${nf.format(i.prevUnits)}</td><td>${growth(i.growth)}</td><td class="down">${short(i.loss*i.asp)}</td><td class="why ${i.diag?i.diag.type:''}">${i.diag?`<b>${i.diag.type==='stock'?'Stock problem':'Stock is fine – look at display, price, pitch'}</b>${esc(i.diag.text)}`:'<span class="sub">Stock not read yet</span>'}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">Nothing is falling sharply.</td></tr>';
   }
   PPic.fill($('itemBody'));
 }
@@ -458,7 +466,7 @@ function basket(){
   const b=S.d.basket;
   $('basketStat').innerHTML=`<div><span>Chain attach</span><b>${b.chainAttach}%</b></div><div><span>Multi-item orders</span><b>${b.multi}%</b> <small class="sub">before ${b.prevMulti}%</small></div><div><span>Avg charm</span><b>${egp(b.charmPrice)}</b></div>`;
   $('attach').innerHTML=b.attachStores.slice().sort((x,y)=>y.rate-x.rate).map(a=>`<div class="hbar" title="${a.withCharm} of ${a.orders} bracelet orders took a charm${a.gapValue?' · '+egp(a.gapValue)+' missed vs chain':''}"><span class="n">${esc(ps(a.name))}</span><span class="t"><i style="width:${Math.min(100,a.rate)}%"></i><u style="left:${Math.min(100,b.chainAttach)}%"></u></span><b class="${a.rate<b.chainAttach?'down':'up'}">${a.rate}%</b></div>`).join('')||'<div class="empty">Not enough bracelet sales in this period.</div>';
-  $('pairs').innerHTML=b.pairs.slice(0,8).map(p=>`<div class="pair"><div class="pp">${thumb(p.a,p.an,'')} ${esc(p.an)}<i>+</i>${esc(p.bn)} ${thumb(p.b,p.bn,'')}</div><div style="text-align:right"><b>${p.count}×</b><small style="display:block">${p.lift}× chance</small></div></div>`).join('')||'<div class="empty">No strong pairs yet – more multi-item sales will reveal them.</div>';
+  $('pairs').innerHTML=b.pairs.slice(0,8).map(p=>`<div class="pair"><div class="pp">${thumb(p.a,p.an,'')} ${esc(p.an)} ${stockTag({pcs:p.pa,wh:p.wa})}<i>+</i>${thumb(p.b,p.bn,'')} ${esc(p.bn)} ${stockTag({pcs:p.pb,wh:p.wb})}</div><div style="text-align:right"><b>${p.count}×</b><small style="display:block">${p.lift}× chance</small></div></div>`).join('')||'<div class="empty">No strong pairs yet – more multi-item sales will reveal them.</div>';
   document.querySelectorAll('#pairs .pthumb').forEach(t=>{t.style.width='30px';t.style.height='30px';t.style.display='inline-grid';t.style.verticalAlign='middle'});
 }
 
@@ -469,7 +477,7 @@ function team(){
   const vs=(l,v,s,fmt,hiBad)=>{const bad=hiBad?v>s:v<s;return `<div><span>${l}</span><b class="${bad?'down':'up'}">${fmt(v)}</b><em>store ${fmt(s)}</em></div>`};
   $('coach').innerHTML=coach.map(p=>`<div class="pc"><div class="who"><div><b>${esc(p.name)}</b><small>${esc(ps(p.store))} · #${p.rank} by revenue · ${short(p.rev)}</small></div><div class="opp">${short(p.opportunity)}<small>to gain</small></div></div>
     <div class="vs">${vs('UPT',p.upt,p.storeUpt,v=>(+v).toFixed(2))}${vs('ATV',p.atv,p.storeAtv,v=>short(v).replace('EGP ',''))}${p.attach==null?'<div><span>Charm attach</span><b>—</b></div>':vs('Charm attach',p.attach,p.storeAttach,v=>v+'%')}</div>
-    <div class="tiptext">${esc(p.tip)}</div>${p.blind?`<div class="tops">Blind spot: <b>${esc(p.blind.cat)}</b> is ${p.blind.store}% of the store's sales, ${p.blind.me}% of theirs.</div>`:''}${p.strong?`<div class="tops">Strength: <b>${esc(p.strong.cat)}</b> (${p.strong.me}% vs store ${p.strong.store}%) – let them coach it.</div>`:''}${p.top.length?`<div class="tops"><div style="margin-bottom:6px">Sells most:</div><div class="topsrow">${p.top.map(x=>`<div class="topitem">${thumb(x.key,x.name,x.units+' sold')}<span>${esc(x.name)}<small>${x.units} sold</small></span></div>`).join('')}</div></div>`:''}</div>`).join('')||'<div class="empty">Everyone is at or above their store\'s average. Excellent.</div>';
+    <div class="tiptext">${esc(p.tip)}</div>${p.blind?`<div class="tops">Blind spot: <b>${esc(p.blind.cat)}</b> is ${p.blind.store}% of the store's sales, ${p.blind.me}% of theirs.</div>`:''}${p.strong?`<div class="tops">Strength: <b>${esc(p.strong.cat)}</b> (${p.strong.me}% vs store ${p.strong.store}%) – let them coach it.</div>`:''}${p.top.length?`<div class="tops"><div style="margin-bottom:6px">Sells most:</div><div class="topsrow">${p.top.map(x=>`<div class="topitem">${thumb(x.key,x.name,x.units+' sold')}<span>${esc(x.name)}<small>${x.units} sold</small>${stockTag(x)}</span></div>`).join('')}</div></div>`:''}</div>`).join('')||'<div class="empty">Everyone is at or above their store\'s average. Excellent.</div>';
   $('teamBody').innerHTML=t.people.map(p=>`<tr><td>${p.rank}</td><td class="l"><b>${esc(p.name)}</b><small>${esc(ps(p.store))}</small></td><td><b>${short(p.rev)}</b></td><td>${nf.format(p.orders)}</td><td class="${p.atv<p.storeAtv?'down':''}">${egp(p.atv)}</td><td class="${p.upt<p.storeUpt?'down':''}">${p.upt.toFixed(2)}</td><td>${p.multi}%</td><td class="${p.attach!=null&&p.attach<p.storeAttach?'down':''}">${p.attach==null?'—':p.attach+'%'}</td><td>${p.opportunity?short(p.opportunity):'<span class="up">✓</span>'}</td></tr>`).join('');
 }
 

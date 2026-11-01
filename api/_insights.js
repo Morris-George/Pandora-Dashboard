@@ -211,6 +211,7 @@ async function build(opt) {
   // ---- stock: run-out risk, transfers, slow stock, range gaps ----
   const st = await latestStock();
   const stockOut = { available: false };
+  let stockOf = () => null; // { pcs: pieces in stores, wh: warehouse pieces } for a design, once the stock is read
   const actions = [];
   if (st) {
     const sRows = st.rows.filter(r => inZone(r[3]) || /warehouse/i.test(r[3]));
@@ -231,8 +232,21 @@ async function build(opt) {
       m.set(br, (m.get(br) || 0) + q);
     }
     const nameOf = k => names.get(k) || sName.get(k) || k;
-    for (const it of [...best, ...rising, ...falling]) { // stock on hand per store, shown in the item popup
-      const m = SB.get(it.key); it.stock = m ? Object.fromEntries([...m.entries()].map(([b, q]) => [b, r0(q)])) : {}; it.wh = r0(WH.get(it.key) || 0); it.hasStock = true;
+    stockOf = k => { const m = SB.get(k); let t = 0; if (m) for (const q of m.values()) t += q; return { pcs: r0(t), wh: r0(WH.get(k) || 0) }; };
+    for (const it of [...best, ...rising, ...falling]) { // stock on hand per store, shown in the item popup and next to every item
+      const m = SB.get(it.key); it.stock = m ? Object.fromEntries([...m.entries()].map(([b, q]) => [b, r0(q)])) : {}; it.hasStock = true;
+      Object.assign(it, stockOf(it.key));
+      it.out = (it.br || []).filter(b => b.units > 0 && !(it.stock[b.name] > 0)).length; // stores that sell it but hold none
+    }
+    // cooling items: is the fall a stock problem, or is the stock there and the item simply not moving?
+    for (const it of falling) {
+      const prevTot = it.br.reduce((t, b) => t + b.prev, 0) || 1;
+      const emptied = it.br.filter(b => b.prev > 0 && !(it.stock[b.name] > 0));
+      const share = emptied.reduce((t, b) => t + b.prev, 0) / prevTot;
+      if (it.pcs === 0 && it.wh === 0) it.diag = { type: 'stock', text: 'Nothing left in any store or the warehouse – reorder.' };
+      else if (it.pcs === 0) it.diag = { type: 'stock', text: `No stock in stores, ${it.wh} in the warehouse – send it out.` };
+      else if (share >= 0.4) it.diag = { type: 'stock', text: `Empty in ${emptied.length} store${emptied.length === 1 ? '' : 's'} that sold ${r0(share * 100)}% of it before: ${emptied.slice(0, 3).map(b => pretty(b.name)).join(', ')}.` };
+      else it.diag = { type: 'display', text: `${it.pcs} pieces on hand, so it is available – check where it sits in the store, the price, and whether the team is offering it.` };
     }
     const chainIC = chainItems; // design -> sales in the period (all stores)
     const scopeStores = pick === 'ALL' ? storeTable.map(s => s.name) : [pick];
@@ -324,6 +338,10 @@ async function build(opt) {
     for (const u of under.slice(0, 6)) actions.push({ kind: 'push', store: u.store, value: u.value, title: `Push ${u.name} at ${pretty(u.store)}`, why: `${u.stock} in stock, sold ${u.sold} where the store's size predicts about ${u.expected}.`, todo: 'Move it to the front tray or window and brief the team today.', items: [{ key: u.key, name: u.name }] });
   }
 
+  if (stockOut.available) {
+    for (const p of pairs) { const a = stockOf(p.a), b = stockOf(p.b); p.pa = a.pcs; p.pb = b.pcs; p.wa = a.wh; p.wb = b.wh; }
+  }
+
   // ---- sales team ----
   const team = { available: false };
   const sd = await staffData(from, to);
@@ -367,7 +385,7 @@ async function build(opt) {
       for (const [c, v] of p.cat) { const sShare = a.rev ? (a.cat.get(c) || 0) / a.rev : 0, mShare = s.rev ? v / s.rev : 0; if (mShare >= 0.1 && mShare > sShare * 1.3 && (!strong || mShare - sShare > strong.gap)) strong = { cat: c, me: r0(mShare * 100), store: r0(sShare * 100), gap: mShare - sShare }; }
       opp.sort((x, y) => y.v - x.v);
       const main = opp[0];
-      const top = [...p.items.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([k, q]) => ({ key: k, name: names.get(k) || k, units: r0(q) }));
+      const top = [...p.items.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([k, q]) => ({ key: k, name: names.get(k) || k, units: r0(q), ...(stockOut.available ? stockOf(k) : {}) }));
       // make the tip about this person: the pair that goes with what they already sell best
       const topK = top.map(t => t.key);
       // the pair where they sell one side well and the other side rarely, not reused too often across the team
@@ -407,6 +425,7 @@ async function build(opt) {
   actions.sort((a, b) => b.value - a.value);
   const plan = actions.filter(a => { seen[a.kind] = (seen[a.kind] || 0) + 1; return seen[a.kind] <= (CAP[a.kind] || 2) && a.value > 0; });
   actions.length = 0; actions.push(...plan);
+  if (stockOut.available) for (const a of actions) for (const it of (a.items || [])) Object.assign(it, stockOf(it.key));
 
   // ---- headlines ----
   const H = [];
@@ -423,6 +442,7 @@ async function build(opt) {
   if (stockOut.available && stockOut.transfers.length) H.push({ tone: 'info', text: `${stockOut.transfers.length >= 30 ? '30+' : stockOut.transfers.length} transfers between stores would put idle stock where it sells, without buying anything.` });
   if (basket.attachStores.length > 1) { const lo = basket.attachStores.slice().sort((a, b) => a.rate - b.rate)[0]; if (lo.rate < basket.chainAttach) H.push({ tone: 'bad', text: `Only ${lo.rate}% of bracelet buyers at ${pretty(lo.name)} take a charm (chain ${basket.chainAttach}%).` }); }
   if (team.available && team.coachTotal) H.push({ tone: 'info', text: `Bringing every sales person up to their own store's average is worth about ${fmtE(team.coachTotal)} in this period.` });
+  if (stockOut.available) for (const h of H) if (h.item) Object.assign(h.item, stockOf(h.item.key));
   const totalValue = r0(actions.slice(0, 15).reduce((t, a) => t + a.value, 0));
 
   return {
