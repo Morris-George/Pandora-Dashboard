@@ -211,18 +211,29 @@ const keyOf=r=>S.group==='fam'?famOf(r[G]):catOf(r);
 
 function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
 
+let loadId=0;
+async function getStock(q,ms){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);
+  try{const r=await fetch('/api/stock?'+q+'from='+encodeURIComponent(S.from)+'&to='+encodeURIComponent(S.to),{credentials:'same-origin',cache:'no-store',signal:c.signal});
+    return {r,j:await r.json().catch(()=>({}))}}finally{clearTimeout(t)}}
+function apply(j){S.meta=j;S.rows=j.rows||[];if(j.source==='erp'){S.from=j.from;S.to=j.to}$('controls').hidden=false;syncDates();render()}
 async function load(){
-  showErr('');$('dMsg').textContent='Loading…';
-  try{
-    const r=await fetch('/api/stock?from='+encodeURIComponent(S.from)+'&to='+encodeURIComponent(S.to),{credentials:'same-origin',cache:'no-store'});
+  const id=++loadId;showErr('');$('dMsg').textContent='Loading…';
+  let shown=false;
+  /* 1) instant: the last saved copy for these dates, so the page opens straight away */
+  try{const {r,j}=await getStock('cached=1&',15000);
+    if(id!==loadId)return;
     if(r.status===401){location.replace('/login.html');return}
-    const j=await r.json().catch(()=>({}));
-    if(r.status===404){empty('No stock balance yet','The super admin adds the Stock Balance report (.xlsx) on the All Uploads page.');return}
-    if(!r.ok||!j.ok){$('dMsg').textContent='';showErr(j.error||'Could not load the stock balance.');return}
-    S.meta=j;S.rows=j.rows||[];
-    if(j.source==='erp'){S.from=j.from;S.to=j.to}
-    $('controls').hidden=false;syncDates();render();
-  }catch(e){$('dMsg').textContent='';showErr('Could not load. Check your connection.')}
+    if(r.ok&&j.ok&&!j.miss&&j.rows&&j.rows.length){apply(j);shown=true;$('dMsg').textContent='Updating from ERP…'}}catch(_){}
+  /* 2) the live read (up to 2 tries: the first one can be slow when ERP is waking up) */
+  for(let n=0;n<2;n++){
+    try{const {r,j}=await getStock('',58000);
+      if(id!==loadId)return;
+      if(r.status===401){location.replace('/login.html');return}
+      if(r.status===404){if(!shown)empty('No stock balance yet','The super admin adds the Stock Balance report (.xlsx) on the All Uploads page.');return}
+      if(r.ok&&j.ok){apply(j);return}
+      if(n===1){if(!shown){$('dMsg').textContent='';showErr(j.error||'Could not load the stock balance.')}else $('dMsg').textContent='Showing the last saved copy; ERP did not answer.';return}
+    }catch(e){if(id!==loadId)return;if(n===1){if(!shown){$('dMsg').textContent='';showErr('Could not load. Check your connection and refresh.')}else $('dMsg').textContent='Showing the last saved copy; ERP did not answer.';return}}
+  }
 }
 function empty(h,p){$('controls').hidden=true;$('kpis').hidden=true;$('detail').hidden=true;$('items').hidden=true;$('catCard').hidden=false;$('catTitle').textContent='Stock balance';$('catMeta').textContent='';$('thead').innerHTML='';$('tbody').innerHTML='<tr><td class="empty" colspan="8" style="text-align:center;white-space:normal"><b>'+esc(h)+'</b><br>'+esc(p)+'</td></tr>'}
 

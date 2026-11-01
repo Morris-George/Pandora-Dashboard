@@ -142,6 +142,13 @@ module.exports = async function handler(req, res) {
   const erpOn = !!(process.env.ERP_URL && process.env.ERP_API_KEY && process.env.ERP_API_SECRET); // live from ERPNext; the Excel file on All Uploads is the fallback
   let note = '';
 
+  // cached=1: answer at once with whatever was saved for these dates (any age), so the page opens instantly while the live read happens in a second call
+  if (url.searchParams.get('cached') === '1') {
+    const c = await store.getJSON('stock/r/' + from + '_' + to + '.json');
+    if (c && c.rows && c.rows.length) return send(res, 200, { ...base, source: 'erp', from, to, fetchedAt: c.at, canChangeDates: true, hasExcel: !!snap, stale: true, rows: scope(c.rows, who) });
+    return send(res, 200, { ok: true, miss: true });
+  }
+
   if (erpOn) {
     try {
       const d = await erpStock(from, to, url.searchParams.get('fresh') === '1');
