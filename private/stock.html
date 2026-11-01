@@ -209,6 +209,8 @@ const catOf=r=>recat(catOfGroup(r[G]),r[N]);
 const famOf=g=>{const f=String(g||'').split(' - ')[0].replace(/^\s*Pandora\s+/i,'').trim();return f?(f.length>2&&f===f.toUpperCase()?f.charAt(0)+f.slice(1).toLowerCase():f):'Other'};
 const keyOf=r=>S.group==='fam'?famOf(r[G]):catOf(r);
 
+/* some items have a barcode-like number as their code and the real design code (793905C01-5700…) as their name: the website knows the design code */
+const picSku=i=>/^\d{8,}$/.test(String(i.code||''))&&/^[A-Za-z0-9]{4,}(-|$)/.test(String(i.name||''))?i.name:i.code;
 function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
 
 let loadId=0;
@@ -345,7 +347,7 @@ function itemsTable(rows){
   card.hidden=false;
   $('itemsMeta').textContent=(S.sel?S.sel+' · ':'')+(S.loc==='ALL'?'All locations':S.loc)+' · '+nf0.format(all.length)+' item'+(all.length===1?'':'s');
   $('ithead').innerHTML='<tr><th></th><th class="l">Item</th><th class="l">Category</th>'+locs.map(l=>`<th title="${esc(l)}">${esc(shortWh(l))}</th>`).join('')+'<th>Balance Qty</th></tr>';
-  $('itbody').innerHTML=shown.map(i=>`<tr><td>${PPic.thumb({sku:i.code,name:i.name||i.code},pcs(i.b)+' pieces')}</td><td class="l">${esc(i.name||i.code)}<small>${esc(i.code)}</small></td><td class="l">${esc(i.cat)}</td>`+locs.map(l=>q(i.w.get(l)||0)).join('')+`<td${i.b<0?' class="neg"':''}><b>${pcs(i.b)}</b></td></tr>`).join('')
+  $('itbody').innerHTML=shown.map(i=>`<tr><td>${PPic.thumb({sku:picSku(i),name:i.name||i.code},pcs(i.b)+' pieces')}</td><td class="l">${esc(i.name||i.code)}<small>${esc(i.code)}</small></td><td class="l">${esc(i.cat)}</td>`+locs.map(l=>q(i.w.get(l)||0)).join('')+`<td${i.b<0?' class="neg"':''}><b>${pcs(i.b)}</b></td></tr>`).join('')
     +`<tr class="total"><td></td><td class="l">Total</td><td class="l"></td>`+locs.map(l=>`<td>${pcs(all.reduce((t,i)=>t+(i.w.get(l)||0),0))}</td>`).join('')+`<td>${pcs(all.reduce((t,i)=>t+i.b,0))}</td></tr>`;
   PPic.fill($('itbody'));
   $('itMore').hidden=all.length<=S.itemsN;
@@ -361,7 +363,7 @@ function detail(list,showVal){
   const byItem=new Map();
   x.rows.forEach(r=>{let o=byItem.get(r[C]);if(!o)byItem.set(r[C],o={code:r[C],name:r[N],b:0,v:0,l:new Set()});o.b+=r[B];o.v+=r[V];if(r[B]!==0)o.l.add(r[W])});
   const its=[...byItem.values()].sort((a,b)=>b.b-a.b),top=its.slice(0,10),neg=its.filter(i=>i.b<0).slice(-5).reverse();
-  const itemRow=i=>`<tr><td>${PPic.thumb({sku:i.code,name:i.name||i.code},pcs(i.b)+' pieces')}</td><td class="l">${esc(i.name||i.code)}<small>${esc(i.code)}</small></td><td>${pcs(i.b)}</td>${showVal?`<td>${egp(i.v)}</td>`:''}<td>${nf0.format(i.l.size)}</td></tr>`;
+  const itemRow=i=>`<tr><td>${PPic.thumb({sku:picSku(i),name:i.name||i.code},pcs(i.b)+' pieces')}</td><td class="l">${esc(i.name||i.code)}<small>${esc(i.code)}</small></td><td>${pcs(i.b)}</td>${showVal?`<td>${egp(i.v)}</td>`:''}<td>${nf0.format(i.l.size)}</td></tr>`;
   const head=`<tr><th></th><th class="l">Item</th><th>Pieces</th>${showVal?'<th>Value</th>':''}<th>Locations</th></tr>`;
   el.innerHTML=`<div class="cardhead"><h2>${esc(x.name)}</h2><span class="meta">${pcs(x.b)} pieces in ${nf0.format(byLoc.size)} location${byLoc.size===1?'':'s'}${showVal?' · '+egp(x.v):''}</span></div>
    <div class="two"><div><h3>By location</h3>${locs.map(l=>`<div class="bar"><span class="n" title="${esc(l[0])}">${esc(l[0])}</span><span class="t"><i style="width:${Math.max(1,Math.abs(l[1])/lmax*100)}%"></i></span><span class="v${l[1]<0?' neg':''}">${pcs(l[1])}</span></div>`).join('')}</div>
