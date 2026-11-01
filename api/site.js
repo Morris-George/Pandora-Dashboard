@@ -184,7 +184,7 @@ module.exports = async function handler(req, res) {
   }
   if (isChecker && pair.hasPair(req, 'checker')) {
     const f1 = await sessionFacts(req);
-    if (!(f1.staff && f1.staff.role === 'admin' && !f1.staff.overseer)) {
+    if (!(f1.staff && !f1.staff.overseer)) { // signed in as a store person, area manager or super admin: the normal page below
       // not signed in as someone who may open it: the paired phone sees only this page (no Home link, nothing else)
       const chrome = withChrome('staff', false);
       return sendFile(res, 'stockchecker.html', 'text/html; charset=utf-8', function (buf) {
@@ -361,9 +361,10 @@ module.exports = async function handler(req, res) {
     if (!(facts.staff && facts.staff.role === 'admin') && !facts.sc) return toHome();
     return sendFile(res, 'stockcount.html', 'text/html; charset=utf-8', withChrome('staff', multi));
   }
-  // Stock Checker: the super admin only
+  // Stock Checker: sales people and store managers (their own store), area managers (their zone) and the super admin. Each store's scans stay separate (api/_checker.js).
   if (requestedPath === '/stockchecker' || requestedPath === '/stockchecker/' || requestedPath === '/stockchecker.html') {
-    if (!(facts.staff && facts.staff.role === 'admin' && !facts.staff.overseer)) return toHome();
+    const onlineStaff = !!(facts.staff && facts.staff.who && facts.staff.who.info && facts.staff.who.info.self && /online|e-?commerce|website/i.test(facts.staff.who.info.self.store || ''));
+    if (!(facts.staff && !facts.staff.overseer) || onlineStaff) return toHome();
     return sendFile(res, 'stockchecker.html', 'text/html; charset=utf-8', withChrome('staff', multi));
   }
   // Refill Order: whoever the super admin gave access to (Staff approvals)

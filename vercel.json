@@ -48,6 +48,10 @@
       "destination": "/api/vm?zonestock=1"
     },
     {
+      "source": "/api/checker",
+      "destination": "/api/vm?checker=1"
+    },
+    {
       "source": "/api/checkerpair",
       "destination": "/api/vm?checkerpair=1"
     },
