@@ -326,8 +326,15 @@ async function build(opt) {
     restock.sort((a, b) => b.value - a.value);
     gaps.sort((a, b) => b.value - a.value); under.sort((a, b) => b.value - a.value);
     const allMoves = transfers.concat(moves).sort((a, b) => b.value - a.value);
+    // everything the item popup needs, for each item that appears in a stock table (clicked row -> stores and quantities)
+    const pops = {};
+    for (const r of [...restock.slice(0, 30), ...allMoves.slice(0, 30), ...gaps.slice(0, 30), ...under.slice(0, 25), ...dead.slice(0, 25)]) {
+      if (pops[r.key]) continue;
+      const c = chainIC.get(r.key), m = SB.get(r.key);
+      pops[r.key] = { key: r.key, name: nameOf(r.key), cat: c ? c.cat : (r.cat || ''), coll: c ? c.coll : '', units: c ? r0(c.units) : 0, rev: c ? r0(c.rev) : 0, asp: c && c.units ? r0(c.rev / c.units) : 0, br: storeSplit(r.key), stock: m ? Object.fromEntries([...m.entries()].map(([b, q]) => [b, r0(q)])) : {}, hasStock: true, ...stockOf(r.key) };
+    }
     Object.assign(stockOut, {
-      available: true, at: st.at, excel: !!st.excel,
+      pops, available: true, at: st.at, excel: !!st.excel,
       restock: restock.slice(0, 30), restockCount: restock.length, outOfStock: restock.filter(r => r.stock === 0).length, atRiskValue: r0(restock.reduce((t, r) => t + r.value, 0)),
       transfers: allMoves.slice(0, 30), gaps: gaps.slice(0, 30), under: under.slice(0, 25),
       dead: dead.slice(0, 25), deadPieces: dead.reduce((t, d) => t + d.pieces, 0), deadValue: r0(dead.reduce((t, d) => t + (d.value || 0), 0)), deadItems: dead.length

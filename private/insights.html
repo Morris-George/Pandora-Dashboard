@@ -100,7 +100,7 @@ td small{display:block;color:var(--ink2);font-size:11.5px}
 .ist.h{border-top:0;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:700;padding:4px 0}
 .ist .sn{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ist .sn small{display:block;color:var(--ink2);font-weight:500;font-size:11.5px;white-space:normal}
 .ist .r{text-align:right}.ist .zero{opacity:.55}
-@media(max-width:560px){.ikpi{grid-template-columns:repeat(2,minmax(0,1fr))}.ist{grid-template-columns:minmax(0,1.5fr) 46px 44px 74px;gap:8px}.ist .bar{display:none}.ist .sn{white-space:normal}.ist .stk{display:none}.ihead .pthumb{width:72px;height:72px}}
+@media(max-width:560px){.ikpi{grid-template-columns:repeat(2,minmax(0,1fr))}.ist{grid-template-columns:minmax(0,1.5fr) 46px 74px 50px;gap:8px}.ist .bar{display:none}.ist .sn{white-space:normal}.ist .shr{display:none}.ihead .pthumb{width:72px;height:72px}}
 .tabs{display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:12px;width:fit-content;flex-wrap:wrap;margin-bottom:12px}
 .tabs button{border:0;background:transparent;color:var(--ink2);font:inherit;font-weight:700;font-size:12.5px;padding:7px 12px;border-radius:9px;cursor:pointer}.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .tabs button b{font-size:11px;color:var(--accent-text);margin-left:4px}
@@ -449,16 +449,16 @@ function stock(){
   document.querySelectorAll('#stockTabs button').forEach(b=>{b.setAttribute('aria-selected',b.dataset.t===S.stockTab);b.innerHTML=b.textContent.replace(/\s*\d+$/,'')+(counts[b.dataset.t]?` <b>${counts[b.dataset.t]}</b>`:'')});
   const t=S.stockTab;let head='',body='',note='';
   if(t==='restock'){note='Best sellers with less than two weeks of stock left in a store, and where to get more from.';head='<tr><th class="l">Item</th><th class="l">Store</th><th>Sells / week</th><th>In stock</th><th>Days left</th><th class="l">Get it from</th><th>At stake</th></tr>';
-    body=st.restock.map(r=>`<tr><td class="l">${itemCell(r,r.stock+' left')}</td><td class="l">${esc(ps(r.store))}</td><td>${r.perWeek}</td><td class="${r.stock?'':'down'}"><b>${r.stock}</b></td><td>${r.stock?r.cover:'<b class="down">0</b>'}</td><td class="l">${r.source?esc(ps(r.source))+` <small>${r.qty} pcs${r.qty<r.need?', order '+(r.need-r.qty)+' more':''}</small>`:`<span class="down">Order ${r.need}</span>`}</td><td><b>${short(r.value)}</b></td></tr>`).join('');}
+    body=st.restock.map(r=>`<tr class="irow" data-stk="${esc(r.key)}"><td class="l">${itemCell(r,r.stock+' left')}</td><td class="l">${esc(ps(r.store))}</td><td>${r.perWeek}</td><td class="${r.stock?'':'down'}"><b>${r.stock}</b></td><td>${r.stock?r.cover:'<b class="down">0</b>'}</td><td class="l">${r.source?esc(ps(r.source))+` <small>${r.qty} pcs${r.qty<r.need?', order '+(r.need-r.qty)+' more':''}</small>`:`<span class="down">Order ${r.need}</span>`}</td><td><b>${short(r.value)}</b></td></tr>`).join('');}
   else if(t==='transfers'){note='Stock sitting where it does not sell, sent to where it does. No purchase needed.';head='<tr><th class="l">Item</th><th class="l">From</th><th class="l">To</th><th>Pieces</th><th>At stake</th></tr>';
-    body=st.transfers.map(r=>`<tr><td class="l">${itemCell(r,r.qty+' to move')}</td><td class="l">${esc(ps(r.from))}</td><td class="l"><b>${esc(ps(r.to))}</b>${r.soldAtTo?`<small>sold ${r.soldAtTo} there</small>`:r.perWeekTo?`<small>sells ${r.perWeekTo}/week there</small>`:''}</td><td><b>${r.qty}</b></td><td>${short(r.value)}</td></tr>`).join('');}
+    body=st.transfers.map(r=>`<tr class="irow" data-stk="${esc(r.key)}"><td class="l">${itemCell(r,r.qty+' to move')}</td><td class="l">${esc(ps(r.from))}</td><td class="l"><b>${esc(ps(r.to))}</b>${r.soldAtTo?`<small>sold ${r.soldAtTo} there</small>`:r.perWeekTo?`<small>sells ${r.perWeekTo}/week there</small>`:''}</td><td><b>${r.qty}</b></td><td>${short(r.value)}</td></tr>`).join('');}
   else if(t==='gaps'){note='Designs most stores sell that this store does not have at all.';head='<tr><th class="l">Item</th><th class="l">Missing at</th><th>Stores selling</th><th>Avg units / store</th><th>In warehouse</th><th>At stake</th></tr>';
-    body=st.gaps.map(r=>`<tr><td class="l">${itemCell(r,'')}</td><td class="l"><b>${esc(ps(r.store))}</b></td><td>${r.sellers}</td><td>${r.avgUnits}</td><td>${r.whStock||'—'}</td><td>${short(r.value)}</td></tr>`).join('');}
+    body=st.gaps.map(r=>`<tr class="irow" data-stk="${esc(r.key)}"><td class="l">${itemCell(r,'')}</td><td class="l"><b>${esc(ps(r.store))}</b></td><td>${r.sellers}</td><td>${r.avgUnits}</td><td>${r.whStock||'—'}</td><td>${short(r.value)}</td></tr>`).join('');}
   else if(t==='under'){note='In stock, but selling far below what the store\'s size predicts: a display or briefing problem, not a stock problem.';head='<tr><th class="l">Item</th><th class="l">Store</th><th>In stock</th><th>Sold</th><th>Expected</th><th>At stake</th></tr>';
-    body=st.under.map(r=>`<tr><td class="l">${itemCell(r,'')}</td><td class="l">${esc(ps(r.store))}</td><td>${r.stock}</td><td class="down"><b>${r.sold}</b></td><td>${r.expected}</td><td>${short(r.value)}</td></tr>`).join('');}
+    body=st.under.map(r=>`<tr class="irow" data-stk="${esc(r.key)}"><td class="l">${itemCell(r,'')}</td><td class="l">${esc(ps(r.store))}</td><td>${r.stock}</td><td class="down"><b>${r.sold}</b></td><td>${r.expected}</td><td>${short(r.value)}</td></tr>`).join('');}
   else{note=`Pieces with no sale anywhere in either period (${nf.format(st.deadPieces)} pieces, ${st.deadItems} designs). Candidates for a promotion, a gift-with-purchase or a return.`;head='<tr><th class="l">Item</th><th>Pieces</th><th>Stores</th>'+(st.deadValue?'<th>Stock value</th>':'')+'</tr>';
-    body=st.dead.map(r=>`<tr><td class="l">${itemCell(r,r.pieces+' pieces')}</td><td><b>${r.pieces}</b></td><td>${r.stores}</td>${st.deadValue?`<td>${short(r.value)}</td>`:''}</tr>`).join('');}
-  $('stockNote').textContent=note;$('stockHead').innerHTML=head;$('stockBody').innerHTML=body||'<tr><td colspan="7" class="empty">Nothing here – good.</td></tr>';
+    body=st.dead.map(r=>`<tr class="irow" data-stk="${esc(r.key)}"><td class="l">${itemCell(r,r.pieces+' pieces')}</td><td><b>${r.pieces}</b></td><td>${r.stores}</td>${st.deadValue?`<td>${short(r.value)}</td>`:''}</tr>`).join('');}
+  $('stockNote').textContent=note+' Tap a row to see which stores hold it and how many.';$('stockHead').innerHTML=head;$('stockBody').innerHTML=body||'<tr><td colspan="7" class="empty">Nothing here – good.</td></tr>';
   PPic.fill($('stockBody'));
 }
 
@@ -499,7 +499,17 @@ function weekday(){
 }
 
 
+function stockPopup(it){
+  const d=S.d,m=it.stock||{},rows=Object.entries(m).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...rows.map(r=>r[1])),tot=rows.reduce((t,r)=>t+r[1],0);
+  $('iBody').innerHTML=`<div class="ihead">${thumb(it.key,it.name,tot+' in stock')}<div><h3>${esc(it.name)}</h3><div class="sub">${esc(it.key)}${it.cat?' · '+esc(it.cat):''}${it.coll?' · '+esc(it.coll):''}</div><div class="sub" style="margin-top:4px">No sales in ${nice(d.from)} – ${nice(d.to)} or the ${d.days} days before</div></div></div>
+  <div class="ikpi"><div><span>Held in</span><b>${rows.length} store${rows.length===1?'':'s'}</b></div><div><span>Pieces in stores</span><b>${nf.format(tot)}</b></div><div><span>Warehouse</span><b>${nf.format(it.wh||0)}</b></div><div><span>Sales</span><b>None</b></div></div>
+  <div class="ist h" style="grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)"><span>Store</span><span>Pieces in stock</span></div>`+
+  rows.map(([n,q])=>`<div class="ist" style="grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)"><span class="sn">${esc(ps(n))}</span><span style="display:flex;align-items:center;gap:8px">${bar(q,max)}<b>${nf.format(q)}</b></span></div>`).join('')+
+  `<p class="note" style="margin-top:10px">Nothing sold anywhere, so this stock is tied up. Options: a window or promotion push, a gift-with-purchase, move it to the best-trading store, or return it.</p>`;
+  $('iModal').hidden=false;PPic.fill($('iBody'));
+}
 function itemPopup(it){
+  if(!it.units&&it.hasStock&&!(it.br||[]).some(b=>b.units>0||b.prev>0))return stockPopup(it);
   const d=S.d,tot=it.units||1;
   const rows=(it.br||[]).slice();
   if(it.hasStock)Object.keys(it.stock||{}).forEach(n=>{if(!rows.find(r=>r.name===n))rows.push({name:n,units:0,rev:0,prev:0})});
@@ -508,10 +518,10 @@ function itemPopup(it){
   const miss=rows.filter(r=>!r.units&&it.hasStock&&!(it.stock||{})[r.name]&&false);
   const stk=n=>it.hasStock?((it.stock||{})[n]||0):null;
   $('iBody').innerHTML=`<div class="ihead">${thumb(it.key,it.name,it.units+' sold')}<div><h3>${esc(it.name)}</h3><div class="sub">${esc(it.key)}${it.cat?' · '+esc(it.cat):''}${it.coll?' · '+esc(it.coll):''}</div><div class="sub" style="margin-top:4px">${nice(d.from)} – ${nice(d.to)}</div></div></div>
-  <div class="ikpi"><div><span>Sold in</span><b>${sold.length} store${sold.length===1?'':'s'}</b></div><div><span>Units</span><b>${nf.format(it.units)}</b></div><div><span>Revenue</span><b>${short(it.rev)}</b></div><div><span>${it.hasStock?'In stock now':'Avg price'}</span><b>${it.hasStock?nf.format(Object.values(it.stock||{}).reduce((a,b)=>a+b,0))+(it.wh?' <small class="sub">+'+nf.format(it.wh)+' wh</small>':''):egp(it.asp)}</b></div></div>
-  <div class="ist h"><span>Store</span><span>Units sold</span><span class="r">Share</span><span class="r">vs previous</span><span class="r stk">In stock</span></div>`+
-  rows.sort((a,b)=>b.units-a.units||b.rev-a.rev).map(r=>{const g=r.prev?((r.units/r.prev-1)*100):null;const s0=stk(r.name);
-    return `<div class="ist${r.units?'':' zero'}"><span class="sn">${esc(ps(r.name))}<small>${r.units?short(r.rev):'no sales'}</small></span><span style="display:flex;align-items:center;gap:8px">${bar(r.units,max)}<b>${nf.format(r.units)}</b></span><span class="r">${r.units?Math.round(r.units/tot*100)+'%':'—'}</span><span class="r">${g==null?(r.units?'<span class="sub">new</span>':'—'):growth(g)}</span><span class="r stk">${s0==null?'':s0===0&&r.units>0?'<b class="down">0</b>':nf.format(s0)}</span></div>`}).join('')+
+  <div class="ikpi"><div><span>${it.units?'Sold in':'Sales'}</span><b>${it.units?sold.length+' store'+(sold.length===1?'':'s'):'None'}</b></div><div><span>Units</span><b>${nf.format(it.units)}</b></div><div><span>Revenue</span><b>${short(it.rev)}</b></div><div><span>${it.hasStock?'In stock now':'Avg price'}</span><b>${it.hasStock?nf.format(Object.values(it.stock||{}).reduce((a,b)=>a+b,0))+(it.wh?' <small class="sub">+'+nf.format(it.wh)+' wh</small>':''):egp(it.asp)}</b></div></div>
+  <div class="ist h"><span>Store</span><span>Units sold</span><span class="r shr">Share</span><span class="r">vs previous</span><span class="r">In stock</span></div>`+
+  rows.sort((a,b)=>b.units-a.units||b.rev-a.rev||((it.stock||{})[b.name]||0)-((it.stock||{})[a.name]||0)).map(r=>{const g=r.prev?((r.units/r.prev-1)*100):null;const s0=stk(r.name);
+    return `<div class="ist${r.units?'':' zero'}"><span class="sn">${esc(ps(r.name))}<small>${r.units?short(r.rev):'no sales in this period'}</small></span><span style="display:flex;align-items:center;gap:8px">${bar(r.units,max)}<b>${nf.format(r.units)}</b></span><span class="r shr">${r.units?Math.round(r.units/tot*100)+'%':'—'}</span><span class="r">${g==null?(r.units?'<span class="sub">new</span>':'—'):growth(g)}</span><span class="r">${s0==null?'':s0===0&&r.units>0?'<b class="down">0</b>':nf.format(s0)}</span></div>`}).join('')+
   `<p class="note" style="margin-top:10px">“vs previous” is units against the previous ${d.days} days (${nice(d.prevFrom)} – ${nice(d.prevTo)}).${it.hasStock?' A red 0 in stock means the store sells it but has none left.':''}</p>`;
   $('iModal').hidden=false;PPic.fill($('iBody'));
 }
@@ -541,7 +551,9 @@ function md(t){
 document.addEventListener('click',e=>{
   const t=e.target;
   if(t.id==='iClose'||t.id==='iModal'){$('iModal').hidden=true;return}
-  const ir=t.closest('tr.irow');if(ir&&!t.closest('.pthumb')){const it=S.d.items[ir.dataset.tab][+ir.dataset.n];if(it){itemPopup(it);return}}
+  const ir=t.closest('tr.irow');if(ir&&!t.closest('.pthumb')){
+    const it=ir.dataset.stk?(S.d.stock.pops||{})[ir.dataset.stk]:S.d.items[ir.dataset.tab][+ir.dataset.n];
+    if(it){itemPopup(it);return}}
   const p=t.closest('#presets [data-p]');
   if(p){const end=S.d?new Date(S.d.dataTo+'T12:00:00'):new Date();let f=new Date(end),to=new Date(end);const v=p.dataset.p;
     if(v==='month')f=new Date(end.getFullYear(),end.getMonth(),1);else if(v==='last'){f=new Date(end.getFullYear(),end.getMonth()-1,1);to=new Date(end.getFullYear(),end.getMonth(),0)}else f.setDate(f.getDate()-(+v-1));
