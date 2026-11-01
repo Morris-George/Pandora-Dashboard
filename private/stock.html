@@ -63,6 +63,15 @@ h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;co
 @media (max-width:760px){.two{grid-template-columns:1fr}.kpi .v{font-size:20px}}
 :root{--text:var(--ink);--muted:var(--ink2);--surface2:var(--fill-soft)}
 .pthumb{width:42px;height:42px;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--surface2);color:var(--muted);font-size:15px;line-height:1;display:grid;place-items:center;overflow:hidden;cursor:zoom-in;transition:transform .15s,border-color .15s}
+.pthumb.big{width:150px;height:150px;border-radius:18px;font-size:34px;flex:none}
+.hit{display:flex;gap:20px;align-items:flex-start;padding:6px 0 18px;border-top:1px solid var(--line);margin-top:6px}.hit:first-of-type{border-top:0}
+.hbody{flex:1;min-width:0}.hname{font-size:20px;font-weight:800;letter-spacing:-.02em;word-break:break-word}
+.hmeta{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;color:var(--ink2);font-size:12.5px;margin:4px 0 10px}.hchip{background:var(--fill-soft);color:var(--accent-text);border-radius:999px;padding:3px 10px;font-weight:700}
+.htotal{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}.htotal b{font-size:38px;font-weight:800;letter-spacing:-.03em}.htotal span{color:var(--ink2);font-size:13px}
+.hlocs{display:grid;gap:7px;max-width:560px}.hloc{display:grid;grid-template-columns:130px 1fr 48px;gap:10px;align-items:center;font-size:13px}.hloc .hn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink2);font-weight:600}.hloc b{text-align:right}
+.htrack{height:10px;border-radius:10px;background:var(--fill-soft);overflow:hidden}.htrack i{display:block;height:100%;border-radius:10px;background:var(--accent)}.htrack i.neg{background:#C0394B}
+.hzero,.hnone{color:var(--ink2);font-size:12px;margin-top:10px}
+@media(max-width:640px){.hit{flex-direction:column}.pthumb.big{width:100%;height:auto;aspect-ratio:1/1;max-width:260px}.hloc{grid-template-columns:96px 1fr 40px}}
 .pthumb:hover,.pthumb:focus-visible{transform:scale(1.08);border-color:var(--accent);outline:none}
 .pthumb img{width:100%;height:100%;object-fit:cover;display:block}
 .pmodal{position:fixed;inset:0;z-index:60;background:rgba(20,12,14,.45);display:grid;place-items:center;padding:20px}.pmodal[hidden]{display:none}
@@ -96,6 +105,8 @@ h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;co
     <div class="cardhead"><h2 id="catTitle">Stock by category</h2><span class="meta" id="catMeta"></span></div>
     <div class="tablewrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
   </section>
+
+  <section class="card" id="hit" hidden></section>
 
   <section class="card" id="detail" hidden></section>
 
@@ -267,8 +278,13 @@ function rowWords(r){return r._w||(r._w=[...new Set(toks(r[C]+' '+r[N]+' '+(r[D]
 function searchScore(r,q){let sc=0,hit=0;const words=rowWords(r);for(const w of q){const h=wordHit(w,words);if(h){hit++;sc+=h}}return{hit,sc}}
 function visibleRows(skipCat){
   const q=toks(S.q),bn=brandNow();
+  if(!skipCat)S.exact=false;
   const base=S.rows.filter(r=>(bn==='ALL'||isPandora(r))&&(S.loc==='ALL'||r[W]===S.loc)&&(skipCat||S.cat==='ALL'||keyOf(r)===S.cat));
   if(!q.length)return base;
+  /* a full code typed in (item code, barcode or design code) shows only that item, not everything that looks similar */
+  const nk=x=>String(x||'').toUpperCase().replace(/[^A-Z0-9]/g,''),qk=nk(S.q);
+  if(qk.length>=5){const ex=base.filter(r=>nk(r[C])===qk||nk(r[N])===qk||nk(String(r[N]).split('-')[0])===qk||nk(String(r[C]).split('-')[0])===qk);
+    if(ex.length){if(!skipCat)S.exact=true;return ex}}
   const sc=base.map(r=>[r,searchScore(r,q)]);
   let out=sc.filter(x=>x[1].hit===q.length);
   if(!out.length&&q.length>1){const need=Math.ceil(q.length/2);out=sc.filter(x=>x[1].hit>=need)}/* nothing has every word: show the closest matches */
@@ -298,6 +314,8 @@ function render(){
 
   $('items').hidden=true;
   const rows=visibleRows(),list=agg(rows);
+  if(S.exact&&rows.length){$('kpis').hidden=true;$('catCard').hidden=true;$('detail').hidden=true;hitCard(rows);return}
+  $('hit').hidden=true;
   const hasMove=S.rows.some(r=>r[O]||r[I]||r[U]), showVal=false; /* value is not shown on this page */
   const T=list.reduce((t,x)=>({o:t.o+x.o,i:t.i+x.i,u:t.u+x.u,b:t.b+x.b,v:t.v+x.v}),{o:0,i:0,u:0,b:0,v:0});
   const items=new Set(rows.map(r=>r[C])),negN=rows.filter(r=>r[B]<0).length;
@@ -332,6 +350,29 @@ function render(){
   itemsTable(rows);
 }
 
+
+/* exact search result: the item as a card with a big picture, its total and every store's quantity */
+function hitCard(rows){
+  const m=new Map();
+  for(const r of rows){let o=m.get(r[C]);if(!o)m.set(r[C],o={code:r[C],name:r[N],cat:catOf(r),b:0,w:new Map()});o.b+=r[B];o.w.set(r[W],(o.w.get(r[W])||0)+r[B])}
+  const items=[...m.values()].sort((a,b)=>b.b-a.b);
+  const allLocs=[...new Set(S.rows.filter(r=>brandNow()==='ALL'||isPandora(r)).map(r=>r[W]))].sort((a,b)=>a.localeCompare(b));
+  const card=$('hit');card.hidden=false;
+  const block=i=>{
+    const have=allLocs.map(l=>[l,i.w.get(l)||0]).filter(x=>x[1]!==0).sort((a,b)=>b[1]-a[1]),none=allLocs.filter(l=>!i.w.get(l));
+    const mx=Math.max(1,...have.map(x=>Math.abs(x[1])));
+    return `<div class="hit">
+      ${PPic.thumb({sku:picSku(i),name:i.name||i.code},pcs(i.b)+' pieces').replace('class="pthumb"','class="pthumb big"')}
+      <div class="hbody">
+        <div class="hname">${esc(i.name||i.code)}</div>
+        <div class="hmeta"><span class="hchip">${esc(i.cat)}</span><span>Code ${esc(i.code)}</span></div>
+        <div class="htotal"><b>${pcs(i.b)}</b><span>pieces in stock${have.length?' · in '+have.length+' store'+(have.length===1?'':'s'):''}</span></div>
+        <div class="hlocs">${have.map(x=>`<div class="hloc"><span class="hn" title="${esc(x[0])}">${esc(shortWh(x[0]).replace(/^Pandora\s+/i,""))}</span><span class="htrack"><i class="${x[1]<0?'neg':''}" style="width:${Math.max(3,Math.abs(x[1])/mx*100)}%"></i></span><b${x[1]<0?' class="neg"':''}>${pcs(x[1])}</b></div>`).join('')||'<div class="hnone">Not in stock anywhere.</div>'}</div>
+        ${none.length&&have.length?`<div class="hzero">No stock: ${none.map(l=>esc(shortWh(l).replace(/^Pandora\s+/i,"")).join(', ')}</div>`:''}
+      </div></div>`};
+  card.innerHTML=`<div class="cardhead"><h2>Exact match</h2><span class="meta">${items.length>1?nf0.format(items.length)+' items share this code · ':''}<button type="button" class="btn" id="hitClear">Clear search</button></span></div>`+items.slice(0,8).map(block).join('')+(items.length>8?`<div class="hzero">…and ${items.length-8} more with the same code.</div>`:'');
+  PPic.fill(card);
+}
 /* Balance Qty for every item: one column per branch (when All locations is chosen) and the total */
 const shortWh=w=>String(w||'').replace(/\s+-\s+[A-Z]{1,4}$/,'');
 function itemsTable(rows){
@@ -388,6 +429,7 @@ $('refresh').addEventListener('click',async()=>{const b=$('refresh');b.disabled=
   try{const r=await fetch('/api/stock?fresh=1&from='+encodeURIComponent(S.from)+'&to='+encodeURIComponent(S.to),{credentials:'same-origin',cache:'no-store'});const j=await r.json().catch(()=>({}));
     if(!r.ok||!j.ok)showErr(j.error||'Could not refresh.');else{S.meta=j;S.rows=j.rows||[];syncDates();render();$('dMsg').textContent='Synced at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'.'}}catch(_){showErr('No connection.')}
   b.disabled=false});
+document.addEventListener('click',e=>{if(e.target.id==='hitClear'){S.q='';$('q').value='';S.itemsN=100;render();$('q').focus()}});
 $('q').addEventListener('input',e=>{S.q=e.target.value;S.itemsN=100;render()});
 let dt=null;
 function setDates(f,t){if(!ISO.test(f)||!ISO.test(t))return;if(f>t){const x=f;f=t;t=x}S.from=f;S.to=t;
