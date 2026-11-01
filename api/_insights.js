@@ -136,8 +136,8 @@ async function build(opt) {
     for (const l of lines) {
       const k = design(l.sku) || l.name; if (!k) continue;
       let o = m.get(k);
-      if (!o) m.set(k, o = { key: k, name: names.get(k) || l.name || k, cat: l.cat, coll: l.coll, units: 0, rev: 0, inv: new Set(), br: new Map(), spark: withSpark ? new Array(B).fill(0) : null });
-      o.units += l.q; o.rev += l.net; o.inv.add(l.inv); o.br.set(l.br, (o.br.get(l.br) || 0) + l.q);
+      if (!o) m.set(k, o = { key: k, name: names.get(k) || l.name || k, cat: l.cat, coll: l.coll, units: 0, rev: 0, inv: new Set(), br: new Map(), brRev: new Map(), spark: withSpark ? new Array(B).fill(0) : null });
+      o.units += l.q; o.rev += l.net; o.inv.add(l.inv); o.br.set(l.br, (o.br.get(l.br) || 0) + l.q); o.brRev.set(l.br, (o.brRev.get(l.br) || 0) + l.net);
       if (!o.coll && l.coll) o.coll = l.coll;
       if (withSpark) o.spark[bucket(l.d)] += l.q;
     }
@@ -145,9 +145,14 @@ async function build(opt) {
   }
   const IC = itemAgg(scopeCur, true), IP = itemAgg(scopePrev, false);
   const chainItems = pick === 'ALL' ? IC : itemAgg(chainCur, false);
+  const chainPrev = pick === 'ALL' ? IP : itemAgg(prev, false);
+  const storeSplit = key => {
+    const c = chainItems.get(key), p = chainPrev.get(key), names2 = new Set([...(c ? c.br.keys() : []), ...(p ? p.br.keys() : [])]);
+    return [...names2].map(n => ({ name: n, units: r0(c ? c.br.get(n) || 0 : 0), rev: r0(c ? c.brRev.get(n) || 0 : 0), prev: r0(p ? p.br.get(n) || 0 : 0) })).filter(x => x.units || x.prev).sort((a, b) => b.rev - a.rev || b.units - a.units);
+  };
   const itemOut = o => {
     const p = IP.get(o.key);
-    return { key: o.key, name: o.name, cat: o.cat, coll: o.coll, units: r0(o.units), rev: r0(o.rev), asp: o.units ? r0(o.rev / o.units) : 0, prevUnits: p ? r0(p.units) : 0, growth: p && p.units > 0 ? r1(pct(o.units, p.units)) : null, stores: [...o.br.values()].filter(v => v > 0).length, spark: o.spark };
+    return { br: storeSplit(o.key), key: o.key, name: o.name, cat: o.cat, coll: o.coll, units: r0(o.units), rev: r0(o.rev), asp: o.units ? r0(o.rev / o.units) : 0, prevUnits: p ? r0(p.units) : 0, growth: p && p.units > 0 ? r1(pct(o.units, p.units)) : null, stores: [...o.br.values()].filter(v => v > 0).length, spark: o.spark };
   };
   const items = [...IC.values()].filter(o => o.units > 0);
   const best = items.slice().sort((a, b) => b.rev - a.rev).slice(0, 15).map(itemOut);
@@ -156,7 +161,7 @@ async function build(opt) {
     .filter(x => x.gain >= Math.max(2, x.o.units * 0.3)).sort((a, b) => b.gain * (b.o.rev / b.o.units) - a.gain * (a.o.rev / a.o.units)).slice(0, 10).map(x => ({ ...itemOut(x.o), gain: r0(x.gain) }));
   const falling = [...IP.values()].filter(p => p.units >= minU).map(p => { const c = IC.get(p.key); return { p, c, loss: p.units - (c ? c.units : 0) }; })
     .filter(x => x.loss >= Math.max(2, x.p.units * 0.35)).sort((a, b) => b.loss * (b.p.rev / b.p.units) - a.loss * (a.p.rev / a.p.units)).slice(0, 10)
-    .map(x => ({ key: x.p.key, name: names.get(x.p.key) || x.p.name, cat: x.p.cat, coll: x.p.coll, units: x.c ? r0(x.c.units) : 0, prevUnits: r0(x.p.units), growth: r1(pct(x.c ? x.c.units : 0, x.p.units)), asp: r0(x.p.rev / x.p.units), loss: r0(x.loss) }));
+    .map(x => ({ br: storeSplit(x.p.key), key: x.p.key, name: names.get(x.p.key) || x.p.name, cat: x.p.cat, coll: x.p.coll, units: x.c ? r0(x.c.units) : 0, prevUnits: r0(x.p.units), growth: r1(pct(x.c ? x.c.units : 0, x.p.units)), asp: r0(x.p.rev / x.p.units), loss: r0(x.loss) }));
 
   // ---- categories & collections ----
   const grp = (lines, f) => { const m = new Map(); for (const l of lines) { const k = f(l) || 'Not classified'; m.set(k, (m.get(k) || 0) + l.net); } return m; };
@@ -226,6 +231,9 @@ async function build(opt) {
       m.set(br, (m.get(br) || 0) + q);
     }
     const nameOf = k => names.get(k) || sName.get(k) || k;
+    for (const it of [...best, ...rising, ...falling]) { // stock on hand per store, shown in the item popup
+      const m = SB.get(it.key); it.stock = m ? Object.fromEntries([...m.entries()].map(([b, q]) => [b, r0(q)])) : {}; it.wh = r0(WH.get(it.key) || 0); it.hasStock = true;
+    }
     const chainIC = chainItems; // design -> sales in the period (all stores)
     const scopeStores = pick === 'ALL' ? storeTable.map(s => s.name) : [pick];
     const restock = [], transfers = [], gaps = [], under = [];

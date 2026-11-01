@@ -89,6 +89,18 @@ tbody tr:hover td{background:var(--hover)}
 td small{display:block;color:var(--ink2);font-size:11.5px}
 .bar{position:relative;height:8px;border-radius:8px;background:var(--fill-soft);min-width:80px;overflow:hidden}.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:8px;background:var(--accent)}
 .up{color:var(--good)}.down{color:var(--bad)}
+.irow{cursor:pointer}
+.imodal{position:fixed;inset:0;z-index:61;background:rgba(20,12,14,.5);display:grid;place-items:center;padding:20px}.imodal[hidden]{display:none}
+.icard{background:var(--surface);color:var(--ink);border-radius:20px;padding:20px 22px 12px;width:min(720px,100%);max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.32);animation:ppop .16s ease-out}
+.iclose{float:right;border:0;background:transparent;color:var(--ink2);font-size:26px;line-height:1;cursor:pointer;margin:-6px -4px 0 8px;position:relative;z-index:1}
+.ihead{display:flex;gap:16px;align-items:flex-start;margin-bottom:14px}.ihead .pthumb{width:96px;height:96px;flex:none;border-radius:16px;font-size:26px}
+.ihead h3{margin:0 0 4px;font-size:18px;font-weight:800;letter-spacing:-.02em;line-height:1.3;padding-right:24px}.ihead .sub{font-size:12.5px}
+.ikpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px}.ikpi div{background:var(--surface2);border-radius:12px;padding:8px 10px}.ikpi span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:700}.ikpi b{font-size:16px;font-weight:800}
+.ist{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.4fr) 66px 78px 64px;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:13px}
+.ist.h{border-top:0;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:700;padding:4px 0}
+.ist .sn{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ist .sn small{display:block;color:var(--ink2);font-weight:500;font-size:11.5px;white-space:normal}
+.ist .r{text-align:right}.ist .zero{opacity:.55}
+@media(max-width:560px){.ikpi{grid-template-columns:repeat(2,minmax(0,1fr))}.ist{grid-template-columns:minmax(0,1.5fr) 46px 44px 74px;gap:8px}.ist .bar{display:none}.ist .sn{white-space:normal}.ist .stk{display:none}.ihead .pthumb{width:72px;height:72px}}
 .tabs{display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:12px;width:fit-content;flex-wrap:wrap;margin-bottom:12px}
 .tabs button{border:0;background:transparent;color:var(--ink2);font:inherit;font-weight:700;font-size:12.5px;padding:7px 12px;border-radius:9px;cursor:pointer}.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .tabs button b{font-size:11px;color:var(--accent-text);margin-left:4px}
@@ -233,6 +245,7 @@ td small{display:block;color:var(--ink2);font-size:11.5px}
     <div class="foot" id="foot"></div>
   </div>
 </div>
+<div class="imodal" id="iModal" hidden><div class="icard" role="dialog" aria-modal="true" aria-label="Where this item sold"><button type="button" class="iclose" id="iClose" aria-label="Close">&times;</button><div id="iBody"></div></div></div>
 <div class="pmodal" id="pModal" hidden><div class="pcard" role="dialog" aria-modal="true" aria-label="Product picture"><button type="button" class="pclose" id="pClose" aria-label="Close">&times;</button><div class="pbig" id="pBig"></div><div class="pname" id="pName"></div><div class="pinfo" id="pInfo"></div></div></div>
 <script>
 /* Product thumbnails (same as Stock balance): built-in pictures first, then the pandoraeg.com site; click to enlarge. */
@@ -405,17 +418,17 @@ function items(){
   const d=S.d,t=S.itemTab;
   document.querySelectorAll('#itemTabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));
   if(t==='best'){
-    $('itemNote').textContent='The designs that bring in the most money. Keep them in stock and in the window in every store.';
+    $('itemNote').textContent='The designs that bring in the most money. Tap an item to see which stores sold it. Keep them in stock and in the window in every store.';
     $('itemHead').innerHTML='<tr><th class="l">Item</th><th>Trend</th><th>Units</th><th>Revenue</th><th title="Change against the previous period of the same length">vs previous period</th><th>Avg price</th><th>Stores</th></tr>';
-    $('itemBody').innerHTML=d.items.best.map(i=>`<tr><td class="l">${itemCell(i,i.units+' sold')}</td><td>${spark(i.spark)}</td><td>${nf.format(i.units)}</td><td><b>${short(i.rev)}</b></td><td>${growth(i.growth)}</td><td>${egp(i.asp)}</td><td>${i.stores}</td></tr>`).join('');
+    $('itemBody').innerHTML=d.items.best.map((i,n)=>`<tr class="irow" data-tab="best" data-n="${n}"><td class="l">${itemCell(i,i.units+' sold')}</td><td>${spark(i.spark)}</td><td>${nf.format(i.units)}</td><td><b>${short(i.rev)}</b></td><td>${growth(i.growth)}</td><td>${egp(i.asp)}</td><td>${i.stores}</td></tr>`).join('');
   }else if(t==='rising'){
     $('itemNote').textContent='Selling clearly more than in the previous period. Give them the front tray and make sure no store runs out.';
     $('itemHead').innerHTML='<tr><th class="l">Item</th><th>Trend</th><th>Units now</th><th>Before</th><th>Change</th><th>Revenue</th></tr>';
-    $('itemBody').innerHTML=d.items.rising.map(i=>`<tr><td class="l">${itemCell(i,i.units+' sold')}</td><td>${spark(i.spark)}</td><td><b>${nf.format(i.units)}</b></td><td>${nf.format(i.prevUnits)}</td><td>${growth(i.growth)}</td><td>${short(i.rev)}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No clear risers in this period.</td></tr>';
+    $('itemBody').innerHTML=d.items.rising.map((i,n)=>`<tr class="irow" data-tab="rising" data-n="${n}"><td class="l">${itemCell(i,i.units+' sold')}</td><td>${spark(i.spark)}</td><td><b>${nf.format(i.units)}</b></td><td>${nf.format(i.prevUnits)}</td><td>${growth(i.growth)}</td><td>${short(i.rev)}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No clear risers in this period.</td></tr>';
   }else{
     $('itemNote').textContent='Selling clearly less than before. Check stock first (a run-out looks like a fall), then display and price.';
     $('itemHead').innerHTML='<tr><th class="l">Item</th><th>Units now</th><th>Before</th><th>Change</th><th>Sales lost</th></tr>';
-    $('itemBody').innerHTML=d.items.falling.map(i=>`<tr><td class="l">${itemCell(i,i.units+' sold')}</td><td><b>${nf.format(i.units)}</b></td><td>${nf.format(i.prevUnits)}</td><td>${growth(i.growth)}</td><td class="down">${short(i.loss*i.asp)}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">Nothing is falling sharply.</td></tr>';
+    $('itemBody').innerHTML=d.items.falling.map((i,n)=>`<tr class="irow" data-tab="falling" data-n="${n}"><td class="l">${itemCell(i,i.units+' sold')}</td><td><b>${nf.format(i.units)}</b></td><td>${nf.format(i.prevUnits)}</td><td>${growth(i.growth)}</td><td class="down">${short(i.loss*i.asp)}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">Nothing is falling sharply.</td></tr>';
   }
   PPic.fill($('itemBody'));
 }
@@ -477,6 +490,24 @@ function weekday(){
   $('wdBody').innerHTML=rows.map(r=>`<tr><td class="l">${esc(r.name==='All selected'?'All selected':ps(r.name))}</td>${r.idx.map(v=>`<td style="text-align:center;${col(v)}" title="${v} = ${v>=100?'+':''}${v-100}% vs an average day">${v}</td>`).join('')}</tr>`).join('');
 }
 
+
+function itemPopup(it){
+  const d=S.d,tot=it.units||1;
+  const rows=(it.br||[]).slice();
+  if(it.hasStock)Object.keys(it.stock||{}).forEach(n=>{if(!rows.find(r=>r.name===n))rows.push({name:n,units:0,rev:0,prev:0})});
+  const max=Math.max(1,...rows.map(r=>r.units));
+  const sold=rows.filter(r=>r.units>0);
+  const miss=rows.filter(r=>!r.units&&it.hasStock&&!(it.stock||{})[r.name]&&false);
+  const stk=n=>it.hasStock?((it.stock||{})[n]||0):null;
+  $('iBody').innerHTML=`<div class="ihead">${thumb(it.key,it.name,it.units+' sold')}<div><h3>${esc(it.name)}</h3><div class="sub">${esc(it.key)}${it.cat?' · '+esc(it.cat):''}${it.coll?' · '+esc(it.coll):''}</div><div class="sub" style="margin-top:4px">${nice(d.from)} – ${nice(d.to)}</div></div></div>
+  <div class="ikpi"><div><span>Sold in</span><b>${sold.length} store${sold.length===1?'':'s'}</b></div><div><span>Units</span><b>${nf.format(it.units)}</b></div><div><span>Revenue</span><b>${short(it.rev)}</b></div><div><span>${it.hasStock?'In stock now':'Avg price'}</span><b>${it.hasStock?nf.format(Object.values(it.stock||{}).reduce((a,b)=>a+b,0))+(it.wh?' <small class="sub">+'+nf.format(it.wh)+' wh</small>':''):egp(it.asp)}</b></div></div>
+  <div class="ist h"><span>Store</span><span>Units sold</span><span class="r">Share</span><span class="r">vs previous</span><span class="r stk">In stock</span></div>`+
+  rows.sort((a,b)=>b.units-a.units||b.rev-a.rev).map(r=>{const g=r.prev?((r.units/r.prev-1)*100):null;const s0=stk(r.name);
+    return `<div class="ist${r.units?'':' zero'}"><span class="sn">${esc(ps(r.name))}<small>${r.units?short(r.rev):'no sales'}</small></span><span style="display:flex;align-items:center;gap:8px">${bar(r.units,max)}<b>${nf.format(r.units)}</b></span><span class="r">${r.units?Math.round(r.units/tot*100)+'%':'—'}</span><span class="r">${g==null?(r.units?'<span class="sub">new</span>':'—'):growth(g)}</span><span class="r stk">${s0==null?'':s0===0&&r.units>0?'<b class="down">0</b>':nf.format(s0)}</span></div>`}).join('')+
+  `<p class="note" style="margin-top:10px">“vs previous” is units against the previous ${d.days} days (${nice(d.prevFrom)} – ${nice(d.prevTo)}).${it.hasStock?' A red 0 in stock means the store sells it but has none left.':''}</p>`;
+  $('iModal').hidden=false;PPic.fill($('iBody'));
+}
+
 async function ai(fresh){
   const btn=$('aiBtn');if(btn){btn.disabled=true;btn.textContent='✦ Writing…'}
   const q=new URLSearchParams({op:'ai',from:S.d.from,to:S.d.to,store:S.d.store});if(fresh)q.set('fresh','1');
@@ -501,6 +532,8 @@ function md(t){
 
 document.addEventListener('click',e=>{
   const t=e.target;
+  if(t.id==='iClose'||t.id==='iModal'){$('iModal').hidden=true;return}
+  const ir=t.closest('tr.irow');if(ir&&!t.closest('.pthumb')){const it=S.d.items[ir.dataset.tab][+ir.dataset.n];if(it){itemPopup(it);return}}
   const p=t.closest('#presets [data-p]');
   if(p){const end=S.d?new Date(S.d.dataTo+'T12:00:00'):new Date();let f=new Date(end),to=new Date(end);const v=p.dataset.p;
     if(v==='month')f=new Date(end.getFullYear(),end.getMonth(),1);else if(v==='last'){f=new Date(end.getFullYear(),end.getMonth()-1,1);to=new Date(end.getFullYear(),end.getMonth(),0)}else f.setDate(f.getDate()-(+v-1));
@@ -518,6 +551,7 @@ document.addEventListener('change',e=>{
   if(c){const s=doneSet();c.checked?s.add(c.dataset.done):s.delete(c.dataset.done);try{localStorage.setItem(doneKey(),JSON.stringify([...s]))}catch(_){}c.closest('.act').classList.toggle('done',c.checked);return}
   if(e.target.id==='dFrom'||e.target.id==='dTo'){const f=$('dFrom').value,t=$('dTo').value;if(ISO.test(f)&&ISO.test(t)){S.from=f<=t?f:t;S.to=f<=t?t:f;load()}}
 });
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('iModal').hidden=true});
 $('refreshBtn').addEventListener('click',()=>load(true));
 $('printBtn').addEventListener('click',()=>window.print());
 load();
