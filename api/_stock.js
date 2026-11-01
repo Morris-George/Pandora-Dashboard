@@ -63,6 +63,25 @@ function scope(rows, who) {
   return out;
 }
 
+// The stock report only knows the design code as the item name. The sales lines know the real product name ("Moments Heart Charm"),
+// so lines with no description borrow it by design code (the part before the dash). Used for the name on the item card and for keyword search.
+async function addNames(rows) {
+  try {
+    if (!rows.some(r => !r[9])) return;
+    const { dashRows } = require('./_sales');
+    const names = new Map();
+    for (const r of await dashRows()) {
+      const b = String(r[5] || '').toUpperCase().split('-')[0].trim();
+      if (b && r[6] && !names.has(b)) names.set(b, String(r[6]).slice(0, 120));
+    }
+    for (const r of rows) {
+      if (r[9]) continue;
+      const n = names.get(String(r[1]).toUpperCase().split('-')[0].trim()) || names.get(String(r[0]).toUpperCase().split('-')[0].trim());
+      if (n) r[9] = n;
+    }
+  } catch (_) { /* names are a bonus: the stock itself is still shown */ }
+}
+
 async function erpStock(from, to, fresh) {
   const key = 'stock/r/' + from + '_' + to + '.json';
   const ttl = to < cairoToday() ? 24 * 3600 * 1000 : 30 * 60 * 1000; // a past date does not change
@@ -75,6 +94,7 @@ async function erpStock(from, to, fresh) {
   // "Branches Stock Balance" is a Custom Report with saved filters; runReport asks ERPNext for our dates instead.
   const list = await runReport(process.env.ERP_STOCK_REPORT || 'Branches Stock Balance', { from_date: from, to_date: to });
   const rec = { at: new Date().toISOString(), from, to, rows: fromErp(list) };
+  await addNames(rec.rows);
   rec.diag = { company: 'Branches Stock Balance', raw: list.length, keys: list[0] ? Object.keys(list[0]).slice(0, 25) : [], kept: rec.rows.length };
   await store.putJSON(STATUS, { ok: true, at: rec.at, from, to, lines: rec.rows.length, raw: list.length });
   if (!rec.rows.length) return rec; // nothing to cache: show what ERP said instead
