@@ -32,6 +32,7 @@ h1{margin:4px 0 2px;font-size:28px;font-weight:800;letter-spacing:-.03em;display
 input[type=date]{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:5px 8px;font:inherit;font-size:12.5px}
 @media(min-width:900px){.controls{position:sticky;top:0}}
 nav.toc{display:flex;gap:6px;flex-wrap:wrap}nav.toc a{font-size:12px;font-weight:700;color:var(--ink2);text-decoration:none;padding:4px 10px;border-radius:999px;background:var(--surface2)}nav.toc a:hover{color:var(--accent-text);background:var(--fill-soft)}
+.pvnote{background:var(--info-bg);color:var(--info);border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.45}.pvnote b{font-weight:800}
 .err{background:var(--bad-bg);color:var(--bad);border-radius:12px;padding:12px 14px;font-weight:600}
 .loading{padding:60px 0;text-align:center;color:var(--ink2)}
 .loader{width:46px;height:46px;margin:0 auto 14px;border-radius:50%;border:4px solid var(--fill-soft);border-top-color:var(--accent);animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
@@ -41,6 +42,7 @@ nav.toc{display:flex;gap:6px;flex-wrap:wrap}nav.toc a{font-size:12px;font-weight
 .brief{background:linear-gradient(160deg,var(--fill-soft),var(--surface) 55%);}
 .heads{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
 .heads li{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start;font-size:13.5px}
+.htxt .inl{display:inline-block;vertical-align:middle;margin-left:8px}.htxt .inl .pthumb{width:44px;height:44px}
 .tone{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:800}
 .tone.good{background:var(--good-bg);color:var(--good)}.tone.bad{background:var(--bad-bg);color:var(--bad)}.tone.info{background:var(--info-bg);color:var(--info)}
 .ai{font-size:13.5px}.ai h3{font-size:14px;margin:14px 0 6px;font-weight:800}.ai h3:first-child{margin-top:0}.ai ul,.ai ol{margin:0;padding-left:20px}.ai li{margin:3px 0}.ai p{margin:4px 0}
@@ -72,6 +74,7 @@ nav.toc{display:flex;gap:6px;flex-wrap:wrap}nav.toc a{font-size:12px;font-weight
 .badge.restock{background:var(--bad-bg);color:var(--bad)}.badge.move{background:var(--info-bg);color:var(--info)}.badge.range{background:#FFF1D6;color:#8A5A00}.badge.push{background:var(--fill-soft);color:var(--accent-text)}.badge.coach{background:#EDE7FB;color:#5B3FA8}.badge.attach{background:var(--good-bg);color:var(--good)}.badge.bundle{background:var(--good-bg);color:var(--good)}
 :root[data-theme="dark"] .badge.range{background:#3A2E14;color:#F2C46B}:root[data-theme="dark"] .badge.coach{background:#2C2440;color:#C7B5F5}
 .num{font-weight:800;color:var(--accent-text);font-size:12px}
+.arow{display:flex;gap:12px;align-items:flex-start}.aimgs{display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;max-width:118px}.aimgs .pthumb{width:56px;height:56px;border-radius:12px}.arow>div:last-child{min-width:0}
 .atitle{font-weight:800;font-size:14.5px;line-height:1.3}
 .awhy{color:var(--ink2);font-size:12.5px}.atodo{font-size:13px;background:var(--surface2);border-radius:10px;padding:8px 10px}
 .aval{font-weight:800;font-size:13px}.aval small{color:var(--ink2);font-weight:600}
@@ -101,6 +104,7 @@ td small{display:block;color:var(--ink2);font-size:11.5px}
 .vs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .vs div{background:var(--surface2);border-radius:10px;padding:7px 8px}.vs span{display:block;font-size:10.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em;font-weight:700}.vs b{font-size:14px}.vs em{display:block;font-style:normal;font-size:11px;color:var(--ink2)}
 .tiptext{font-size:12.5px;background:var(--fill-soft);border-radius:10px;padding:8px 10px}
+.topsrow{display:flex;flex-direction:column;gap:6px}.topitem{display:flex;gap:10px;align-items:center}.topitem span{font-size:12.5px;color:var(--ink);font-weight:600;line-height:1.3}.topitem small{display:block;color:var(--ink2);font-weight:500}.topitem .pthumb{width:40px;height:40px;flex:none}
 .tops{font-size:12px;color:var(--ink2)}
 /* attach */
 .hbar{display:grid;grid-template-columns:140px 1fr 56px;gap:10px;align-items:center;font-size:13px;margin:6px 0}.hbar .t{position:relative;height:12px;border-radius:12px;background:var(--fill-soft)}.hbar .t i{position:absolute;left:0;top:0;bottom:0;border-radius:12px;background:var(--accent)}.hbar .t u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);opacity:.6}
@@ -144,6 +148,7 @@ td small{display:block;color:var(--ink2);font-size:11.5px}
     <nav class="toc"><a href="#sPlan">Action plan</a><a href="#sStores">Stores</a><a href="#sItems">Items</a><a href="#sStock">Stock</a><a href="#sBasket">Baskets</a><a href="#sTeam">Sales team</a><a href="#sPatterns">Patterns</a></nav>
   </section>
 
+  <div id="pvnote" class="pvnote" hidden></div>
   <div id="err" class="err" hidden></div>
   <div id="loading" class="loading"><div class="loader"></div>Reading sales, stock and the sales team…</div>
 
@@ -175,7 +180,7 @@ td small{display:block;color:var(--ink2);font-size:11.5px}
 
     <section class="card" id="sStores">
       <div class="cardhead"><h2>Stores</h2><span class="meta">Compared with the previous period of the same length</span></div>
-      <div class="tablewrap"><table><thead><tr><th class="l">Store</th><th class="l">Share</th><th>Revenue</th><th>vs previous</th><th>Orders</th><th>ATV</th><th>UPT</th><th>Multi-item</th></tr></thead><tbody id="storeBody"></tbody></table></div>
+      <div class="tablewrap"><table><thead><tr><th class="l">Store</th><th class="l">Share</th><th>Revenue</th><th title="Change against the previous period of the same length">vs previous period</th><th>Orders</th><th>ATV</th><th>UPT</th><th>Multi-item</th></tr></thead><tbody id="storeBody"></tbody></table></div>
     </section>
 
     <section class="card" id="sItems">
@@ -313,7 +318,7 @@ const nice=s=>{const p=String(s||'').split('-');return p.length===3?(+p[2])+' '+
 const ISO=/^\d{4}-\d{2}-\d{2}$/;
 const S={from:'',to:'',store:'ALL',d:null,itemTab:'best',stockTab:'restock',mixTab:'cat',kind:'ALL'};
 {const u=new URLSearchParams(location.search);if(ISO.test(u.get('from')||''))S.from=u.get('from');if(ISO.test(u.get('to')||''))S.to=u.get('to');if(u.get('store'))S.store=u.get('store')}
-function delta(a,b,opt){opt=opt||{};if(!b)return '<span class="delta flat">no earlier data</span>';const g=(a/b-1)*100;if(!isFinite(g))return '';const up=g>=0,cls=Math.abs(g)<.5?'flat':up?'up':'down';return `<span class="delta ${cls}">${up?'▲':'▼'} ${Math.abs(g).toFixed(1)}%</span> <small class="delta"><small>vs ${opt.fmt?opt.fmt(b):nf.format(b)}</small></small>`}
+function delta(a,b,opt){opt=opt||{};if(!b)return '<span class="delta flat">no earlier data</span>';const g=(a/b-1)*100;if(!isFinite(g))return '';const up=g>=0,cls=Math.abs(g)<.5?'flat':up?'up':'down';return `<span class="delta ${cls}">${up?'▲':'▼'} ${Math.abs(g).toFixed(1)}%</span> <small class="delta"><small>was ${opt.fmt?opt.fmt(b):nf.format(b)} before</small></small>`}
 function growth(g){if(g==null)return '<span class="sub">new</span>';const c=Math.abs(g)<.5?'':g>0?'up':'down';return `<b class="${c}">${g>0?'▲':g<0?'▼':''} ${Math.abs(g).toFixed(1)}%</b>`}
 function spark(v){if(!v||!v.length)return '';const w=90,h=26,m=Math.max(1,...v);const pts=v.map((x,i)=>`${(i/(v.length-1)*w).toFixed(1)},${(h-2-x/m*(h-4)).toFixed(1)}`).join(' ');return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(--accent-strong)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
 function bar(v,max){return `<div class="bar"><i style="width:${Math.max(2,Math.min(100,v/(max||1)*100))}%"></i></div>`}
@@ -338,9 +343,10 @@ function render(){
   const d=S.d;$('loading').hidden=true;$('report').hidden=false;
   $('dFrom').value=d.from;$('dTo').value=d.to;$('dFrom').min=$('dTo').min=d.dataFrom;$('dFrom').max=$('dTo').max=d.dataTo;
   $('storeChips').innerHTML=['ALL',...d.stores].map(s=>`<button class="chip" type="button" data-store="${esc(s)}" aria-pressed="${s===d.store}">${s==='ALL'?(d.zone?esc(d.zone):'All stores'):esc(ps(s))}</button>`).join('');
-  $('subtitle').textContent=`${nice(d.from)} – ${nice(d.to)} (${d.days} days), compared with ${nice(d.prevFrom)} – ${nice(d.prevTo)} · ${d.store==='ALL'?(d.zone||'All stores'):ps(d.store)}`;
+  $('subtitle').textContent=`${nice(d.from)} – ${nice(d.to)} (${d.days} days) · ${d.store==='ALL'?(d.zone||'All stores'):ps(d.store)}`;
+  $('pvnote').hidden=false;$('pvnote').innerHTML=`<b>What “vs previous” means:</b> every change on this page compares <b>${nice(d.from)} – ${nice(d.to)}</b> with the <b>${d.days} days right before it</b> (<b>${nice(d.prevFrom)} – ${nice(d.prevTo)}</b>). ▲ green = more than before, ▼ red = less. A store, item or person showing ▼ sold less than in that earlier period.`;
   // findings
-  $('heads').innerHTML=d.headlines.map(h=>`<li><span class="tone ${h.tone}">${h.tone==='good'?'▲':h.tone==='bad'?'!':'i'}</span><span>${esc(h.text)}</span></li>`).join('');
+  $('heads').innerHTML=d.headlines.map(h=>`<li><span class="tone ${h.tone}">${h.tone==='good'?'▲':h.tone==='bad'?'!':'i'}</span><span class="htxt">${esc(h.text)}${h.item?` <span class="inl">${thumb(h.item.key,h.item.name,'')}</span>`:''}</span></li>`).join('');
   $('aiBox').hidden=true;$('heads').hidden=false;$('briefTitle').textContent='Key findings';$('briefMeta').textContent='';
   $('aiBar').innerHTML=d.aiReady?`<button class="btn pri" type="button" id="aiBtn">✦ Write the AI brief</button><span>Claude reads every number on this page and writes the story and this week's moves.</span>`:(d.isAdmin?`<span>Want a written AI brief? Add an <b>ANTHROPIC_API_KEY</b> in Vercel → Settings → Environment Variables, then redeploy. Everything else on this page already works without it.</span>`:'<span>Findings are worked out from your sales, stock and staff data.</span>');
   if(d.aiReady)setTimeout(()=>ai(false),50);
@@ -380,13 +386,13 @@ const KIND={restock:'Restock',move:'Transfer',range:'Range gap',push:'Push',coac
 const doneKey=()=>'pandora-insights-done:'+S.d.from+':'+S.d.to+':'+S.d.store;
 function doneSet(){try{return new Set(JSON.parse(localStorage.getItem(doneKey())||'[]'))}catch(_){return new Set()}}
 function plan(){
-  const d=S.d,done=doneSet();
+  const d=S.d,done=doneSet();setTimeout(()=>PPic.fill($('plan')),0);
   const kinds=[...new Set(d.actions.map(a=>a.kind))];
   $('planKinds').innerHTML=['ALL',...kinds].map(k=>`<button class="chip" data-kind="${k}" aria-pressed="${k===S.kind}">${k==='ALL'?'All moves':KIND[k]||k}</button>`).join('');
   const list=d.actions.map((a,i)=>({...a,n:i+1})).filter(a=>S.kind==='ALL'||a.kind===S.kind);
   $('planMeta').textContent=`${d.actions.length} moves · worth about ${short(d.actionsValue)} · tick them off as you go`;
   $('plan').innerHTML=list.map(a=>{const id=a.kind+'|'+a.title;return `<article class="act${done.has(id)?' done':''}"><div class="top"><span class="num">#${a.n}</span><span class="badge ${a.kind}">${KIND[a.kind]||a.kind}</span></div>
-    <div class="atitle">${esc(a.title)}</div><div class="awhy">${esc(a.why)}</div><div class="atodo">→ ${esc(a.todo)}</div>
+    <div class="arow">${(a.items||[]).length?`<div class="aimgs">${a.items.map(i=>thumb(i.key,i.name,'')).join('')}</div>`:''}<div><div class="atitle">${esc(a.title)}</div><div class="awhy">${esc(a.why)}</div></div></div><div class="atodo">→ ${esc(a.todo)}</div>
     <div class="top"><span class="aval">${short(a.value)} <small>possible sales</small></span><label class="donebox"><input type="checkbox" data-done="${esc(id)}"${done.has(id)?' checked':''}> Done</label></div></article>`}).join('')||'<div class="empty">No moves found for this period – nothing urgent.</div>';
 }
 
@@ -400,7 +406,7 @@ function items(){
   document.querySelectorAll('#itemTabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));
   if(t==='best'){
     $('itemNote').textContent='The designs that bring in the most money. Keep them in stock and in the window in every store.';
-    $('itemHead').innerHTML='<tr><th class="l">Item</th><th>Trend</th><th>Units</th><th>Revenue</th><th>vs previous</th><th>Avg price</th><th>Stores</th></tr>';
+    $('itemHead').innerHTML='<tr><th class="l">Item</th><th>Trend</th><th>Units</th><th>Revenue</th><th title="Change against the previous period of the same length">vs previous period</th><th>Avg price</th><th>Stores</th></tr>';
     $('itemBody').innerHTML=d.items.best.map(i=>`<tr><td class="l">${itemCell(i,i.units+' sold')}</td><td>${spark(i.spark)}</td><td>${nf.format(i.units)}</td><td><b>${short(i.rev)}</b></td><td>${growth(i.growth)}</td><td>${egp(i.asp)}</td><td>${i.stores}</td></tr>`).join('');
   }else if(t==='rising'){
     $('itemNote').textContent='Selling clearly more than in the previous period. Give them the front tray and make sure no store runs out.';
@@ -450,14 +456,14 @@ function team(){
   const vs=(l,v,s,fmt,hiBad)=>{const bad=hiBad?v>s:v<s;return `<div><span>${l}</span><b class="${bad?'down':'up'}">${fmt(v)}</b><em>store ${fmt(s)}</em></div>`};
   $('coach').innerHTML=coach.map(p=>`<div class="pc"><div class="who"><div><b>${esc(p.name)}</b><small>${esc(ps(p.store))} · #${p.rank} by revenue · ${short(p.rev)}</small></div><div class="opp">${short(p.opportunity)}<small>to gain</small></div></div>
     <div class="vs">${vs('UPT',p.upt,p.storeUpt,v=>(+v).toFixed(2))}${vs('ATV',p.atv,p.storeAtv,v=>short(v).replace('EGP ',''))}${p.attach==null?'<div><span>Charm attach</span><b>—</b></div>':vs('Charm attach',p.attach,p.storeAttach,v=>v+'%')}</div>
-    <div class="tiptext">${esc(p.tip)}</div>${p.blind?`<div class="tops">Blind spot: <b>${esc(p.blind.cat)}</b> is ${p.blind.store}% of the store's sales, ${p.blind.me}% of theirs.</div>`:''}${p.strong?`<div class="tops">Strength: <b>${esc(p.strong.cat)}</b> (${p.strong.me}% vs store ${p.strong.store}%) – let them coach it.</div>`:''}${p.top.length?`<div class="tops">Sells most: ${p.top.map(x=>esc(x.name)+' ('+x.units+')').join(', ')}</div>`:''}</div>`).join('')||'<div class="empty">Everyone is at or above their store\'s average. Excellent.</div>';
+    <div class="tiptext">${esc(p.tip)}</div>${p.blind?`<div class="tops">Blind spot: <b>${esc(p.blind.cat)}</b> is ${p.blind.store}% of the store's sales, ${p.blind.me}% of theirs.</div>`:''}${p.strong?`<div class="tops">Strength: <b>${esc(p.strong.cat)}</b> (${p.strong.me}% vs store ${p.strong.store}%) – let them coach it.</div>`:''}${p.top.length?`<div class="tops"><div style="margin-bottom:6px">Sells most:</div><div class="topsrow">${p.top.map(x=>`<div class="topitem">${thumb(x.key,x.name,x.units+' sold')}<span>${esc(x.name)}<small>${x.units} sold</small></span></div>`).join('')}</div></div>`:''}</div>`).join('')||'<div class="empty">Everyone is at or above their store\'s average. Excellent.</div>';
   $('teamBody').innerHTML=t.people.map(p=>`<tr><td>${p.rank}</td><td class="l"><b>${esc(p.name)}</b><small>${esc(ps(p.store))}</small></td><td><b>${short(p.rev)}</b></td><td>${nf.format(p.orders)}</td><td class="${p.atv<p.storeAtv?'down':''}">${egp(p.atv)}</td><td class="${p.upt<p.storeUpt?'down':''}">${p.upt.toFixed(2)}</td><td>${p.multi}%</td><td class="${p.attach!=null&&p.attach<p.storeAttach?'down':''}">${p.attach==null?'—':p.attach+'%'}</td><td>${p.opportunity?short(p.opportunity):'<span class="up">✓</span>'}</td></tr>`).join('');
 }
 
 function mix(){
   const list=S.mixTab==='cat'?S.d.categories:S.d.collections,max=Math.max(1,...list.map(x=>x.share));
   document.querySelectorAll('#mixTabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===S.mixTab));
-  $('mix').innerHTML=`<table><thead><tr><th class="l">${S.mixTab==='cat'?'Category':'Collection'}</th><th class="l">Share</th><th>Revenue</th><th>vs previous</th></tr></thead><tbody>${list.map(x=>`<tr><td class="l"><b>${esc(x.name)}</b></td><td class="l" style="min-width:110px">${bar(x.share,max)}<small>${x.share}%</small></td><td>${short(x.rev)}</td><td>${growth(x.growth)}</td></tr>`).join('')}</tbody></table>`;
+  $('mix').innerHTML=`<table><thead><tr><th class="l">${S.mixTab==='cat'?'Category':'Collection'}</th><th class="l">Share</th><th>Revenue</th><th title="Change against the previous period of the same length">vs previous period</th></tr></thead><tbody>${list.map(x=>`<tr><td class="l"><b>${esc(x.name)}</b></td><td class="l" style="min-width:110px">${bar(x.share,max)}<small>${x.share}%</small></td><td>${short(x.rev)}</td><td>${growth(x.growth)}</td></tr>`).join('')}</tbody></table>`;
 }
 function pay(){
   const p=S.d.payment,max=Math.max(1,...p.map(x=>x.share));
