@@ -113,6 +113,8 @@ td small{display:block;color:var(--ink2);font-size:11.5px}
 .why{font-size:12px;white-space:normal;min-width:200px;text-align:left}.why b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em}.why.stock b{color:var(--bad)}.why.display b{color:var(--info)}
 .itemcell{display:flex;align-items:center;gap:10px;text-align:left}.itemcell .nm{font-weight:700;white-space:normal;line-height:1.3}.itemcell small{display:block;color:var(--ink2);font-weight:500}
 /* team */
+.lbctl{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface2)}.lbctl input[type=search]{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:12.5px;min-width:190px}
+th.sortable{cursor:pointer;user-select:none}th.sortable:hover{color:var(--accent-text)}th.sorted{color:var(--accent-text)}td.sorted{background:var(--fill-soft)}tbody tr:hover td.sorted{background:var(--fill-soft)}
 .coachgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));gap:12px;margin-bottom:18px}
 .pc{border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
 .pc .who{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.pc .who b{font-size:15px}.pc .who small{display:block;color:var(--ink2)}
@@ -235,8 +237,13 @@ td small{display:block;color:var(--ink2);font-size:11.5px}
       <div id="teamBox">
         <div class="eyebrow" style="margin-bottom:8px">Coaching priorities – biggest gain first</div>
         <div class="coachgrid" id="coach"></div>
-        <div class="eyebrow" style="margin-bottom:8px">Leaderboard</div>
-        <div class="tablewrap"><table><thead><tr><th>#</th><th class="l">Sales person</th><th>Revenue</th><th>Orders</th><th>ATV</th><th>UPT</th><th>Multi-item</th><th>Charm attach</th><th>Gain if at store avg</th></tr></thead><tbody id="teamBody"></tbody></table></div>
+        <div class="cardhead" style="margin-bottom:8px"><div class="eyebrow" style="margin:0">Leaderboard</div><span class="meta" id="lbCount"></span></div>
+        <div class="lbctl">
+          <div class="row"><span class="lbl">Rank by</span><div class="chips" id="lbSort"></div></div>
+          <div class="row"><span class="lbl">Order</span><div class="chips" id="lbDir"><button class="chip" data-dir="-1" aria-pressed="true">High → low</button><button class="chip" data-dir="1" aria-pressed="false">Low → high</button></div>
+            <input type="search" id="lbQ" placeholder="Find a sales person" aria-label="Find a sales person"><label class="donebox"><input type="checkbox" id="lbGain"> Only people with room to grow</label></div>
+        </div>
+        <div class="tablewrap"><table id="lbTable"><thead id="lbHead"></thead><tbody id="teamBody"></tbody></table></div>
       </div>
     </section>
 
@@ -478,7 +485,23 @@ function team(){
   $('coach').innerHTML=coach.map(p=>`<div class="pc"><div class="who"><div><b>${esc(p.name)}</b><small>${esc(ps(p.store))} · #${p.rank} by revenue · ${short(p.rev)}</small></div><div class="opp">${short(p.opportunity)}<small>to gain</small></div></div>
     <div class="vs">${vs('UPT',p.upt,p.storeUpt,v=>(+v).toFixed(2))}${vs('ATV',p.atv,p.storeAtv,v=>short(v).replace('EGP ',''))}${p.attach==null?'<div><span>Charm attach</span><b>—</b></div>':vs('Charm attach',p.attach,p.storeAttach,v=>v+'%')}</div>
     <div class="tiptext">${esc(p.tip)}</div>${p.blind?`<div class="tops">Blind spot: <b>${esc(p.blind.cat)}</b> is ${p.blind.store}% of the store's sales, ${p.blind.me}% of theirs.</div>`:''}${p.strong?`<div class="tops">Strength: <b>${esc(p.strong.cat)}</b> (${p.strong.me}% vs store ${p.strong.store}%) – let them coach it.</div>`:''}${p.top.length?`<div class="tops"><div style="margin-bottom:6px">Sells most:</div><div class="topsrow">${p.top.map(x=>`<div class="topitem">${thumb(x.key,x.name,x.units+' sold')}<span>${esc(x.name)}<small>${x.units} sold</small>${stockTag(x)}</span></div>`).join('')}</div></div>`:''}</div>`).join('')||'<div class="empty">Everyone is at or above their store\'s average. Excellent.</div>';
-  $('teamBody').innerHTML=t.people.map(p=>`<tr><td>${p.rank}</td><td class="l"><b>${esc(p.name)}</b><small>${esc(ps(p.store))}</small></td><td><b>${short(p.rev)}</b></td><td>${nf.format(p.orders)}</td><td class="${p.atv<p.storeAtv?'down':''}">${egp(p.atv)}</td><td class="${p.upt<p.storeUpt?'down':''}">${p.upt.toFixed(2)}</td><td>${p.multi}%</td><td class="${p.attach!=null&&p.attach<p.storeAttach?'down':''}">${p.attach==null?'—':p.attach+'%'}</td><td>${p.opportunity?short(p.opportunity):'<span class="up">✓</span>'}</td></tr>`).join('');
+  leaderboard();
+}
+
+
+const LB=[['rev','Revenue',p=>p.rev],['orders','Orders',p=>p.orders],['atv','ATV',p=>p.atv],['upt','UPT',p=>p.upt],['multi','Multi-item',p=>p.multi],['attach','Charm attach',p=>p.attach],['opportunity','Gain if at store avg',p=>p.opportunity]];
+S.lbSort='rev';S.lbDir=-1;S.lbQ='';S.lbGain=false;
+function leaderboard(){
+  const t=S.d.team;if(!t||!t.available)return;
+  $('lbSort').innerHTML=LB.map(c=>`<button class="chip" data-sort="${c[0]}" aria-pressed="${c[0]===S.lbSort}">${c[1]}</button>`).join('');
+  document.querySelectorAll('#lbDir [data-dir]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.dir===S.lbDir));
+  const col=LB.find(c=>c[0]===S.lbSort)||LB[0],f=col[2],q=S.lbQ.trim().toLowerCase();
+  let list=t.people.filter(p=>(!q||(p.name+' '+p.store).toLowerCase().includes(q))&&(!S.lbGain||p.opportunity>0));
+  list=list.slice().sort((a,b)=>{const x=f(a),y=f(b);if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return (x-y)*S.lbDir||b.rev-a.rev});
+  $('lbCount').textContent=`${list.length} of ${t.people.length} sales people · ranked by ${col[1].toLowerCase()}${S.lbDir===1?' (lowest first)':''}`;
+  $('lbHead').innerHTML='<tr><th>#</th><th class="l">Sales person</th>'+[['rev','Revenue'],['orders','Orders'],['atv','ATV'],['upt','UPT'],['multi','Multi-item'],['attach','Charm attach'],['opportunity','Gain if at store avg']].map(([k,l])=>`<th class="sortable${k===S.lbSort?' sorted':''}" data-sort="${k}" title="Sort by ${l}">${l}${k===S.lbSort?(S.lbDir===-1?' ▼':' ▲'):''}</th>`).join('')+'</tr>';
+  const sc=k=>k===S.lbSort?' sorted':'';
+  $('teamBody').innerHTML=list.map((p,i)=>`<tr><td>${i+1}</td><td class="l"><b>${esc(p.name)}</b><small>${esc(ps(p.store))}${S.lbSort==='rev'&&S.lbDir===-1?'':' · #'+p.rank+' by revenue'}</small></td><td class="${sc('rev')}"><b>${short(p.rev)}</b></td><td class="${sc('orders')}">${nf.format(p.orders)}</td><td class="${sc('atv')}${p.atv<p.storeAtv?' down':''}">${egp(p.atv)}</td><td class="${sc('upt')}${p.upt<p.storeUpt?' down':''}">${p.upt.toFixed(2)}</td><td class="${sc('multi')}">${p.multi}%</td><td class="${sc('attach')}${p.attach!=null&&p.attach<p.storeAttach?' down':''}">${p.attach==null?'—':p.attach+'%'}</td><td class="${sc('opportunity')}">${p.opportunity?short(p.opportunity):'<span class="up">✓</span>'}</td></tr>`).join('')||'<tr><td colspan="9" class="empty">No one matches.</td></tr>';
 }
 
 function mix(){
@@ -562,11 +585,15 @@ document.addEventListener('click',e=>{
   const it=t.closest('#itemTabs [data-t]');if(it){S.itemTab=it.dataset.t;items();return}
   const stt=t.closest('#stockTabs [data-t]');if(stt){S.stockTab=stt.dataset.t;stock();return}
   const mt=t.closest('#mixTabs [data-t]');if(mt){S.mixTab=mt.dataset.t;mix();return}
+  const so=t.closest('[data-sort]');if(so){if(S.lbSort===so.dataset.sort&&so.tagName==='TH')S.lbDir=-S.lbDir;else{S.lbSort=so.dataset.sort;S.lbDir=-1}leaderboard();return}
+  const di=t.closest('#lbDir [data-dir]');if(di){S.lbDir=+di.dataset.dir;leaderboard();return}
   const kd=t.closest('[data-kind]');if(kd){S.kind=kd.dataset.kind;plan();return}
   if(t.id==='aiBtn'||t.id==='aiRe'){ai(t.id==='aiRe');return}
   if(t.id==='aiShow'){const sh=$('heads').hidden;$('heads').hidden=!sh;$('aiBox').hidden=sh;t.textContent=sh?'Show AI brief':'Show key findings';return}
 });
+document.addEventListener('input',e=>{if(e.target.id==='lbQ'){S.lbQ=e.target.value;leaderboard()}});
 document.addEventListener('change',e=>{
+  if(e.target.id==='lbGain'){S.lbGain=e.target.checked;leaderboard();return}
   const c=e.target.closest('[data-done]');
   if(c){const s=doneSet();c.checked?s.add(c.dataset.done):s.delete(c.dataset.done);try{localStorage.setItem(doneKey(),JSON.stringify([...s]))}catch(_){}c.closest('.act').classList.toggle('done',c.checked);return}
   if(e.target.id==='dFrom'||e.target.id==='dTo'){const f=$('dFrom').value,t=$('dTo').value;if(ISO.test(f)&&ISO.test(t)){S.from=f<=t?f:t;S.to=f<=t?t:f;load()}}
