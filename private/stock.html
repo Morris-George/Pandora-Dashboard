@@ -63,6 +63,12 @@ h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;co
 @media (max-width:760px){.two{grid-template-columns:1fr}.kpi .v{font-size:20px}}
 :root{--text:var(--ink);--muted:var(--ink2);--surface2:var(--fill-soft)}
 .pthumb{width:42px;height:42px;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--surface2);color:var(--muted);font-size:15px;line-height:1;display:grid;place-items:center;overflow:hidden;cursor:zoom-in;transition:transform .15s,border-color .15s}
+.irow{cursor:pointer}.irow:hover td{background:var(--hover)}
+.smodal{position:fixed;inset:0;z-index:61;background:rgba(20,12,14,.45);display:grid;place-items:center;padding:20px}.smodal[hidden]{display:none}
+.smodal .scard{background:var(--surface);color:var(--ink);border-radius:18px;padding:16px 18px 6px;width:min(680px,100%);max-height:88vh;overflow:auto;box-shadow:0 18px 50px rgba(0,0,0,.28);animation:ppop .16s ease-out}
+.smodal .pclose{float:right;border:0;background:transparent;color:var(--ink2);font-size:24px;line-height:1;cursor:pointer;margin:-4px -2px 0 8px;position:relative;z-index:1}
+.smodal .hit{border-top:0;padding-bottom:12px}.smodal .hname{font-size:17px;padding-right:22px}.smodal .hloc{grid-template-columns:110px 1fr 44px}.smodal .pthumb.big{width:110px;height:110px}.smodal .htotal b{font-size:30px}
+@media(max-width:640px){.smodal .pthumb.big{width:100%;height:auto;max-width:200px}}
 .pthumb.big{width:150px;height:150px;border-radius:18px;font-size:34px;flex:none}
 .hit{display:flex;gap:20px;align-items:flex-start;padding:6px 0 18px;border-top:1px solid var(--line);margin-top:6px}.hit:first-of-type{border-top:0}
 .hbody{flex:1;min-width:0}.hname{font-size:20px;font-weight:800;letter-spacing:-.02em;word-break:break-word}
@@ -115,6 +121,7 @@ h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;co
     <div class="tablewrap"><table><thead id="ithead"></thead><tbody id="itbody"></tbody></table></div>
     <div style="margin-top:12px;text-align:center"><button class="btn" type="button" id="itMore" hidden>Show more items</button></div>
   </section>
+  <div class="smodal" id="sModal" hidden><div class="scard" role="dialog" aria-modal="true" aria-label="Quantity in each store"><button type="button" class="pclose" id="sClose" aria-label="Close">&times;</button><div id="sBody"></div></div></div>
   <div class="pmodal" id="pModal" hidden><div class="pcard" role="dialog" aria-modal="true" aria-label="Product picture"><button type="button" class="pclose" id="pClose" aria-label="Close">&times;</button><div class="pbig" id="pBig"></div><div class="pname" id="pName"></div><div class="pinfo" id="pInfo"></div></div></div>
 <footer class="pagefoot" id="foot"></footer>
 </div>
@@ -351,14 +358,8 @@ function render(){
 }
 
 
-/* exact search result: the item as a card with a big picture, its total and every store's quantity */
-function hitCard(rows){
-  const m=new Map();
-  for(const r of rows){let o=m.get(r[C]);if(!o)m.set(r[C],o={code:r[C],name:r[N],desc:r[D]||'',cat:catOf(r),b:0,w:new Map()});if(!o.desc&&r[D])o.desc=r[D];o.b+=r[B];o.w.set(r[W],(o.w.get(r[W])||0)+r[B])}
-  const items=[...m.values()].sort((a,b)=>b.b-a.b);
-  const allLocs=[...new Set(S.rows.filter(r=>brandNow()==='ALL'||isPandora(r)).map(r=>r[W]))].sort((a,b)=>a.localeCompare(b));
-  const card=$('hit');card.hidden=false;
-  const block=i=>{
+function itemBlock(i){
+    const allLocs=[...new Set(S.rows.filter(r=>brandNow()==='ALL'||isPandora(r)).map(r=>r[W]))].sort((a,b)=>a.localeCompare(b));
     const have=allLocs.map(l=>[l,i.w.get(l)||0]).filter(x=>x[1]!==0).sort((a,b)=>b[1]-a[1]),none=allLocs.filter(l=>!i.w.get(l));
     const mx=Math.max(1,...have.map(x=>Math.abs(x[1])));
     return `<div class="hit">
@@ -369,8 +370,16 @@ function hitCard(rows){
         <div class="htotal"><b>${pcs(i.b)}</b><span>pieces in stock${have.length?' · in '+have.length+' store'+(have.length===1?'':'s'):''}</span></div>
         <div class="hlocs">${have.map(x=>`<div class="hloc"><span class="hn" title="${esc(x[0])}">${esc(shortWh(x[0]).replace(/^Pandora\s+/i,""))}</span><span class="htrack"><i class="${x[1]<0?'neg':''}" style="width:${Math.max(3,Math.abs(x[1])/mx*100)}%"></i></span><b${x[1]<0?' class="neg"':''}>${pcs(x[1])}</b></div>`).join('')||'<div class="hnone">Not in stock anywhere.</div>'}</div>
         ${none.length&&have.length?`<div class="hzero">No stock: ${none.map(l=>esc(shortWh(l).replace(/^Pandora\s+/i,""))).join(', ')}</div>`:''}
-      </div></div>`};
-  card.innerHTML=`<div class="cardhead"><h2>Exact match</h2><span class="meta">${items.length>1?nf0.format(items.length)+' items share this code · ':''}<button type="button" class="btn" id="hitClear">Clear search</button></span></div>`+items.slice(0,8).map(block).join('')+(items.length>8?`<div class="hzero">…and ${items.length-8} more with the same code.</div>`:'');
+      </div></div>`}
+
+/* exact search result: the item as a card with a big picture, its total and every store's quantity */
+function hitCard(rows){
+  const m=new Map();
+  for(const r of rows){let o=m.get(r[C]);if(!o)m.set(r[C],o={code:r[C],name:r[N],desc:r[D]||'',cat:catOf(r),b:0,w:new Map()});if(!o.desc&&r[D])o.desc=r[D];o.b+=r[B];o.w.set(r[W],(o.w.get(r[W])||0)+r[B])}
+  const items=[...m.values()].sort((a,b)=>b.b-a.b);
+  const allLocs=[...new Set(S.rows.filter(r=>brandNow()==='ALL'||isPandora(r)).map(r=>r[W]))].sort((a,b)=>a.localeCompare(b));
+  const card=$('hit');card.hidden=false;
+  card.innerHTML=`<div class="cardhead"><h2>Exact match</h2><span class="meta">${items.length>1?nf0.format(items.length)+' items share this code · ':''}<button type="button" class="btn" id="hitClear">Clear search</button></span></div>`+items.slice(0,8).map(itemBlock).join('')+(items.length>8?`<div class="hzero">…and ${items.length-8} more with the same code.</div>`:'');
   PPic.fill(card);
 }
 /* Balance Qty for every item: one column per branch (when All locations is chosen) and the total */
@@ -388,7 +397,7 @@ function itemsTable(rows){
   card.hidden=false;
   $('itemsMeta').textContent=(S.sel?S.sel+' · ':'')+(S.loc==='ALL'?'All locations':S.loc)+' · '+nf0.format(all.length)+' item'+(all.length===1?'':'s');
   $('ithead').innerHTML='<tr><th></th><th class="l">Item</th><th class="l">Category</th>'+locs.map(l=>`<th title="${esc(l)}">${esc(shortWh(l))}</th>`).join('')+'<th>Balance Qty</th></tr>';
-  $('itbody').innerHTML=shown.map(i=>`<tr><td>${PPic.thumb({sku:picSku(i),name:i.name||i.code},pcs(i.b)+' pieces')}</td><td class="l">${esc(i.desc||i.name||i.code)}<small>${i.desc?esc(i.name)+' · ':''}${esc(i.code)}</small></td><td class="l">${esc(i.cat)}</td>`+locs.map(l=>q(i.w.get(l)||0)).join('')+`<td${i.b<0?' class="neg"':''}><b>${pcs(i.b)}</b></td></tr>`).join('')
+  $('itbody').innerHTML=shown.map(i=>`<tr class="irow" data-code="${esc(i.code)}"><td>${PPic.thumb({sku:picSku(i),name:i.name||i.code},pcs(i.b)+' pieces')}</td><td class="l">${esc(i.desc||i.name||i.code)}<small>${i.desc?esc(i.name)+' · ':''}${esc(i.code)}</small></td><td class="l">${esc(i.cat)}</td>`+locs.map(l=>q(i.w.get(l)||0)).join('')+`<td${i.b<0?' class="neg"':''}><b>${pcs(i.b)}</b></td></tr>`).join('')
     +`<tr class="total"><td></td><td class="l">Total</td><td class="l"></td>`+locs.map(l=>`<td>${pcs(all.reduce((t,i)=>t+(i.w.get(l)||0),0))}</td>`).join('')+`<td>${pcs(all.reduce((t,i)=>t+i.b,0))}</td></tr>`;
   PPic.fill($('itbody'));
   $('itMore').hidden=all.length<=S.itemsN;
@@ -404,7 +413,7 @@ function detail(list,showVal){
   const byItem=new Map();
   x.rows.forEach(r=>{let o=byItem.get(r[C]);if(!o)byItem.set(r[C],o={code:r[C],name:r[N],desc:r[D]||'',b:0,v:0,l:new Set()});o.b+=r[B];o.v+=r[V];if(r[B]!==0)o.l.add(r[W])});
   const its=[...byItem.values()].sort((a,b)=>b.b-a.b),top=its.slice(0,10),neg=its.filter(i=>i.b<0).slice(-5).reverse();
-  const itemRow=i=>`<tr><td>${PPic.thumb({sku:picSku(i),name:i.name||i.code},pcs(i.b)+' pieces')}</td><td class="l">${esc(i.desc||i.name||i.code)}<small>${i.desc?esc(i.name)+' · ':''}${esc(i.code)}</small></td><td>${pcs(i.b)}</td>${showVal?`<td>${egp(i.v)}</td>`:''}<td>${nf0.format(i.l.size)}</td></tr>`;
+  const itemRow=i=>`<tr class="irow" data-code="${esc(i.code)}"><td>${PPic.thumb({sku:picSku(i),name:i.name||i.code},pcs(i.b)+' pieces')}</td><td class="l">${esc(i.desc||i.name||i.code)}<small>${i.desc?esc(i.name)+' · ':''}${esc(i.code)}</small></td><td>${pcs(i.b)}</td>${showVal?`<td>${egp(i.v)}</td>`:''}<td>${nf0.format(i.l.size)}</td></tr>`;
   const head=`<tr><th></th><th class="l">Item</th><th>Pieces</th>${showVal?'<th>Value</th>':''}<th>Locations</th></tr>`;
   el.innerHTML=`<div class="cardhead"><h2>${esc(x.name)}</h2><span class="meta">${pcs(x.b)} pieces in ${nf0.format(byLoc.size)} location${byLoc.size===1?'':'s'}${showVal?' · '+egp(x.v):''}</span></div>
    <div class="two"><div><h3>By location</h3>${locs.map(l=>`<div class="bar"><span class="n" title="${esc(l[0])}">${esc(l[0])}</span><span class="t"><i style="width:${Math.max(1,Math.abs(l[1])/lmax*100)}%"></i></span><span class="v${l[1]<0?' neg':''}">${pcs(l[1])}</span></div>`).join('')}</div>
@@ -429,6 +438,16 @@ $('refresh').addEventListener('click',async()=>{const b=$('refresh');b.disabled=
   try{const r=await fetch('/api/stock?fresh=1&from='+encodeURIComponent(S.from)+'&to='+encodeURIComponent(S.to),{credentials:'same-origin',cache:'no-store'});const j=await r.json().catch(()=>({}));
     if(!r.ok||!j.ok)showErr(j.error||'Could not refresh.');else{S.meta=j;S.rows=j.rows||[];syncDates();render();$('dMsg').textContent='Synced at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'.'}}catch(_){showErr('No connection.')}
   b.disabled=false});
+document.addEventListener('click',e=>{
+  if(e.target.id==='sClose'||e.target.id==='sModal'){$('sModal').hidden=true;return}
+  if(e.target.closest('.pthumb'))return;
+  const tr=e.target.closest('tr.irow');if(!tr)return;
+  const code=tr.dataset.code,rows=S.rows.filter(r=>r[C]===code&&(brandNow()==='ALL'||isPandora(r)));if(!rows.length)return;
+  const o={code,name:rows[0][N],desc:'',cat:catOf(rows[0]),b:0,w:new Map()};
+  for(const r of rows){if(!o.desc&&r[D])o.desc=r[D];o.b+=r[B];o.w.set(r[W],(o.w.get(r[W])||0)+r[B])}
+  $('sBody').innerHTML=itemBlock(o);PPic.fill($('sBody'));$('sModal').hidden=false;
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('sModal').hidden=true});
 document.addEventListener('click',e=>{if(e.target.id==='hitClear'){S.q='';$('q').value='';S.itemsN=100;render();$('q').focus()}});
 $('q').addEventListener('input',e=>{S.q=e.target.value;S.itemsN=100;render()});
 let dt=null;
