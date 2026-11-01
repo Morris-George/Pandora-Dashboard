@@ -67,6 +67,9 @@ h2{font-size:13px;font-family:var(--mono);letter-spacing:.1em;text-transform:upp
 .item span{font:12px var(--mono);color:var(--mute);overflow-wrap:anywhere}
 .item em{font:800 26px var(--mono);font-style:normal;font-variant-numeric:tabular-nums}
 .item .sw{color:var(--bad);font:700 12px var(--ui);display:block}
+.whobox{background:var(--panel);border:2px solid #FF93A0;border-radius:16px;padding:14px;margin-top:14px}.whobox h3{margin:0 0 4px}.whobox .manual input{font-size:18px;padding:12px 14px}
+.pickrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.pickrow button{border:1px solid var(--line,#EADCDF);background:transparent;color:inherit;border-radius:999px;padding:6px 12px;font:inherit;font-weight:600;cursor:pointer}
+.chg{font-size:12px;margin-left:6px;color:#B83A52;font-weight:700;text-decoration:none}.prow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--line,#EADCDF)}.prow:first-child{border-top:0}.prow small{display:block;opacity:.7}.prow button{border:1px solid var(--line,#EADCDF);background:transparent;color:inherit;border-radius:10px;padding:6px 10px;font:inherit;font-size:12px;cursor:pointer}.prow b.me{color:#B83A52}
 details{background:var(--panel);border-radius:14px;padding:12px 14px;margin-top:16px}
 summary{cursor:pointer;font-weight:600}
 textarea,input[type=text]{width:100%;font:14px var(--mono);color:var(--fg);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:10px}
@@ -78,15 +81,22 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 </head>
 <body>
 <header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Stock Checker</h1><div class="sub">Scan each barcode in the store and compare the item in your hand with its picture.</div></div><div class="actions"></div></header>
-<div class="tots tot">Scans <b id="totScans">0</b> · SKUs <b id="totSkus">0</b></div>
+<div class="tots tot"><span id="whoLine"></span>Scans <b id="totScans">0</b> · SKUs <b id="totSkus">0</b> <a href="#" id="chgName" class="chg">Change name</a></div>
+
+<section class="whobox" id="whoBox" hidden>
+  <h3>Who is scanning?</h3>
+  <p class="hint">Your scans and your total are saved on this phone under your name. The next person types their own name to keep a separate count.</p>
+  <form id="whoForm" class="manual"><input type="text" id="whoName" maxlength="40" autocomplete="off" placeholder="Your name"><button type="submit">Start</button></form>
+  <div id="whoPick"></div>
+</section>
 
 <section class="qrcard" id="qrCard" hidden>
   <div class="qrbox" id="qrBox" role="img" aria-label="QR code that opens Stock Checker on a phone"></div>
   <div>
     <h3>Scan with your phone</h3>
-    <p class="hint">Point the phone camera at this code and open the link. It opens straight to the scanner, with no login. Tap Start camera and scan the barcodes. Counts are kept on the phone doing the scanning.</p>
+    <p class="hint">Point the phone camera at this code and open the link. It opens straight to the scanner, with no login. Type your name, tap Start camera and scan. Each person's scans and total are saved on that phone under their name.</p>
     <div class="sku" id="qrUrl"></div>
-    <button id="useHere" type="button" class="sec">Use this computer's camera instead</button>
+    <button id="useHere" type="button" class="sec">Use this device's camera instead</button>
   </div>
 </section>
 
@@ -113,6 +123,11 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 <h2>Scanned items</h2>
 <div class="list" id="list"></div>
 
+<details open id="peopleBox">
+  <summary>Saved on this device</summary>
+  <div id="peopleList"></div>
+</details>
+
 <details>
   <summary>Product catalog (barcode → name and picture)</summary>
   <p class="hint">One product per line: <b>barcode, name, picture link</b>. Copy it from Excel (tab-separated also works). The picture link must be a direct image URL. A barcode that is not listed still counts and is flagged “Not in catalog”.</p>
@@ -137,7 +152,7 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 <div class="row" style="margin-top:18px">
   <button id="csvBtn" type="button" class="sec">Copy results (CSV)</button>
   <button id="undoBtn" type="button" class="sec">Undo last scan</button>
-  <button id="resetBtn" type="button" class="sec">Reset counts</button>
+  <button id="resetBtn" type="button" class="sec">Reset my scan</button>
 </div>
 <p class="hint" id="note"></p>
 
@@ -153,7 +168,22 @@ var catalog={},counts={},log=[],stream=null,facing='environment',coolUntil=0,run
 
 function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-catalog=load('sc_catalog',{});counts=load('sc_counts',{});log=load('sc_log',[]);
+catalog=load('sc_catalog',{});
+/* each person who scans on this device has their own saved scans, kept under their name */
+var name=String(load('sc_name','')||'');
+function K(t,n){return 'sc_'+t+':'+encodeURIComponent((n==null?name:n).toLowerCase())}
+function persist(){save(K('c'),counts);save(K('l'),log);touchPerson()}
+function people(){return load('sc_people',[])}
+function touchPerson(){if(!name)return;var a=people().filter(function(p){return p.name.toLowerCase()!==name.toLowerCase()});a.push({name:name,last:Date.now()});save('sc_people',a)}
+function adoptName(n){
+  name=n;save('sc_name',n);
+  var had=localStorage.getItem(K('c'));
+  counts=load(K('c'),{});log=load(K('l'),[]);
+  /* scans made before names existed on this device go to the first person who signs in */
+  if(had===null&&!people().length){var oc=load('sc_counts',null);if(oc&&Object.keys(oc).length){counts=oc;log=load('sc_log',[])}}
+  touchPerson();persist();
+}
+if(name){counts=load(K('c'),{});log=load(K('l'),[])}
 
 /* ---- catalog ---- */
 function splitLine(l){
@@ -200,40 +230,67 @@ function renderList(){
     return '<div class="item"><div class="th">'+imgTag(k)+'</div><div><b>'+esc(c&&c.name?c.name:'Not in catalog')+'</b><span>'+esc(k)+'</span>'+(o.sw?'<span class="sw">'+o.sw+' marked swapped</span>':'')+'</div><em>'+o.n+'</em></div>'}).join(''):'<p class="hint">Nothing scanned yet.</p>';
   var t=0;keys.forEach(function(k){t+=counts[k].n});$('totScans').textContent=t;$('totSkus').textContent=keys.length;
 }
-function renderAll(){renderLast();renderList()}
+function renderWho(){$('whoLine').innerHTML=name?'<b>'+esc(name)+'</b> · ':'';$('chgName').hidden=!name}
+function renderPeople(){
+  var a=people().slice().sort(function(x,y){return y.last-x.last});
+  $('peopleList').innerHTML=a.length?a.map(function(p){
+    var c=load(K('c',p.name),{}),ks=Object.keys(c),t=0;ks.forEach(function(k){t+=c[k].n});
+    var me=p.name.toLowerCase()===name.toLowerCase();
+    return '<div class="prow"><div><b'+(me?' class="me"':'')+'>'+esc(p.name)+(me?' (you)':'')+'</b><small>'+t+' scans · '+ks.length+' SKUs · last '+new Date(p.last).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'</small></div>'+
+      '<button type="button" data-reset="'+esc(p.name)+'">Reset</button></div>'}).join(''):'<p class="hint">Nobody has scanned on this device yet.</p>';
+}
+function showWho(){
+  $('whoBox').hidden=false;var a=people();
+  $('whoPick').innerHTML=a.length?'<div class="hint" style="margin-top:10px">Already scanned on this phone? Tap your name:</div><div class="pickrow">'+a.map(function(p){return '<button type="button" data-pick="'+esc(p.name)+'">'+esc(p.name)+'</button>'}).join('')+'</div>':'';
+  setTimeout(function(){$('whoName').focus()},50);
+}
+function useName(n){n=String(n||'').replace(/\s+/g,' ').trim().slice(0,40);if(!n)return;if(running){stopCam();$('startBtn').textContent='Start camera'}adoptName(n);$('whoBox').hidden=true;$('whoName').value='';renderWho();renderAll();renderPeople()}
+$('whoForm').onsubmit=function(e){e.preventDefault();useName($('whoName').value)};
+$('chgName').onclick=function(e){e.preventDefault();showWho()};
+document.addEventListener('click',function(e){
+  var pk=e.target.closest('[data-pick]');if(pk){useName(pk.getAttribute('data-pick'));return}
+  var rs=e.target.closest('[data-reset]');if(rs){
+    var n=rs.getAttribute('data-reset');
+    if(rs.getAttribute('data-armed')!=='1'){rs.setAttribute('data-armed','1');rs.textContent='Tap again to erase';setTimeout(function(){rs.setAttribute('data-armed','');rs.textContent='Reset'},3000);return}
+    try{localStorage.setItem(K('c',n),'{}');localStorage.setItem(K('l',n),'[]')}catch(x){}
+    if(n.toLowerCase()===name.toLowerCase()){counts={};log=[]}
+    renderAll();renderPeople()}
+});
+function renderAll(){renderLast();renderList();renderWho()}
 
 /* ---- scan handling ---- */
 function beep(){try{var a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=880;g.gain.value=.12;o.connect(g);g.connect(a.destination);o.start();setTimeout(function(){o.stop();a.close()},110)}catch(e){}if(navigator.vibrate)navigator.vibrate(60)}
 function handleCode(raw,source){
   var code=String(raw||'').trim();if(!code)return false;
+  if(!name){showWho();return false}
   var now=Date.now();if(now<coolUntil)return false;
   coolUntil=now+COOLDOWN;
   var o=counts[code]||(counts[code]={n:0,sw:0,last:0});o.n++;o.last=now;
-  log.push({code:code,t:now,verdict:''});if(log.length>500)log.shift();
-  save('sc_counts',counts);save('sc_log',log);
+  log.push({code:code,t:now,verdict:'',by:name});if(log.length>500)log.shift();
+  persist();
   beep();cam.classList.add('hit');setTimeout(function(){cam.classList.remove('hit')},350);
-  renderAll();return true;
+  renderAll();renderPeople();return true;
 }
 function setVerdict(v){
   if(!log.length)return;var e=log[log.length-1];
   if(e.verdict==='swapped'&&counts[e.code])counts[e.code].sw=Math.max(0,counts[e.code].sw-1);
   e.verdict=v;if(v==='swapped')counts[e.code].sw=(counts[e.code].sw||0)+1;
-  save('sc_counts',counts);save('sc_log',log);renderAll();
+  persist();renderAll();
 }
 $('undoBtn').onclick=function(){
   if(!log.length)return;var e=log.pop(),o=counts[e.code];
   if(o){o.n--;if(e.verdict==='swapped')o.sw=Math.max(0,o.sw-1);if(o.n<=0)delete counts[e.code]}
-  save('sc_counts',counts);save('sc_log',log);renderAll();
+  persist();renderAll();
 };
 var armed=false;
 $('resetBtn').onclick=function(){
   var b=$('resetBtn');
-  if(!armed){armed=true;b.textContent='Tap again to erase counts';setTimeout(function(){armed=false;b.textContent='Reset counts'},3000);return}
-  armed=false;b.textContent='Reset counts';counts={};log=[];save('sc_counts',counts);save('sc_log',log);renderAll();
+  if(!armed){armed=true;b.textContent='Tap again to erase my scan';setTimeout(function(){armed=false;b.textContent='Reset my scan'},3000);return}
+  armed=false;b.textContent='Reset my scan';counts={};log=[];persist();renderAll();renderPeople();
 };
 $('csvBtn').onclick=function(){
-  var rows=['barcode,name,count,marked_swapped'];
-  Object.keys(counts).forEach(function(k){var c=catalog[k];rows.push([k,'"'+(c&&c.name?c.name.replace(/"/g,'""'):'NOT IN CATALOG')+'"',counts[k].n,counts[k].sw||0].join(','))});
+  var rows=['scanned_by,barcode,name,count,marked_swapped'];
+  Object.keys(counts).forEach(function(k){var c=catalog[k];rows.push(['"'+name.replace(/"/g,'""')+'"',k,'"'+(c&&c.name?c.name.replace(/"/g,'""'):'NOT IN CATALOG')+'"',counts[k].n,counts[k].sw||0].join(','))});
   var txt=rows.join('\n');
   var done=function(m){$('note').textContent=m};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){done('Copied. Paste into Excel or Sheets.')},function(){done(txt)})}else done(txt);
@@ -292,7 +349,7 @@ function camError(err){
   running=false;stateEl.textContent='Camera off';camMsg.hidden=false;
   camMsg.textContent=(err&&err.name==='NotAllowedError')?'Camera permission was blocked. Allow the camera for this site in the browser settings, then tap Start camera.':'Could not start the camera ('+(err&&err.name||'error')+').';
 }
-$('startBtn').onclick=function(){if(running){stopCam();stateEl.textContent='Camera off';camMsg.hidden=false;camMsg.textContent='Camera stopped.';this.textContent='Start camera'}else{startCam();this.textContent='Stop camera'}};
+$('startBtn').onclick=function(){if(!running&&!name){showWho();return}if(running){stopCam();stateEl.textContent='Camera off';camMsg.hidden=false;camMsg.textContent='Camera stopped.';this.textContent='Start camera'}else{startCam();this.textContent='Stop camera'}};
 $('flipBtn').onclick=function(){facing=facing==='environment'?'user':'environment';if(running)startCam()};
 document.addEventListener('visibilitychange',function(){if(document.hidden&&running){stopCam();$('startBtn').textContent='Start camera';stateEl.textContent='Camera off';camMsg.hidden=false;camMsg.textContent='Camera paused. Tap Start camera.'}});
 
@@ -308,7 +365,7 @@ function drawQR(link){
     qrBox.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+w+' '+w+'" shape-rendering="crispEdges"><rect width="'+w+'" height="'+w+'" fill="#fff"/><path d="'+d+'" fill="#2A1F24"/></svg>';
   }catch(e){qrBox.textContent='The QR code could not load. Open the link below on your phone.'}
 }
-var onPhone=!!window.__PAIRED||!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
+var onPhone=!!window.__PAIRED; /* the QR code opens first everywhere; the camera only starts on the paired phone or when asked */
 if(window.__PAIRED){var cr=document.querySelector('.crumb');if(cr)cr.hidden=true}
 function showQrView(on){qrCard.hidden=!on;camBlock.hidden=on;if(on&&running){stopCam();$('startBtn').textContent='Start camera'}}
 if(!onPhone){
@@ -318,11 +375,11 @@ if(!onPhone){
     if(o.ok&&o.j&&o.j.token)drawQR(location.origin+'/stockchecker?pair='+encodeURIComponent(o.j.token));
     else qrBox.textContent=(o.j&&o.j.error)||'The phone link could not be made. Reload the page and try again.';
   }).catch(function(){qrBox.textContent='The phone link could not be made. Reload the page and try again.'});
-  $('useHere').onclick=function(){showQrView(false)};
+  $('useHere').onclick=function(){showQrView(false);if(!name)showWho()};
   $('showQr').onclick=function(){showQrView(true)};
 }
 
-renderAll();
+renderAll();renderPeople();if(!name&&onPhone)showWho();
 })();
 </script>
 </body>
