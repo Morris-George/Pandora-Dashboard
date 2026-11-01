@@ -81,6 +81,7 @@ async function erpItemNames() {
   return names;
 }
 async function addNames(rows) {
+  addNames.err = '';
   if (!rows.some(r => !r[9])) return;
   let err = '';
   try {
@@ -101,7 +102,8 @@ async function addNames(rows) {
       if (n) r[9] = n;
     }
   } catch (_) { /* names are a bonus: the stock itself is still shown */ }
-  addNames.err = err;
+  const left = rows.filter(r => !r[9]).length;
+  addNames.err = left ? left + ' of ' + rows.length + ' stock lines have no name' + (err ? ' (ERP Item list: ' + err + ')' : ' (ERP Item list read, no description for them)') : '';
 }
 
 async function erpStock(from, to, fresh) {
@@ -112,7 +114,7 @@ async function erpStock(from, to, fresh) {
     // a Sync press is honoured unless the same dates were read less than a minute ago; an empty answer is never trusted from the cache
     if (c && c.rows && c.rows.length && Date.now() - Date.parse(c.at) < (fresh ? 60 * 1000 : ttl)) {
       // a copy saved before names existed: add them once and save it again
-      if (!c.named && c.rows.some(r => !r[9])) { await addNames(c.rows); c.named = true; await store.putJSON(key, c).catch(() => {}); }
+      if ((!c.named || fresh) && c.rows.some(r => !r[9])) { await addNames(c.rows); c.named = true; c.diag = { ...(c.diag || {}), names: addNames.err || undefined }; await store.putJSON(key, c).catch(() => {}); }
       return c;
     }
   }

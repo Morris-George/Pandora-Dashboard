@@ -257,7 +257,7 @@ function syncDates(){
   $('refresh').hidden=!can;
   $('dMsg').textContent=can?'':'The dates are those of the uploaded Excel file.'+(m.note?' '+m.note:'');
   $('subtitle').textContent=can?'Closing balance on '+nice(S.to)+' · movement since '+nice(S.from):'From the Excel file “'+(m.file||'Stock balance')+'” · added '+nice(String(m.uploadedAt||m.asOf||'').slice(0,10));
-  $('foot').textContent=(m.namesNote?'Item names could not be read from ERP ('+m.namesNote+'). ':'')+(can?('Read from ERP'+(m.fetchedAt?' at '+new Date(m.fetchedAt).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'')+'.'):'Pieces and values are as in the uploaded file.');
+  $('foot').textContent=(m.namesNote?'Names: '+m.namesNote+'. ':'')+(can?('Read from ERP'+(m.fetchedAt?' at '+new Date(m.fetchedAt).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'')+'.'):'Pieces and values are as in the uploaded file.');
 }
 
 const isPandora=r=>/^\s*pandora\b/i.test(String(r[G]||''));
