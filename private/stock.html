@@ -368,7 +368,7 @@ function hitCard(rows){
         <div class="hmeta"><span class="hchip">${esc(i.cat)}</span><span>Code ${esc(i.code)}</span></div>
         <div class="htotal"><b>${pcs(i.b)}</b><span>pieces in stock${have.length?' · in '+have.length+' store'+(have.length===1?'':'s'):''}</span></div>
         <div class="hlocs">${have.map(x=>`<div class="hloc"><span class="hn" title="${esc(x[0])}">${esc(shortWh(x[0]).replace(/^Pandora\s+/i,""))}</span><span class="htrack"><i class="${x[1]<0?'neg':''}" style="width:${Math.max(3,Math.abs(x[1])/mx*100)}%"></i></span><b${x[1]<0?' class="neg"':''}>${pcs(x[1])}</b></div>`).join('')||'<div class="hnone">Not in stock anywhere.</div>'}</div>
-        ${none.length&&have.length?`<div class="hzero">No stock: ${none.map(l=>esc(shortWh(l).replace(/^Pandora\s+/i,"")).join(', ')}</div>`:''}
+        ${none.length&&have.length?`<div class="hzero">No stock: ${none.map(l=>esc(shortWh(l).replace(/^Pandora\s+/i,""))).join(', ')}</div>`:''}
       </div></div>`};
   card.innerHTML=`<div class="cardhead"><h2>Exact match</h2><span class="meta">${items.length>1?nf0.format(items.length)+' items share this code · ':''}<button type="button" class="btn" id="hitClear">Clear search</button></span></div>`+items.slice(0,8).map(block).join('')+(items.length>8?`<div class="hzero">…and ${items.length-8} more with the same code.</div>`:'');
   PPic.fill(card);
