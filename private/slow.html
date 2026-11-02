@@ -328,7 +328,7 @@ $('xlsx').onclick=()=>{if(!ITEMS.length)return;const wb=XLSX.utils.book_new(),ha
   XLSX.writeFile(wb,'Slow Moving '+new Date().toISOString().slice(0,10)+'.xlsx')};
 load();
 </script>
-<style>#zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out}#zoom img{max-width:90vw;max-height:90vh;border-radius:10px;background:#fff}.img img,#hitPic img{cursor:zoom-in}</style>
+<style>#zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out}#zoom img{width:min(380px,80vw);height:min(380px,80vw);object-fit:contain;padding:10px;border-radius:18px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.35)}.img img,#hitPic img{cursor:zoom-in}</style>
 <script>document.addEventListener("click",e=>{const z=document.getElementById("zoom");if(z){z.remove();return}const im=e.target.closest&&e.target.closest(".img img,#hitPic img");if(!im)return;e.stopPropagation();e.preventDefault();const d=document.createElement("div");d.id="zoom";d.innerHTML="<img alt=\"\">";d.firstChild.src=im.src;HD.up(d.firstChild,HD.dvOf(im));document.body.appendChild(d)},true);document.addEventListener("keydown",e=>{if(e.key==="Escape"){const z=document.getElementById("zoom");if(z)z.remove()}});</script>
 </body>
 </html>
