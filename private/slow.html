@@ -34,6 +34,19 @@ tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr[data-f
 .chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer}.chip.on{background:var(--accent);border-color:var(--accent);color:#2A1018}
 .qk{padding:6px 0;border-top:1px solid var(--line)}.qk:first-child{border-top:0}
 .bad{color:var(--bad)}.good{color:var(--good)}
+.trk{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.tk{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px 10px 16px;cursor:pointer;transition:transform .15s,box-shadow .15s;overflow:hidden}.tk::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}.tk:hover,.sc:hover,.star:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(42,31,36,.12)}.tk span{font-size:20px}.tk b{display:block;font-size:17px;font-weight:800}.tk small{color:var(--ink2);font-size:11.5px;font-weight:600}.tk:first-child,.tk:nth-child(2){cursor:default}
+.star{display:flex;gap:12px;align-items:center;margin-top:10px;padding:10px 12px;border-radius:14px;background:var(--soft);cursor:pointer;transition:transform .15s,box-shadow .15s}.star .img{width:56px;height:56px;flex:none}
+.scards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}.sc{border:1px solid var(--line);border-radius:16px;padding:12px;cursor:pointer;background:var(--surface);transition:transform .15s,box-shadow .15s;display:flex;flex-direction:column;gap:8px}
+.stack{display:inline-flex}.stack .img{width:40px;height:40px;margin-left:-10px;border:2px solid var(--surface);border-radius:50%}.stack .img:first-child{margin-left:0}
+.flowrow{display:grid;grid-template-columns:62px 1fr 44px;gap:8px;align-items:center}.flowrow .lbl{font-size:12px;color:var(--ink2);font-weight:600}.flowrow b{text-align:right}
+.rlist,.rl{font-variant-numeric:tabular-nums}.rlist{display:flex;flex-direction:column;gap:6px}.rl{display:grid;grid-template-columns:minmax(70px,auto) 1fr 52px 64px;gap:10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:12px;cursor:pointer;transition:background .15s}.rlist .rl{grid-template-columns:minmax(70px,auto) 20px minmax(70px,auto) 1fr 52px 64px auto}.rl:hover{background:var(--soft)}.rl .arr{color:var(--accent);font-weight:800}.rl .stack .img{width:30px;height:30px}
+table.hm{width:auto}table.hm th,table.hm td{text-align:center;padding:9px 12px;border:1px solid var(--line);font-size:13px}table.hm th{cursor:pointer}.cell{cursor:pointer;font-weight:700;transition:transform .1s}.cell:hover{outline:2px solid var(--accent);outline-offset:-2px}.cell0{color:var(--ink2);opacity:.4}
+#trM{position:fixed;inset:0;z-index:50;background:rgba(23,16,19,.55);display:flex;align-items:center;justify-content:center;padding:14px}#trMB{background:var(--surface);color:var(--ink);border-radius:20px;width:min(720px,100%);max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.mh{display:flex;gap:10px;align-items:center;padding:14px 16px;position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);z-index:2}.mc{padding:12px 16px 18px}.mc h3{margin:16px 0 8px;font-size:14px}
+.tip{background:var(--soft);border-radius:12px;padding:9px 12px;font-size:13px;margin-bottom:6px}.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:640px){.g2{grid-template-columns:1fr}.rl,.rlist .rl{grid-template-columns:1fr auto}.rl .hb,.rlist .rl .arr{display:none}}
+.ir{display:flex;gap:12px;align-items:center;padding:8px 6px;border-top:1px solid var(--line);cursor:pointer;border-radius:10px}.ir:hover{background:var(--soft)}.ir .pc{font-size:16px}.ir small{color:var(--ink2);font-weight:600}
+.img.lg{width:56px;height:56px;border-radius:12px;flex:none}.img.xl{width:min(280px,70vw);height:min(280px,70vw);border-radius:18px;font-size:12px}.bigpic{display:flex;justify-content:center;margin:6px 0}
+.sm{padding:3px 9px;font-size:12px}
 </style>
 </head>
 <body><div class="wrap">
@@ -52,8 +65,9 @@ tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr[data-f
 <div class="kpis" id="kpis"></div>
 <div class="card"><h2>Quick Read</h2><div id="quick"></div></div>
 <div class="card"><h2>By Store</h2><div class="note">The slow stock of each store, and how much of it sells somewhere else. Click a row to filter the lists below.</div><div class="tw" id="byStore"></div></div>
-<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Transfers Between Stores</h2><button class="btn" id="trX">Download transfers (Excel)</button></div>
-  <div class="note" style="margin:4px 0 8px" id="trNote"></div><div class="tw" id="tr"></div></div>
+<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Transfers Between Stores</h2><span class="row"><span class="chips" id="trV"></span><button class="btn" id="trX">Download transfers (Excel)</button></span></div>
+  <div class="note" style="margin:4px 0 10px" id="trNote"></div><div id="trIn"></div><div id="tr" style="margin-top:12px"></div></div>
+<div id="trM" hidden><div id="trMB"></div></div>
 <div class="grid2">
   <div class="card"><h2>By Category</h2><div class="note">Click a row to filter.</div><div class="tw" id="byCat"></div></div>
   <div class="card" id="ageCard"><h2>By Age</h2><div class="note">How long the stock has not moved. Click a bar to filter.</div><div id="byAge"></div></div>
@@ -182,12 +196,77 @@ function draw(){
   drawTable();drawRaw();
 }
 function routesOf(){const R=new Map();for(const t of TR){if(F.store&&t.from!==F.store&&t.to!==F.store)continue;const k=t.from+'→'+t.to,o=R.get(k)||{from:t.from,to:t.to,qty:0,l:[]};o.qty+=t.qty;o.l.push(t);R.set(k,o)}return [...R.values()].sort((a,b)=>a.from.localeCompare(b.from)||b.qty-a.qty)}
+/* ---------- Transfers: store cards, heat map, route list. Tap anything for the story behind it ---------- */
+let TRV='cards',TRR=[],MSTK=[];
+try{TRV=localStorage.getItem('sl.trv')||'cards'}catch(_){}
+function trStats(routes){const S=new Map(),g=k=>{if(!S.has(k))S.set(k,{name:k,out:0,inn:0,to:new Map(),from:new Map(),items:new Map()});return S.get(k)};
+  for(const r of routes){const a=g(r.from),b=g(r.to);a.out+=r.qty;b.inn+=r.qty;a.to.set(r.to,r);b.from.set(r.from,r);
+    for(const t of r.l){const o=a.items.get(t.i.sku)||{i:t.i,qty:0,dests:[]};o.qty+=t.qty;o.dests.push({to:r.to,qty:t.qty,soldTo:t.soldTo});a.items.set(t.i.sku,o)}}
+  return [...S.values()]}
+const skuN=r=>new Set(r.l.map(t=>t.i.sku)).size;
+const topItems=(s,n)=>[...s.items.values()].sort((a,b)=>b.qty-a.qty).slice(0,n);
+const bar=(v,mx,c)=>`<div class="hb"><i style="width:${Math.max(3,v/(mx||1)*100)}%;background:${c||'var(--accent)'}"></i></div>`;
 function drawTransfers(routes){
-  $('trNote').innerHTML=TR.length?`Pieces that did not sell in their store go to the stores where the same SKU sold in the last ${J.months} months, the best seller first, never more than that store sold. Click a row for the SKUs.${F.store?` Showing routes from or to <b>${esc(F.store)}</b>.`:''}`:'No slow piece sells in another store.';
-  const fromN=new Map();routes.forEach(r=>fromN.set(r.from,(fromN.get(r.from)||0)+1));let last='';
-  $('tr').innerHTML=routes.length?`<table><tr><th class="l">From</th><th class="l">To</th><th>Pieces</th><th>SKUs</th><th class="l">Examples</th></tr>${routes.map((r,ix)=>{const first=r.from!==last;last=r.from;return `<tr data-route="${ix}"${first?' style="border-top:2px solid var(--line)"':''}>${first?`<td class="l" rowspan="${fromN.get(r.from)}" style="vertical-align:top;background:var(--surface)"><b>${esc(r.from)}</b></td>`:''}<td class="l" style="cursor:pointer">→ ${esc(r.to)}</td><td><b>${fmt(r.qty)}</b></td><td>${new Set(r.l.map(t=>t.i.sku)).size}</td><td class="l name">${r.l.slice(0,3).map(t=>esc(t.i.sku)).join(', ')}${r.l.length>3?' …':''}</td></tr><tr class="rdet" data-for="${ix}" hidden><td colspan="5" style="background:var(--bg)"><table>${r.l.map(t=>`<tr><td>${pic(t.i.sku)}</td><td class="l"><b>${esc(t.i.sku)}</b></td><td class="name">${esc(t.i.name)}</td><td>${fmt(t.qty)} pcs</td><td class="note">sold ${fmt(t.soldTo)} at ${esc(t.to)}, 0 at ${esc(t.from)}</td></tr>`).join('')}</table></td></tr>`}).join('')}</table>`:'';
-  $('tr').querySelectorAll('tr[data-route]').forEach(tr=>tr.onclick=()=>{const d=$('tr').querySelector(`tr[data-for="${tr.dataset.route}"]`);d.hidden=!d.hidden});
+  TRR=routes;const S=trStats(routes),tot=routes.reduce((a,r)=>a+r.qty,0);
+  $('trNote').innerHTML=TR.length?`Pieces that did not sell in their store, and the stores where the same SKU <b>did</b> sell in the last ${J.months} months. <b>Tap any card, number or square</b> to see where the pieces go and which items.${F.store?` Showing routes from or to <b>${esc(F.store)}</b>.`:''}`:'No slow piece sells in another store.';
+  $('trV').innerHTML=[['cards','🏬 Stores'],['map','🔥 Heat map'],['list','📋 List']].map(([k,t])=>`<span class="chip ${TRV===k?'on':''}" data-trv="${k}">${t}</span>`).join('');
+  if(!routes.length){$('trIn').innerHTML='';$('tr').innerHTML='';return}
+  // the story in plain words
+  const giv=[...S].sort((a,b)=>b.out-a.out)[0],rec=[...S].sort((a,b)=>b.inn-a.inn)[0],top=[...routes].sort((a,b)=>b.qty-a.qty)[0];
+  const star=[...new Map([...S].flatMap(s=>[...s.items.values()]).map(o=>[o.i.sku,0])).keys()].map(sku=>{const l=TR.filter(t=>t.i.sku===sku&&(!F.store||t.from===F.store||t.to===F.store));return {i:l[0].i,qty:l.reduce((a,t)=>a+t.qty,0),n:new Set(l.map(t=>t.to)).size}}).sort((a,b)=>b.qty-a.qty)[0];
+  $('trIn').innerHTML=`<div class="trk"><div class="tk" style="--c:var(--accent)"><span>📦</span><b>${fmt(tot)}</b><small>pieces can move</small></div><div class="tk" style="--c:#8FB8DE"><span>🔀</span><b>${fmt(routes.length)}</b><small>routes</small></div><div class="tk" data-store="${esc(giv.name)}" style="--c:var(--warn)"><span>🎁</span><b>${esc(giv.name)}</b><small>gives the most · ${fmt(giv.out)} pcs</small></div><div class="tk" data-store="${esc(rec.name)}" style="--c:var(--good)"><span>🛍️</span><b>${esc(rec.name)}</b><small>can take the most · ${fmt(rec.inn)} pcs</small></div><div class="tk" data-route="${routes.indexOf(top)}" style="--c:var(--bad)"><span>🚚</span><b>${esc(top.from)} → ${esc(top.to)}</b><small>biggest route · ${fmt(top.qty)} pcs</small></div></div>`+
+   (star?`<div class="star" data-item="${esc(star.i.sku)}">${pic(star.i.sku)}<div><b>⭐ Star item to move: ${esc(star.i.name||star.i.sku)}</b><div class="note">${esc(star.i.sku)} · ${fmt(star.qty)} pcs can go to ${star.n} store${star.n>1?'s':''}. Tap to see where.</div></div></div>`:'');
+  if(TRV==='cards'){
+    const mx=Math.max(...S.map(s=>Math.max(s.out,s.inn)));
+    $('tr').innerHTML='<div class="scards">'+[...S].sort((a,b)=>b.out-a.out).map(s=>{const best=[...s.to.values()].sort((a,b)=>b.qty-a.qty)[0],ti=topItems(s,3);
+      return `<div class="sc" data-store="${esc(s.name)}"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><b style="font-size:16px">${esc(s.name)}</b><span class="stack">${ti.map(o=>pic(o.i.sku)).join('')}</span></div>
+      <div class="flowrow"><span class="lbl">🎁 Gives</span>${bar(s.out,mx,'var(--accent)')}<b>${fmt(s.out)}</b></div>
+      <div class="flowrow"><span class="lbl">🛍️ Takes</span>${bar(s.inn,mx,'#8FB8DE')}<b>${fmt(s.inn)}</b></div>
+      <div class="note">${best?`Best home: <b>→ ${esc(best.to)}</b> (${fmt(best.qty)} pcs)`:'Only receives'}</div></div>`}).join('')+'</div>';
+  }else if(TRV==='map'){
+    const rows=[...S].filter(s=>s.out).sort((a,b)=>b.out-a.out),cols=[...S].filter(s=>s.inn).sort((a,b)=>b.inn-a.inn),mx=Math.max(...routes.map(r=>r.qty));
+    $('tr').innerHTML=`<div class="note" style="margin-bottom:6px">Rows give, columns take. The darker the square, the more pieces. Tap a square for the items.</div><div class="tw" style="max-height:none"><table class="hm"><tr><th class="l">From ↓ &nbsp; To →</th>${cols.map(c=>`<th data-store="${esc(c.name)}">${esc(c.name)}</th>`).join('')}<th>Total</th></tr>${rows.map(r=>`<tr><td class="l" data-store="${esc(r.name)}" style="cursor:pointer"><b>${esc(r.name)}</b></td>${cols.map(c=>{const x=r.to.get(c.name);return x?`<td class="cell" data-route="${routes.indexOf(x)}" style="background:color-mix(in srgb,var(--accent) ${Math.round(15+x.qty/mx*75)}%,transparent)">${fmt(x.qty)}</td>`:`<td class="cell0">·</td>`}).join('')}<td><b>${fmt(r.out)}</b></td></tr>`).join('')}<tr><td class="l"><b>Total</b></td>${cols.map(c=>`<td><b>${fmt(c.inn)}</b></td>`).join('')}<td><b>${fmt(tot)}</b></td></tr></table></div>`;
+  }else{
+    const mx=Math.max(...routes.map(r=>r.qty));
+    $('tr').innerHTML='<div class="rlist">'+routes.map((r,ix)=>`<div class="rl" data-route="${ix}"><b class="a">${esc(r.from)}</b><span class="arr">➜</span><b class="a">${esc(r.to)}</b>${bar(r.qty,mx)}<b>${fmt(r.qty)}</b><span class="note">${skuN(r)} SKUs</span><span class="stack">${r.l.slice(0,3).map(t=>pic(t.i.sku)).join('')}</span></div>`).join('')+'</div>';
+  }
 }
+/* the pop-up: a tiny back-able stack of screens */
+function openM(fn){MSTK.push(fn);renderM()}
+function backM(){MSTK.pop();MSTK.length?renderM():closeM()}
+function closeM(){MSTK=[];$('trM').hidden=true;document.body.style.overflow=''}
+function renderM(){const o=MSTK[MSTK.length-1]();$('trM').hidden=false;document.body.style.overflow='hidden';
+  $('trMB').innerHTML=`<div class="mh">${MSTK.length>1?'<button class="btn sm" data-mback>← Back</button>':''}<div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:800">${o.title}</div><div class="note">${o.sub||''}</div></div>${o.dl?'<button class="btn sm" data-mdl>⬇ Excel</button>':''}<button class="btn sm" data-mclose>✕</button></div><div class="mc">${o.body}</div>`;
+  $('trMB')._dl=o.dl;$('trMB').scrollTop=0}
+const itemRow=(i,qty,extra)=>`<div class="ir" data-item="${esc(i.sku)}">${pic(i.sku).replace('class="img"','class="img lg"')}<div style="min-width:0;flex:1"><b>${esc(i.name||i.sku)}</b><div class="note">${esc(i.sku)}${extra?' · '+extra:''}</div></div><b class="pc">${fmt(qty)} <small>pcs</small></b></div>`;
+function storeScreen(name){const s=trStats(TRR).find(x=>x.name===name);if(!s)return {title:esc(name),body:'<div class="note">No transfers for this store.</div>'};
+  const to=[...s.to.values()].sort((a,b)=>b.qty-a.qty),fr=[...s.from.values()].sort((a,b)=>b.qty-a.qty),mx=Math.max(1,...to.map(r=>r.qty),...fr.map(r=>r.qty));
+  const lst=(a,k,c)=>a.map(r=>`<div class="rl" data-route="${TRR.indexOf(r)}"><b class="a">${esc(r[k])}</b>${bar(r.qty,mx,c)}<b>${fmt(r.qty)}</b><span class="note">${skuN(r)} SKUs</span></div>`).join('')||'<div class="note">—</div>';
+  const best=to[0];
+  return {title:'🏬 '+esc(name),sub:`Gives <b>${fmt(s.out)}</b> pcs · can take <b>${fmt(s.inn)}</b> pcs`,
+   body:(best?`<div class="tip">💡 Send most of ${esc(name)}'s slow pieces to <b>${esc(best.to)}</b>: it sold these same SKUs, ${fmt(best.qty)} pcs fit there.</div>`:'')+
+   `<div class="g2"><div><h3>🎁 Sends to</h3>${lst(to,'to','var(--accent)')}</div><div><h3>🛍️ Receives from</h3>${lst(fr,'from','#8FB8DE')}</div></div>`+
+   (s.items.size?`<h3>⭐ Best items to move out (${s.items.size})</h3>${topItems(s,12).map(o=>itemRow(o.i,o.qty,'→ '+o.dests.map(d=>esc(d.to)).join(', '))).join('')}`:'')}}
+function routeScreen(r){const l=[...r.l].sort((a,b)=>b.qty-a.qty);
+  return {title:`${esc(r.from)} ➜ ${esc(r.to)}`,sub:`<b>${fmt(r.qty)}</b> pieces · ${skuN(r)} SKUs. Best sellers at ${esc(r.to)} first.`,
+   dl:()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(l.map(t=>({'SKU':t.i.sku,'Item':t.i.name,'Pcs':t.qty,['Sold at '+r.to+' ('+J.months+' months)']:t.soldTo}))),'Route');XLSX.writeFile(wb,`Transfer ${r.from} to ${r.to}.xlsx`)},
+   body:`<div class="tip">💡 ${esc(r.from)} sold <b>0</b> of these in ${J.months} months, ${esc(r.to)} sold them.</div>`+l.map(t=>itemRow(t.i,t.qty,`${esc(r.to)} sold ${fmt(t.soldTo)}`)).join('')}}
+function itemScreen(sku){const l=TR.filter(t=>t.i.sku===sku);const i=(l[0]||ITEMS.find(x=>x.sku===sku)||{}).i||ITEMS.find(x=>x.sku===sku);if(!i)return {title:esc(sku),body:''};
+  const by=new Map();l.forEach(t=>{(by.get(t.from)||by.set(t.from,[]).get(t.from)).push(t)});
+  const stock=ITEMS.filter(x=>x.sku===sku);
+  return {title:esc(i.name||sku),sub:esc(sku),body:`<div class="bigpic ovp" data-hd="${esc(dvOf(sku))}">${pic(sku).replace('class="img"','class="img xl"')}</div>
+   <h3>📍 Slow stock today</h3><div class="chips">${stock.map(x=>`<span class="chip on" style="cursor:default">${esc(x.store)} · ${fmt(x.qty)} pcs</span>`).join('')}</div>
+   <h3>🚚 Where it can go</h3>${[...by].map(([f,a])=>`<div class="rl" data-route="${TRR.findIndex(r=>r.from===f&&r.to===a[0].to)}" style="grid-template-columns:1fr"><span><b>${esc(f)}</b> ➜ ${a.map(t=>`<b>${esc(t.to)}</b> ${fmt(t.qty)} pcs <span class="note">(sold ${fmt(t.soldTo)})</span>`).join(' · ')}</span></div>`).join('')||'<div class="note">No other store sold it.</div>'}`}}
+document.addEventListener('click',e=>{const t=e.target,M=$('trM');
+  if(t.closest('[data-mclose]')||t===M){closeM();return}
+  if(t.closest('[data-mback]')){backM();return}
+  if(t.closest('[data-mdl]')){const f=$('trMB')._dl;f&&f();return}
+  const v=t.closest('[data-trv]');if(v){TRV=v.dataset.trv;try{localStorage.setItem('sl.trv',TRV)}catch(_){}drawTransfers(TRR);return}
+  const inM=t.closest('#trM'),sc=t.closest('#trIn,#tr,#trM');if(!sc)return;
+  const it=t.closest('[data-item]');if(it){const k=it.dataset.item;openM(()=>itemScreen(k));return}
+  const ro=t.closest('[data-route]');if(ro&&TRR[+ro.dataset.route]){const r=TRR[+ro.dataset.route];openM(()=>routeScreen(r));return}
+  const st=t.closest('[data-store]');if(st){const k=st.dataset.store;openM(()=>storeScreen(k))}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('trM').hidden)closeM()});
 function rows(){const q=$('q').value.trim().toUpperCase();return ITEMS.filter(i=>(!q||i.sku.includes(q)||String(i.name).toUpperCase().includes(q))&&(!F.cat||i.cat===F.cat)&&(!F.store||i.store===F.store)&&(!F.ab||i.ab===F.ab)&&(!F.tag||i.tags.includes(F.tag)))}
 const spark=v=>{if(!v||!v.some(x=>x))return '<span class="note">-</span>';const w=56,h=16,mx=Math.max(1,...v),st=v.length>1?w/(v.length-1):0;return `<svg width="${w}" height="${h}"><polyline points="${v.map((x,k)=>`${(k*st).toFixed(1)},${(h-1-x/mx*(h-2)).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="1.5"/></svg>`};
 function drawTable(){const hasV=J.C.val>=0,hasA=ITEMS.some(i=>i.age!=null);
