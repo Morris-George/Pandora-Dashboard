@@ -170,7 +170,13 @@ async function itemStock(req, res, who) {
   const today = cairoToday(), from = today.slice(0, 8) + '01';
   const snap = await store.getJSON(CURRENT);
   let rows = null, at = '';
-  if (process.env.ERP_URL && process.env.ERP_API_KEY && process.env.ERP_API_SECRET) {
+  if (url.searchParams.get('cached') === '1') {
+    // instant answer: the newest saved copy of this month's stock, any age (the page then asks again for the live one)
+    const idx = (await store.getJSON(CACHE_INDEX)) || [];
+    const c = await store.getJSON('stock/r/' + from + '_' + today + '.json') || (idx.length ? await store.getJSON(idx[idx.length - 1]) : null);
+    if (c && c.rows && c.rows.length) { rows = c.rows; at = c.at; }
+    else if (!snap) return send(res, 200, { ok: true, miss: true });
+  } else if (process.env.ERP_URL && process.env.ERP_API_KEY && process.env.ERP_API_SECRET) {
     try { const d = await erpStock(from, today, false); rows = d.rows; at = d.at; }
     catch (_) {
       // ERP did not answer: use whatever was saved for this month, then the Excel file
@@ -191,7 +197,7 @@ async function itemStock(req, res, who) {
     by.set(w, (by.get(w) || 0) + (Number(r[7]) || 0));
   }
   const stores = [...by.entries()].map(([s, q]) => ({ store: s, qty: Math.round(q * 1000) / 1000 })).sort((a, b) => b.qty - a.qty || a.store.localeCompare(b.store));
-  return send(res, 200, { ok: true, code, stores, total: stores.reduce((t, x) => t + x.qty, 0), scope: sc.all ? 'all' : sc.rx ? 'zone' : 'store', zone: sc.zone || undefined, asOf: at, source: at && snap && rows === snap.rows ? 'excel' : 'erp' });
+  return send(res, 200, { ok: true, code, stores, total: stores.reduce((t, x) => t + x.qty, 0), scope: sc.all ? 'all' : sc.rx ? 'zone' : 'store', zone: sc.zone || undefined, asOf: at, source: at && snap && rows === snap.rows ? 'excel' : 'erp', cachedOnly: url.searchParams.get('cached') === '1' || undefined });
 }
 
 module.exports = async function handler(req, res) {
