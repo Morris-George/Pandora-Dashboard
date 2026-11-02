@@ -47,6 +47,7 @@ table.hm{width:auto}table.hm th,table.hm td{text-align:center;padding:9px 12px;b
 .ir{display:flex;gap:12px;align-items:center;padding:8px 6px;border-top:1px solid var(--line);cursor:pointer;border-radius:10px}.ir:hover{background:var(--soft)}.ir .pc{font-size:16px}.ir small{color:var(--ink2);font-weight:600}
 .img.lg{width:56px;height:56px;border-radius:12px;flex:none}.img.xl{width:min(280px,70vw);height:min(280px,70vw);border-radius:18px;font-size:12px}.bigpic{display:flex;justify-content:center;margin:6px 0}
 .sm{padding:3px 9px;font-size:12px}
+.ic{width:1.1em;height:1.1em;vertical-align:-.2em;flex:none}.tk .ico{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:10px;background:color-mix(in srgb,var(--c) 20%,transparent);color:var(--c);margin-bottom:4px}.tk .ico .ic{width:19px;height:19px}.star .ic,.tip .ic{color:var(--warn)}.flowrow .lbl .ic{color:var(--accent)}.chip .ic{width:1em;height:1em}.mc h3 .ic{color:var(--accent);width:1.15em;height:1.15em}.rl .arr .ic{vertical-align:-.25em}.btn .ic{width:1em;height:1em}
 </style>
 </head>
 <body><div class="wrap">
@@ -197,6 +198,22 @@ function draw(){
 }
 function routesOf(){const R=new Map();for(const t of TR){if(F.store&&t.from!==F.store&&t.to!==F.store)continue;const k=t.from+'→'+t.to,o=R.get(k)||{from:t.from,to:t.to,qty:0,l:[]};o.qty+=t.qty;o.l.push(t);R.set(k,o)}return [...R.values()].sort((a,b)=>a.from.localeCompare(b.from)||b.qty-a.qty)}
 /* ---------- Transfers: store cards, heat map, route list. Tap anything for the story behind it ---------- */
+const IC={store:'<path d="M3 9l1.5-5h15L21 9"/><path d="M3 9a3 3 0 006 0 3 3 0 006 0 3 3 0 006 0"/><path d="M5 12v8h14v-8"/><path d="M10 20v-4h4v4"/>',
+grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
+box:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+route:'<circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H15a3.5 3.5 0 000-7H9a3.5 3.5 0 010-7h6.5"/>',
+up:'<path d="M7 17L17 7M8 7h9v9"/>',
+down:'<path d="M17 7L7 17M16 17H7V8"/>',
+truck:'<path d="M2 6h11v10H2zM13 9h4l4 4v3h-8"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+star:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+bulb:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/>',
+pin:'<path d="M12 21s7-6.2 7-11.5A7 7 0 005 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+dl:'<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
+arrow:'<path d="M4 12h16M14 6l6 6-6 6"/>',
+back:'<path d="M20 12H4M10 6l-6 6 6 6"/>',
+x:'<path d="M6 6l12 12M18 6L6 18"/>'};
+const ic=n=>`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
 let TRV='cards',TRR=[],MSTK=[];
 try{TRV=localStorage.getItem('sl.trv')||'cards'}catch(_){}
 function trStats(routes){const S=new Map(),g=k=>{if(!S.has(k))S.set(k,{name:k,out:0,inn:0,to:new Map(),from:new Map(),items:new Map()});return S.get(k)};
@@ -209,26 +226,26 @@ const bar=(v,mx,c)=>`<div class="hb"><i style="width:${Math.max(3,v/(mx||1)*100)
 function drawTransfers(routes){
   TRR=routes;const S=trStats(routes),tot=routes.reduce((a,r)=>a+r.qty,0);
   $('trNote').innerHTML=TR.length?`Pieces that did not sell in their store, and the stores where the same SKU <b>did</b> sell in the last ${J.months} months. <b>Tap any card, number or square</b> to see where the pieces go and which items.${F.store?` Showing routes from or to <b>${esc(F.store)}</b>.`:''}`:'No slow piece sells in another store.';
-  $('trV').innerHTML=[['cards','🏬 Stores'],['map','🔥 Heat map'],['list','📋 List']].map(([k,t])=>`<span class="chip ${TRV===k?'on':''}" data-trv="${k}">${t}</span>`).join('');
+  $('trV').innerHTML=[['cards',ic('store')+' Stores'],['map',ic('grid')+' Heat map'],['list',ic('route')+' List']].map(([k,t])=>`<span class="chip ${TRV===k?'on':''}" data-trv="${k}">${t}</span>`).join('');
   if(!routes.length){$('trIn').innerHTML='';$('tr').innerHTML='';return}
   // the story in plain words
   const giv=[...S].sort((a,b)=>b.out-a.out)[0],rec=[...S].sort((a,b)=>b.inn-a.inn)[0],top=[...routes].sort((a,b)=>b.qty-a.qty)[0];
   const star=[...new Map([...S].flatMap(s=>[...s.items.values()]).map(o=>[o.i.sku,0])).keys()].map(sku=>{const l=TR.filter(t=>t.i.sku===sku&&(!F.store||t.from===F.store||t.to===F.store));return {i:l[0].i,qty:l.reduce((a,t)=>a+t.qty,0),n:new Set(l.map(t=>t.to)).size}}).sort((a,b)=>b.qty-a.qty)[0];
-  $('trIn').innerHTML=`<div class="trk"><div class="tk" style="--c:var(--accent)"><span>📦</span><b>${fmt(tot)}</b><small>pieces can move</small></div><div class="tk" style="--c:#8FB8DE"><span>🔀</span><b>${fmt(routes.length)}</b><small>routes</small></div><div class="tk" data-store="${esc(giv.name)}" style="--c:var(--warn)"><span>🎁</span><b>${esc(giv.name)}</b><small>gives the most · ${fmt(giv.out)} pcs</small></div><div class="tk" data-store="${esc(rec.name)}" style="--c:var(--good)"><span>🛍️</span><b>${esc(rec.name)}</b><small>can take the most · ${fmt(rec.inn)} pcs</small></div><div class="tk" data-route="${routes.indexOf(top)}" style="--c:var(--bad)"><span>🚚</span><b>${esc(top.from)} → ${esc(top.to)}</b><small>biggest route · ${fmt(top.qty)} pcs</small></div></div>`+
-   (star?`<div class="star" data-item="${esc(star.i.sku)}">${pic(star.i.sku)}<div><b>⭐ Star item to move: ${esc(star.i.name||star.i.sku)}</b><div class="note">${esc(star.i.sku)} · ${fmt(star.qty)} pcs can go to ${star.n} store${star.n>1?'s':''}. Tap to see where.</div></div></div>`:'');
+  $('trIn').innerHTML=`<div class="trk"><div class="tk" style="--c:var(--accent)"><span class="ico">${ic('box')}</span><b>${fmt(tot)}</b><small>pieces can move</small></div><div class="tk" style="--c:#8FB8DE"><span class="ico">${ic('route')}</span><b>${fmt(routes.length)}</b><small>routes</small></div><div class="tk" data-store="${esc(giv.name)}" style="--c:var(--warn)"><span class="ico">${ic('up')}</span><b>${esc(giv.name)}</b><small>gives the most · ${fmt(giv.out)} pcs</small></div><div class="tk" data-store="${esc(rec.name)}" style="--c:var(--good)"><span class="ico">${ic('down')}</span><b>${esc(rec.name)}</b><small>can take the most · ${fmt(rec.inn)} pcs</small></div><div class="tk" data-route="${routes.indexOf(top)}" style="--c:var(--bad)"><span class="ico">${ic('truck')}</span><b>${esc(top.from)} → ${esc(top.to)}</b><small>biggest route · ${fmt(top.qty)} pcs</small></div></div>`+
+   (star?`<div class="star" data-item="${esc(star.i.sku)}">${pic(star.i.sku)}<div><b>${ic('star')} Star item to move: ${esc(star.i.name||star.i.sku)}</b><div class="note">${esc(star.i.sku)} · ${fmt(star.qty)} pcs can go to ${star.n} store${star.n>1?'s':''}. Tap to see where.</div></div></div>`:'');
   if(TRV==='cards'){
     const mx=Math.max(...S.map(s=>Math.max(s.out,s.inn)));
     $('tr').innerHTML='<div class="scards">'+[...S].sort((a,b)=>b.out-a.out).map(s=>{const best=[...s.to.values()].sort((a,b)=>b.qty-a.qty)[0],ti=topItems(s,3);
       return `<div class="sc" data-store="${esc(s.name)}"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><b style="font-size:16px">${esc(s.name)}</b><span class="stack">${ti.map(o=>pic(o.i.sku)).join('')}</span></div>
-      <div class="flowrow"><span class="lbl">🎁 Gives</span>${bar(s.out,mx,'var(--accent)')}<b>${fmt(s.out)}</b></div>
-      <div class="flowrow"><span class="lbl">🛍️ Takes</span>${bar(s.inn,mx,'#8FB8DE')}<b>${fmt(s.inn)}</b></div>
-      <div class="note">${best?`Best home: <b>→ ${esc(best.to)}</b> (${fmt(best.qty)} pcs)`:'Only receives'}</div></div>`}).join('')+'</div>';
+      <div class="flowrow"><span class="lbl">${ic('up')} Gives</span>${bar(s.out,mx,'var(--accent)')}<b>${fmt(s.out)}</b></div>
+      <div class="flowrow"><span class="lbl">${ic('down')} Takes</span>${bar(s.inn,mx,'#8FB8DE')}<b>${fmt(s.inn)}</b></div>
+      <div class="note">${best?`Best home: <b>${esc(best.to)}</b> (${fmt(best.qty)} pcs)`:'Only receives'}</div></div>`}).join('')+'</div>';
   }else if(TRV==='map'){
     const rows=[...S].filter(s=>s.out).sort((a,b)=>b.out-a.out),cols=[...S].filter(s=>s.inn).sort((a,b)=>b.inn-a.inn),mx=Math.max(...routes.map(r=>r.qty));
     $('tr').innerHTML=`<div class="note" style="margin-bottom:6px">Rows give, columns take. The darker the square, the more pieces. Tap a square for the items.</div><div class="tw" style="max-height:none"><table class="hm"><tr><th class="l">From ↓ &nbsp; To →</th>${cols.map(c=>`<th data-store="${esc(c.name)}">${esc(c.name)}</th>`).join('')}<th>Total</th></tr>${rows.map(r=>`<tr><td class="l" data-store="${esc(r.name)}" style="cursor:pointer"><b>${esc(r.name)}</b></td>${cols.map(c=>{const x=r.to.get(c.name);return x?`<td class="cell" data-route="${routes.indexOf(x)}" style="background:color-mix(in srgb,var(--accent) ${Math.round(15+x.qty/mx*75)}%,transparent)">${fmt(x.qty)}</td>`:`<td class="cell0">·</td>`}).join('')}<td><b>${fmt(r.out)}</b></td></tr>`).join('')}<tr><td class="l"><b>Total</b></td>${cols.map(c=>`<td><b>${fmt(c.inn)}</b></td>`).join('')}<td><b>${fmt(tot)}</b></td></tr></table></div>`;
   }else{
     const mx=Math.max(...routes.map(r=>r.qty));
-    $('tr').innerHTML='<div class="rlist">'+routes.map((r,ix)=>`<div class="rl" data-route="${ix}"><b class="a">${esc(r.from)}</b><span class="arr">➜</span><b class="a">${esc(r.to)}</b>${bar(r.qty,mx)}<b>${fmt(r.qty)}</b><span class="note">${skuN(r)} SKUs</span><span class="stack">${r.l.slice(0,3).map(t=>pic(t.i.sku)).join('')}</span></div>`).join('')+'</div>';
+    $('tr').innerHTML='<div class="rlist">'+routes.map((r,ix)=>`<div class="rl" data-route="${ix}"><b class="a">${esc(r.from)}</b><span class="arr">${ic('arrow')}</span><b class="a">${esc(r.to)}</b>${bar(r.qty,mx)}<b>${fmt(r.qty)}</b><span class="note">${skuN(r)} SKUs</span><span class="stack">${r.l.slice(0,3).map(t=>pic(t.i.sku)).join('')}</span></div>`).join('')+'</div>';
   }
 }
 /* the pop-up: a tiny back-able stack of screens */
@@ -236,27 +253,27 @@ function openM(fn){MSTK.push(fn);renderM()}
 function backM(){MSTK.pop();MSTK.length?renderM():closeM()}
 function closeM(){MSTK=[];$('trM').hidden=true;document.body.style.overflow=''}
 function renderM(){const o=MSTK[MSTK.length-1]();$('trM').hidden=false;document.body.style.overflow='hidden';
-  $('trMB').innerHTML=`<div class="mh">${MSTK.length>1?'<button class="btn sm" data-mback>← Back</button>':''}<div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:800">${o.title}</div><div class="note">${o.sub||''}</div></div>${o.dl?'<button class="btn sm" data-mdl>⬇ Excel</button>':''}<button class="btn sm" data-mclose>✕</button></div><div class="mc">${o.body}</div>`;
+  $('trMB').innerHTML=`<div class="mh">${MSTK.length>1?'<button class="btn sm" data-mback>'+ic('back')+' Back</button>':''}<div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:800">${o.title}</div><div class="note">${o.sub||''}</div></div>${o.dl?'<button class="btn sm" data-mdl>'+ic('dl')+' Excel</button>':''}<button class="btn sm" data-mclose aria-label="Close">${ic('x')}</button></div><div class="mc">${o.body}</div>`;
   $('trMB')._dl=o.dl;$('trMB').scrollTop=0}
 const itemRow=(i,qty,extra)=>`<div class="ir" data-item="${esc(i.sku)}">${pic(i.sku).replace('class="img"','class="img lg"')}<div style="min-width:0;flex:1"><b>${esc(i.name||i.sku)}</b><div class="note">${esc(i.sku)}${extra?' · '+extra:''}</div></div><b class="pc">${fmt(qty)} <small>pcs</small></b></div>`;
 function storeScreen(name){const s=trStats(TRR).find(x=>x.name===name);if(!s)return {title:esc(name),body:'<div class="note">No transfers for this store.</div>'};
   const to=[...s.to.values()].sort((a,b)=>b.qty-a.qty),fr=[...s.from.values()].sort((a,b)=>b.qty-a.qty),mx=Math.max(1,...to.map(r=>r.qty),...fr.map(r=>r.qty));
   const lst=(a,k,c)=>a.map(r=>`<div class="rl" data-route="${TRR.indexOf(r)}"><b class="a">${esc(r[k])}</b>${bar(r.qty,mx,c)}<b>${fmt(r.qty)}</b><span class="note">${skuN(r)} SKUs</span></div>`).join('')||'<div class="note">—</div>';
   const best=to[0];
-  return {title:'🏬 '+esc(name),sub:`Gives <b>${fmt(s.out)}</b> pcs · can take <b>${fmt(s.inn)}</b> pcs`,
-   body:(best?`<div class="tip">💡 Send most of ${esc(name)}'s slow pieces to <b>${esc(best.to)}</b>: it sold these same SKUs, ${fmt(best.qty)} pcs fit there.</div>`:'')+
-   `<div class="g2"><div><h3>🎁 Sends to</h3>${lst(to,'to','var(--accent)')}</div><div><h3>🛍️ Receives from</h3>${lst(fr,'from','#8FB8DE')}</div></div>`+
-   (s.items.size?`<h3>⭐ Best items to move out (${s.items.size})</h3>${topItems(s,12).map(o=>itemRow(o.i,o.qty,'→ '+o.dests.map(d=>esc(d.to)).join(', '))).join('')}`:'')}}
+  return {title:ic('store')+' '+esc(name),sub:`Gives <b>${fmt(s.out)}</b> pcs · can take <b>${fmt(s.inn)}</b> pcs`,
+   body:(best?`<div class="tip">${ic('bulb')} Send most of ${esc(name)}'s slow pieces to <b>${esc(best.to)}</b>: it sold these same SKUs, ${fmt(best.qty)} pcs fit there.</div>`:'')+
+   `<div class="g2"><div><h3>${ic('up')} Sends to</h3>${lst(to,'to','var(--accent)')}</div><div><h3>${ic('down')} Receives from</h3>${lst(fr,'from','#8FB8DE')}</div></div>`+
+   (s.items.size?`<h3>${ic('star')} Best items to move out (${s.items.size})</h3>${topItems(s,12).map(o=>itemRow(o.i,o.qty,'to '+o.dests.map(d=>esc(d.to)).join(', '))).join('')}`:'')}}
 function routeScreen(r){const l=[...r.l].sort((a,b)=>b.qty-a.qty);
-  return {title:`${esc(r.from)} ➜ ${esc(r.to)}`,sub:`<b>${fmt(r.qty)}</b> pieces · ${skuN(r)} SKUs. Best sellers at ${esc(r.to)} first.`,
+  return {title:`${esc(r.from)} ${ic('arrow')} ${esc(r.to)}`,sub:`<b>${fmt(r.qty)}</b> pieces · ${skuN(r)} SKUs. Best sellers at ${esc(r.to)} first.`,
    dl:()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(l.map(t=>({'SKU':t.i.sku,'Item':t.i.name,'Pcs':t.qty,['Sold at '+r.to+' ('+J.months+' months)']:t.soldTo}))),'Route');XLSX.writeFile(wb,`Transfer ${r.from} to ${r.to}.xlsx`)},
-   body:`<div class="tip">💡 ${esc(r.from)} sold <b>0</b> of these in ${J.months} months, ${esc(r.to)} sold them.</div>`+l.map(t=>itemRow(t.i,t.qty,`${esc(r.to)} sold ${fmt(t.soldTo)}`)).join('')}}
+   body:`<div class="tip">${ic('bulb')} ${esc(r.from)} sold <b>0</b> of these in ${J.months} months, ${esc(r.to)} sold them.</div>`+l.map(t=>itemRow(t.i,t.qty,`${esc(r.to)} sold ${fmt(t.soldTo)}`)).join('')}}
 function itemScreen(sku){const l=TR.filter(t=>t.i.sku===sku);const i=(l[0]||ITEMS.find(x=>x.sku===sku)||{}).i||ITEMS.find(x=>x.sku===sku);if(!i)return {title:esc(sku),body:''};
   const by=new Map();l.forEach(t=>{(by.get(t.from)||by.set(t.from,[]).get(t.from)).push(t)});
   const stock=ITEMS.filter(x=>x.sku===sku);
   return {title:esc(i.name||sku),sub:esc(sku),body:`<div class="bigpic ovp" data-hd="${esc(dvOf(sku))}">${pic(sku).replace('class="img"','class="img xl"')}</div>
-   <h3>📍 Slow stock today</h3><div class="chips">${stock.map(x=>`<span class="chip on" style="cursor:default">${esc(x.store)} · ${fmt(x.qty)} pcs</span>`).join('')}</div>
-   <h3>🚚 Where it can go</h3>${[...by].map(([f,a])=>`<div class="rl" data-route="${TRR.findIndex(r=>r.from===f&&r.to===a[0].to)}" style="grid-template-columns:1fr"><span><b>${esc(f)}</b> ➜ ${a.map(t=>`<b>${esc(t.to)}</b> ${fmt(t.qty)} pcs <span class="note">(sold ${fmt(t.soldTo)})</span>`).join(' · ')}</span></div>`).join('')||'<div class="note">No other store sold it.</div>'}`}}
+   <h3>${ic('pin')} Slow stock today</h3><div class="chips">${stock.map(x=>`<span class="chip on" style="cursor:default">${esc(x.store)} · ${fmt(x.qty)} pcs</span>`).join('')}</div>
+   <h3>${ic('truck')} Where it can go</h3>${[...by].map(([f,a])=>`<div class="rl" data-route="${TRR.findIndex(r=>r.from===f&&r.to===a[0].to)}" style="grid-template-columns:1fr"><span><b>${esc(f)}</b> ${ic('arrow')} ${a.map(t=>`<b>${esc(t.to)}</b> ${fmt(t.qty)} pcs <span class="note">(sold ${fmt(t.soldTo)})</span>`).join(' · ')}</span></div>`).join('')||'<div class="note">No other store sold it.</div>'}`}}
 document.addEventListener('click',e=>{const t=e.target,M=$('trM');
   if(t.closest('[data-mclose]')||t===M){closeM();return}
   if(t.closest('[data-mback]')){backM();return}
