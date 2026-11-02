@@ -8,7 +8,7 @@
 // Row: [item code, item name, item group, warehouse, opening qty, in qty, out qty, balance qty, balance value, description (search only)]
 const zlib = require('zlib');
 const store = require('./_store');
-const { whoami } = require('./_auth');
+const { whoami, whoFromRec } = require('./_auth');
 const ex = require('./_exclude');
 
 const CURRENT = 'stock/current.json';
@@ -143,10 +143,62 @@ async function readBody(req) {
   return Buffer.concat(chunks);
 }
 
+// ---- One item's quantity in each store (the "Stock per store" button in the Pandora Dashboards item popup) ----
+//   GET /api/stock?op=item&code=<SKU>     -> { ok, code, stores:[{store, qty}], total, scope, asOf }
+// Who sees which stores is decided HERE, on the server, never in the page:
+//   super admin / overseer / VM  -> every store and warehouse
+//   area managers (Joseph, Hassan) -> only the stores of their own zone
+//   store managers and sales people -> only their own store
+// Anyone else (HR, Stock Count only) gets nothing. A person who was only lifted onto this report by Report access
+// keeps their own limits when they are a store manager or a sales person.
+const nrmStore = s => String(s || '').toLowerCase().replace(/^pandora\s+/, '').replace(/[^a-z0-9]+/g, '');
+const sameStore = (a, b) => { const x = nrmStore(a), y = nrmStore(b); return !!x && !!y && (x === y || (Math.min(x.length, y.length) >= 3 && (x.includes(y) || y.includes(x)))); };
+function itemScope(who) {
+  let w = who;
+  if (w && w.lifted && w.user) { const own = whoFromRec(w.user); if (own && own.kind === 'staff') w = own; }
+  if (w.kind === 'vm') return { all: true };
+  if (w.kind === 'env') return w.info && w.info.allow ? { rx: w.info.allow.map(s => new RegExp(s, 'i')), zone: w.info.zone } : { all: true };
+  if (w.kind === 'staff' && w.info && w.info.self && w.info.self.store) return { store: w.info.self.store };
+  return null;
+}
+async function itemStock(req, res, who) {
+  const sc = itemScope(who);
+  if (!sc) return send(res, 403, { ok: false, error: 'No access.' });
+  const url = new URL(req.url, 'https://x.invalid');
+  const code = str(url.searchParams.get('code'), 60).toUpperCase();
+  if (!code || code === '—') return send(res, 400, { ok: false, error: 'This item has no code.' });
+  const today = cairoToday(), from = today.slice(0, 8) + '01';
+  const snap = await store.getJSON(CURRENT);
+  let rows = null, at = '';
+  if (process.env.ERP_URL && process.env.ERP_API_KEY && process.env.ERP_API_SECRET) {
+    try { const d = await erpStock(from, today, false); rows = d.rows; at = d.at; }
+    catch (_) {
+      // ERP did not answer: use whatever was saved for this month, then the Excel file
+      const c = await store.getJSON('stock/r/' + from + '_' + today + '.json');
+      if (c && c.rows && c.rows.length) { rows = c.rows; at = c.at; }
+    }
+  }
+  if (!rows && snap) { rows = snap.rows; at = snap.uploadedAt || snap.asOf || ''; }
+  if (!rows) return send(res, 404, { ok: false, error: 'No stock balance is available yet.' });
+  const up = v => String(v == null ? '' : v).trim().toUpperCase();
+  let hit = rows.filter(r => up(r[0]) === code || up(r[1]) === code);
+  if (!hit.length) hit = rows.filter(r => up(r[0]).startsWith(code + '-') || up(r[1]).startsWith(code + '-')); // the design without a size
+  const by = new Map();
+  for (const r of hit) {
+    const w = r[3];
+    if (sc.rx && !sc.rx.some(x => x.test(w))) continue;
+    if (sc.store && !sameStore(w, sc.store)) continue;
+    by.set(w, (by.get(w) || 0) + (Number(r[7]) || 0));
+  }
+  const stores = [...by.entries()].map(([s, q]) => ({ store: s, qty: Math.round(q * 1000) / 1000 })).sort((a, b) => b.qty - a.qty || a.store.localeCompare(b.store));
+  return send(res, 200, { ok: true, code, stores, total: stores.reduce((t, x) => t + x.qty, 0), scope: sc.all ? 'all' : sc.rx ? 'zone' : 'store', zone: sc.zone || undefined, asOf: at, source: at && snap && rows === snap.rows ? 'excel' : 'erp' });
+}
+
 module.exports = async function handler(req, res) {
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   const who = await whoami(req);
   if (!who) return send(res, 401, { ok: false, error: 'sign-in-required' });
+  if (req.method === 'GET' && new URL(req.url, 'https://x.invalid').searchParams.get('op') === 'item') return itemStock(req, res, who); // per-store quantity of one item, limited to the caller's own stores
   if (!(who.kind === 'vm' || who.kind === 'env')) return send(res, 403, { ok: false, error: 'No access.' }); // sales people and store managers never
   const isAdmin = who.kind === 'env' && who.info.role === 'admin';
   const url = new URL(req.url, 'https://x.invalid');

@@ -70,6 +70,7 @@
 .bmodal .brow b{white-space:nowrap}.bmodal .brow small{color:var(--muted);font-size:11px}
 .bmodal .btrack{grid-column:1/-1;height:5px;border-radius:5px;background:var(--surface2);overflow:hidden}.bmodal .btrack i{display:block;height:100%;background:var(--accent);border-radius:5px}
 .bmodal .bnone{color:var(--muted);text-align:center;padding:18px 0;font-size:12.5px}
+.bmodal .btabs{display:flex;gap:6px;margin:0 0 12px}.bmodal .btabs button{flex:1;border:1px solid var(--line);background:var(--surface2);color:var(--text);border-radius:999px;padding:7px 10px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}.bmodal .btabs button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}.bmodal .btabs button:disabled{opacity:.45;cursor:default}.bmodal .bnote{color:var(--muted);font-size:11px;margin-top:10px}
 .pmodal{position:fixed;inset:0;z-index:60;background:rgba(20,12,14,.45);display:grid;place-items:center;padding:20px}.pmodal[hidden]{display:none}
 .pmodal .pcard{background:var(--surface);color:var(--text);border-radius:18px;padding:14px 14px 16px;width:min(340px,100%);box-shadow:0 18px 50px rgba(0,0,0,.28);animation:ppop .16s ease-out}
 .pmodal .pbig{width:100%;aspect-ratio:1/1;border-radius:12px;background:var(--surface2);display:grid;place-items:center;overflow:hidden;color:var(--muted);font-size:12px;text-align:center}
@@ -155,11 +156,42 @@
 <div class="footer"><span>PRIVATE WORKSPACE · Saved data stays until you remove it in All Uploads.</span><span id="lastUpdated">Calculated from current report</span></div>
 </main></div>
 <script src="/parsers.js"></script>
-<div class="bmodal" id="bModal" hidden><div class="bcard" role="dialog" aria-modal="true" aria-label="Branches that sold this item"><button type="button" class="bclose" id="bClose" aria-label="Close">&times;</button><div class="bname" id="bName"></div><div class="binfo" id="bInfo"></div><div id="bBody"></div></div></div>
+<div class="bmodal" id="bModal" hidden><div class="bcard" role="dialog" aria-modal="true" aria-label="Branches that sold this item"><button type="button" class="bclose" id="bClose" aria-label="Close">&times;</button><div class="bname" id="bName"></div><div class="binfo" id="bInfo"></div><div class="btabs" id="bTabs"><button type="button" id="bTabSold" aria-pressed="true">Sold by branch</button><button type="button" id="bTabStock" aria-pressed="false">Qty in each store</button></div><div id="bBody"></div></div></div>
 <script>
 /* Click a product (Top products, Category explorer, Sales by collection) to see which branches sold it. Uses the dates and revenue basis above, all branches. */
 (function(){
   const m=()=>document.getElementById('bModal');
+  const cur={sku:'',sold:''},stockCache={};
+  function tab(w){
+    document.getElementById('bTabSold').setAttribute('aria-pressed',w==='sold');
+    document.getElementById('bTabStock').setAttribute('aria-pressed',w==='stock');
+    if(w==='sold'){document.getElementById('bBody').innerHTML=cur.sold;return}
+    showStock();
+  }
+  /* Quantity in each store. The server decides which stores this person may see (super admin: all, area managers: their zone, store managers and staff: their own store). */
+  async function showStock(){
+    const sku=cur.sku,body=document.getElementById('bBody');
+    body.innerHTML='<div class="bnone">Loading stock…</div>';
+    let j=stockCache[sku];
+    if(!j){
+      try{
+        const r=await fetch('/api/stock?op=item&code='+encodeURIComponent(sku),{credentials:'same-origin',cache:'no-store'});
+        j=await r.json().catch(()=>({}));
+        if(!r.ok)j={ok:false,error:j.error||'Could not load the stock.'};
+      }catch(_){j={ok:false,error:'Could not load the stock.'}}
+      if(j.ok)stockCache[sku]=j;
+    }
+    if(cur.sku!==sku||document.getElementById('bTabStock').getAttribute('aria-pressed')!=='true')return; // the person moved on
+    if(!j.ok){body.innerHTML='<div class="bnone">'+esc(j.error||'Could not load the stock.')+'</div>';return}
+    const list=j.stores||[],max=Math.max(1,...list.map(x=>Math.abs(x.qty)));
+    const who=j.scope==='store'?'your store':j.scope==='zone'?'the stores of '+esc(j.zone||'your zone'):'every store';
+    const when=j.asOf?' · updated '+esc(String(j.asOf).slice(0,16).replace('T',' ')):'';
+    body.innerHTML=list.length?`<div class="bsum"><div><span>Stores holding it</span><b>${num(list.filter(x=>x.qty>0).length)}</b></div><div><span>Pieces in stock</span><b>${num(j.total)}</b></div></div>`+list.map(x=>`<div class="brow"><span><b>${esc(x.store)}</b></span><b>${num(x.qty)} pcs</b><span class="btrack"><i style="width:${x.qty>0?Math.max(2,x.qty/max*100):0}%"></i></span></div>`).join('')+`<div class="bnote">Stock now for ${who}${when}.</div>`:'<div class="bnone">No stock of this item was found in '+who+'.</div>';
+  }
+  document.addEventListener('click',ev=>{
+    if(ev.target.id==='bTabSold')tab('sold');
+    else if(ev.target.id==='bTabStock'&&!ev.target.disabled)tab('stock');
+  });
   function openB(el){
     const sku=el.dataset.sku||'—',name=el.dataset.name||'Unspecified',s=$('startDate').value,e=$('endDate').value;
     const by={};let tu=0,tv=0;
@@ -168,7 +200,9 @@
     const list=Object.values(by).sort((a,b)=>b.value-a.value),max=Math.max(1,...list.map(x=>Math.abs(x.value)));
     document.getElementById('bName').textContent=name;
     document.getElementById('bInfo').textContent=(sku!=='—'?sku+' · ':'')+s+' — '+e;
-    document.getElementById('bBody').innerHTML=list.length?`<div class="bsum"><div><span>Branches that sold it</span><b>${num(list.length)}</b></div><div><span>Units</span><b>${num(tu)}</b></div><div><span>Revenue</span><b>${money(tv)}</b></div></div>`+list.map(x=>`<div class="brow"><span><b>${esc(x.name)}</b><br><small>${num(x.units)} units · last sold ${esc(x.last)}</small></span><b>${money(x.value)}</b><span class="btrack"><i style="width:${Math.max(2,Math.abs(x.value)/max*100)}%"></i></span></div>`).join(''):'<div class="bnone">No branch sold this item in the selected dates.</div>';
+    cur.sku=sku;cur.sold=list.length?`<div class="bsum"><div><span>Branches that sold it</span><b>${num(list.length)}</b></div><div><span>Units</span><b>${num(tu)}</b></div><div><span>Revenue</span><b>${money(tv)}</b></div></div>`+list.map(x=>`<div class="brow"><span><b>${esc(x.name)}</b><br><small>${num(x.units)} units · last sold ${esc(x.last)}</small></span><b>${money(x.value)}</b><span class="btrack"><i style="width:${Math.max(2,Math.abs(x.value)/max*100)}%"></i></span></div>`).join(''):'<div class="bnone">No branch sold this item in the selected dates.</div>';
+    document.getElementById('bTabStock').disabled=(sku==='—');
+    tab('sold');
     m().hidden=false;
   }
   document.addEventListener('click',ev=>{
