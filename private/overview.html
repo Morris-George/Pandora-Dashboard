@@ -70,6 +70,7 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
   function chip(p,txt){if(p==null)return '';var up=p>=0;return '<span class="chip '+(up?'up':'down')+'">'+(up?'+':'')+p.toFixed(1)+'% '+esc(txt)+'</span>'}
   function card(label,val,note,main){return '<div class="card'+(main?' main':'')+'"><div class="lbl">'+esc(label)+'</div><div class="val">'+val+'</div><div class="note">'+(note||'')+'</div></div>'}
   function block(title,p,vsTxt){
+
     var v=p.vs;
     var top=p.top?esc(p.top.name):'-';
     var html='<section><h2>'+esc(title)+'</h2><div class="range">'+dmy(p.from)+' to '+dmy(p.to)+' &middot; '+p.stores+' stores selling</div><div class="grid">'
@@ -80,6 +81,8 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
       +card('Units per ticket (UPT)',(p.upt||0).toFixed(1),v?chip(v.upt,vsTxt):'Pieces in each order')
       +card('Average price per piece',egp(p.asp),'Sales divided by pieces')
       +card('Average per store per day',egp(p.avgPerStorePerDay),'Average store, one day')
+      +(p.months?card('Average month (total, all stores)',egp(p.avgMonth),MON[+p.monthsFrom.slice(5)-1].slice(0,3)+' to '+MON[+p.monthsTo.slice(5)-1].slice(0,3)+', '+p.months+' full months',true)
+        +card('Average month, average store',egp(p.avgMonthPerStore),'One store, one month',true):'')
       +card('Top store',p.top?'<span style="font-size:.78em">'+top+'</span>':'-',p.top?'EGP '+n(p.top.sales):'')
       +'</div></section>';
     return html;
@@ -96,7 +99,7 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
     return '<section><h2>Per store</h2><div class="range">Each store: last full month, this month so far and year to date. Sorted by year to date sales.</div><div class="stores">'+names.map(function(nm){
       var m=mtd[nm],y=ytd[nm],c=lm[nm];
       return '<div class="card st"><h3>'+esc(nm)+'</h3><table><tr><th></th>'+(hasLm?'<th>'+lS+'</th>':'')+'<th>'+mS+' 1-'+(+d.upTo.slice(8))+'</th><th>Year</th></tr>'
-        +row('Sales (EGP)',m,y,c,E)+row('Share of chain',m,y,c,S)+row('Avg ticket (EGP)',m,y,c,A)+row('Orders',m,y,c,O)+row('UPT',m,y,c,U)+'</table></div>'}).join('')+'</div></section>';
+        +row('Sales (EGP)',m,y,c,E)+row('Share of chain',m,y,c,S)+row('Avg ticket (EGP)',m,y,c,A)+row('Orders',m,y,c,O)+row('UPT',m,y,c,U)+(y&&y.avgMonth?'<tr><td>Avg per month (EGP)</td>'+(hasLm?'<td>-</td>':'')+'<td>-</td><td>'+n(y.avgMonth)+'</td></tr>':'')+'</table></div>'}).join('')+'</div></section>';
   }
   // long numbers shrink instead of wrapping onto a second line
   function fit(){

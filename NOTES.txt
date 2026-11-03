@@ -155,3 +155,4 @@ STORE OVERVIEW (/overview, private/overview.html, API /api/overview -> api/erp.j
 - Access: home tile 'overview' (api/_apps.js) for role admin (super admin and the brand manager); area managers, VM, finance and staff get 403 from the API and are sent home from the page. The super admin can still switch it off for the brand manager on Report access.
 - Per store section: every store's sales, share of the chain, average ticket, orders and UPT for month and year to date.
 - Also shows the last full month (e.g. October) next to 'this month so far' and year to date, for the chain and per store, because early in a month 'month to date' covers only a few days.
+- YTD also shows the average month (full months only, e.g. Jan-Oct): total for all stores, average store, and 'Avg per month' on each store card.

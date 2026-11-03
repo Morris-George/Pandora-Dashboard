@@ -59,6 +59,31 @@ function figures(lines, from, to) {
   };
 }
 
+// Average month of the year so far: full months only (the month still running is left out, unless the data reaches its last day).
+function monthlyAvg(rows, yearStart, to) {
+  const last = new Date(Date.UTC(+to.slice(0, 4), +to.slice(5, 7), 0)).getUTCDate();
+  const lastKey = +to.slice(8) >= last ? to.slice(0, 7) : null;
+  const byM = new Map(); // month -> Map(store -> sales)
+  for (const r of rows) {
+    if (r[0] < yearStart || r[0] > to) continue;
+    const k = r[0].slice(0, 7);
+    if (k === to.slice(0, 7) && k !== lastKey) continue;
+    const m = byM.get(k) || new Map(), br = pretty(r[7] || 'Unspecified');
+    m.set(br, (m.get(br) || 0) + (+r[3] || 0)); byM.set(k, m);
+  }
+  let chain = 0, perStoreAvg = 0, months = 0;
+  const acc = new Map(); // store -> [sum, months with sales]
+  for (const m of byM.values()) {
+    let tot = 0, n = 0;
+    for (const [br, v] of m) if (v > 0) { tot += v; n++; const a = acc.get(br) || [0, 0]; a[0] += v; a[1]++; acc.set(br, a); }
+    if (!n) continue;
+    months++; chain += tot; perStoreAvg += tot / n;
+  }
+  const byStore = {};
+  for (const [br, a] of acc) byStore[br] = r0(a[0] / a[1]);
+  return { months, from: [...byM.keys()].sort()[0] || '', to: [...byM.keys()].sort().pop() || '', chain: months ? r0(chain / months) : 0, perStoreAvg: months ? r0(perStoreAvg / months) : 0, byStore };
+}
+
 async function build() {
   const rows = (await dashRows()).filter(r => r && r[0] && ISO.test(r[0]) && !ONLINE.test(String(r[7] || '')));
   if (!rows.length) return { ok: true, empty: true };
@@ -79,6 +104,9 @@ async function build() {
   const lmEnd = new Date(Date.UTC(+monthStart.slice(0, 4), +monthStart.slice(5, 7) - 1, 0)).toISOString().slice(0, 10);
   out.lm = minD <= lmFrom ? { from: lmFrom, to: lmEnd, month: lmFrom.slice(0, 7), ...figures(rows, lmFrom, lmEnd), vs: null } : null;
   out.ytd = mk(yearStart, shifted(yearStart, -1, 0), shifted(maxD, -1, 0));
+  const ma = monthlyAvg(rows, yearStart, maxD);
+  Object.assign(out.ytd, { months: ma.months, monthsFrom: ma.from, monthsTo: ma.to, avgMonth: ma.chain, avgMonthPerStore: ma.perStoreAvg });
+  out.ytd.perStore.forEach(x => { x.avgMonth = ma.byStore[x.name] || 0; });
   return out;
 }
 
@@ -89,7 +117,7 @@ module.exports = async function handler(req, res) {
   if (!(who.kind === 'env' && who.info.role === 'admin')) return send(res, 403, { ok: false, error: 'Only the super admin and the brand manager can open this report.' }); // area managers, VM and staff never
   if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
   const fresh = new URL(req.url, 'https://x.invalid').searchParams.get('fresh') === '1';
-  const ck = 'overview/c3.json';
+  const ck = 'overview/c4.json';
   if (!fresh) {
     const c = await store.getJSON(ck).catch(() => null);
     if (c && c.ok && Date.now() - Date.parse(c.generatedAt) < CACHE_MIN * 60000) return send(res, 200, c);
