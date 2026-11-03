@@ -157,3 +157,4 @@ STORE OVERVIEW (/overview, private/overview.html, API /api/overview -> api/erp.j
 - Also shows the last full month (e.g. October) next to 'this month so far' and year to date, for the chain and per store, because early in a month 'month to date' covers only a few days.
 - YTD also shows the average month (full months only, e.g. Jan-Oct): total for all stores, average store, and 'Avg per month' on each store card.
 - CHANGE (Nov 3): the page now shows only year to date; the month-to-date and last-month sections were removed. Per store cards show Year to date and Avg month (full months only).
+- Pandora Dashboards 'Find a SKU': the picked SKU now shows its picture (click to enlarge, same as other product pictures) and 'Still in stock in' = stores holding it with pieces, from /api/stock?op=item (same access rule as the product popup).

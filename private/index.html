@@ -58,6 +58,10 @@
 .xtop5 .xp{grid-template-columns:42px minmax(0,1fr) auto;align-items:center}
 .pthumb{width:42px;height:42px;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--surface2);color:var(--muted);font-size:15px;line-height:1;display:grid;place-items:center;overflow:hidden;cursor:zoom-in;transition:transform .15s,border-color .15s}
 .xtop5 .xp .pthumb+span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skuhead{display:flex;gap:14px;align-items:flex-start;margin-bottom:6px}.skupic .pthumb{width:104px;height:104px;border-radius:14px;font-size:26px}.skuhead>div:last-child{min-width:0}
+.skustk{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}.skusum{font-size:12.5px;color:var(--muted);margin-bottom:4px}.skusum b{color:var(--text)}
+.skurow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:6px 0;border-top:1px solid var(--line);font-size:12.5px}.skurow b{white-space:nowrap}.skubar{grid-column:1/-1;height:5px;border-radius:5px;background:var(--surface2);overflow:hidden}.skubar i{display:block;height:100%;background:var(--accent);border-radius:5px}
+.skunone{color:var(--muted);font-size:12.5px;padding:6px 0}.skunote{color:var(--muted);font-size:11px;margin-top:4px}
 .pthumb:hover,.pthumb:focus-visible{transform:scale(1.08);border-color:var(--accent);outline:none}
 .pthumb img{width:100%;height:100%;object-fit:cover;display:block}
 .pbr{cursor:pointer}tr.pbr:hover td,.xp.pbr:hover{background:var(--surface2)}
@@ -489,7 +493,8 @@ function renderSku(){
     const vals=keys.map(k=>byKey[k]||0),mx=Math.max(1,...vals),W=600,bw=W/keys.length;
     const svg=`<svg class="skutrend" viewBox="0 0 ${W} 110" preserveAspectRatio="none" role="img" aria-label="Revenue for this SKU over time">${vals.map((v,i)=>{const h=v>0?Math.max(2,v/mx*104):0;return `<rect x="${(i*bw+bw*.12).toFixed(2)}" y="${(108-h).toFixed(2)}" width="${(bw*.76).toFixed(2)}" height="${h.toFixed(2)}" rx="1.5"><title>${keys[i]}: ${money(v)}</title></rect>`}).join('')}</svg><div class="skuaxis"><span>${keys[0]}</span><span>${keys[keys.length-1]}</span></div>`;
     const names=Object.keys(sel.names);
-    detail=`<div class="xdetail"><h4 class="skutitle">${esc(topName(sel))}</h4><div class="skusub"><i class="xsku">${esc(sel.sku)}</i> · ${esc(Object.keys(sel.cat).join(', '))}${names.length>1?' · sold under '+names.length+' names':''}</div>
+    detail=`<div class="xdetail"><div class="skuhead"><div class="skupic">${PPic.thumb({sku:sel.sku,name:topName(sel)},'')}</div><div><h4 class="skutitle">${esc(topName(sel))}</h4><div class="skusub"><i class="xsku">${esc(sel.sku)}</i> · ${esc(Object.keys(sel.cat).join(', '))}${names.length>1?' · sold under '+names.length+' names':''}</div></div></div>
+    <div class="xh">Still in stock in</div><div id="skuStock" class="skustk"><div class="skunone">Loading stock…</div></div>
     <div class="xk"><div><span>Revenue</span><b>${money(rv)}</b></div><div><span>Units</span><b>${num(un)}</b></div><div><span>Invoices</span><b>${num(inv)}</b></div></div>
     <div class="xk"><div><span>Avg per unit</span><b>${un>0?money(rv/un):'—'}</b></div><div><span>Share of sales</span><b>${totalAll>0?(rv/totalAll*100).toFixed(rv/totalAll<0.1?2:1)+'%':'—'}</b></div><div><span>Last sold</span><b>${esc(dates[dates.length-1])}</b></div></div>
     <div class="xh">${months?'Revenue by month':'Revenue by day'}</div>${svg}
@@ -498,9 +503,26 @@ function renderSku(){
     out.innerHTML=`<div class="exp-grid">${list||''}${detail}</div>`;
     if(!list)out.firstChild.style.gridTemplateColumns='1fr';
     bars('skuBranch',br);bars('skuPay',pay);
+    PPic.fill(out);skuStock(sel.sku);
     return;
   }
   out.innerHTML=`<div class="exp-grid">${list}<div class="xdetail"><div class="xempty">Pick a SKU from the list to see its data.</div></div></div>`;
+}
+/* Which stores still hold this SKU (same server rule as the product popup: super admin all stores, area managers their zone, store people their own store). */
+async function skuStock(sku){
+  const draw=j=>{
+    const box=$('skuStock');if(!box||box.dataset.sku&&box.dataset.sku!==sku)return;
+    if(!j.ok){box.innerHTML='<div class="skunone">'+esc(j.error||'Could not load the stock.')+'</div>';return}
+    const all=(j.stores||[]),list=all.filter(x=>x.qty>0).sort((a,b)=>b.qty-a.qty),max=Math.max(1,...list.map(x=>x.qty));
+    const who=j.scope==='store'?'your store':j.scope==='zone'?'the stores of '+esc(j.zone||'your zone'):'every store';
+    const when=j.asOf?' · updated '+esc(String(j.asOf).slice(0,16).replace('T',' ')):'';
+    box.innerHTML=list.length?`<div class="skusum"><b>${num(list.length)}</b> store${list.length>1?'s':''} · <b>${num(list.reduce((a,x)=>a+x.qty,0))}</b> pcs</div>`+list.map(x=>`<div class="skurow"><span>${esc(x.store)}</span><b>${num(x.qty)} pcs</b><span class="skubar"><i style="width:${Math.max(3,x.qty/max*100)}%"></i></span></div>`).join('')+`<div class="skunote">Stock now in ${who}${when}.</div>`:'<div class="skunone">Out of stock: no store in '+who+' holds this item.</div>';
+  };
+  const box=$('skuStock');if(box)box.dataset.sku=sku;
+  const get=async c=>{try{const r=await fetch('/api/stock?op=item&code='+encodeURIComponent(sku)+(c?'&cached=1':''),{credentials:'same-origin',cache:'no-store'});const j=await r.json().catch(()=>({}));return r.ok?j:{ok:false,error:j.error||'Could not load the stock.'}}catch(_){return{ok:false,error:'Could not load the stock.'}}};
+  const live=get(false),fast=await get(true);
+  if(fast.ok&&!fast.miss)draw(fast);
+  const j=await live;draw(j.ok||!fast.ok||fast.miss?j:fast);
 }
 function group2(rows,f){const m={};rows.forEach(r=>{const k=f(r);const o=m[k]||(m[k]={name:k,value:0});o.value+=rev(r)});return Object.values(m).sort((a,b)=>b.value-a.value)}
 $('skuInput').addEventListener('input',e=>{sk.q=e.target.value;sk.pick=null;renderSku()});
