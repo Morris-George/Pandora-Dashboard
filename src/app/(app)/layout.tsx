@@ -13,7 +13,9 @@ import { createClient } from "@/lib/supabase/server";
 import { loadWorkflow } from "@/lib/workflow";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const t0 = Date.now(); // TEMP timing: find where the 5 s go (remove after)
   const session = await requireSession();
+  const tSession = Date.now() - t0;
   if (session.mustChangePassword) redirect("/change-password");
   const { t, locale } = await getI18n();
   const supabase = await createClient();
@@ -22,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     supabase.from("app_settings").select("value").eq("key", "menu_labels").maybeSingle(),
     loadWorkflow(supabase),
   ]);
+  console.log(`[timing] layout session=${tSession}ms settings=${Date.now() - t0 - tSession}ms role=${session.role}`);
   const custom = (menu?.value ?? {}) as Record<string, { ar?: string; en?: string }>;
   const navLabels: Record<string, string> = { ...t.nav };
   for (const [href, v] of Object.entries(custom)) { const name = v?.[locale === "ar" ? "ar" : "en"]; if (name) navLabels[href] = name; }

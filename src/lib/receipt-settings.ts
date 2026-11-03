@@ -10,6 +10,14 @@ export type ReceiptSettings = {
   showItemCode: boolean;
   showQr: boolean;
   showAgreed: boolean;
+  showCustomer: boolean;
+  showFault: boolean;
+  showAccessories: boolean;
+  showWhatsapp: boolean;
+  showScanText: boolean;
+  showTerms: boolean;
+  showSignature: boolean;
+  showFooter: boolean;
   termsIntake: Bilingual;
   termsDelivery: Bilingual;
   footer: Bilingual;
@@ -20,6 +28,8 @@ export type ReceiptSettings = {
 export const RECEIPT_DEFAULTS: ReceiptSettings = {
   logo: "pandora", customLogo: "", storeLine: "", phone: "", website: "",
   showMobile: true, showItemCode: true, showQr: true, showAgreed: true,
+  showCustomer: true, showFault: true, showAccessories: true, showWhatsapp: true,
+  showScanText: true, showTerms: true, showSignature: false, showFooter: true, // signature line off by default
   termsIntake: { ar: "", en: "" }, termsDelivery: { ar: "", en: "" }, footer: { ar: "", en: "" },
   labelWidth: 50, labelHeight: 30,
 };

@@ -69,19 +69,19 @@ export default async function ReceiptPage({ params, searchParams }: { params: Pr
         {cfg.storeLine && <div className="text-[11px]">{cfg.storeLine}</div>}
         <div>{delivery ? t.deliveryTitle : t.title}</div>
         <div className="text-[11px]">{(tk.branches as unknown as { name: string } | null)?.name} · {when}</div>
-        {(tk.branches as unknown as { whatsapp: string | null } | null)?.whatsapp && (
+        {cfg.showWhatsapp && (tk.branches as unknown as { whatsapp: string | null } | null)?.whatsapp && (
           <div className="text-[11px]">{t.whatsapp}: <span dir="ltr">{(tk.branches as unknown as { whatsapp: string }).whatsapp}</span></div>
         )}
       </div>
       <hr />
       <div className="text-center text-xl font-extrabold" dir="ltr">{tk.ticket_no}</div>
       <hr />
-      <Row k={t.customer} v={c?.full_name ?? "—"} />
+      {cfg.showCustomer && <Row k={t.customer} v={c?.full_name ?? "—"} />}
       {mobile && <Row k={t.mobile} v={<span dir="ltr">{mobile}</span>} />}
       <Row k={t.item} v={tk.item_name} />
       {cfg.showItemCode && tk.item_code && <Row k={t.code} v={<span dir="ltr">{tk.item_code}</span>} />}
-      <Row k={t.fault} v={tk.fault_category} />
-      {tk.accessories && <Row k={t.accessories} v={tk.accessories} />}
+      {cfg.showFault && <Row k={t.fault} v={tk.fault_category} />}
+      {cfg.showAccessories && tk.accessories && <Row k={t.accessories} v={tk.accessories} />}
       {!delivery && cfg.showAgreed && <Row k={t.agreed} v={tk.agreed_amount != null ? `${Number(tk.agreed_amount).toFixed(2)} ${t.egp}` : t.afterDiagnosis} />}
       {delivery && (
         <>
@@ -99,15 +99,19 @@ export default async function ReceiptPage({ params, searchParams }: { params: Pr
         <>
           <div className="flex flex-col items-center gap-1">
             <span dangerouslySetInnerHTML={{ __html: qr }} />
-            <div className="text-center text-[11px]">{t.scan}</div>
+            {cfg.showScanText && <div className="text-center text-[11px]">{t.scan}</div>}
           </div>
           <hr />
         </>
       )}
-      <p className="text-[10px] whitespace-pre-line">{terms}</p>
-      <div className="mt-6 border-b border-black" />
-      <div className="text-[11px]">{delivery ? t.signReceived : t.sign}</div>
-      <p className="text-center text-[11px] mt-3 whitespace-pre-line">{footer}</p>
+      {cfg.showTerms && <p className="text-[10px] whitespace-pre-line">{terms}</p>}
+      {cfg.showSignature && (
+        <>
+          <div className="mt-6 border-b border-black" />
+          <div className="text-[11px]">{delivery ? t.signReceived : t.sign}</div>
+        </>
+      )}
+      {cfg.showFooter && <p className="text-center text-[11px] mt-3 whitespace-pre-line">{footer}</p>}
       {(cfg.phone || cfg.website) && <p className="text-center text-[11px]" dir="ltr">{[cfg.phone, cfg.website].filter(Boolean).join(" · ")}</p>}
     </main>
   );

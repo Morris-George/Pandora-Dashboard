@@ -76,7 +76,7 @@ export function ReceiptPanel({ locale, initial }: { locale: Locale; initial: Rec
 
         <fieldset className="flex flex-col gap-2">
           <legend className="text-sm font-medium mb-1">{t.fields}</legend>
-          {(["showMobile", "showItemCode", "showQr", "showAgreed"] as const).map((k) => (
+          {(["showCustomer", "showMobile", "showItemCode", "showFault", "showAccessories", "showWhatsapp", "showAgreed", "showQr", "showScanText", "showTerms", "showSignature", "showFooter"] as const).map((k) => (
             <label key={k} className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={s[k]} onChange={(e) => set(k, e.target.checked)} /> {t.fieldNames[k]}
             </label>
