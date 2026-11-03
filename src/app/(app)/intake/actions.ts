@@ -89,7 +89,8 @@ const DraftInput = z.object({
   itemCode: z.string().trim().max(60).optional(),
   itemDescription: z.string().trim().max(2000).optional(),
   itemBarcode: z.string().trim().max(60).optional(),
-  itemImage: z.string().regex(/^\/(private\/)?files\/[^?#]+$/).max(300).optional().or(z.literal("")),
+  // ERPNext file path, or a product image on the Shopify CDN (same hosts the image proxy allows)
+  itemImage: z.string().regex(/^(\/(private\/)?files\/[^?#]+|https:\/\/cdn\.shopify\.com\/\S+)$/).max(500).optional().or(z.literal("")),
   invoiceNo: z.string().trim().max(60).optional(),
   purchaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")),
   noInvoice: z.boolean().default(false),
