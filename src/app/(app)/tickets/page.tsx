@@ -4,6 +4,7 @@ import { getI18n } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import type { Warranty } from "@/lib/warranty";
 import { loadSla, overdueDays } from "@/lib/sla";
+import { BulkActions } from "./bulk-actions";
 
 export const metadata = { title: "Pandora Maintenance" };
 
@@ -17,7 +18,8 @@ const STATUS_STYLE: Record<string, string> = {
 
 export default async function TicketsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; overdue?: string }> }) {
   // Admin has no ticket access (SoD-4); RLS also returns nothing for admin
-  await requireRole("associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin");
+  const me = await requireRole("associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin");
+  const bulk = me.fullAccess; // Super Admin: tick tickets to change status or delete
   const { t: d, locale } = await getI18n();
   const t = d.list;
   const { q = "", status = "", overdue = "" } = await searchParams;
@@ -75,16 +77,19 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
       {!tickets?.length ? (
         <p className="text-stone-600 py-6">{t.empty}</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div id="ticket-rows" className="overflow-x-auto flex flex-col gap-3">
+          {bulk && <BulkActions locale={locale} formId="ticket-rows" statuses={statuses} />}
           <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="text-start text-xs text-stone-500">
+                {bulk && <th className="p-2 w-8" />}
                 {Object.values(t.cols).map((c) => <th key={c} className="p-2 text-start font-medium">{c}</th>)}
               </tr>
             </thead>
             <tbody>
               {tickets.map((x) => (
                 <tr key={x.id} className="border-t border-stone-100 hover:bg-stone-50">
+                  {bulk && <td className="p-2"><input type="checkbox" data-bulk data-no={x.ticket_no} value={x.id} aria-label={x.ticket_no} className="h-4 w-4" /></td>}
                   <td className="p-2 font-semibold" dir="ltr"><Link href={`/tickets/${x.id}`} className="underline-offset-2 hover:underline">{x.ticket_no}</Link></td>
                   <td className="p-2">{fmt(x.created_at)}</td>
                   <td className="p-2">{names.get(x.customer_id) ?? "—"}</td>
