@@ -1,4 +1,5 @@
 import { requireRole } from "@/lib/auth";
+import { loadWorkflow } from "@/lib/workflow";
 import { RoleTabs, screenRole } from "@/components/role-tabs";
 import { getI18n } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
@@ -22,8 +23,11 @@ export default async function DiagnosisPage({ searchParams }: { searchParams: Pr
     .select("id, ticket_no, item_name, item_code, fault_category, fault_notes, warranty_provisional, no_invoice, purchase_date, status, assigned_technician, branches(name)")
     .in("status", me.role === "hq" ? ["received_at_hq"] : STAGES)
     .order("created_at");
-  // Technicians work only on tickets assigned to them
-  if (me.role === "technician" && !user.fullAccess) q = q.eq("assigned_technician", me.userId);
+  // Technicians work only on tickets assigned to them; with supervisor assignment off they also see tickets waiting to be taken
+  const selfAssign = me.role === "technician" && !(await loadWorkflow(supabase)).supervisor_assign;
+  if (me.role === "technician" && !user.fullAccess) {
+    q = selfAssign ? q.or(`assigned_technician.eq.${me.userId},status.eq.received_at_hq`) : q.eq("assigned_technician", me.userId);
+  }
   const { data: tickets } = await q;
 
   const ids = (tickets ?? []).map((t) => t.id);
@@ -72,7 +76,8 @@ export default async function DiagnosisPage({ searchParams }: { searchParams: Pr
     <>
       {tabs}
     <DiagnosisPanel locale={locale} role={me.role} jobs={jobs}
-      technicians={(techs ?? []).map((t) => ({ id: t.id, name: t.full_name }))} costs={costs} categoryCosts={categoryCosts} />
+      selfAssign={selfAssign}
+      technicians={(techs ?? []).filter((t) => !selfAssign || t.id === me.userId).map((t) => ({ id: t.id, name: t.full_name }))} costs={costs} categoryCosts={categoryCosts} />
       {user.isAdmin && <div className="mt-6"><CostLinksPanel locale={locale} links={links} /></div>}
     </>
   );

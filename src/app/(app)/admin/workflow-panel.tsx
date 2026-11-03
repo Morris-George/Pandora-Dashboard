@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import { setWorkflowStep } from "./actions";
 
-export type Workflow = { manager_approval: boolean; area_manager: boolean; override_approval: boolean; supervisor_qc: boolean };
-export const WORKFLOW_DEFAULTS: Workflow = { manager_approval: true, area_manager: true, override_approval: true, supervisor_qc: true };
+export type Workflow = { manager_approval: boolean; area_manager: boolean; override_approval: boolean; supervisor_qc: boolean; cs_quote: boolean; supervisor_assign: boolean };
+export const WORKFLOW_DEFAULTS: Workflow = { manager_approval: true, area_manager: true, override_approval: true, supervisor_qc: true, cs_quote: true, supervisor_assign: true };
 
 // Optional steps in the cycle (all on by default): switched off, the step is skipped
 export function WorkflowPanel({ locale, workflow }: { locale: Locale; workflow: Workflow }) {

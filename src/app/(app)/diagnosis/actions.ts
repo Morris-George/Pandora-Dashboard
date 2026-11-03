@@ -32,7 +32,7 @@ const QuoteLine = z.object({ desc: z.string().trim().min(1).max(120), qty: z.num
 const Part = z.object({ code: z.string().trim().min(1).max(60), qty: z.number().positive().max(999) });
 
 export async function startDiagnosis(ticketId: string, technicianId: string): Promise<Result> {
-  await requireRole("supervisor", "hq");
+  await requireRole("supervisor", "hq", "technician"); // technician: only themselves, when assignment is off (checked in the RPC)
   const supabase = await createClient();
   const { error } = await supabase.rpc("start_diagnosis", { p_ticket: id.parse(ticketId), p_technician: id.parse(technicianId) });
   if (error) return { error: errorKey(error.message) };

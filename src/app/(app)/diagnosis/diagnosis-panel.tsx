@@ -22,8 +22,8 @@ const ghost = "rounded-lg border border-stone-900 px-4 py-2 text-sm disabled:opa
 const danger = "rounded-lg border border-red-800 text-red-800 px-4 py-2 text-sm disabled:opacity-40";
 const VAT = 0.14;
 
-export function DiagnosisPanel({ locale, role, jobs, technicians, costs, categoryCosts }: {
-  locale: Locale; role: AppRole; jobs: Job[]; technicians: { id: string; name: string }[]; costs: Record<string, { name: string; price: number }[]>; categoryCosts: Record<string, { name: string; price: number }>;
+export function DiagnosisPanel({ locale, role, jobs, technicians, costs, categoryCosts, selfAssign = false }: {
+  locale: Locale; role: AppRole; jobs: Job[]; selfAssign?: boolean; technicians: { id: string; name: string }[]; costs: Record<string, { name: string; price: number }[]>; categoryCosts: Record<string, { name: string; price: number }>;
 }) {
   const d = dictionaries[locale];
   const t = d.diag;
@@ -56,7 +56,7 @@ export function DiagnosisPanel({ locale, role, jobs, technicians, costs, categor
       {error && <p role="alert" className="rounded-lg bg-red-50 text-red-800 text-sm p-3">{error}</p>}
       {notice && <p role="status" className="rounded-lg bg-emerald-50 text-emerald-900 text-sm p-3">{notice}</p>}
 
-      {(sup || role === "hq") && (
+      {(sup || role === "hq" || selfAssign) && (
         <Section title={t.assignTitle} note={t.assignNote} empty={t.noneAssign} count={toAssign.length}>
           {toAssign.map((j) => <AssignRow key={j.id} {...p} j={j} technicians={technicians} />)}
         </Section>

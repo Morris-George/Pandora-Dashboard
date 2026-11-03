@@ -175,7 +175,7 @@ export async function saveMenuLabels(input: Record<string, { ar?: string; en?: s
 }
 
 // Optional dispatch steps (manager approval, area manager handover) on / off
-const STEPS = ["manager_approval", "area_manager", "override_approval", "supervisor_qc"] as const;
+const STEPS = ["manager_approval", "area_manager", "override_approval", "supervisor_qc", "cs_quote", "supervisor_assign"] as const;
 export async function setWorkflowStep(step: (typeof STEPS)[number], on: boolean): Promise<Result> {
   const me = await requireRole("admin");
   if (!STEPS.includes(step)) return { error: "invalid" };
@@ -190,6 +190,8 @@ export async function setWorkflowStep(step: (typeof STEPS)[number], on: boolean)
   revalidatePath("/admin");
   revalidatePath("/dispatch");
   revalidatePath("/diagnosis");
+  revalidatePath("/quotes");
+  revalidatePath("/", "layout");
   return {};
 }
 

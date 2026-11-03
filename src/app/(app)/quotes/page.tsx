@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
+import { loadWorkflow } from "@/lib/workflow";
 import { getI18n } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { QuotesPanel, type QuoteJob } from "./quotes-panel";
@@ -6,9 +8,11 @@ import { QuotesPanel, type QuoteJob } from "./quotes-panel";
 export const metadata = { title: "Pandora Maintenance" };
 
 export default async function QuotesPage() {
-  await requireRole("cs");
+  const me = await requireRole("cs", "associate", "manager");
   const { locale } = await getI18n();
   const supabase = await createClient();
+  // Stores use this screen only when the Customer Service step is off (Admin → Workflow)
+  if (me.role !== "cs" && !me.fullAccess && (await loadWorkflow(supabase)).cs_quote) redirect("/?denied=1");
 
   const { data: tickets } = await supabase.from("tickets")
     .select("id, ticket_no, item_name, item_code, status, customer_id, updated_at, branches(name)")

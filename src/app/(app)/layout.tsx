@@ -10,17 +10,24 @@ import { PageTitle } from "@/components/page-title";
 import { ViewAs } from "./view-as";
 import { Toaster } from "@/components/toast";
 import { createClient } from "@/lib/supabase/server";
+import { loadWorkflow } from "@/lib/workflow";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
   if (session.mustChangePassword) redirect("/change-password");
   const { t, locale } = await getI18n();
+  const supabase = await createClient();
   // Menu names renamed in Admin → Menu override the built-in ones
-  const { data: menu } = await (await createClient()).from("app_settings").select("value").eq("key", "menu_labels").maybeSingle();
+  const [{ data: menu }, wf] = await Promise.all([
+    supabase.from("app_settings").select("value").eq("key", "menu_labels").maybeSingle(),
+    loadWorkflow(supabase),
+  ]);
   const custom = (menu?.value ?? {}) as Record<string, { ar?: string; en?: string }>;
   const navLabels: Record<string, string> = { ...t.nav };
   for (const [href, v] of Object.entries(custom)) { const name = v?.[locale === "ar" ? "ar" : "en"]; if (name) navLabels[href] = name; }
-  const nav = navFor(session.role, session.fullAccess);
+  // Store roles see Quote approval only when the Customer Service step is off
+  const nav = navFor(session.role, session.fullAccess)
+    .filter((n) => !(n.href === "/quotes" && !session.fullAccess && session.role !== "cs" && wf.cs_quote));
   const scope = session.branches.length ? session.branches.map((b) => b.name).join(", ") : t.shell.allBranches;
   const initials = session.fullName.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 

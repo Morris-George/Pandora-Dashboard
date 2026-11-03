@@ -199,6 +199,8 @@ const en = {
         area_manager: { name: "Area manager handover", on: "The area manager scans every item to collect the bag and holds custody until it is received.", off: "The receiver scans the bag directly. No area manager step." },
         override_approval: { name: "Supervisor approval of warranty changes", on: "When the technician changes the store's warranty result, a supervisor approves it first.", off: "The technician's warranty decision applies at once. The reason is still recorded." },
         supervisor_qc: { name: "Supervisor quality check", on: "A finished repair goes to the supervisor for a quality check before it is returned.", off: "A finished repair goes straight to the return list. No quality check." },
+        cs_quote: { name: "Customer Service records quote answers", on: "Customer Service contacts the customer and records the approval or rejection of the quote.", off: "The store records the customer's answer (Quote approval appears in the store's menu). The customer can still answer from the tracking link." },
+        supervisor_assign: { name: "Supervisor assigns the technician", on: "The supervisor picks the technician for each ticket that reaches HQ.", off: "Technicians see tickets waiting at HQ and take them themselves." },
       },
     },
     security: {
@@ -939,6 +941,8 @@ const ar: Dict = {
         area_manager: { name: "استلام مدير المنطقة", on: "مدير المنطقة بيعمل سكان لكل قطعة وهو بيستلم، والعهدة معاه لحد ما تتسلم.", off: "المستلم بيعمل سكان للكيس على طول. من غير خطوة مدير المنطقة." },
         override_approval: { name: "موافقة المشرف على تغيير الضمان", on: "لما الفني يغير نتيجة الضمان اللي حددها الفرع، المشرف لازم يوافق الأول.", off: "قرار الفني في الضمان بيتطبق على طول، والسبب بيفضل متسجل." },
         supervisor_qc: { name: "فحص الجودة من المشرف", on: "الإصلاح بعد ما يخلص بيروح للمشرف يفحصه قبل الإرجاع.", off: "الإصلاح بعد ما يخلص بيروح لقائمة الإرجاع على طول، من غير فحص جودة." },
+        cs_quote: { name: "خدمة العملاء بتسجل رد العميل على عرض السعر", on: "خدمة العملاء بتكلم العميل وبتسجل موافقته أو رفضه لعرض السعر.", off: "الفرع بيسجل رد العميل (موافقة عروض الأسعار بتظهر في قائمة الفرع). العميل لسه يقدر يرد من رابط التتبع." },
+        supervisor_assign: { name: "المشرف بيعيّن الفني", on: "المشرف بيختار الفني لكل تيكيت يوصل المركز الرئيسي.", off: "الفنيين بيشوفوا التيكيتات اللي مستنية في المركز وبياخدوها بنفسهم." },
       },
     },
     security: {

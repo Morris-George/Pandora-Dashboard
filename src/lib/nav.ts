@@ -7,7 +7,7 @@ export const NAV: { href: string; label: string; roles: AppRole[]; ready: boolea
   { href: "/tickets", label: "Tickets", roles: ["associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin"], ready: true },
   { href: "/dispatch", label: "Dispatches & Returns", roles: ["associate", "manager", "courier", "hq", "technician", "supervisor"], ready: true },
   { href: "/diagnosis", label: "Diagnosis", roles: ["technician", "supervisor", "hq"], ready: true },
-  { href: "/quotes", label: "Quote approval", roles: ["cs"], ready: true },
+  { href: "/quotes", label: "Quote approval", roles: ["cs", "associate", "manager"], ready: true },
   { href: "/pickup", label: "Pickup", roles: ["associate", "manager"], ready: true },
   { href: "/tracking", label: "Ticket Tracking", roles: ["associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin"], ready: true },
   { href: "/reports", label: "Reports", roles: ["associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin"], ready: true },
