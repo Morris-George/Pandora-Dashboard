@@ -34,6 +34,7 @@ export function DispatchPanel({ locale, role, myBranches, packable, returnable, 
   const [busy, start] = useTransition();
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [picked, setPicked] = useState<string[]>([]); // batches ticked for approval
   const isBranch = role === "associate" || role === "manager";
 
   const run: Run = (fn, after) =>
@@ -83,16 +84,30 @@ export function DispatchPanel({ locale, role, myBranches, packable, returnable, 
       {(isBranch || role === "courier") && awaiting.length > 0 && (
         <section className={card}>
           <h2 className="text-lg font-semibold">{t.approvalTitle}</h2>
-          {awaiting.map((b) => (
-            <div key={b.id} className="border-t border-stone-100 pt-3 flex flex-wrap items-center gap-3">
-              <BatchHead t={t} b={b} />
-              <span className="flex-1" />
-              {role === "manager" && (b.mine
-                ? <span className="text-xs text-stone-500">{t.ownBatch}</span>
-                : <button disabled={busy} className={primary} onClick={() => run(() => approveBatch(b.id))}>{t.approve}</button>)}
-              <ItemList items={b.items} />
+          {awaiting.map((b) => {
+            const can = role === "manager" && !b.mine;
+            return (
+              <label key={b.id} className={`border-t border-stone-100 pt-3 flex flex-wrap items-center gap-3 ${can ? "cursor-pointer" : ""}`}>
+                {can && <input type="checkbox" className="h-5 w-5" checked={picked.includes(b.id)}
+                  onChange={(e) => setPicked(e.target.checked ? [...picked, b.id] : picked.filter((x) => x !== b.id))} />}
+                <BatchHead t={t} b={b} />
+                <span className="flex-1" />
+                {role === "manager" && b.mine && <span className="text-xs text-stone-500">{t.ownBatch}</span>}
+                <ItemList items={b.items} />
+              </label>
+            );
+          })}
+          {role === "manager" && awaiting.some((b) => !b.mine) && (
+            <div className="border-t border-stone-100 pt-3">
+              <button disabled={busy || !picked.length} className={`${primary} disabled:opacity-40`}
+                onClick={() => run(async () => {
+                  for (const id of picked) { const r = await approveBatch(id); if (r.error) return r; }
+                  return {};
+                }, () => setPicked([]))}>
+                {t.approveSelected(picked.length)}
+              </button>
             </div>
-          ))}
+          )}
         </section>
       )}
 
