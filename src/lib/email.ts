@@ -3,9 +3,21 @@ import nodemailer from "nodemailer";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Customer emails (SMS later). Status changes queue rows in email_outbox (DB trigger);
-// this sends the queue through our mail server (SMTP). Without SMTP settings the rows simply wait.
+// this sends the queue through our mail server (SMTP). Settings come from Admin → Email
+// (mail_settings, server-only); the SMTP_* environment variables are the fallback.
 
-export const emailConfigured = () => !!process.env.SMTP_HOST && !!process.env.SMTP_USER && !!process.env.SMTP_PASS && !!process.env.EMAIL_FROM;
+export type MailConfig = { host: string; port: number; user: string; pass: string; from: string; paused: boolean };
+
+export async function mailConfig(): Promise<MailConfig | null> {
+  const { data: m } = await createAdminClient().from("mail_settings").select("*").maybeSingle();
+  const host = m?.host || process.env.SMTP_HOST, user = m?.username || process.env.SMTP_USER, pass = m?.password || process.env.SMTP_PASS;
+  const fromEmail = m?.from_email || null;
+  const from = fromEmail ? `${m?.from_name || "Pandora Maintenance"} <${fromEmail}>` : process.env.EMAIL_FROM;
+  if (!host || !user || !pass || !from) return null;
+  return { host, port: Number(m?.port || process.env.SMTP_PORT || 587), user, pass, from, paused: m ? m.paused : process.env.EMAIL_PAUSED === "1" };
+}
+
+const transport = (c: MailConfig) => nodemailer.createTransport({ host: c.host, port: c.port, secure: c.port === 465, auth: { user: c.user, pass: c.pass } });
 
 const SITE = process.env.SITE_URL ?? "https://pandora-maintenance.vercel.app";
 
@@ -35,15 +47,12 @@ function render(kind: Kind, name: string, ticketNo: string, item: string, link: 
 </div></body></html>`;
 }
 
-// Super Admin check of the mail server settings: one plain email to the given address
+// Super Admin check of the mail server settings: one email to any address (works while paused)
 export async function sendTestEmail(to: string): Promise<string | null> {
-  if (!emailConfigured()) return "not configured";
-  const port = Number(process.env.SMTP_PORT ?? 587);
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST, port, secure: port === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  }).sendMail({
-    from: process.env.EMAIL_FROM, to, subject: "Pandora Maintenance — test email",
+  const c = await mailConfig();
+  if (!c) return "not configured";
+  return transport(c).sendMail({
+    from: c.from, to, subject: "Pandora Maintenance — test email",
     html: render("received", "Test", "TEST-0000", "Test item", SITE),
   }).then(() => null, (e: unknown) => String(e).slice(0, 300));
 }
@@ -52,17 +61,13 @@ export async function sendTestEmail(to: string): Promise<string | null> {
 export async function flushEmails(limit = 20): Promise<{ sent: number; failed: number }> {
   const out = { sent: 0, failed: 0 };
   const db = createAdminClient();
+  const c = await mailConfig();
   // Paused (pilot): drop queued notices so old ones are not sent later when email is switched on
-  if (process.env.EMAIL_PAUSED === "1") {
+  if (!c || c.paused) {
     await db.from("email_outbox").update({ status: "failed", last_error: "email paused" }).eq("status", "pending");
     return out;
   }
-  if (!emailConfigured()) return out;
-  const port = Number(process.env.SMTP_PORT ?? 587);
-  const smtp = nodemailer.createTransport({
-    host: process.env.SMTP_HOST, port, secure: port === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
+  const smtp = transport(c);
   const { data: rows } = await db.from("email_outbox")
     .select("id, kind, to_email, attempts, tickets(ticket_no, item_name, tracking_token, customers(full_name))")
     .eq("status", "pending").lt("attempts", 5).order("created_at").limit(limit);
@@ -71,7 +76,7 @@ export async function flushEmails(limit = 20): Promise<{ sent: number; failed: n
     if (!t) continue;
     const kind = r.kind as Kind;
     const err = await smtp.sendMail({
-      from: process.env.EMAIL_FROM, to: r.to_email, headers: { "Auto-Submitted": "auto-generated", "X-Auto-Response-Suppress": "All" }, subject: COPY[kind].subject(t.ticket_no),
+      from: c.from, to: r.to_email, headers: { "Auto-Submitted": "auto-generated", "X-Auto-Response-Suppress": "All" }, subject: COPY[kind].subject(t.ticket_no),
       html: render(kind, t.customers?.full_name ?? "", t.ticket_no, t.item_name, `${SITE}/track/${t.tracking_token}`),
     }).then(() => null, (e: unknown) => String(e).slice(0, 300));
     if (!err) {

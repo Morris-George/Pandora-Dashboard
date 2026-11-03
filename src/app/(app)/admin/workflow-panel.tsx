@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
-import { setWorkflowStep, testEmail } from "./actions";
+import { setWorkflowStep } from "./actions";
 
 export type Workflow = { manager_approval: boolean; area_manager: boolean };
 
@@ -11,7 +11,6 @@ export function WorkflowPanel({ locale, workflow }: { locale: Locale; workflow: 
   const t = dictionaries[locale].admin.workflow;
   const [busy, start] = useTransition();
   const [error, setError] = useState("");
-  const [mail, setMail] = useState("");
   const toggle = (step: keyof Workflow) => start(async () => {
     setError("");
     const r = await setWorkflowStep(step, !workflow[step]).catch(() => ({ error: "failed" }));
@@ -38,14 +37,6 @@ export function WorkflowPanel({ locale, workflow }: { locale: Locale; workflow: 
         </div>
       ))}
       {error && <p role="alert" className="text-sm text-red-800">{error}</p>}
-      <div className="flex flex-wrap items-center gap-3 border-t border-stone-100 pt-4">
-        <button disabled={busy} onClick={() => start(async () => {
-          setMail("");
-          const r = await testEmail().catch(() => ({ error: "failed" } as { error?: string; to?: string }));
-          setMail(r.error ? `${t.testFailed}: ${r.error}` : t.testSent(r.to ?? ""));
-        })} className="rounded-lg border border-stone-900 px-4 py-2 text-sm font-bold disabled:opacity-40">{t.testEmail}</button>
-        {mail && <p role="status" className="text-sm text-stone-700 break-all">{mail}</p>}
-      </div>
     </section>
   );
 }

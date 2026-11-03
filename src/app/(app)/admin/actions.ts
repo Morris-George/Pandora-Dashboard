@@ -124,12 +124,36 @@ export async function saveReceiptSettings(input: unknown): Promise<Result> {
   return {};
 }
 
-// Sends one test email to the signed-in Super Admin
-export async function testEmail(): Promise<{ error?: string; to?: string }> {
+// Mail server settings (Admin → Email). An empty password keeps the saved one; it is never read back.
+const Mail = z.object({
+  host: z.string().trim().max(200), port: z.coerce.number().int().min(1).max(65535),
+  username: z.string().trim().max(200), password: z.string().max(200),
+  fromName: z.string().trim().max(120), fromEmail: z.string().trim().toLowerCase().email().max(200).or(z.literal("")),
+  paused: z.boolean(),
+});
+export async function saveMailSettings(input: z.input<typeof Mail>): Promise<Result> {
   const me = await requireRole("admin");
+  const p = Mail.safeParse(input);
+  if (!p.success) return { error: "invalid" };
+  const d = p.data;
+  const { error } = await createAdminClient().from("mail_settings").upsert({
+    id: true, host: d.host || null, port: d.port, username: d.username || null, from_name: d.fromName || null, from_email: d.fromEmail || null,
+    paused: d.paused, updated_by: me.userId, updated_at: new Date().toISOString(), ...(d.password ? { password: d.password } : {}),
+  });
+  if (error) return { error: "failed" };
+  await audit(me.userId, "mail_settings_saved", "mail_settings", { host: d.host, port: d.port, username: d.username, from: d.fromEmail, paused: d.paused, passwordChanged: !!d.password });
+  revalidatePath("/admin");
+  return {};
+}
+
+// Sends one test email to any address (default: the signed-in Super Admin)
+export async function testEmail(to?: string): Promise<{ error?: string; to?: string }> {
+  const me = await requireRole("admin");
+  const addr = z.string().trim().email().safeParse(to || me.email);
+  if (!addr.success) return { error: "invalid email" };
   const { sendTestEmail } = await import("@/lib/email");
-  const err = await sendTestEmail(me.email);
-  return err ? { error: err } : { to: me.email };
+  const err = await sendTestEmail(addr.data);
+  return err ? { error: err } : { to: addr.data };
 }
 
 // Optional dispatch steps (manager approval, area manager handover) on / off
