@@ -151,7 +151,8 @@ export default async function TicketPage({ params, searchParams }: {
             <div><dt className="text-stone-500">{t.heldBy}</dt>
               <dd className="font-medium">{holder}{tk.held_since ? <span className="text-stone-500 font-normal"> · {new Date(tk.held_since).toLocaleString(locale === "ar" ? "ar-EG" : "en-GB", { dateStyle: "medium", timeStyle: "short" })}</span> : null}</dd></div>
           )}
-          <div><dt className="text-stone-500">{t.warranty}</dt><dd className="font-medium">{d.warranty[tk.warranty_provisional as Warranty]}</dd></div>
+          {/* Staff only: the provisional warranty is not printed on the customer's memo */}
+          <div className="no-print"><dt className="text-stone-500">{t.warranty}</dt><dd className="font-medium">{d.warranty[tk.warranty_provisional as Warranty]}</dd></div>
           {tk.fault_notes && <div className="sm:col-span-2"><dt className="text-stone-500">{t.comment}</dt><dd>{tk.fault_notes}</dd></div>}
           {tk.accessories && <div className="sm:col-span-2"><dt className="text-stone-500">{t.accessories}</dt><dd>{tk.accessories}</dd></div>}
           <div><dt className="text-stone-500">{t.agreed}</dt>
