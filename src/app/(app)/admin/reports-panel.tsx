@@ -10,7 +10,7 @@ type Level = "none" | "view" | "export";
 type Report = { key: string; financial: boolean };
 
 // Admin is left out: it never sees ticket data (SoD-4)
-const ROLES: Exclude<AppRole, "admin">[] = ["associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops"];
+const ROLES: Exclude<AppRole, "admin">[] = ["associate", "manager", "courier", "hq", "supervisor", "technician", "cs", "finance", "ops"];
 const LEVELS: Level[] = ["none", "view", "export"];
 
 export function ReportsPanel({ locale, reports, grants }: {

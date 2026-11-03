@@ -25,7 +25,7 @@ export default async function DiagnosisPage({ searchParams }: { searchParams: Pr
     .order("created_at");
   // Technicians work only on tickets assigned to them; with supervisor assignment off they also see tickets waiting to be taken
   const selfAssign = me.role === "technician" && !(await loadWorkflow(supabase)).supervisor_assign;
-  if (me.role === "technician" && !user.fullAccess) {
+  if (me.role === "technician" && !user.isAdmin) { // Super Admin sees every technician's tickets
     q = selfAssign ? q.or(`assigned_technician.eq.${me.userId},status.eq.received_at_hq`) : q.eq("assigned_technician", me.userId);
   }
   const { data: tickets } = await q;
