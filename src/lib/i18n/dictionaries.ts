@@ -191,12 +191,14 @@ const en = {
       resume: "Turn on", pause: "Pause",
     },
     workflow: {
-      title: "Workflow: dispatch steps",
+      title: "Workflow: optional steps",
       note: "Turn optional steps off when the process changes, for example when items go straight to an outside service center. Changes apply to new shipments right away.",
       on: "On", off: "Off (skipped)", turnOn: "Turn on", turnOff: "Turn off", failed: "Could not save. Try again.",
       steps: {
         manager_approval: { name: "Second branch manager approval", on: "A branch manager other than the packer approves the bag before it leaves.", off: "The bag leaves as soon as the store seals it. No approval." },
         area_manager: { name: "Area manager handover", on: "The area manager scans every item to collect the bag and holds custody until it is received.", off: "The receiver scans the bag directly. No area manager step." },
+        override_approval: { name: "Supervisor approval of warranty changes", on: "When the technician changes the store's warranty result, a supervisor approves it first.", off: "The technician's warranty decision applies at once. The reason is still recorded." },
+        supervisor_qc: { name: "Supervisor quality check", on: "A finished repair goes to the supervisor for a quality check before it is returned.", off: "A finished repair goes straight to the return list. No quality check." },
       },
     },
     security: {
@@ -929,12 +931,14 @@ const ar: Dict = {
       resume: "تشغيل", pause: "إيقاف",
     },
     workflow: {
-      title: "مسار العمل: خطوات الشحن",
+      title: "مسار العمل: الخطوات الاختيارية",
       note: "اقفل الخطوات الاختيارية لما طريقة الشغل تتغير، مثلاً لو القطع هتروح مركز صيانة خارجي على طول. التغيير بيطبق على الشحنات الجديدة فورًا.",
       on: "شغالة", off: "مقفولة (بتتخطى)", turnOn: "تشغيل", turnOff: "إيقاف", failed: "ماقدرناش نحفظ. حاول تاني.",
       steps: {
         manager_approval: { name: "موافقة مدير فرع تاني", on: "مدير فرع غير اللي جهّز الشحنة بيوافق قبل ما الكيس يخرج.", off: "الكيس بيخرج أول ما الفرع يقفله. من غير موافقة." },
         area_manager: { name: "استلام مدير المنطقة", on: "مدير المنطقة بيعمل سكان لكل قطعة وهو بيستلم، والعهدة معاه لحد ما تتسلم.", off: "المستلم بيعمل سكان للكيس على طول. من غير خطوة مدير المنطقة." },
+        override_approval: { name: "موافقة المشرف على تغيير الضمان", on: "لما الفني يغير نتيجة الضمان اللي حددها الفرع، المشرف لازم يوافق الأول.", off: "قرار الفني في الضمان بيتطبق على طول، والسبب بيفضل متسجل." },
+        supervisor_qc: { name: "فحص الجودة من المشرف", on: "الإصلاح بعد ما يخلص بيروح للمشرف يفحصه قبل الإرجاع.", off: "الإصلاح بعد ما يخلص بيروح لقائمة الإرجاع على طول، من غير فحص جودة." },
       },
     },
     security: {

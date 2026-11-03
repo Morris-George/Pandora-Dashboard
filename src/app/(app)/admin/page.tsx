@@ -6,7 +6,7 @@ import { CategoriesPanel } from "./categories-panel";
 import { ReportsPanel } from "./reports-panel";
 import { ErpPanel } from "./erp-panel";
 import { SecurityPanel } from "./security-panel";
-import { WorkflowPanel } from "./workflow-panel";
+import { WorkflowPanel, WORKFLOW_DEFAULTS } from "./workflow-panel";
 import { EmailPanel } from "./email-panel";
 import { MenuPanel, type MenuLabels } from "./menu-panel";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -73,7 +73,7 @@ export default async function AdminPage() {
         fromEmail: mail?.from_email ?? "support@pandoraeg.com", paused: mail ? mail.paused : process.env.EMAIL_PAUSED === "1",
         hasPassword: mail?.hasPassword || !!process.env.SMTP_PASS,
       }} />
-      <WorkflowPanel locale={locale} workflow={{ manager_approval: true, area_manager: true, ...(wf?.value as object | null) }} />
+      <WorkflowPanel locale={locale} workflow={{ ...WORKFLOW_DEFAULTS, ...(wf?.value as object | null) }} />
       <SecurityPanel locale={locale} twoStep={twoStep?.value !== false} />
       <ErpPanel locale={locale} configured={erpConfigured()} excluded={excl ?? []}
         lastRun={runs?.[0] ? { at: runs[0].started_at, trigger: runs[0].trigger, ok: runs[0].ok, summary: runs[0].summary } : null} />

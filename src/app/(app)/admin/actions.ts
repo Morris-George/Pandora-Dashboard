@@ -173,17 +173,19 @@ export async function saveMenuLabels(input: Record<string, { ar?: string; en?: s
 }
 
 // Optional dispatch steps (manager approval, area manager handover) on / off
-export async function setWorkflowStep(step: "manager_approval" | "area_manager", on: boolean): Promise<Result> {
+const STEPS = ["manager_approval", "area_manager", "override_approval", "supervisor_qc"] as const;
+export async function setWorkflowStep(step: (typeof STEPS)[number], on: boolean): Promise<Result> {
   const me = await requireRole("admin");
-  if (step !== "manager_approval" && step !== "area_manager") return { error: "invalid" };
+  if (!STEPS.includes(step)) return { error: "invalid" };
   const supabase = await createClient();
   const { data: cur } = await supabase.from("app_settings").select("value").eq("key", "workflow").maybeSingle();
-  const value = { manager_approval: true, area_manager: true, ...(cur?.value as object | null), [step]: on };
+  const value = { ...Object.fromEntries(STEPS.map((k) => [k, true])), ...(cur?.value as object | null), [step]: on };
   const { error } = await supabase.from("app_settings").upsert({ key: "workflow", value, updated_by: me.userId, updated_at: new Date().toISOString() });
   if (error) return { error: "failed" };
   await audit(me.userId, `workflow_${step}_${on ? "on" : "off"}`, "workflow", value);
   revalidatePath("/admin");
   revalidatePath("/dispatch");
+  revalidatePath("/diagnosis");
   return {};
 }
 

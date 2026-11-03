@@ -4,9 +4,10 @@ import { useState, useTransition } from "react";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import { setWorkflowStep } from "./actions";
 
-export type Workflow = { manager_approval: boolean; area_manager: boolean };
+export type Workflow = { manager_approval: boolean; area_manager: boolean; override_approval: boolean; supervisor_qc: boolean };
+export const WORKFLOW_DEFAULTS: Workflow = { manager_approval: true, area_manager: true, override_approval: true, supervisor_qc: true };
 
-// Optional dispatch steps: second-manager approval and the area manager handover (both on by default)
+// Optional steps in the cycle (all on by default): switched off, the step is skipped
 export function WorkflowPanel({ locale, workflow }: { locale: Locale; workflow: Workflow }) {
   const t = dictionaries[locale].admin.workflow;
   const [busy, start] = useTransition();
