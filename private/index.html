@@ -258,9 +258,26 @@ window.PPic=(function(){
     return tried.get(b);
   }
   function show(btn,u){if(!u||btn.querySelector('img'))return;const im=new Image();im.alt='';im.referrerPolicy='no-referrer';im.onload=()=>{btn.textContent='';btn.appendChild(im)};im.src=https(u)}
+  /* Preloading: the full-size picture is found, downloaded and decoded in the background (for thumbnails on screen, or as soon as one is touched), so opening it shows the sharp picture at once. */
+  const R=new Map(),L=new Map(),F=new Map();
+  function loadBig(sku){
+    const b=base(sku);if(!b||b==='—')return Promise.resolve('');
+    if(R.has(b))return Promise.resolve(R.get(b).src);if(L.has(b))return L.get(b);
+    if(F.has(b)&&Date.now()-F.get(b)<60000)return Promise.resolve('');
+    const p=lookup(sku).then(u=>u?new Promise(res=>{const im=new Image();im.referrerPolicy='no-referrer';im.onload=()=>{const d=()=>{R.set(b,{src:im.src,u});res(im.src)};im.decode?im.decode().then(d,d):d()};im.onerror=()=>res('');im.src=big(u)}):'');
+    L.set(b,p);p.then(s=>{L.delete(b);if(!s)F.set(b,Date.now())});return p;
+  }
+  let wio=null;const wq=[];let wbusy=0;
+  function wpump(){while(wbusy<3&&wq.length){const s=wq.shift();wbusy++;loadBig(s).finally(()=>{wbusy--;wpump()})}}
+  function watch(root){
+    if(!('IntersectionObserver' in window))return;
+    if(!wio)wio=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;wio.unobserve(e.target);wq.push(e.target.dataset.sku);wpump()}),{rootMargin:'200px'});
+    (root||document).querySelectorAll('.pthumb:not([data-w])').forEach(b=>{b.dataset.w='1';wio.observe(b)});
+  }
+  ['pointerover','pointerdown','touchstart'].forEach(ev=>document.addEventListener(ev,e=>{const t=e.target&&e.target.closest&&e.target.closest('.pthumb');if(t)loadBig(t.dataset.sku)},{capture:true,passive:true}));
   let io=null;
   function fill(root){
-    loadPack();
+    loadPack();watch(root);
     const btns=(root||document).querySelectorAll('.pthumb:not(:has(img))');
     btns.forEach(b=>{
       const bi=builtin(b.dataset.sku);if(bi){show(b,bi);return}
@@ -277,16 +294,17 @@ window.PPic=(function(){
     document.getElementById('pName').textContent=btn.dataset.name||'';
     document.getElementById('pInfo').textContent=[btn.dataset.sku,btn.dataset.info].filter(Boolean).join(' · ');
     const mine=btn.querySelector('img'),token=btn;open.t=token;
+    const sharp=(src)=>{const im=new Image();im.alt=btn.dataset.name||'';im.referrerPolicy='no-referrer';im.src=src;return im};
+    const hit=R.get(base(btn.dataset.sku));
     box.textContent='';
-    if(mine){const im=new Image();im.alt=btn.dataset.name||'';im.src=mine.src;box.appendChild(im)}else box.textContent='Looking for the picture…';
-    m.hidden=false;
-    /* the small icon picture is only 150px: fetch the full-size one from the site and swap it in when it has loaded */
-    const u=await lookup(btn.dataset.sku);if(open.t!==token)return;
-    if(!u){if(!mine)box.textContent='No picture for this item';return}
-    const im=new Image();im.alt=btn.dataset.name||'';im.referrerPolicy='no-referrer';
-    im.onload=()=>{if(open.t!==token)return;box.textContent='';box.appendChild(im);show(btn,u)};
-    im.onerror=()=>{if(!mine&&open.t===token)box.textContent='No picture for this item'};
-    im.src=big(u);
+    /* already preloaded: show the sharp picture immediately */
+    if(hit){box.appendChild(sharp(hit.src));m.hidden=false;show(btn,hit.u);return}
+    /* not ready yet: never show the small blurry picture first; wait for the sharp one (small one only as a fallback after 1.5 s or if there is no sharp one) */
+    box.textContent='Loading picture…';m.hidden=false;
+    const fb=setTimeout(()=>{if(open.t===token&&mine&&!box.querySelector('img')){box.textContent='';const im=new Image();im.alt=btn.dataset.name||'';im.src=mine.src;box.appendChild(im)}},1500);
+    const s=await loadBig(btn.dataset.sku);clearTimeout(fb);if(open.t!==token)return;
+    if(!s){if(box.querySelector('img'))return;if(mine){box.textContent='';const im=new Image();im.alt=btn.dataset.name||'';im.src=mine.src;box.appendChild(im)}else box.textContent='No picture for this item';return}
+    box.textContent='';box.appendChild(sharp(s));const r=R.get(base(btn.dataset.sku));if(r)show(btn,r.u);
   }
   function close(){open.t=null;modal().hidden=true}
   document.addEventListener('click',e=>{const b=e.target.closest('.pthumb');if(b){e.preventDefault();open(b);return}if(e.target.id==='pModal'||e.target.id==='pClose')close()});

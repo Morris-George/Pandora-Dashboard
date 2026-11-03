@@ -83,16 +83,33 @@ table.hm{width:auto}table.hm th,table.hm td{text-align:center;padding:9px 12px;b
 <script src="/stockcount-pics-1.js" async></script><script src="/stockcount-pics-2.js" async></script><script src="/stockcount-pics-3.js" async></script><script src="/stockcount-pics-4.js" async></script>
 <script>
 /* Sharp pictures: the small built-in picture shows first, the full-size one (from pandoraeg.com, found by our server at /api/pic) replaces it whenever a picture is shown big. */
-window.HD=(function(){const KEY='pandora-hd-v1',M=new Map();let c={};try{c=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+window.HD=(function(){const KEY='pandora-hd-v1',M=new Map(),L=new Map(),R=new Map(),F=new Map();let c={};try{c=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
 const base=s=>String(s||'').trim().toUpperCase().split('-')[0];
 const big=u=>{try{const x=new URL(String(u).replace(/^http:/,'https:'),location.href);x.searchParams.set('width','900');return x.href}catch(e){return u}};
 function url(sku){const b=base(sku);if(!b||b[0]==='?')return Promise.resolve('');if(c[b])return Promise.resolve(c[b]);
-  if(!M.has(b))M.set(b,fetch('/api/pic?sku='+encodeURIComponent(b),{credentials:'same-origin'}).then(r=>r.json()).then(j=>{const u=j&&j.url||'';if(u){c[b]=u;try{localStorage.setItem(KEY,JSON.stringify(c))}catch(e){}}return u}).catch(()=>''));return M.get(b)}
-function up(img,sku){if(!img||!sku)return;const t=(img._hd=(img._hd||0)+1);url(sku).then(u=>{if(!u||img._hd!==t)return;const im=new Image();im.referrerPolicy='no-referrer';im.onload=()=>{if(img._hd===t)img.src=im.src};im.src=big(u)})}
+  if(!M.has(b)){const pr=fetch('/api/pic?sku='+encodeURIComponent(b),{credentials:'same-origin'}).then(r=>r.json()).then(j=>{const u=j&&j.url||'';if(u){c[b]=u;try{localStorage.setItem(KEY,JSON.stringify(c))}catch(e){}}return u}).catch(()=>'');M.set(b,pr);pr.then(u=>{if(!u)M.delete(b)})}return M.get(b)}
+/* load(): finds the full-size picture AND downloads + decodes it ahead of time, so showing it later is instant (no small blurry picture first) */
+function load(sku){const b=base(sku);if(!b||b[0]==='?')return Promise.resolve('');if(R.has(b))return Promise.resolve(R.get(b));if(L.has(b))return L.get(b);
+  if(F.has(b)&&Date.now()-F.get(b)<60000)return Promise.resolve('');
+  const p=url(sku).then(u=>u?new Promise(res=>{const im=new Image();im.referrerPolicy='no-referrer';im.onload=()=>{const d=()=>{R.set(b,im.src);res(im.src)};im.decode?im.decode().then(d,d):d()};im.onerror=()=>res('');im.src=big(u)}):'');
+  L.set(b,p);p.then(s=>{L.delete(b);if(!s)F.set(b,Date.now())});return p}
+/* up(): swaps the small picture for the sharp one. hold=true keeps the small one hidden until the sharp one is ready (max 1.5 s), so the blurry picture is never seen */
+function up(img,sku,hold){if(!img||!sku)return;const t=(img._hd=(img._hd||0)+1),b=base(sku),r=R.get(b);
+  if(r){img.src=r;img.style.opacity='';return}
+  if(hold&&b&&b[0]!=='?'){img.style.transition='opacity .12s';img.style.opacity='0';setTimeout(()=>{if(img._hd===t)img.style.opacity=''},1500)}
+  load(sku).then(s=>{if(img._hd!==t)return;if(s)img.src=s;img.style.opacity=''})}
 const dvOf=img=>{const e=img.closest&&img.closest('[data-hd]');return e?e.dataset.hd:''};
-let q=0;function scan(){q=0;document.querySelectorAll('.ovp img,#hitPic img').forEach(i=>{if(i._hdSeen)return;i._hdSeen=1;up(i,dvOf(i))})}
+/* warm-up: pictures that are on screen (or about to be) are fetched in the background, 3 at a time; touching one fetches it straight away */
+const WQ=[];let wbusy=0,wio=null;
+function wpump(){while(wbusy<3&&WQ.length){const s=WQ.shift();wbusy++;load(s).finally(()=>{wbusy--;wpump()})}}
+const SEL='.img img,.ovp img,#hitPic img,#sidePic img';
+let q=0;function scan(){q=0;
+  document.querySelectorAll('.ovp img,#hitPic img').forEach(i=>{if(i._hdSeen)return;i._hdSeen=1;up(i,dvOf(i),true)});
+  if('IntersectionObserver' in window){if(!wio)wio=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;wio.unobserve(e.target);const d=dvOf(e.target);if(d){WQ.push(d);wpump()}}),{rootMargin:'200px'});
+    document.querySelectorAll('.img img,#sidePic img').forEach(i=>{if(i._hdW)return;i._hdW=1;wio.observe(i)})}}
 try{new MutationObserver(()=>{if(!q)q=requestAnimationFrame(scan)}).observe(document.documentElement,{childList:true,subtree:true})}catch(e){}
-return {up,url,big,dvOf}})();
+['pointerover','pointerdown','touchstart'].forEach(ev=>document.addEventListener(ev,e=>{const i=e.target&&e.target.closest&&e.target.closest(SEL);if(i){const d=dvOf(i);if(d)load(d)}},{capture:true,passive:true}));
+return {up,url,big,dvOf,load}})();
 </script>
 
 <script>
@@ -340,6 +357,6 @@ $('xlsx').onclick=()=>{if(!ITEMS.length)return;const wb=XLSX.utils.book_new(),ha
 load();
 </script>
 <style>#zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out}#zoom img{width:min(380px,80vw);height:min(380px,80vw);object-fit:contain;padding:10px;border-radius:18px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.35)}.img img,#hitPic img{cursor:zoom-in}</style>
-<script>document.addEventListener("click",e=>{const z=document.getElementById("zoom");if(z){z.remove();return}const im=e.target.closest&&e.target.closest(".img img,#hitPic img");if(!im)return;e.stopPropagation();e.preventDefault();const d=document.createElement("div");d.id="zoom";d.innerHTML="<img alt=\"\">";d.firstChild.src=im.src;HD.up(d.firstChild,HD.dvOf(im));document.body.appendChild(d)},true);document.addEventListener("keydown",e=>{if(e.key==="Escape"){const z=document.getElementById("zoom");if(z)z.remove()}});</script>
+<script>document.addEventListener("click",e=>{const z=document.getElementById("zoom");if(z){z.remove();return}const im=e.target.closest&&e.target.closest(".img img,#hitPic img");if(!im)return;e.stopPropagation();e.preventDefault();const d=document.createElement("div");d.id="zoom";d.innerHTML="<img alt=\"\">";d.firstChild.src=im.src;HD.up(d.firstChild,HD.dvOf(im),true);document.body.appendChild(d)},true);document.addEventListener("keydown",e=>{if(e.key==="Escape"){const z=document.getElementById("zoom");if(z)z.remove()}});</script>
 </body>
 </html>
