@@ -204,10 +204,12 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
       <ol className="grid grid-cols-4 gap-2" aria-label={t.stepsLabel}>
         {STEPS.map((label, n) => {
           const done = !stepMissing[n].length;
+          // A later step opens only when every step before it is complete
+          const locked = n > step && stepMissing.slice(0, n).some((m) => m.length);
           return (
             <li key={n}>
-              <button type="button" onClick={() => setStep(n)} aria-current={step === n ? "step" : undefined}
-                className={`w-full rounded-xl border px-2 py-2.5 text-xs sm:text-sm font-semibold flex flex-col sm:flex-row items-center justify-center gap-1.5 transition
+              <button type="button" onClick={() => setStep(n)} disabled={locked} aria-current={step === n ? "step" : undefined}
+                className={`w-full rounded-xl border px-2 py-2.5 text-xs sm:text-sm font-semibold flex flex-col sm:flex-row items-center justify-center gap-1.5 transition disabled:opacity-50 disabled:cursor-not-allowed
                   ${step === n ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--on-accent)] shadow-sm" : done ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-stone-200 bg-white text-stone-600"}`}>
                 <span className={`grid place-items-center w-6 h-6 rounded-full text-xs ${step === n ? "bg-white/30" : done ? "bg-emerald-600 text-white" : "bg-stone-100"}`}>{done && step !== n ? "✓" : n + 1}</span>
                 {label}
@@ -376,8 +378,8 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
           <button type="button" onClick={() => setStep(step - 1)} className="rounded-lg border border-stone-900 px-4 py-3 font-semibold">{t.back}</button>
         )}
         {step < 3 ? (
-          <button type="button" onClick={() => { setStep(step + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-5 py-3 font-semibold">{t.next}</button>
+          <button type="button" disabled={stepMissing[step].length > 0} onClick={() => { setStep(step + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-5 py-3 font-semibold disabled:opacity-40">{t.next}</button>
         ) : (
           <button type="button" onClick={submit} disabled={missing.length > 0 || !!busy}
             className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-5 py-3 font-semibold disabled:opacity-40">
