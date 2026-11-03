@@ -188,20 +188,20 @@ function builtPic(dv) {
   return BUILT.get(dv) || '';
 }
 
-// the picture of one item: the built-in picture first, then pandoraeg.com (same source as the other reports), else the picture saved on the item in ERP
+// the picture of one item: the full-size pandoraeg.com picture (same as the other reports), then the built-in small one (same source as the other reports), else the picture saved on the item in ERP
 async function sendPic(res, dv, code) {
   if (!/^[A-Z0-9_]{4,20}$/.test(dv)) return res.status(404).end();
-  const b64 = builtPic(dv);
-  if (b64) { res.setHeader('Content-Type', 'image/jpeg'); res.setHeader('Cache-Control', 'private, max-age=604800'); res.setHeader('X-Content-Type-Options', 'nosniff'); return res.status(200).end(Buffer.from(b64, 'base64')); }
   try {
     const u = await require('./_pic').find(dv);
     if (u) {
-      const x = new URL(u); x.searchParams.set('width', '600');
+      const x = new URL(u); x.searchParams.set('width', '900'); // full size, like the other reports
       res.setHeader('Cache-Control', 'private, max-age=86400');
       res.setHeader('Location', x.toString());
       return res.status(302).end();
     }
-  } catch (_) { /* try ERP */ }
+  } catch (_) { /* try the built-in picture */ }
+  const b64 = builtPic(dv); // small, only when the full-size picture cannot be found
+  if (b64) { res.setHeader('Content-Type', 'image/jpeg'); res.setHeader('Cache-Control', 'private, max-age=3600'); res.setHeader('X-Content-Type-Options', 'nosniff'); return res.status(200).end(Buffer.from(b64, 'base64')); }
   try {
     const base = String(process.env.ERP_URL || '').replace(/\/+$/, '');
     const known = (await itemInfo([String(code || '').trim()]).catch(() => ({})))[String(code || '').trim()];
