@@ -130,7 +130,7 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 
 <div id="camBlock">
 <div class="cam" id="cam">
-  <video id="video" playsinline muted></video>
+  <video id="video" playsinline muted autoplay></video>
   <div class="reticle"></div>
   <div class="state" id="state">Camera off</div>
   <div class="cam-msg" id="camMsg">Tap “Start camera” and point at a barcode.</div>
@@ -454,7 +454,7 @@ function camLoop(g){
   }
   cam.busy=true;var p;
   if(detector){
-    p=detector.detect(v).then(function(r){
+    p=within(detector.detect(v),1500,[]).then(function(r){
       if(!r||!r.length)return '';
       var vals=r.map(function(x){return String(x.rawValue||'').trim()}).filter(Boolean);
       return vals.find(isKnown)||vals.find(gtinOk)||'';
@@ -470,21 +470,23 @@ function camLoop(g){
   }
   p.catch(function(){return ''}).then(function(raw){cam.busy=false;if(raw)camHit(String(raw).trim());camNext(g)});
 }
+/* a step that never answers (some phones never resolve play() / autofocus / format checks) must not freeze the start */
+function within(p,ms,dflt){return new Promise(function(res){var done=false,t=setTimeout(function(){if(!done){done=true;res(dflt)}},ms);Promise.resolve(p).then(function(v){if(!done){done=true;clearTimeout(t);res(v)}},function(){if(!done){done=true;clearTimeout(t);res(dflt)}})})}
 function startCam(){
   stopCam();
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){camMsg.hidden=false;camMsg.textContent='Camera needs a secure (https) page. Open this file from an https link.';return}
   camMsg.hidden=true;stateEl.textContent='Starting…';
   navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:720}},audio:false}).then(function(s){
-    stream=s;video.srcObject=s;return video.play().catch(function(){});
+    stream=s;video.srcObject=s;return within(video.play(),2500);
   }).then(function(){
     cam.track=stream.getVideoTracks()[0];
     var caps={};try{caps=cam.track.getCapabilities?cam.track.getCapabilities():{}}catch(e){}
     $('torchBtn').hidden=!caps.torch;cam.torch=false;
-    var af=cam.track.applyConstraints?cam.track.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(function(){}):Promise.resolve();
+    var af=cam.track.applyConstraints?within(cam.track.applyConstraints({advanced:[{focusMode:'continuous'}]}),1500):Promise.resolve();
     return af.then(function(){
       detector=null;
       if('BarcodeDetector' in window){
-        return BarcodeDetector.getSupportedFormats().then(function(have){var f=WANT.filter(function(x){return have.indexOf(x)>-1});if(f.length)detector=new BarcodeDetector({formats:f})}).catch(function(){detector=null});
+        return within(BarcodeDetector.getSupportedFormats(),1500,null).then(function(have){try{var f=have?WANT.filter(function(x){return have.indexOf(x)>-1}):WANT;if(f.length)detector=new BarcodeDetector({formats:f})}catch(e){detector=null}});
       }
     });
   }).then(function(){
