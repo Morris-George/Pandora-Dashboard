@@ -264,7 +264,15 @@ function storeScreen(name){const s=trStats(TRR).find(x=>x.name===name);if(!s)ret
   return {title:ic('store')+' '+esc(name),sub:`Gives <b>${fmt(s.out)}</b> pcs · can take <b>${fmt(s.inn)}</b> pcs`,
    body:(best?`<div class="tip">${ic('bulb')} Send most of ${esc(name)}'s slow pieces to <b>${esc(best.to)}</b>: it sold these same SKUs, ${fmt(best.qty)} pcs fit there.</div>`:'')+
    `<div class="g2"><div><h3>${ic('up')} Sends to</h3>${lst(to,'to','var(--accent)')}</div><div><h3>${ic('down')} Receives from</h3>${lst(fr,'from','#8FB8DE')}</div></div>`+
-   (s.items.size?`<h3>${ic('star')} Best items to move out (${s.items.size})</h3>${topItems(s,12).map(o=>itemRow(o.i,o.qty,'to '+o.dests.map(d=>esc(d.to)).join(', '))).join('')}`:'')}}
+   (s.items.size?catItems(s):'')}}
+/* "Best items to move out", by category: one chip per category (pieces to move), the list shows the chosen one */
+let SC={store:'',cat:'All',all:false};
+function catItems(s){if(SC.store!==s.name)SC={store:s.name,cat:'All',all:false};
+  const all=[...s.items.values()].sort((a,b)=>b.qty-a.qty),cm=new Map();all.forEach(o=>{const c=o.i.cat||'Other',x=cm.get(c)||{c,qty:0,n:0};x.qty+=o.qty;x.n++;cm.set(c,x)});
+  const cats=[...cm.values()].sort((a,b)=>b.qty-a.qty);if(SC.cat!=='All'&&!cm.has(SC.cat))SC.cat='All';
+  const l=SC.cat==='All'?all:all.filter(o=>(o.i.cat||'Other')===SC.cat),shown=SC.all?l:l.slice(0,12);
+  return `<h3>${ic('star')} Best items to move out (${l.length})</h3><div class="chips" style="margin-bottom:8px"><span class="chip ${SC.cat==='All'?'on':''}" data-scat="All">All <b>${fmt(all.reduce((a,o)=>a+o.qty,0))}</b></span>${cats.map(x=>`<span class="chip ${SC.cat===x.c?'on':''}" data-scat="${esc(x.c)}">${esc(x.c)} <b>${fmt(x.qty)}</b> <span class="note">${x.n} SKUs</span></span>`).join('')}</div>`+
+   shown.map(o=>itemRow(o.i,o.qty,'to '+o.dests.map(d=>esc(d.to)).join(', '))).join('')+(l.length>shown.length?`<button class="btn sm" style="margin-top:8px" data-sall>Show all ${fmt(l.length)}</button>`:'')}
 function routeScreen(r){const l=[...r.l].sort((a,b)=>b.qty-a.qty);
   return {title:`${esc(r.from)} ${ic('arrow')} ${esc(r.to)}`,sub:`<b>${fmt(r.qty)}</b> pieces · ${skuN(r)} SKUs. Best sellers at ${esc(r.to)} first.`,
    dl:()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(l.map(t=>({'SKU':t.i.sku,'Item':t.i.name,'Pcs':t.qty,['Sold at '+r.to+' ('+J.months+' months)']:t.soldTo}))),'Route');XLSX.writeFile(wb,`Transfer ${r.from} to ${r.to}.xlsx`)},
@@ -279,6 +287,8 @@ document.addEventListener('click',e=>{const t=e.target,M=$('trM');
   if(t.closest('[data-mclose]')||t===M){closeM();return}
   if(t.closest('[data-mback]')){backM();return}
   if(t.closest('[data-mdl]')){const f=$('trMB')._dl;f&&f();return}
+  const sc0=t.closest('[data-scat]');if(sc0){SC.cat=sc0.dataset.scat;SC.all=false;renderM();return}
+  if(t.closest('[data-sall]')){SC.all=true;renderM();return}
   const v=t.closest('[data-trv]');if(v){TRV=v.dataset.trv;try{localStorage.setItem('sl.trv',TRV)}catch(_){}drawTransfers(TRR);return}
   const inM=t.closest('#trM'),sc=t.closest('#trIn,#tr,#trM');if(!sc)return;
   const it=t.closest('[data-item]');if(it){const k=it.dataset.item;openM(()=>itemScreen(k));return}
