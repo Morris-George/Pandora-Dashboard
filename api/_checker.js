@@ -107,6 +107,9 @@ function build(st, day, files, me, mgr) {
   return { store: st, day, total, skus: items.size, people, items: [...items.values()].sort((a, b) => b.last - a.last).slice(0, 400), recent: recent.slice(0, 40), me: me || '' };
 }
 
+// ERP item names read "583050C00-18-5700303037288": the SKU, then the barcode (same reading as the Slow Moving report)
+const skuFromName = v => { const m = /^\s*([0-9]{5,6}[A-Z0-9]{0,6}(?:-[A-Z0-9]{1,4})?)(?=-\d{8,14}\b|\s|$)/i.exec(String(v || '')); return m ? m[1].toUpperCase() : ''; };
+const eanFromName = v => { const m = /-(\d{8,14})\b/.exec(String(v || '')); return m ? m[1] : ''; };
 // ---- barcode -> SKU + name, from the ERP stock list (item code = barcode, item name = SKU, description = product name) ----
 let IDX = null, IDX_AT = 0, IDX_P = null;
 async function buildIndex() {
@@ -118,7 +121,11 @@ async function buildIndex() {
     if (!(c && c.rows && c.rows.length)) { const ix = (await store.getJSON('stock/index.json').catch(() => null)) || []; if (ix.length) c = await store.getJSON(ix[ix.length - 1]).catch(() => null); }
     let rows = c && c.rows;
     if (!(rows && rows.length)) { const s = await store.getJSON('stock/current.json').catch(() => null); rows = s && s.rows; }
-    for (const r of rows || []) { const sku = String(r[1] || '').trim(), name = String(r[9] || '').trim(); add(r[0], sku, name, r[0]); if (sku) add(sku, sku, name, r[0]); }
+    for (const r of rows || []) {
+      const nm = String(r[1] || '').trim(), name = String(r[9] || '').trim();
+      const sku = skuFromName(nm) || skuFromName(r[0]) || nm, ean = eanFromName(nm) || (/^\d{8,14}$/.test(String(r[0]).trim()) ? String(r[0]).trim() : '');
+      add(r[0], sku, name, r[0]); add(nm, sku, name, r[0]); add(sku, sku, name, r[0]); if (ean) add(ean, sku, name, r[0]);
+    }
     const erp = await store.getJSON('rf/erp.json').catch(() => null); // ERP item code -> SKU, saved by the Refill Order sync
     if (erp && erp.code2sku) for (const k of Object.keys(erp.code2sku)) add(k, erp.code2sku[k], '');
   } catch (_) { /* names and pictures are a bonus: scanning still works without them */ }
@@ -137,8 +144,8 @@ async function erpLookup(code) {
   if (!l.length) l = await get([['item_name', 'like', '%-' + code]]);
   if (!l.length) return null;
   const x = l[0], nm = String(x.item_name || '').trim(), dc = String(x.description || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
-  const sku = (SKU_RX.exec(nm) || SKU_RX.exec(x.name) || SKU_RX.exec(dc) || DESIGN_RX.exec(nm) || [''])[0].toUpperCase();
-  return { sku, name: dc || (nm !== sku ? nm : ''), ic: String(x.name || '') };
+  const sku = skuFromName(nm) || skuFromName(x.name) || (SKU_RX.exec(dc) || [''])[0].toUpperCase();
+  return { sku, name: dc || (nm !== sku && nm !== (sku + '-' + code) ? nm : ''), ic: String(x.name || '') };
 }
 async function itemInfo(codes) {
   if (!IDX || Date.now() - IDX_AT > 10 * 60 * 1000) {
