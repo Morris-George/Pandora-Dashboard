@@ -185,12 +185,16 @@ function PackCard({ t, title, note, empty, nested, busy, run, branches, items, o
   branches: { id: string; name: string }[]; items: ItemRow[];
   onCreate: (branchId: string, seal: string, ids: string[]) => Promise<{ error?: string; batchNo?: string }>;
 }) {
-  const branchId = branches[0]?.id ?? "";
   const [picked, setPicked] = useState<string[]>([]);
   const [seal, setSeal] = useState("");
-  const shown = items.filter((i) => i.branchId === branchId);
+  // "All stores": every store's items are listed; one bag holds one store, taken from the ticked items
+  const many = branches.length > 1;
+  const shown = items.filter((i) => branches.some((b) => b.id === i.branchId));
   const toggle = (id: string) => setPicked(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
   const chosen = picked.filter((id) => shown.some((i) => i.id === id));
+  const chosenStores = [...new Set(shown.filter((i) => chosen.includes(i.id)).map((i) => i.branchId))];
+  const branchId = chosenStores.length === 1 ? chosenStores[0] : branches[0]?.id ?? "";
+  const mixed = chosenStores.length > 1;
 
   return (
     <section className={nested ? "border-t border-stone-200 pt-4 flex flex-col gap-3" : card}>
@@ -198,8 +202,7 @@ function PackCard({ t, title, note, empty, nested, busy, run, branches, items, o
         <h2 className={nested ? "font-semibold" : "text-lg font-semibold"}>{title}</h2>
         {note && <p className="text-sm text-stone-600 mt-1">{note}</p>}
       </div>
-      {/* The store comes from the Store filter at the top; with "All stores" the user picks one there */}
-      {branches.length > 1 ? <p className="text-sm text-stone-600">{t.pickStore}</p> : !shown.length ? <p className="text-sm text-stone-600">{empty}</p> : (
+      {!shown.length ? <p className="text-sm text-stone-600">{empty}</p> : (
         <>
           <div className="flex flex-col">
             {shown.map((i) => (
@@ -207,6 +210,7 @@ function PackCard({ t, title, note, empty, nested, busy, run, branches, items, o
                 <input type="checkbox" checked={picked.includes(i.id)} onChange={() => toggle(i.id)} />
                 <strong dir="ltr">{i.ticketNo}</strong>
                 <span className="text-stone-700">{i.itemName}</span>
+                {many && <span className="text-stone-500">· {i.branchName}</span>}
               </label>
             ))}
           </div>
@@ -214,7 +218,8 @@ function PackCard({ t, title, note, empty, nested, busy, run, branches, items, o
             <label className="flex flex-col gap-1.5 text-sm font-medium">{t.seal}
               <input value={seal} onChange={(e) => setSeal(e.target.value)} dir="ltr" className={`${input} w-48`} />
             </label>
-            <button disabled={busy || !chosen.length || !seal.trim()} className={primary}
+            {mixed && <p className="text-sm text-amber-800 basis-full">{t.oneStore}</p>}
+            <button disabled={busy || !chosen.length || !seal.trim() || mixed} className={primary}
               onClick={() => run(() => onCreate(branchId, seal, chosen), () => { setPicked([]); setSeal(""); })}>
               {t.create(chosen.length)}
             </button>
