@@ -11,6 +11,7 @@ export type Job = {
   fault: string; faultNotes: string | null; provisional: string; noInvoice: boolean; purchaseDate: string | null;
   status: string; technician: string | null;
   overridePending: boolean; overrideMine: boolean; overrideReason: string | null; decision: string | null; finding: string | null;
+  qcNote: string | null; // latest QC rejection note, while the item is back in repair
 };
 type D = (typeof dictionaries)["en"];
 type Run = (fn: () => Promise<{ error?: string; outcome?: string }>, after?: () => void) => void;
@@ -140,6 +141,9 @@ function JobHead({ d, j }: { d: D; j: Job }) {
         <span>{cat.provisional}: {d.warranty[j.provisional as keyof D["warranty"]]}{j.noInvoice ? ` · ${cat.noInvoice}` : ""}</span>
         {j.technician && <span>{d.roles.technician}: {j.technician}</span>}
       </div>
+      {j.qcNote && j.status === "in_repair" && (
+        <div className="mt-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm text-amber-900">{d.diag.qcBack}: {j.qcNote}</div>
+      )}
     </div>
   );
 }

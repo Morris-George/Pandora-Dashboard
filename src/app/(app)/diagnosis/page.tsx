@@ -35,6 +35,13 @@ export default async function DiagnosisPage({ searchParams }: { searchParams: Pr
     ? await supabase.from("diagnoses").select("ticket_id, fault_found, warranty_decision, override_requested, override_reason, decided_at, technician").in("ticket_id", ids)
     : { data: [] };
   const diagBy = new Map((diags ?? []).map((d) => [d.ticket_id, d]));
+  // Supervisor's note when QC sent an item back to repair (newest first)
+  const { data: qcBacks } = ids.length
+    ? await supabase.from("status_history").select("ticket_id, reason").in("ticket_id", ids)
+        .eq("from_status", "quality_check").eq("to_status", "in_repair").order("at", { ascending: false })
+    : { data: [] };
+  const qcBy = new Map<string, string>();
+  for (const h of qcBacks ?? []) if (h.reason && !qcBy.has(h.ticket_id)) qcBy.set(h.ticket_id, h.reason);
 
   // Technician names: HQ can't read profiles, so read them server-side (names only)
   const { data: techs } = await createAdminClient().from("profiles").select("id, full_name").eq("role", "technician").eq("active", true).order("full_name");
@@ -53,6 +60,7 @@ export default async function DiagnosisPage({ searchParams }: { searchParams: Pr
       overrideReason: d?.override_reason ?? null,
       decision: d?.warranty_decision ?? null,
       finding: d?.fault_found ?? null,
+      qcNote: qcBy.get(t.id) ?? null,
     };
   });
 

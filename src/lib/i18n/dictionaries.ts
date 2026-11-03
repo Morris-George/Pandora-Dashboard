@@ -459,6 +459,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     } as Record<string, string>,
   },
   diag: {
+    qcBack: "Sent back by QC",
     costs: {
       pick: "Linked cost items:",
       title: "Repair cost items (Super Admin)",
@@ -1234,6 +1235,7 @@ const ar: Dict = {
     } as Record<string, string>,
   },
   diag: {
+    qcBack: "رجع من فحص الجودة",
     costs: {
       pick: "بنود التكلفة المربوطة:",
       title: "بنود تكلفة الصيانة (سوبر أدمن)",
