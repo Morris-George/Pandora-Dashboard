@@ -165,7 +165,9 @@ export async function saveMenuLabels(input: Record<string, { ar?: string; en?: s
   const value = Object.fromEntries(NAV.map((n) => [n.href, { ar: clean(input[n.href]?.ar), en: clean(input[n.href]?.en) }])
     .filter(([, v]) => (v as { ar: string; en: string }).ar || (v as { ar: string; en: string }).en));
   const supabase = await createClient();
-  const { error } = await supabase.from("app_settings").upsert({ key: "menu_labels", value, updated_by: me.userId, updated_at: new Date().toISOString() });
+  // Update, not upsert: admins may not insert into app_settings (the row comes from a migration)
+  const { data: saved, error } = await supabase.from("app_settings").update({ value, updated_by: me.userId, updated_at: new Date().toISOString() }).eq("key", "menu_labels").select("key");
+  if (!error && !saved?.length) return { error: "failed" };
   if (error) return { error: "failed" };
   await audit(me.userId, "menu_labels_saved", "menu_labels", value);
   revalidatePath("/", "layout");
@@ -180,7 +182,9 @@ export async function setWorkflowStep(step: (typeof STEPS)[number], on: boolean)
   const supabase = await createClient();
   const { data: cur } = await supabase.from("app_settings").select("value").eq("key", "workflow").maybeSingle();
   const value = { ...Object.fromEntries(STEPS.map((k) => [k, true])), ...(cur?.value as object | null), [step]: on };
-  const { error } = await supabase.from("app_settings").upsert({ key: "workflow", value, updated_by: me.userId, updated_at: new Date().toISOString() });
+  // Update, not upsert: admins may not insert into app_settings (the row comes from a migration)
+  const { data: saved, error } = await supabase.from("app_settings").update({ value, updated_by: me.userId, updated_at: new Date().toISOString() }).eq("key", "workflow").select("key");
+  if (!error && !saved?.length) return { error: "failed" };
   if (error) return { error: "failed" };
   await audit(me.userId, `workflow_${step}_${on ? "on" : "off"}`, "workflow", value);
   revalidatePath("/admin");
