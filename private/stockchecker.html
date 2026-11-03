@@ -140,6 +140,7 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 <div class="row">
   <button id="startBtn" type="button">Start camera</button>
   <button id="flipBtn" type="button" class="sec">Flip camera</button>
+    <button id="torchBtn" type="button" class="sec" hidden>Light</button>
     <button id="showQr" type="button" class="sec" hidden>Show phone QR code</button>
 </div>
 </div>
@@ -173,7 +174,7 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 
 <details>
   <summary>Type a code / USB scanner</summary>
-  <p class="hint">Useful for testing at a desk. Obeys the same 2-second cooldown.</p>
+  <p class="hint">Useful for testing at a desk. Obeys the same cooldown as the camera.</p>
   <form class="manual" id="manual">
     <input type="text" id="manualCode" inputmode="numeric" autocomplete="off" placeholder="Barcode">
     <button type="submit">Add</button>
@@ -192,10 +193,10 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 (function(){
-var COOLDOWN=2000;
+var COOLDOWN=4000; /* same gap between two counted scans as Stock Count */
 var $=function(i){return document.getElementById(i)};
 var video=$('video'),cam=$('cam'),stateEl=$('state'),camMsg=$('camMsg'),fill=$('coolFill');
-var catalog={},stream=null,facing='environment',coolUntil=0,running=false,rafId=0,zxReader=null,detector=null;
+var catalog={},stream=null,facing='environment',coolUntil=0,running=false,rafId=0,detector=null,zxReader=null;
 
 function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
@@ -399,7 +400,7 @@ $('csvBtn').onclick=function(){
   var done=function(m){$('note').textContent=m};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){done('Copied. Paste into Excel or Sheets.')},function(){done(txt)})}else done(txt);
 };
-$('manual').onsubmit=function(e){e.preventDefault();var i=$('manualCode');if(handleCode(i.value,'manual'))i.value='';else $('note').textContent=store?(name?'Wait for the 2-second cooldown.':'Type your name first.'):'Pick a store first.'};
+$('manual').onsubmit=function(e){e.preventDefault();var i=$('manualCode');if(handleCode(i.value,'manual'))i.value='';else $('note').textContent=store?(name?'Wait a few seconds between scans.':'Type your name first.'):'Pick a store first.'};
 
 /* ---- cooldown ui ---- */
 function tickUI(){
@@ -410,49 +411,100 @@ function tickUI(){
 }
 requestAnimationFrame(tickUI);
 
-/* ---- camera ---- */
+/* ---- camera: the same scanning engine and settings as Stock Count ---- */
+var cam={gen:0,cand:'',candN:0,candAt:0,last:'',lastAt:0,busy:false,cv:null,zx:null,hints:null,track:null,torch:false};
+var WANT=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code','data_matrix'];
 function stopCam(){
-  running=false;cancelAnimationFrame(rafId);
-  if(zxReader){try{zxReader.reset()}catch(e){}zxReader=null}
+  running=false;cam.gen++;clearTimeout(rafId);
   if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
-  video.srcObject=null;
+  video.srcObject=null;$('torchBtn').hidden=true;
+}
+/* check digit of an EAN / UPC (8, 12, 13, 14 digits); other lengths pass */
+function gtinOk(s){
+  if(!/^\d+$/.test(s)||[8,12,13,14].indexOf(s.length)<0)return true;
+  var d=s.split('').map(Number),n=d.length,sum=0;
+  for(var k=0;k<n-1;k++)sum+=d[n-2-k]*(k%2===0?3:1);
+  return (10-sum%10)%10===d[n-1];
+}
+function isKnown(c){return !!(known[c]||(view&&view.items.some(function(x){return x.c===c})))}
+/* misread guard (same as Stock Count): a code the site does not know must pass the check digit, and unknown codes need two matching reads in a row */
+function camHit(raw){
+  if(!raw||!store)return;
+  var t=Date.now();
+  if(raw===cam.last&&t-cam.lastAt<1800){cam.lastAt=t;return}
+  var kn=isKnown(raw);
+  if(!kn&&!gtinOk(raw))return;
+  var need=kn?1:2;
+  if(raw===cam.cand&&t-cam.candAt<700)cam.candN++;else{cam.cand=raw;cam.candN=1}
+  cam.candAt=t;
+  if(cam.candN<need)return;
+  cam.cand='';cam.candN=0;
+  if(handleCode(raw)){cam.last=raw;cam.lastAt=t}
+}
+function camNext(g){
+  if(video.requestVideoFrameCallback){try{video.requestVideoFrameCallback(function(){camLoop(g)});return}catch(e){}}
+  rafId=setTimeout(function(){camLoop(g)},0);
+}
+function camLoop(g){
+  if(!running||g!==cam.gen)return;
+  var v=video;
+  if(Date.now()<coolUntil||cam.busy||!(v.readyState>=2&&v.videoWidth)){
+    if(Date.now()<coolUntil){rafId=setTimeout(function(){camLoop(g)},150);return}
+    return camNext(g);
+  }
+  cam.busy=true;var p;
+  if(detector){
+    p=detector.detect(v).then(function(r){
+      if(!r||!r.length)return '';
+      var vals=r.map(function(x){return String(x.rawValue||'').trim()}).filter(Boolean);
+      return vals.find(isKnown)||vals.find(gtinOk)||'';
+    });
+  }else{
+    p=Promise.resolve().then(function(){
+      var c=cam.cv,w=Math.min(v.videoWidth,960),h=Math.round(v.videoHeight*w/v.videoWidth);
+      if(c.width!==w||c.height!==h){c.width=w;c.height=h}
+      c.getContext('2d',{willReadFrequently:true}).drawImage(v,0,0,w,h);
+      var Z=window.ZXing;
+      try{return cam.zx.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(c))),cam.hints).getText()}catch(e){return ''}
+    });
+  }
+  p.catch(function(){return ''}).then(function(raw){cam.busy=false;if(raw)camHit(String(raw).trim());camNext(g)});
 }
 function startCam(){
   stopCam();
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){camMsg.hidden=false;camMsg.textContent='Camera needs a secure (https) page. Open this file from an https link.';return}
   camMsg.hidden=true;stateEl.textContent='Starting…';
-  var hasBD='BarcodeDetector' in window;
-  if(hasBD){
-    navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:720}},audio:false}).then(function(s){
-      stream=s;video.srcObject=s;return video.play()
-    }).then(function(){
-      running=true;
-      var fmts=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','code_93','itf','codabar','qr_code'];
-      var go=function(sup){
-        var use=fmts.filter(function(f){return !sup||sup.indexOf(f)>-1});
-        detector=new BarcodeDetector({formats:use});
-        var busy=false;
-        (function loop(){
-          if(!running)return;
-          if(!busy&&Date.now()>=coolUntil&&video.readyState>=2){busy=true;
-            detector.detect(video).then(function(r){if(r.length)handleCode(r[0].rawValue)}).catch(function(){}).then(function(){busy=false})}
-          rafId=requestAnimationFrame(loop);
-        })();
-      };
-      if(BarcodeDetector.getSupportedFormats)BarcodeDetector.getSupportedFormats().then(go,function(){go(null)});else go(null);
-    }).catch(camError);
-  }else if(window.ZXing){
-    zxReader=new ZXing.BrowserMultiFormatReader();
-    running=true;
-    zxReader.decodeFromConstraints({video:{facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:720}},audio:false},video,function(res){
-      if(res&&Date.now()>=coolUntil)handleCode(res.getText());
-    }).catch(camError);
-  }else{camMsg.hidden=false;camMsg.textContent='Barcode reader could not load. Check the internet connection and reload.'}
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:720}},audio:false}).then(function(s){
+    stream=s;video.srcObject=s;return video.play().catch(function(){});
+  }).then(function(){
+    cam.track=stream.getVideoTracks()[0];
+    var caps={};try{caps=cam.track.getCapabilities?cam.track.getCapabilities():{}}catch(e){}
+    $('torchBtn').hidden=!caps.torch;cam.torch=false;
+    var af=cam.track.applyConstraints?cam.track.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(function(){}):Promise.resolve();
+    return af.then(function(){
+      detector=null;
+      if('BarcodeDetector' in window){
+        return BarcodeDetector.getSupportedFormats().then(function(have){var f=WANT.filter(function(x){return have.indexOf(x)>-1});if(f.length)detector=new BarcodeDetector({formats:f})}).catch(function(){detector=null});
+      }
+    });
+  }).then(function(){
+    if(!detector){
+      if(!window.ZXing)throw {name:'NOZXING'};
+      var Z=window.ZXing,h=new Map();
+      h.set(Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.EAN_8,Z.BarcodeFormat.UPC_A,Z.BarcodeFormat.UPC_E,Z.BarcodeFormat.CODE_128,Z.BarcodeFormat.CODE_39,Z.BarcodeFormat.ITF,Z.BarcodeFormat.QR_CODE,Z.BarcodeFormat.DATA_MATRIX]);
+      h.set(Z.DecodeHintType.TRY_HARDER,true);
+      cam.zx=new Z.MultiFormatReader();cam.hints=h;cam.cv=document.createElement('canvas');
+    }
+    running=true;cam.busy=false;cam.cand='';cam.candN=0;
+    camLoop(cam.gen);
+  }).catch(camError);
 }
 function camError(err){
   running=false;stateEl.textContent='Camera off';camMsg.hidden=false;
-  camMsg.textContent=(err&&err.name==='NotAllowedError')?'Camera permission was blocked. Allow the camera for this site in the browser settings, then tap Start camera.':'Could not start the camera ('+(err&&err.name||'error')+').';
+  if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
+  camMsg.textContent=(err&&err.name==='NotAllowedError')?'Camera permission was blocked. Allow the camera for this site in the browser settings, then tap Start camera.':(err&&err.name==='NOZXING')?'Barcode reader could not load. Check the internet connection and reload.':'Could not start the camera ('+(err&&err.name||'error')+').';
 }
+$('torchBtn').onclick=function(){try{cam.torch=!cam.torch;cam.track.applyConstraints({advanced:[{torch:cam.torch}]}).catch(function(){})}catch(e){}};
 
 $('startBtn').onclick=function(){if(!running&&(!store||!name)){if(store)showWho();return}if(running){stopCam();stateEl.textContent='Camera off';camMsg.hidden=false;camMsg.textContent='Camera stopped.';this.textContent='Start camera'}else{startCam();this.textContent='Stop camera'}};
 $('flipBtn').onclick=function(){facing=facing==='environment'?'user':'environment';if(running)startCam()};
