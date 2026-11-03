@@ -439,6 +439,8 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     items: "Items",
     outbound: "To HQ",
     return: "To branch",
+    waitingOn: "Waiting on",
+    wait: { manager: "2nd Branch Manager approval", courier: "Area Manager pickup", hq: "HQ receiving", branch: "Branch receiving", ops: "Ops review" },
     batchStatus: { awaiting_approval: "Awaiting approval", in_transit: "In transit", received: "Received", incident: "Incident" } as Record<string, string>,
     cols: { batch: "Batch", direction: "Direction", branch: "Branch", seal: "Seal", items: "Items", created: "Created", status: "Status" },
     errors: {
@@ -1208,6 +1210,8 @@ const ar: Dict = {
     items: "القطع",
     outbound: "للمركز الرئيسي",
     return: "للفرع",
+    waitingOn: "مستني",
+    wait: { manager: "موافقة مدير فرع تاني", courier: "استلام مدير المنطقة", hq: "استلام المركز الرئيسي", branch: "استلام الفرع", ops: "مراجعة العمليات" },
     batchStatus: { awaiting_approval: "في انتظار الموافقة", in_transit: "في الطريق", received: "تم الاستلام", incident: "مشكلة" } as Record<string, string>,
     cols: { batch: "الشحنة", direction: "الاتجاه", branch: "الفرع", seal: "السيل", items: "القطع", created: "التاريخ", status: "الحالة" },
     errors: {

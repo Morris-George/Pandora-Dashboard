@@ -174,7 +174,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
                     <td className="p-2" dir="ltr">{b.seal}</td>
                     <td className="p-2">{b.items.filter((i) => i.scanned).length}/{b.items.length}</td>
                     <td className="p-2">{fmt(b.createdAt)}</td>
-                    <td className="p-2"><span className={`rounded-full px-2.5 py-1 text-xs whitespace-nowrap ${BADGE[b.status]}`}>{t.batchStatus[b.status]}</span></td>
+                    <td className="p-2"><span className={`rounded-full px-2.5 py-1 text-xs whitespace-nowrap ${BADGE[b.status]}`}>{t.batchStatus[b.status]}</span>{waitingOn(t, b) && <div className="text-[11px] text-stone-500 mt-1 whitespace-nowrap">{t.waitingOn}: {waitingOn(t, b)}</div>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -336,4 +336,12 @@ function CollectCard({ t, b, busy, run }: { t: T; b: BatchRow; busy: boolean; ru
       </div>
     </div>
   );
+}
+
+// Who the batch is waiting on, shown under its status
+function waitingOn(t: T, b: BatchRow): string {
+  if (b.status === "awaiting_approval") return t.wait.manager;
+  if (b.status === "in_transit") return !b.pickedAt ? t.wait.courier : b.direction === "outbound" ? t.wait.hq : t.wait.branch;
+  if (b.status === "incident") return t.wait.ops;
+  return "";
 }
