@@ -158,6 +158,19 @@ export async function testEmail(to?: string): Promise<{ error?: string; to?: str
 }
 
 // Menu names from Admin → Menu: { "/tickets": { ar, en } }; empty names fall back to the built-in ones
+export async function saveWaTemplates(input: Record<string, string>): Promise<Result> {
+  const me = await requireRole("admin");
+  const { WA_KINDS } = await import("@/lib/whatsapp");
+  const value = Object.fromEntries(WA_KINDS.filter((k) => typeof input[k] === "string" && input[k].trim()).map((k) => [k, input[k].trim().slice(0, 1500)]));
+  const supabase = await createClient();
+  // Update, not upsert: the row comes from a migration
+  const { data: saved, error } = await supabase.from("app_settings").update({ value, updated_by: me.userId, updated_at: new Date().toISOString() }).eq("key", "wa_templates").select("key");
+  if (error || !saved?.length) return { error: "failed" };
+  await audit(me.userId, "wa_templates_saved", "wa_templates", value);
+  revalidatePath("/", "layout");
+  return {};
+}
+
 export async function saveMenuLabels(input: Record<string, { ar?: string; en?: string }>): Promise<Result> {
   const me = await requireRole("admin");
   const { NAV } = await import("@/lib/nav");

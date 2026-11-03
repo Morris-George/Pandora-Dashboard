@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Warranty } from "@/lib/warranty";
 import { PrintButton } from "./print-button";
-import { waKind, waMessage, waNumber } from "@/lib/whatsapp";
+import { waKind, waMessage, waNumber, type WaTemplates } from "@/lib/whatsapp";
 import { ExceptionActions } from "./exception-actions";
 import { DeleteTicket } from "./delete-ticket";
 import { EXCEPTIONS, type ExceptionTarget } from "./exceptions";
@@ -66,10 +66,11 @@ export default async function TicketPage({ params, searchParams }: {
   const { data: lastQuote } = kind === "quote"
     ? await supabase.from("quotations").select("total").eq("ticket_id", tk.id).order("sent_at", { ascending: false, nullsFirst: false }).limit(1).maybeSingle()
     : { data: null };
+  const { data: waTpl } = await supabase.from("app_settings").select("value").eq("key", "wa_templates").maybeSingle();
   const waHref = customer?.mobile ? `https://wa.me/${waNumber(customer.mobile)}?text=${encodeURIComponent(waMessage(kind, {
     name: customer.full_name ?? "", ticketNo: tk.ticket_no, item: tk.item_name, store: branch, link: trackUrl,
     quote: lastQuote?.total != null ? money(Number(lastQuote.total)) : undefined,
-  }))}` : null;
+  }, (waTpl?.value ?? {}) as WaTemplates))}` : null;
 
   // Timeline: every status change, who made it and how long the ticket stayed there
   const { data: hist } = await supabase.from("status_history").select("to_status, user_id, role, reason, at").eq("ticket_id", tk.id).order("at");

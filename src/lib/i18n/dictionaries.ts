@@ -174,6 +174,12 @@ const en = {
       emptyNote: "Leave a text empty to use the standard wording. Receipts print in the language the staff member is using.",
       save: "Save receipt", saved: "Saved. The next receipt uses it.", failed: "Could not save. Check the fields and try again.",
     },
+    wa: {
+      title: "WhatsApp messages",
+      note: "The text the store sends from its WhatsApp (Ticket memo and Pickup buttons). Use the placeholders below; they are filled in for each customer.",
+      kinds: { received: "Item received at store", quote: "Quote ready", ready: "Ready for pickup", reminder: "Pickup reminder", collected: "Collected – thank you", update: "General update" } as Record<string, string>,
+      reset: "Restore built-in text", save: "Save messages", saved: "Saved.", failed: "Couldn't save. Try again.",
+    },
     menu: {
       title: "Menu: tab names",
       note: "Rename the menu tabs. Leave a box empty to keep the built-in name (shown in grey).",
@@ -656,6 +662,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     } as Record<string, string>,
   },
   pickup: {
+    waNotify: "WhatsApp the customer",
     title: "Customer pickup",
     waitingTitle: "Waiting for the customer",
     note: "Oldest first. Check the customer's identity, take payment if anything is due, then hand over the item.",
@@ -948,6 +955,12 @@ const ar: Dict = {
       arabic: "عربي", english: "إنجليزي",
       emptyNote: "سيب النص فاضي عشان يستخدم الصيغة الأساسية. الإيصال بيتطبع باللغة اللي الموظف شغال بيها.",
       save: "حفظ الإيصال", saved: "اتحفظ. أول إيصال جاي هيستخدمه.", failed: "مقدرناش نحفظ. راجع البيانات وحاول تاني.",
+    },
+    wa: {
+      title: "رسائل واتساب",
+      note: "النص اللي الفرع بيبعته من الواتساب بتاعه (زرار إيصال الاستلام وشاشة التسليم). استخدم الكلمات اللي تحت، وبتتملي لكل عميل.",
+      kinds: { received: "استلام القطعة في الفرع", quote: "عرض السعر جاهز", ready: "جاهز للاستلام", reminder: "تذكير بالاستلام", collected: "تم الاستلام – شكراً", update: "تحديث عام" } as Record<string, string>,
+      reset: "رجّع النص الأصلي", save: "حفظ الرسائل", saved: "اتحفظ.", failed: "محصلش حفظ، حاول تاني.",
     },
     menu: {
       title: "القائمة: أسماء التبويبات",
@@ -1432,6 +1445,7 @@ const ar: Dict = {
     } as Record<string, string>,
   },
   pickup: {
+    waNotify: "ابعت للعميل واتساب",
     title: "التسليم للعميل",
     waitingTitle: "في انتظار العميل",
     note: "الأقدم أولاً. اتأكد من هوية العميل، حصّل المبلغ لو فيه مستحق، وبعدين سلّم القطعة.",

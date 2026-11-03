@@ -9,7 +9,7 @@ import { collect, findRepairInvoice, markUncollected, type RepairInvoice } from 
 export type PickupJob = {
   id: string; ticketNo: string; itemName: string; itemCode: string | null; status: string; branchName: string;
   customer: string; mobileHint: string; readyAt: string | null; outcome: "repaired" | "rejected" | "unrepairable";
-  warranty: string; due: number;
+  warranty: string; due: number; waHref: string | null;
 };
 type D = (typeof dictionaries)["en"];
 type Run = (fn: () => Promise<{ error?: string; outcome?: string }>, after?: (outcome?: string) => void) => void;
@@ -102,6 +102,7 @@ function PickupCard({ d, j, role, busy, run, money, onDone }: {
         <span>{j.customer} <span dir="ltr" className="text-stone-500">{j.mobileHint}</span></span>
         <span>{d.warranty[j.warranty as keyof D["warranty"]]}</span>
         <strong>{pay ? t.due(money(j.due)) : t.nothingDue}</strong>
+        {j.waHref && <a href={j.waHref} target="_blank" rel="noopener" className="text-emerald-800 font-semibold underline">{t.waNotify}</a>}
       </div>
 
       {!open ? (

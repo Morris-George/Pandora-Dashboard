@@ -1,6 +1,8 @@
 // Click-to-chat WhatsApp messages the store sends from its own WhatsApp (no WhatsApp Business API needed yet).
-// The message is always in Arabic with an English line, matching the customer emails.
+// Each message is a template the Super Admin can edit in Admin → WhatsApp messages.
 export type WaKind = "received" | "quote" | "ready" | "reminder" | "collected" | "update";
+export const WA_KINDS: WaKind[] = ["received", "quote", "ready", "reminder", "collected", "update"];
+export type WaTemplates = Partial<Record<WaKind, string>>;
 
 export function waKind(status: string): WaKind {
   if (status === "awaiting_customer_approval") return "quote";
@@ -11,31 +13,41 @@ export function waKind(status: string): WaKind {
   return "update";
 }
 
-export function waMessage(kind: WaKind, v: { name: string; ticketNo: string; item: string; store: string; link: string; quote?: string }) {
-  const hi = `عزيزنا العميل ${v.name.split(/\s+/)[0] || ""}،`;
-  const ref = `رقم طلب الصيانة: ${v.ticketNo}
-المنتج: ${v.item}`;
-  const body: Record<WaKind, string> = {
-    received: `نشكركم على ثقتكم في باندورا. نود إفادتكم بأنه تم استلام منتجكم في فرع ${v.store}، وسيتم إرساله إلى مركز الصيانة لإجراء الفحص اللازم.`,
-    update: `نود إطلاعكم على آخر مستجدات طلب الصيانة الخاص بكم، ويمكنكم متابعة حالته في أي وقت من خلال الرابط أدناه.`,
-    quote: `تم الانتهاء من فحص منتجكم${v.quote ? `، وتبلغ تكلفة الإصلاح ${v.quote} جنيهاً مصرياً شاملة ضريبة القيمة المضافة` : ""}. نرجو التكرم بالموافقة على عرض السعر أو رفضه من خلال الرابط أدناه حتى نتمكن من استكمال الإجراءات.`,
-    ready: `يسعدنا إبلاغكم بأن منتجكم أصبح جاهزاً للاستلام من فرع ${v.store}. يرجى إحضار إيصال الاستلام عند الحضور.`,
-    reminder: `نود تذكيركم بأن منتجكم لا يزال بانتظاركم في فرع ${v.store}. يرجى إحضار إيصال الاستلام عند الحضور.`,
-    collected: `نشكركم على استلام منتجكم، ونتطلع دائماً إلى خدمتكم.`,
-  };
-  return `${hi}
+// Placeholders: {name} {ticket} {item} {store} {link} {quote}
+const frame = (body: string) => `عزيزنا العميل {name}،
 
-${body[kind]}
+${body}
 
-${ref}
-متابعة الطلب: ${v.link}
+رقم طلب الصيانة: {ticket}
+المنتج: {item}
+متابعة الطلب: {link}
 
 مع خالص التحية،
-فريق خدمة العملاء – باندورا ${v.store}`;
+فريق خدمة العملاء – باندورا {store}`;
+
+export const WA_DEFAULTS: Record<WaKind, string> = {
+  received: frame("نشكركم على ثقتكم في باندورا. نود إفادتكم بأنه تم استلام منتجكم في فرع {store}، وسيتم إرساله إلى مركز الصيانة لإجراء الفحص اللازم."),
+  update: frame("نود إطلاعكم على آخر مستجدات طلب الصيانة الخاص بكم، ويمكنكم متابعة حالته في أي وقت من خلال الرابط أدناه."),
+  quote: frame("تم الانتهاء من فحص منتجكم، وتبلغ تكلفة الإصلاح {quote} جنيهاً مصرياً شاملة ضريبة القيمة المضافة. نرجو التكرم بالموافقة على عرض السعر أو رفضه من خلال الرابط أدناه حتى نتمكن من استكمال الإجراءات."),
+  ready: frame("يسعدنا إبلاغكم بأن منتجكم أصبح جاهزاً للاستلام من فرع {store}. يرجى إحضار إيصال الاستلام عند الحضور."),
+  reminder: frame("نود تذكيركم بأن منتجكم لا يزال بانتظاركم في فرع {store}. يرجى إحضار إيصال الاستلام عند الحضور."),
+  collected: frame("نشكركم على استلام منتجكم، ونتطلع دائماً إلى خدمتكم."),
+};
+
+export function waMessage(kind: WaKind, v: { name: string; ticketNo: string; item: string; store: string; link: string; quote?: string }, templates: WaTemplates = {}) {
+  const tpl = templates[kind]?.trim() || WA_DEFAULTS[kind];
+  const vals: Record<string, string> = {
+    name: v.name.split(/\s+/)[0] || "", ticket: v.ticketNo, item: v.item, store: v.store, link: v.link, quote: v.quote ?? "—",
+  };
+  return tpl.replace(/\{(name|ticket|item|store|link|quote)\}/g, (_, k: string) => vals[k]);
 }
 
 // Egyptian 01xxxxxxxxx → 201xxxxxxxxx for wa.me
 export function waNumber(mobile: string) {
   const d = mobile.replace(/\D/g, "");
   return /^01\d{9}$/.test(d) ? `2${d}` : d;
+}
+
+export function waLink(mobile: string, text: string) {
+  return `https://wa.me/${waNumber(mobile)}?text=${encodeURIComponent(text)}`;
 }
