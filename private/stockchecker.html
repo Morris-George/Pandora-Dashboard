@@ -412,10 +412,10 @@ function tickUI(){
 requestAnimationFrame(tickUI);
 
 /* ---- camera: the same scanning engine and settings as Stock Count ---- */
-var cam={gen:0,cand:'',candN:0,candAt:0,last:'',lastAt:0,busy:false,cv:null,zx:null,hints:null,track:null,torch:false};
+var scn={gen:0,cand:'',candN:0,candAt:0,last:'',lastAt:0,busy:false,cv:null,zx:null,hints:null,track:null,torch:false};
 var WANT=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code','data_matrix'];
 function stopCam(){
-  running=false;cam.gen++;clearTimeout(rafId);
+  running=false;scn.gen++;clearTimeout(rafId);
   if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
   video.srcObject=null;$('torchBtn').hidden=true;
 }
@@ -431,28 +431,28 @@ function isKnown(c){return !!(known[c]||(view&&view.items.some(function(x){retur
 function camHit(raw){
   if(!raw||!store)return;
   var t=Date.now();
-  if(raw===cam.last&&t-cam.lastAt<1800){cam.lastAt=t;return}
+  if(raw===scn.last&&t-scn.lastAt<1800){scn.lastAt=t;return}
   var kn=isKnown(raw);
   if(!kn&&!gtinOk(raw))return;
   var need=kn?1:2;
-  if(raw===cam.cand&&t-cam.candAt<700)cam.candN++;else{cam.cand=raw;cam.candN=1}
-  cam.candAt=t;
-  if(cam.candN<need)return;
-  cam.cand='';cam.candN=0;
-  if(handleCode(raw)){cam.last=raw;cam.lastAt=t}
+  if(raw===scn.cand&&t-scn.candAt<700)scn.candN++;else{scn.cand=raw;scn.candN=1}
+  scn.candAt=t;
+  if(scn.candN<need)return;
+  scn.cand='';scn.candN=0;
+  if(handleCode(raw)){scn.last=raw;scn.lastAt=t}
 }
 function camNext(g){
   if(video.requestVideoFrameCallback){try{video.requestVideoFrameCallback(function(){camLoop(g)});return}catch(e){}}
   rafId=setTimeout(function(){camLoop(g)},0);
 }
 function camLoop(g){
-  if(!running||g!==cam.gen)return;
+  if(!running||g!==scn.gen)return;
   var v=video;
-  if(Date.now()<coolUntil||cam.busy||!(v.readyState>=2&&v.videoWidth)){
+  if(Date.now()<coolUntil||scn.busy||!(v.readyState>=2&&v.videoWidth)){
     if(Date.now()<coolUntil){rafId=setTimeout(function(){camLoop(g)},150);return}
     return camNext(g);
   }
-  cam.busy=true;var p;
+  scn.busy=true;var p;
   if(detector){
     p=within(detector.detect(v),1500,[]).then(function(r){
       if(!r||!r.length)return '';
@@ -461,14 +461,14 @@ function camLoop(g){
     });
   }else{
     p=Promise.resolve().then(function(){
-      var c=cam.cv,w=Math.min(v.videoWidth,960),h=Math.round(v.videoHeight*w/v.videoWidth);
+      var c=scn.cv,w=Math.min(v.videoWidth,960),h=Math.round(v.videoHeight*w/v.videoWidth);
       if(c.width!==w||c.height!==h){c.width=w;c.height=h}
       c.getContext('2d',{willReadFrequently:true}).drawImage(v,0,0,w,h);
       var Z=window.ZXing;
-      try{return cam.zx.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(c))),cam.hints).getText()}catch(e){return ''}
+      try{return scn.zx.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(c))),scn.hints).getText()}catch(e){return ''}
     });
   }
-  p.catch(function(){return ''}).then(function(raw){cam.busy=false;if(raw)camHit(String(raw).trim());camNext(g)});
+  p.catch(function(){return ''}).then(function(raw){scn.busy=false;if(raw)camHit(String(raw).trim());camNext(g)});
 }
 /* a step that never answers (some phones never resolve play() / autofocus / format checks) must not freeze the start */
 function within(p,ms,dflt){return new Promise(function(res){var done=false,t=setTimeout(function(){if(!done){done=true;res(dflt)}},ms);Promise.resolve(p).then(function(v){if(!done){done=true;clearTimeout(t);res(v)}},function(){if(!done){done=true;clearTimeout(t);res(dflt)}})})}
@@ -479,10 +479,10 @@ function startCam(){
   navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:720}},audio:false}).then(function(s){
     stream=s;video.srcObject=s;return within(video.play(),2500);
   }).then(function(){
-    cam.track=stream.getVideoTracks()[0];
-    var caps={};try{caps=cam.track.getCapabilities?cam.track.getCapabilities():{}}catch(e){}
-    $('torchBtn').hidden=!caps.torch;cam.torch=false;
-    var af=cam.track.applyConstraints?within(cam.track.applyConstraints({advanced:[{focusMode:'continuous'}]}),1500):Promise.resolve();
+    scn.track=stream.getVideoTracks()[0];
+    var caps={};try{caps=scn.track.getCapabilities?scn.track.getCapabilities():{}}catch(e){}
+    $('torchBtn').hidden=!caps.torch;scn.torch=false;
+    var af=scn.track.applyConstraints?within(scn.track.applyConstraints({advanced:[{focusMode:'continuous'}]}),1500):Promise.resolve();
     return af.then(function(){
       detector=null;
       if('BarcodeDetector' in window){
@@ -495,18 +495,18 @@ function startCam(){
       var Z=window.ZXing,h=new Map();
       h.set(Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.EAN_8,Z.BarcodeFormat.UPC_A,Z.BarcodeFormat.UPC_E,Z.BarcodeFormat.CODE_128,Z.BarcodeFormat.CODE_39,Z.BarcodeFormat.ITF,Z.BarcodeFormat.QR_CODE,Z.BarcodeFormat.DATA_MATRIX]);
       h.set(Z.DecodeHintType.TRY_HARDER,true);
-      cam.zx=new Z.MultiFormatReader();cam.hints=h;cam.cv=document.createElement('canvas');
+      scn.zx=new Z.MultiFormatReader();scn.hints=h;scn.cv=document.createElement('canvas');
     }
-    running=true;cam.busy=false;cam.cand='';cam.candN=0;
-    camLoop(cam.gen);
+    running=true;scn.busy=false;scn.cand='';scn.candN=0;
+    camLoop(scn.gen);
   }).catch(camError);
 }
 function camError(err){
-  running=false;stateEl.textContent='Camera off';camMsg.hidden=false;
+  running=false;stateEl.textContent='Camera off';camMsg.hidden=false;$('startBtn').textContent='Start camera';
   if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
   camMsg.textContent=(err&&err.name==='NotAllowedError')?'Camera permission was blocked. Allow the camera for this site in the browser settings, then tap Start camera.':(err&&err.name==='NOZXING')?'Barcode reader could not load. Check the internet connection and reload.':'Could not start the camera ('+(err&&err.name||'error')+').';
 }
-$('torchBtn').onclick=function(){try{cam.torch=!cam.torch;cam.track.applyConstraints({advanced:[{torch:cam.torch}]}).catch(function(){})}catch(e){}};
+$('torchBtn').onclick=function(){try{scn.torch=!scn.torch;scn.track.applyConstraints({advanced:[{torch:scn.torch}]}).catch(function(){})}catch(e){}};
 
 $('startBtn').onclick=function(){if(!running&&(!store||!name)){if(store)showWho();return}if(running){stopCam();stateEl.textContent='Camera off';camMsg.hidden=false;camMsg.textContent='Camera stopped.';this.textContent='Start camera'}else{startCam();this.textContent='Stop camera'}};
 $('flipBtn').onclick=function(){facing=facing==='environment'?'user':'environment';if(running)startCam()};
