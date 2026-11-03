@@ -255,6 +255,10 @@ async function openRep(){const id=$('rpSel').value;if(!id){R=null;$('kpis').inne
   clearTimeout(RT);RT=setTimeout(()=>{if(!$('pRep').hidden&&R&&R.status==='Open')openRep()},30000)}
 $('rpSel').onchange=openRep;$('rpRef').onclick=openRep;
 const tot=(t,c)=>Object.values((R.counts[t]||{boxes:{}}).boxes).reduce((a,m)=>a+(m[c]||0),0);
+/* who scanned a SKU (every box added up): [[name, pcs], ...] */
+const whoSku=(t,c)=>{const m={};for(const bx of Object.values((R.counts[t]||{}).who||{}))for(const [p,n] of Object.entries(bx[c]||{}))m[p]=(m[p]||0)+n;return Object.entries(m).filter(x=>x[1]).sort((x,y)=>y[1]-x[1]).map(([p,n])=>[p==='?'?'Unknown':p,n])};
+const whoHtml=(t,c)=>whoSku(t,c).map(([p,n])=>`${esc(p)} <b>${fmt(n)}</b>`).join('<br>')||'—';
+const whoXl=(t,c)=>whoSku(t,c).map(([p,n])=>p+' '+n).join(', ');
 function recRows(){const lines=new Map(R.lines.map(l=>[l[0],l])),codes=new Set(R.lines.map(l=>l[0]));
   for(const t of Object.keys(TEAMS))for(const m of Object.values((R.counts[t]||{boxes:{}}).boxes))Object.keys(m).forEach(c=>codes.add(c));
   return [...codes].map(c=>{const l=lines.get(c),inv=l?l[2]:0,cost=l?l[3]:0,a=tot('accounts',c),w=tot('warehouse',c);
@@ -281,8 +285,8 @@ function drawRep(){if(!R)return;const rows=recRows(),inv=R.lines.reduce((a,l)=>a
   const l=rows.filter(r=>(!F||(F==='diff'?r.st!=='ok':r.st===F))&&(!q||r.sku.includes(q)||r.ean.includes(q))).sort((a,b)=>order[a.st]-order[b.st]||Math.abs(b.dw)-Math.abs(a.dw)||a.sku.localeCompare(b.sku));
   $('cnt').textContent=fmt(l.length)+' rows';
   const d=n=>`<td class="${n<0?'dn':n>0?'dp':'d0'}">${n>0?'+':''}${fmt(n)}</td>`;
-  $('recT').innerHTML=`<tr><th></th><th class="l">SKU</th><th class="l">EAN</th><th>Cost $</th><th>Invoice</th><th>Finance</th><th>Warehouse</th><th>Finance vs invoice</th><th>Warehouse vs invoice</th><th>Difference $</th><th class="l">Status</th></tr>`+
-    l.slice(0,1500).map(r=>`<tr><td>${box(r.code)}</td><td class="l"><b>${esc(r.sku)}</b></td><td class="l">${esc(r.ean)}</td><td>${r.cost?r.cost.toFixed(2):''}</td><td>${fmt(r.inv)}</td><td>${fmt(r.a)}</td><td>${fmt(r.w)}</td>${d(r.da)}${d(r.dw)}<td>${r.dw&&r.cost?usd(r.dw*r.cost):''}</td><td class="l"><span class="tag ${ST_T[r.st][1]}">${ST_T[r.st][0]}</span></td></tr>`).join('');
+  $('recT').innerHTML=`<tr><th></th><th class="l">SKU</th><th class="l">EAN</th><th>Cost $</th><th>Invoice</th><th>Finance</th><th class="l">Finance scanned by</th><th>Warehouse</th><th class="l">Warehouse scanned by</th><th>Finance vs invoice</th><th>Warehouse vs invoice</th><th>Difference $</th><th class="l">Status</th></tr>`+
+    l.slice(0,1500).map(r=>`<tr><td>${box(r.code)}</td><td class="l"><b>${esc(r.sku)}</b></td><td class="l">${esc(r.ean)}</td><td>${r.cost?r.cost.toFixed(2):''}</td><td>${fmt(r.inv)}</td><td>${fmt(r.a)}</td><td class="l note">${whoHtml('accounts',r.code)}</td><td>${fmt(r.w)}</td><td class="l note">${whoHtml('warehouse',r.code)}</td>${d(r.da)}${d(r.dw)}<td>${r.dw&&r.cost?usd(r.dw*r.cost):''}</td><td class="l"><span class="tag ${ST_T[r.st][1]}">${ST_T[r.st][0]}</span></td></tr>`).join('');
   // by box
   const bset=new Set();Object.keys(TEAMS).forEach(t=>Object.keys((R.counts[t]||{boxes:{}}).boxes).forEach(b=>bset.add(+b)));
   const bp=(t,b)=>Object.values(((R.counts[t]||{boxes:{}}).boxes[b])||{}).reduce((a,n)=>a+n,0);
@@ -296,7 +300,7 @@ $('q').oninput=drawRep;
 $('rpClose').onclick=async()=>{const to=R.status==='Open'?'Closed':'Open';if(to==='Closed'&&!confirm('Close this shipment? Scanning stops and the report is frozen. You can open it again later.'))return;
   try{await api('/api/recv?op=status',{id:R.id,status:to});await boot();$('rpSel').value=R.id;tab('rep')}catch(e){showErr(e.message)}};
 $('rpX').onclick=()=>{if(!R)return;const rows=recRows(),wb=XLSX.utils.book_new(),inv=R.lines.reduce((a,l)=>a+l[2],0);
-  const one=r=>({SKU:r.sku,EAN:r.ean,'Sales pool':r.pool,'Cost USD':r.cost,Invoice:r.inv,Finance:r.a,Warehouse:r.w,'Finance vs invoice':r.da,'Warehouse vs invoice':r.dw,'Difference USD':Math.round(r.dw*r.cost*100)/100,Status:ST_T[r.st][0]});
+  const one=r=>({SKU:r.sku,EAN:r.ean,'Sales pool':r.pool,'Cost USD':r.cost,Invoice:r.inv,Finance:r.a,'Finance scanned by':whoXl('accounts',r.code),Warehouse:r.w,'Warehouse scanned by':whoXl('warehouse',r.code),'Finance vs invoice':r.da,'Warehouse vs invoice':r.dw,'Difference USD':Math.round(r.dw*r.cost*100)/100,Status:ST_T[r.st][0]});
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{Shipment:R.name,'Invoice #':R.invoice,Status:R.status,'Invoice pcs':inv,'Invoice USD':Math.round(R.lines.reduce((a,l)=>a+l[2]*l[3],0)*100)/100,'Finance pcs':rows.reduce((a,r)=>a+r.a,0),'Warehouse pcs':rows.reduce((a,r)=>a+r.w,0),'SKUs matching':rows.filter(r=>r.st==='ok').length,'SKUs with differences':rows.filter(r=>r.st!=='ok').length}]),'Summary');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.map(one)),'Reconciliation');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.filter(r=>r.st!=='ok').map(one)),'Differences');
