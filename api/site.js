@@ -226,6 +226,7 @@ module.exports = async function handler(req, res) {
     else if (P === '/refill' || P === '/refill.html') id = 'refill';
     else if (P === '/slow' || P === '/slow.html') id = 'slow';
     else if (P === '/insights' || P === '/insights.html') id = 'insights';
+    else if (P === '/overview' || P === '/overview.html') id = 'overview';
     else if (P === '/distribution' || P === '/distribution.html') id = 'dist';
     else if (P === '/receiving' || P === '/receiving.html') id = 'recv';
     else if (P === '/vm' || P === '/vm.html') id = 'vm';
@@ -385,6 +386,11 @@ module.exports = async function handler(req, res) {
   if (requestedPath === '/insights' || requestedPath === '/insights/' || requestedPath === '/insights.html') {
     if (!facts.dash) return toHome();
     return sendFile(res, 'insights.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+  }
+  // Store Overview: super admin and brand manager (overseer) only
+  if (requestedPath === '/overview' || requestedPath === '/overview/' || requestedPath === '/overview.html') {
+    if (!(facts.staff && facts.staff.role === 'admin')) return toHome();
+    return sendFile(res, 'overview.html', 'text/html; charset=utf-8', withChrome('staff', multi));
   }
   if (requestedPath === '/slow' || requestedPath === '/slow/' || requestedPath === '/slow.html') {
     if (!facts.refill || facts.refill === 'none') return toHome();

@@ -1,0 +1,96 @@
+// Store Overview (super admin and brand manager / overseer only). Reached at /api/overview, rewritten to api/erp.js
+// (the Hobby plan allows 12 functions, so it is a helper). A simple set of numbers for the whole chain, month to date and year to date:
+// total sales, average sales per store, average ticket (ATV), orders, units per ticket, average price per piece,
+// average per store per day and the top store. Same figures as Pandora Dashboards: net of VAT, Laderach / Waterway left out
+// (api/_sales.js), an order = an invoice with sales and pieces above zero (like Sales Intelligence). The Online shop is not a store.
+const store = require('./_store');
+const { whoami } = require('./_auth');
+const { dashRows } = require('./_sales');
+
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+const CACHE_MIN = 10;
+const ONLINE = /online|e-?commerce|website/i;
+
+function send(res, code, obj) {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  return res.status(code).json(obj);
+}
+const r1 = n => Math.round((n || 0) * 10) / 10;
+const r0 = n => Math.round(n || 0);
+const dayN = iso => Math.round(Date.parse(iso + 'T00:00:00Z') / 86400000);
+const pretty = v => String(v || '').replace(/^\s*pandora\s+/i, '').replace(/\s+-\s+[A-Z]{1,4}$/, '').trim() || String(v || '');
+const pad = n => String(n).padStart(2, '0');
+// same day in another year / month, kept inside that month (29 Feb -> 28 Feb, 31 Mar -> 28 Feb)
+function shifted(iso, dy, dm) {
+  let y = +iso.slice(0, 4) + dy, m = +iso.slice(5, 7) - 1 + dm, d = +iso.slice(8, 10);
+  y += Math.floor(m / 12); m = ((m % 12) + 12) % 12;
+  const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  return y + '-' + pad(m + 1) + '-' + pad(Math.min(d, last));
+}
+
+function figures(lines, from, to) {
+  const inv = new Map(), byStore = new Map();
+  let rev = 0, units = 0;
+  for (const r of lines) {
+    if (r[0] < from || r[0] > to) continue;
+    const q = +r[2] || 0, net = +r[3] || 0, br = r[7] || 'Unspecified';
+    rev += net; units += q;
+    const k = br + '|' + r[1];
+    const o = inv.get(k) || { rev: 0, q: 0 }; o.rev += net; o.q += q; inv.set(k, o);
+    byStore.set(br, (byStore.get(br) || 0) + net);
+  }
+  let orders = 0, pieces = 0, ordersRev = 0;
+  for (const o of inv.values()) if (o.rev > 0 && o.q > 0) { orders++; pieces += o.q; ordersRev += o.rev; }
+  const stores = [...byStore.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  const days = dayN(to) - dayN(from) + 1;
+  const n = stores.length;
+  return {
+    sales: r0(rev), stores: n, avgPerStore: n ? r0(rev / n) : 0, avgPerStorePerDay: n && days > 0 ? r0(rev / n / days) : 0,
+    orders, atv: orders ? r0(ordersRev / orders) : 0, upt: orders ? r1(pieces / orders) : 0, units: r0(units), asp: units > 0 ? r0(rev / units) : 0,
+    top: stores.length ? { name: pretty(stores[0][0]), sales: r0(stores[0][1]) } : null,
+    days
+  };
+}
+
+async function build() {
+  const rows = (await dashRows()).filter(r => r && r[0] && ISO.test(r[0]) && !ONLINE.test(String(r[7] || '')));
+  if (!rows.length) return { ok: true, empty: true };
+  let minD = '9999', maxD = '';
+  for (const r of rows) { if (r[0] < minD) minD = r[0]; if (r[0] > maxD) maxD = r[0]; }
+  const monthStart = maxD.slice(0, 8) + '01', yearStart = maxD.slice(0, 5) + '01-01';
+  const out = { ok: true, upTo: maxD, generatedAt: new Date().toISOString(), month: maxD.slice(0, 7), year: maxD.slice(0, 4) };
+  const mk = (from, prevFrom, prevTo) => {
+    const cur = figures(rows, from, maxD);
+    // the earlier period is only compared when the saved data really reaches back to its first day
+    const prev = minD <= prevFrom ? figures(rows, prevFrom, prevTo) : null;
+    const pc = (a, b) => (b ? Math.round((a / b - 1) * 1000) / 10 : null);
+    return { from, to: maxD, ...cur, vs: prev && prev.sales > 0 ? { from: prevFrom, to: prevTo, sales: pc(cur.sales, prev.sales), avgPerStore: pc(cur.avgPerStore, prev.avgPerStore), atv: pc(cur.atv, prev.atv), upt: pc(cur.upt, prev.upt) } : null };
+  };
+  out.mtd = mk(monthStart, shifted(monthStart, 0, -1), shifted(maxD, 0, -1));
+  out.ytd = mk(yearStart, shifted(yearStart, -1, 0), shifted(maxD, -1, 0));
+  return out;
+}
+
+module.exports = async function handler(req, res) {
+  if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
+  const who = await whoami(req);
+  if (!who) return send(res, 401, { ok: false, error: 'sign-in-required' });
+  if (!(who.kind === 'env' && who.info.role === 'admin')) return send(res, 403, { ok: false, error: 'Only the super admin and the brand manager can open this report.' }); // area managers, VM and staff never
+  if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
+  const fresh = new URL(req.url, 'https://x.invalid').searchParams.get('fresh') === '1';
+  const ck = 'overview/c.json';
+  if (!fresh) {
+    const c = await store.getJSON(ck).catch(() => null);
+    if (c && c.ok && Date.now() - Date.parse(c.generatedAt) < CACHE_MIN * 60000) return send(res, 200, c);
+  }
+  try {
+    const d = await build();
+    if (d.ok && !d.empty) await store.putJSON(ck, d).catch(() => {});
+    return send(res, 200, d);
+  } catch (e) {
+    console.error('OVERVIEW_ERROR', e && e.stack || e);
+    return send(res, 500, { ok: false, error: 'Could not build the report: ' + String(e && e.message || e).slice(0, 200) });
+  }
+};
+module.exports.build = build;

@@ -43,6 +43,10 @@
       "destination": "/api/erp?insights=1"
     },
     {
+      "source": "/api/overview",
+      "destination": "/api/erp?overview=1"
+    },
+    {
       "source": "/api/slow",
       "destination": "/api/erp?slow=1"
     },
