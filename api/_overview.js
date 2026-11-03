@@ -41,13 +41,19 @@ function figures(lines, from, to) {
     byStore.set(br, (byStore.get(br) || 0) + net);
   }
   let orders = 0, pieces = 0, ordersRev = 0;
-  for (const o of inv.values()) if (o.rev > 0 && o.q > 0) { orders++; pieces += o.q; ordersRev += o.rev; }
+  const ps = new Map(); // per store: orders, pieces, revenue of those orders
+  for (const [k, o] of inv) if (o.rev > 0 && o.q > 0) {
+    orders++; pieces += o.q; ordersRev += o.rev;
+    const br = k.slice(0, k.lastIndexOf('|')), x = ps.get(br) || { orders: 0, pieces: 0, rev: 0 };
+    x.orders++; x.pieces += o.q; x.rev += o.rev; ps.set(br, x);
+  }
   const stores = [...byStore.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   const days = dayN(to) - dayN(from) + 1;
   const n = stores.length;
   return {
     sales: r0(rev), stores: n, avgPerStore: n ? r0(rev / n) : 0, avgPerStorePerDay: n && days > 0 ? r0(rev / n / days) : 0,
     orders, atv: orders ? r0(ordersRev / orders) : 0, upt: orders ? r1(pieces / orders) : 0, units: r0(units), asp: units > 0 ? r0(rev / units) : 0,
+    perStore: stores.map(([name, v]) => { const x = ps.get(name) || { orders: 0, pieces: 0, rev: 0 }; return { name: pretty(name), sales: r0(v), share: rev > 0 ? r1(v / rev * 100) : 0, orders: x.orders, atv: x.orders ? r0(x.rev / x.orders) : 0, upt: x.orders ? r1(x.pieces / x.orders) : 0 }; }),
     top: stores.length ? { name: pretty(stores[0][0]), sales: r0(stores[0][1]) } : null,
     days
   };
@@ -79,7 +85,7 @@ module.exports = async function handler(req, res) {
   if (!(who.kind === 'env' && who.info.role === 'admin')) return send(res, 403, { ok: false, error: 'Only the super admin and the brand manager can open this report.' }); // area managers, VM and staff never
   if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
   const fresh = new URL(req.url, 'https://x.invalid').searchParams.get('fresh') === '1';
-  const ck = 'overview/c.json';
+  const ck = 'overview/c2.json';
   if (!fresh) {
     const c = await store.getJSON(ck).catch(() => null);
     if (c && c.ok && Date.now() - Date.parse(c.generatedAt) < CACHE_MIN * 60000) return send(res, 200, c);
