@@ -111,18 +111,34 @@ function build(st, day, files, me, mgr) {
 let IDX = null, IDX_AT = 0, IDX_P = null;
 async function buildIndex() {
   const m = new Map();
-  const add = (k, sku, name) => { k = String(k || '').trim().toUpperCase(); if (!k) return; const o = m.get(k); if (!o) m.set(k, { sku: sku || '', name: name || '' }); else { if (!o.sku && sku) o.sku = sku; if (!o.name && name) o.name = name; } };
+  const add = (k, sku, name, ic) => { k = String(k || '').trim().toUpperCase(); if (!k) return; const o = m.get(k); if (!o) m.set(k, { sku: sku || '', name: name || '', ic: ic ? String(ic) : '' }); else { if (!o.sku && sku) o.sku = sku; if (!o.name && name) o.name = name; } };
   try {
     const today = cairoDay(Date.now()), from = today.slice(0, 8) + '01';
     let c = await store.getJSON('stock/r/' + from + '_' + today + '.json').catch(() => null);
     if (!(c && c.rows && c.rows.length)) { const ix = (await store.getJSON('stock/index.json').catch(() => null)) || []; if (ix.length) c = await store.getJSON(ix[ix.length - 1]).catch(() => null); }
     let rows = c && c.rows;
     if (!(rows && rows.length)) { const s = await store.getJSON('stock/current.json').catch(() => null); rows = s && s.rows; }
-    for (const r of rows || []) { const sku = String(r[1] || '').trim(), name = String(r[9] || '').trim(); add(r[0], sku, name); if (sku) add(sku, sku, name); }
+    for (const r of rows || []) { const sku = String(r[1] || '').trim(), name = String(r[9] || '').trim(); add(r[0], sku, name, r[0]); if (sku) add(sku, sku, name, r[0]); }
     const erp = await store.getJSON('rf/erp.json').catch(() => null); // ERP item code -> SKU, saved by the Refill Order sync
     if (erp && erp.code2sku) for (const k of Object.keys(erp.code2sku)) add(k, erp.code2sku[k], '');
   } catch (_) { /* names and pictures are a bonus: scanning still works without them */ }
   return m;
+}
+// A barcode that is not in the stock list (out of stock, never stocked here): ask ERP's Item list directly and remember the answer.
+const SKU_RX = /\b\d{5,6}[A-Z]\d{2}(?:-[0-9A-Z]+)?\b/, DESIGN_RX = /\b\d{6}(?:-\d{1,3})?\b/;
+async function erpLookup(code) {
+  const base = String(process.env.ERP_URL || '').replace(/\/+$/, '');
+  if (!base || !process.env.ERP_API_KEY) return null;
+  const auth = { Authorization: 'token ' + process.env.ERP_API_KEY + ':' + process.env.ERP_API_SECRET, Accept: 'application/json' };
+  const f = 'fields=' + encodeURIComponent('["name","item_name","description"]') + '&limit_page_length=1';
+  const get = async flt => { try { const r = await fetch(base + '/api/resource/Item?' + f + '&filters=' + encodeURIComponent(JSON.stringify(flt)), { headers: auth, signal: AbortSignal.timeout(6000) }); return r.ok ? ((await r.json()).data || []) : []; } catch (_) { return []; } };
+  let l = await get([['Item Barcode', 'barcode', '=', code]]);
+  if (!l.length) l = await get([['name', '=', code]]);
+  if (!l.length) l = await get([['item_name', 'like', '%-' + code]]);
+  if (!l.length) return null;
+  const x = l[0], nm = String(x.item_name || '').trim(), dc = String(x.description || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+  const sku = (SKU_RX.exec(nm) || SKU_RX.exec(x.name) || SKU_RX.exec(dc) || DESIGN_RX.exec(nm) || [''])[0].toUpperCase();
+  return { sku, name: dc || (nm !== sku ? nm : ''), ic: String(x.name || '') };
 }
 async function itemInfo(codes) {
   if (!IDX || Date.now() - IDX_AT > 10 * 60 * 1000) {
@@ -130,14 +146,46 @@ async function itemInfo(codes) {
     await IDX_P;
   }
   const out = {};
-  for (const c of codes) { const o = IDX && IDX.get(String(c).trim().toUpperCase()); if (o && (o.sku || o.name)) out[c] = o; }
+  const miss = [];
+  for (const c of codes) { const o = IDX && IDX.get(String(c).trim().toUpperCase()); if (o && (o.sku || o.name)) out[c] = o; else miss.push(c); }
+  if (miss.length) { // not in stock: earlier ERP answers are kept (a miss for a day), new ones are asked now (a few at a time)
+    const memo = (await store.getJSON('chk/items.json').catch(() => null)) || {};
+    const ask = [];
+    for (const c of miss) {
+      const m = memo[c];
+      if (m && m.sku) out[c] = m; else if (!(m && m.at > Date.now() - 864e5)) ask.push(c);
+    }
+    const got = await Promise.all(ask.slice(0, 6).map(c => erpLookup(c).catch(() => null)));
+    let changed = false;
+    ask.slice(0, 6).forEach((c, i) => { memo[c] = got[i] ? { ...got[i], at: Date.now() } : { at: Date.now() }; changed = true; if (got[i] && (got[i].sku || got[i].name)) out[c] = got[i]; });
+    if (changed) { const ks = Object.keys(memo); if (ks.length > 3000) ks.slice(0, 500).forEach(k => delete memo[k]); await store.putJSON('chk/items.json', memo).catch(() => {}); }
+  }
   return out;
 }
 const dvOf = v => String(v || '').trim().toUpperCase().split('-')[0];
 
-// the picture of one item: pandoraeg.com first (same source as the other reports), else the picture saved on the item in ERP
+// The pictures already built into the site (private/stockcount-pics-N.js, one JPEG per design) work for any design, in stock or not.
+let BUILT = null;
+function builtPic(dv) {
+  if (!BUILT) {
+    BUILT = new Map();
+    const fs = require('fs'), path = require('path');
+    for (let i = 1; i <= 9; i++) {
+      try {
+        const t = fs.readFileSync(path.join(__dirname, '..', 'private', 'stockcount-pics-' + i + '.js'), 'utf8');
+        const rx = /"([A-Z0-9_]{4,20})":"([A-Za-z0-9+\/=]+)"/g; let m;
+        while ((m = rx.exec(t))) BUILT.set(m[1], m[2]);
+      } catch (_) { /* that file is not there */ }
+    }
+  }
+  return BUILT.get(dv) || '';
+}
+
+// the picture of one item: the built-in picture first, then pandoraeg.com (same source as the other reports), else the picture saved on the item in ERP
 async function sendPic(res, dv, code) {
   if (!/^[A-Z0-9_]{4,20}$/.test(dv)) return res.status(404).end();
+  const b64 = builtPic(dv);
+  if (b64) { res.setHeader('Content-Type', 'image/jpeg'); res.setHeader('Cache-Control', 'private, max-age=604800'); res.setHeader('X-Content-Type-Options', 'nosniff'); return res.status(200).end(Buffer.from(b64, 'base64')); }
   try {
     const u = await require('./_pic').find(dv);
     if (u) {
@@ -149,7 +197,8 @@ async function sendPic(res, dv, code) {
   } catch (_) { /* try ERP */ }
   try {
     const base = String(process.env.ERP_URL || '').replace(/\/+$/, '');
-    const c = String(code || '').trim();
+    const known = (await itemInfo([String(code || '').trim()]).catch(() => ({})))[String(code || '').trim()];
+    const c = String((known && known.ic) || code || '').trim();
     if (!base || !/^[A-Za-z0-9._\-\/ ]{1,40}$/.test(c)) return res.status(404).end();
     const auth = { Authorization: 'token ' + process.env.ERP_API_KEY + ':' + process.env.ERP_API_SECRET };
     const r0 = await fetch(base + '/api/resource/Item/' + encodeURIComponent(c), { headers: auth, signal: AbortSignal.timeout(8000) });

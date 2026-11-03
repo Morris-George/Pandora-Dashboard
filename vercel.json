@@ -6,6 +6,9 @@
     },
     "api/erp.js": {
       "maxDuration": 60
+    },
+    "api/vm.js": {
+      "includeFiles": "private/stockcount-pics-*.js"
     }
   },
   "crons": [
