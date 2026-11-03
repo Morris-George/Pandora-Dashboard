@@ -9,7 +9,7 @@ import { approveBatch, courierPickup, createOutbound, createReturn, receiveBatch
 
 export type ItemRow = { id: string; ticketNo: string; itemName: string; branchId: string; branchName: string };
 export type BatchRow = {
-  id: string; batchNo: string; direction: "outbound" | "return"; branchName: string; seal: string;
+  id: string; batchNo: string; direction: "outbound" | "return"; branchId: string; branchName: string; seal: string;
   status: string; mine: boolean; createdAt: string; pickedAt: string | null;
   items: { ticketNo: string; itemName: string; scanned: boolean }[];
 };
@@ -26,7 +26,7 @@ const BADGE: Record<string, string> = {
   incident: "bg-red-100 text-red-900",
 };
 
-export function DispatchPanel({ locale, role, myBranches, packable, returnable, batches, areaManager = true }: {
+export function DispatchPanel({ locale, role, myBranches, packable: allPackable, returnable: allReturnable, batches: allBatches, areaManager = true }: {
   locale: Locale; role: AppRole; myBranches: { id: string; name: string }[];
   packable: ItemRow[]; returnable: ItemRow[]; batches: BatchRow[]; areaManager?: boolean;
 }) {
@@ -35,6 +35,11 @@ export function DispatchPanel({ locale, role, myBranches, packable, returnable, 
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [picked, setPicked] = useState<string[]>([]); // batches ticked for approval
+  // Store filter: "all" or one store; every section below shows only that store
+  const [store, setStore] = useState("all");
+  const inStore = <R extends { branchId: string }>(rows: R[]) => (store === "all" ? rows : rows.filter((r) => r.branchId === store));
+  const packable = inStore(allPackable), returnable = inStore(allReturnable), batches = inStore(allBatches);
+  const packBranches = store === "all" ? myBranches : myBranches.filter((b) => b.id === store);
   const isBranch = role === "associate" || role === "manager";
 
   const run: Run = (fn, after) =>
@@ -57,13 +62,24 @@ export function DispatchPanel({ locale, role, myBranches, packable, returnable, 
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">{t.title}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">{t.title}</h1>
+        {myBranches.length > 1 && (
+          <label className="flex items-center gap-2 text-sm font-medium">{t.storeFilter}
+            <select value={store} onChange={(e) => { setStore(e.target.value); setPicked([]); }}
+              className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-normal bg-white">
+              <option value="all">{t.allStores}</option>
+              {myBranches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </label>
+        )}
+      </div>
       {error && <p role="alert" className="rounded-lg bg-red-50 text-red-800 text-sm p-3">{error}</p>}
       {notice && <p role="status" className="rounded-lg bg-emerald-50 text-emerald-900 text-sm p-3">{notice}</p>}
 
       {isBranch && (
-        <PackCard t={t} title={t.packTitle} note={t.packNote} empty={t.noneToPack} busy={busy} run={run}
-          branches={myBranches} items={packable} onCreate={(branchId, seal, ids) => createOutbound({ branchId, seal, ticketIds: ids })} />
+        <PackCard key={store} t={t} title={t.packTitle} note={t.packNote} empty={t.noneToPack} busy={busy} run={run}
+          branches={packBranches} items={packable} onCreate={(branchId, seal, ids) => createOutbound({ branchId, seal, ticketIds: ids })} />
       )}
 
       {role === "supervisor" && (

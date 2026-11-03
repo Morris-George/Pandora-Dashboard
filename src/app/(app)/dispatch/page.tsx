@@ -42,7 +42,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
   });
 
   const rows: BatchRow[] = (batches ?? []).map((b) => ({
-    id: b.id, batchNo: b.batch_no, direction: b.direction, branchName: (b.branches as unknown as Joined<{ name: string }>)?.name ?? "—",
+    id: b.id, batchNo: b.batch_no, direction: b.direction, branchId: b.branch_id, branchName: (b.branches as unknown as Joined<{ name: string }>)?.name ?? "—",
     seal: b.seal_no, status: b.status, mine: b.sent_by === me.userId, createdAt: b.created_at, pickedAt: b.picked_up_at,
     items: ((b.batch_items ?? []) as unknown as { scanned_in: boolean; tickets: Joined<{ ticket_no: string; item_name: string }> }[])
       .map((i) => ({ ticketNo: i.tickets?.ticket_no ?? "—", itemName: i.tickets?.item_name ?? "", scanned: i.scanned_in })),
