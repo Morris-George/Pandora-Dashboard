@@ -1,10 +1,11 @@
 import "server-only";
+import nodemailer from "nodemailer";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Customer emails (SMS later). Status changes queue rows in email_outbox (DB trigger);
-// this sends the queue through Resend. Without RESEND_API_KEY the rows simply wait.
+// this sends the queue through our mail server (SMTP). Without SMTP settings the rows simply wait.
 
-export const emailConfigured = () => !!process.env.RESEND_API_KEY && !!process.env.EMAIL_FROM;
+export const emailConfigured = () => !!process.env.SMTP_HOST && !!process.env.SMTP_USER && !!process.env.SMTP_PASS && !!process.env.EMAIL_FROM;
 
 const SITE = process.env.SITE_URL ?? "https://pandora-maintenance.vercel.app";
 
@@ -37,13 +38,18 @@ function render(kind: Kind, name: string, ticketNo: string, item: string, link: 
 // Sends up to `limit` queued emails. Safe to call often (e.g. in after()).
 export async function flushEmails(limit = 20): Promise<{ sent: number; failed: number }> {
   const out = { sent: 0, failed: 0 };
-  if (!emailConfigured()) return out;
   const db = createAdminClient();
   // Paused (pilot): drop queued notices so old ones are not sent later when email is switched on
   if (process.env.EMAIL_PAUSED === "1") {
     await db.from("email_outbox").update({ status: "failed", last_error: "email paused" }).eq("status", "pending");
     return out;
   }
+  if (!emailConfigured()) return out;
+  const port = Number(process.env.SMTP_PORT ?? 587);
+  const smtp = nodemailer.createTransport({
+    host: process.env.SMTP_HOST, port, secure: port === 465,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  });
   const { data: rows } = await db.from("email_outbox")
     .select("id, kind, to_email, attempts, tickets(ticket_no, item_name, tracking_token, customers(full_name))")
     .eq("status", "pending").lt("attempts", 5).order("created_at").limit(limit);
@@ -51,19 +57,14 @@ export async function flushEmails(limit = 20): Promise<{ sent: number; failed: n
     const t = r.tickets as unknown as { ticket_no: string; item_name: string; tracking_token: string; customers: { full_name: string } | null } | null;
     if (!t) continue;
     const kind = r.kind as Kind;
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: process.env.EMAIL_FROM, to: [r.to_email], headers: { "Auto-Submitted": "auto-generated", "X-Auto-Response-Suppress": "All" }, subject: COPY[kind].subject(t.ticket_no),
-        html: render(kind, t.customers?.full_name ?? "", t.ticket_no, t.item_name, `${SITE}/track/${t.tracking_token}`),
-      }),
-    }).catch((e: unknown) => ({ ok: false, text: async () => String(e) }) as const);
-    if (res.ok) {
+    const err = await smtp.sendMail({
+      from: process.env.EMAIL_FROM, to: r.to_email, headers: { "Auto-Submitted": "auto-generated", "X-Auto-Response-Suppress": "All" }, subject: COPY[kind].subject(t.ticket_no),
+      html: render(kind, t.customers?.full_name ?? "", t.ticket_no, t.item_name, `${SITE}/track/${t.tracking_token}`),
+    }).then(() => null, (e: unknown) => String(e).slice(0, 300));
+    if (!err) {
       await db.from("email_outbox").update({ status: "sent", sent_at: new Date().toISOString(), attempts: r.attempts + 1 }).eq("id", r.id);
       out.sent++;
     } else {
-      const err = (await res.text()).slice(0, 300);
       await db.from("email_outbox").update({ attempts: r.attempts + 1, last_error: err, status: r.attempts + 1 >= 5 ? "failed" : "pending" }).eq("id", r.id);
       out.failed++;
     }

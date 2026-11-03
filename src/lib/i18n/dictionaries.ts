@@ -174,6 +174,15 @@ const en = {
       emptyNote: "Leave a text empty to use the standard wording. Receipts print in the language the staff member is using.",
       save: "Save receipt", saved: "Saved. The next receipt uses it.", failed: "Could not save. Check the fields and try again.",
     },
+    workflow: {
+      title: "Workflow: dispatch steps",
+      note: "Turn optional steps off when the process changes, for example when items go straight to an outside service center. Changes apply to new shipments right away.",
+      on: "On", off: "Off (skipped)", turnOn: "Turn on", turnOff: "Turn off", failed: "Could not save. Try again.",
+      steps: {
+        manager_approval: { name: "Second branch manager approval", on: "A branch manager other than the packer approves the bag before it leaves.", off: "The bag leaves as soon as the store seals it. No approval." },
+        area_manager: { name: "Area manager handover", on: "The area manager scans every item to collect the bag and holds custody until it is received.", off: "The receiver scans the bag directly. No area manager step." },
+      },
+    },
     security: {
       title: "Security: two-step login for Super Admins",
       note: "When on, Super Admins enter a code from an authenticator app after their password. Strongly recommended: these accounts can do everything.",
@@ -342,6 +351,12 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     printReceipt: "Print receipt (80 mm)",
     whatsapp: { received: "WhatsApp: item received", update: "WhatsApp: status update", quote: "WhatsApp: send the quote", ready: "WhatsApp: ready for pickup", reminder: "WhatsApp: pickup reminder", collected: "WhatsApp: thank you" } as Record<string, string>,
     printLabel: "Print bag label",
+    remove: {
+      title: "Delete ticket", button: "Delete ticket", confirm: "Delete permanently", cancel: "Cancel",
+      note: "This permanently removes the ticket, its history, quotes and photos. It cannot be undone. A record stays in the audit log.",
+      reason: "Reason (required)", typeNo: (no: string) => `Type ${no} to confirm`,
+      mismatch: "The ticket number does not match.", failed: "Could not delete the ticket. Try again.",
+    },
     printDelivery: "Print delivery receipt",
     customer: "Customer",
     mobile: "Mobile",
@@ -871,6 +886,15 @@ const ar: Dict = {
       emptyNote: "سيب النص فاضي عشان يستخدم الصيغة الأساسية. الإيصال بيتطبع باللغة اللي الموظف شغال بيها.",
       save: "حفظ الإيصال", saved: "اتحفظ. أول إيصال جاي هيستخدمه.", failed: "مقدرناش نحفظ. راجع البيانات وحاول تاني.",
     },
+    workflow: {
+      title: "مسار العمل: خطوات الشحن",
+      note: "اقفل الخطوات الاختيارية لما طريقة الشغل تتغير، مثلاً لو القطع هتروح مركز صيانة خارجي على طول. التغيير بيطبق على الشحنات الجديدة فورًا.",
+      on: "شغالة", off: "مقفولة (بتتخطى)", turnOn: "تشغيل", turnOff: "إيقاف", failed: "ماقدرناش نحفظ. حاول تاني.",
+      steps: {
+        manager_approval: { name: "موافقة مدير فرع تاني", on: "مدير فرع غير اللي جهّز الشحنة بيوافق قبل ما الكيس يخرج.", off: "الكيس بيخرج أول ما الفرع يقفله. من غير موافقة." },
+        area_manager: { name: "استلام مدير المنطقة", on: "مدير المنطقة بيعمل سكان لكل قطعة وهو بيستلم، والعهدة معاه لحد ما تتسلم.", off: "المستلم بيعمل سكان للكيس على طول. من غير خطوة مدير المنطقة." },
+      },
+    },
     security: {
       title: "الأمان: التحقق بخطوتين لمديري النظام",
       note: "لما يكون شغال، مدير النظام بيكتب كود من تطبيق التحقق بعد كلمة المرور. مُوصى بيه جداً لأن الحسابات دي تقدر تعمل كل حاجة.",
@@ -1040,6 +1064,12 @@ const ar: Dict = {
     printReceipt: "طباعة إيصال (80 مم)",
     whatsapp: { received: "واتساب: تم الاستلام", update: "واتساب: آخر حالة", quote: "واتساب: ابعت عرض السعر", ready: "واتساب: جاهزة للاستلام", reminder: "واتساب: تذكير بالاستلام", collected: "واتساب: شكراً" } as Record<string, string>,
     printLabel: "طباعة ملصق الكيس",
+    remove: {
+      title: "حذف التيكيت", button: "حذف التيكيت", confirm: "حذف نهائي", cancel: "إلغاء",
+      note: "ده هيمسح التيكيت وسجله وعروض الأسعار والصور نهائيًا ومش هينفع يرجع. هيفضل سجل بالحذف في سجل المراجعة.",
+      reason: "السبب (مطلوب)", typeNo: (no: string) => `اكتب ${no} للتأكيد`,
+      mismatch: "رقم التيكيت مش مطابق.", failed: "ماقدرناش نحذف التيكيت. حاول تاني.",
+    },
     printDelivery: "طباعة إيصال التسليم",
     customer: "العميل",
     mobile: "الموبايل",

@@ -18,7 +18,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
   const isBranch = me.role === "associate" || me.role === "manager";
 
   // RLS already limits branch roles to their own branches
-  const [{ data: packable }, { data: returnable }, { data: batches }] = await Promise.all([
+  const [{ data: packable }, { data: returnable }, { data: batches }, { data: wf }] = await Promise.all([
     isBranch
       ? supabase.from("tickets").select("id, ticket_no, item_name, branch_id").eq("status", "received_at_branch").order("created_at")
       : Promise.resolve({ data: [] }),
@@ -28,7 +28,10 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
     supabase.from("dispatch_batches")
       .select("id, batch_no, direction, branch_id, seal_no, status, sent_by, created_at, courier_id, picked_up_at, branches(name), batch_items(scanned_in, tickets(ticket_no, item_name))")
       .order("created_at", { ascending: false }).limit(50),
+    supabase.from("app_settings").select("value").eq("key", "workflow").maybeSingle(),
   ]);
+  // Admin → Workflow: with the area manager step off, the receiver scans the bag directly
+  const areaManager = (wf?.value as { area_manager?: boolean } | null)?.area_manager !== false;
 
   // Branch names for the return grouping (supervisor sees all branches)
   const { data: branchList } = await supabase.from("branches").select("id, name, is_hq").eq("active", true).order("name");
@@ -55,6 +58,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
       packable={(packable ?? []).map(toItem)}
       returnable={(returnable ?? []).map(toItem)}
       batches={rows}
+      areaManager={areaManager}
     />
     </>
   );

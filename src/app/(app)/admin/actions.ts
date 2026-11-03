@@ -124,6 +124,21 @@ export async function saveReceiptSettings(input: unknown): Promise<Result> {
   return {};
 }
 
+// Optional dispatch steps (manager approval, area manager handover) on / off
+export async function setWorkflowStep(step: "manager_approval" | "area_manager", on: boolean): Promise<Result> {
+  const me = await requireRole("admin");
+  if (step !== "manager_approval" && step !== "area_manager") return { error: "invalid" };
+  const supabase = await createClient();
+  const { data: cur } = await supabase.from("app_settings").select("value").eq("key", "workflow").maybeSingle();
+  const value = { manager_approval: true, area_manager: true, ...(cur?.value as object | null), [step]: on };
+  const { error } = await supabase.from("app_settings").upsert({ key: "workflow", value, updated_by: me.userId, updated_at: new Date().toISOString() });
+  if (error) return { error: "failed" };
+  await audit(me.userId, `workflow_${step}_${on ? "on" : "off"}`, "workflow", value);
+  revalidatePath("/admin");
+  revalidatePath("/dispatch");
+  return {};
+}
+
 // Two-step login for Super Admins on / off (on by default)
 export async function setTwoStep(on: boolean): Promise<Result> {
   const me = await requireRole("admin");

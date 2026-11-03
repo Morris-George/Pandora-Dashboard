@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { getI18n } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { DeleteTicket } from "../tickets/[id]/delete-ticket";
 
 export const metadata = { title: "Pandora Maintenance" };
 
@@ -21,7 +22,7 @@ const STAGES = [
 type Event = { at: string; kind: "status" | "move" | "diag" | "quote" | "created"; title: string; detail?: string; by?: string };
 
 export default async function TrackingPage({ searchParams }: { searchParams: Promise<{ q?: string; id?: string; name?: string; mobile?: string }> }) {
-  await requireRole("associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin");
+  const me = await requireRole("associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin");
   const { t: d, locale } = await getI18n();
   const t = d.tracking;
   const { q = "", id, name = "", mobile = "" } = await searchParams;
@@ -133,6 +134,7 @@ export default async function TrackingPage({ searchParams }: { searchParams: Pro
             ))}
           </ol>
         </section>
+        {me.fullAccess && <DeleteTicket locale={locale} ticketId={tk.id} ticketNo={tk.ticket_no} />}
       </>
     );
   }

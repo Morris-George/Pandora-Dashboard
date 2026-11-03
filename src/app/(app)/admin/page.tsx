@@ -6,6 +6,7 @@ import { CategoriesPanel } from "./categories-panel";
 import { ReportsPanel } from "./reports-panel";
 import { ErpPanel } from "./erp-panel";
 import { SecurityPanel } from "./security-panel";
+import { WorkflowPanel } from "./workflow-panel";
 import { ReceiptPanel } from "./receipt-panel";
 import { StoresPanel } from "./stores-panel";
 import { SlaPanel } from "./sla-panel";
@@ -20,7 +21,7 @@ export default async function AdminPage() {
   const { locale } = await getI18n();
   const supabase = await createClient();
 
-  const [{ data: profiles }, { data: links }, { data: branches }, { data: pending }, { data: cats }, { data: reports }, { data: access }, { data: runs }, { data: excl }, { data: sps }, { data: twoStep }, { data: receipt }] = await Promise.all([
+  const [{ data: profiles }, { data: links }, { data: branches }, { data: pending }, { data: cats }, { data: reports }, { data: access }, { data: runs }, { data: excl }, { data: sps }, { data: twoStep }, { data: wf }, { data: receipt }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email, role, active, source, must_change_password, erp_created_run").order("full_name"),
     supabase.from("user_branches").select("user_id, branch_id"),
     supabase.from("branches").select("id, name, is_hq, whatsapp").eq("active", true).order("name"),
@@ -32,6 +33,7 @@ export default async function AdminPage() {
     supabase.from("erp_sync_exclusions").select("email, reason").order("email"),
     supabase.from("sales_persons").select("erp_name, erp_group, branch_id, branch_override, profile_id, enabled, ignored, created_run, sync_paused").order("erp_name"),
     supabase.from("app_settings").select("value").eq("key", "admin_two_step").maybeSingle(),
+    supabase.from("app_settings").select("value").eq("key", "workflow").maybeSingle(),
     supabase.from("app_settings").select("value").eq("key", "receipt").maybeSingle(),
   ]);
 
@@ -56,6 +58,7 @@ export default async function AdminPage() {
       <StoresPanel locale={locale} stores={(branches ?? []).map((b) => ({ id: b.id, name: b.name, whatsapp: b.whatsapp }))} />
       <SlaPanel locale={locale} rules={slaRules} />
       <ReceiptPanel locale={locale} initial={withDefaults(receipt?.value)} />
+      <WorkflowPanel locale={locale} workflow={{ manager_approval: true, area_manager: true, ...(wf?.value as object | null) }} />
       <SecurityPanel locale={locale} twoStep={twoStep?.value !== false} />
       <ErpPanel locale={locale} configured={erpConfigured()} excluded={excl ?? []}
         lastRun={runs?.[0] ? { at: runs[0].started_at, trigger: runs[0].trigger, ok: runs[0].ok, summary: runs[0].summary } : null} />

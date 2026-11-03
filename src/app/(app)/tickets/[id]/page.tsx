@@ -10,6 +10,7 @@ import type { Warranty } from "@/lib/warranty";
 import { PrintButton } from "./print-button";
 import { waKind, waMessage, waNumber } from "@/lib/whatsapp";
 import { ExceptionActions } from "./exception-actions";
+import { DeleteTicket } from "./delete-ticket";
 import { EXCEPTIONS, type ExceptionTarget } from "./exceptions";
 
 export const metadata = { title: "Pandora Maintenance" };
@@ -204,6 +205,7 @@ export default async function TicketPage({ params, searchParams }: {
       )}
 
       <ExceptionActions locale={locale} ticketId={tk.id} moves={moves} />
+      {me.fullAccess && <DeleteTicket locale={locale} ticketId={tk.id} ticketNo={tk.ticket_no} />}
     </div>
   );
 }
