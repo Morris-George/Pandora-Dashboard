@@ -185,7 +185,7 @@ function PackCard({ t, title, note, empty, nested, busy, run, branches, items, o
   branches: { id: string; name: string }[]; items: ItemRow[];
   onCreate: (branchId: string, seal: string, ids: string[]) => Promise<{ error?: string; batchNo?: string }>;
 }) {
-  const [branchId, setBranchId] = useState(branches[0]?.id ?? "");
+  const branchId = branches[0]?.id ?? "";
   const [picked, setPicked] = useState<string[]>([]);
   const [seal, setSeal] = useState("");
   const shown = items.filter((i) => i.branchId === branchId);
@@ -198,14 +198,8 @@ function PackCard({ t, title, note, empty, nested, busy, run, branches, items, o
         <h2 className={nested ? "font-semibold" : "text-lg font-semibold"}>{title}</h2>
         {note && <p className="text-sm text-stone-600 mt-1">{note}</p>}
       </div>
-      {branches.length > 1 && (
-        <label className="flex flex-col gap-1.5 text-sm font-medium self-start">{t.branch}
-          <select value={branchId} onChange={(e) => { setBranchId(e.target.value); setPicked([]); }} className={input}>
-            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
-        </label>
-      )}
-      {!shown.length ? <p className="text-sm text-stone-600">{empty}</p> : (
+      {/* The store comes from the Store filter at the top; with "All stores" the user picks one there */}
+      {branches.length > 1 ? <p className="text-sm text-stone-600">{t.pickStore}</p> : !shown.length ? <p className="text-sm text-stone-600">{empty}</p> : (
         <>
           <div className="flex flex-col">
             {shown.map((i) => (
