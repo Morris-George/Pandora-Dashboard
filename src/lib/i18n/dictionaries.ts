@@ -211,7 +211,7 @@ const en = {
       warn: "Anyone who gets a Super Admin password could then change users, data and settings. This change is recorded in the audit log.",
       failed: "Could not save. Try again.",
     },
-    teamFilter: "Team:", allTeams: (n: number) => `All teams (${n})`, storeFilter: "Store:", allStores: (n: number) => `All stores (${n})`, noStore: (n: number) => `HQ / no store (${n})`, showing: (n: number) => `${n} users`,
+    teamFilter: "Team:", allTeams: (n: number) => `All teams (${n})`, userSearch: "Search by name, email, store or role", storeFilter: "Store:", allStores: (n: number) => `All stores (${n})`, noStore: (n: number) => `HQ / no store (${n})`, showing: (n: number) => `${n} users`,
     usersTitle: "Users",
     usersNote: "Accounts are created by the Super Admin only. A temporary password is shown once; the user must change it at first sign-in.",
     staff: {
@@ -953,7 +953,7 @@ const ar: Dict = {
       warn: "أي حد يعرف كلمة مرور مدير النظام هيقدر يغيّر المستخدمين والبيانات والإعدادات. التغيير ده بيتسجل في سجل التدقيق.",
       failed: "مقدرناش نحفظ. حاول تاني.",
     },
-    teamFilter: "الفريق:", allTeams: (n: number) => `كل الفرق (${n})`, storeFilter: "الفرع:", allStores: (n: number) => `كل الفروع (${n})`, noStore: (n: number) => `الإدارة / بدون فرع (${n})`, showing: (n: number) => `${n} مستخدم`,
+    teamFilter: "الفريق:", allTeams: (n: number) => `كل الفرق (${n})`, userSearch: "ابحث بالاسم أو الإيميل أو الفرع أو الدور", storeFilter: "الفرع:", allStores: (n: number) => `كل الفروع (${n})`, noStore: (n: number) => `الإدارة / بدون فرع (${n})`, showing: (n: number) => `${n} مستخدم`,
     usersTitle: "المستخدمون",
     usersNote: "الحسابات يُنشئها المسؤول الأعلى فقط. كلمة المرور المؤقتة تظهر مرة واحدة، ويجب على المستخدم تغييرها عند أول دخول.",
     staff: {

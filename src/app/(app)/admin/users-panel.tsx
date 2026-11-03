@@ -31,7 +31,12 @@ export function UsersPanel({ locale, meId, users, pending, branches }: {
   const [ask, askDialog] = useAsk();
   const [store, setStore] = useState(""); // "" = all, "none" = no store (HQ / central roles), else branch id
   const [team, setTeam] = useState<"" | AppRole>(""); // "" = every role
-  const shownUsers = users.filter((u) => (!store || (store === "none" ? !u.branchIds.length : u.branchIds.includes(store))) && (!team || u.role === team));
+  const [search, setSearch] = useState("");
+  // Free search: name, email, store name or role (e.g. "Alex", "area manager")
+  const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const haystack = (u: UserRow) => [u.name, u.email, d.roles[u.role], ...branches.filter((b) => u.branchIds.includes(b.id)).map((b) => b.name)].join(" ").toLowerCase();
+  const shownUsers = users.filter((u) => (!store || (store === "none" ? !u.branchIds.length : u.branchIds.includes(store))) && (!team || u.role === team)
+    && words.every((w) => haystack(u).includes(w)));
   const perStore = (id: string) => users.filter((u) => u.active && u.branchIds.includes(id)).length;
   const [temp, setTemp] = useState<{ email: string; password: string } | null>(null);
   const [roleDraft, setRoleDraft] = useState<Record<string, AppRole>>({});
@@ -74,6 +79,8 @@ export function UsersPanel({ locale, meId, users, pending, branches }: {
           <p className="text-sm text-stone-600 mt-1">{t.usersNote}</p>
         </div>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.userSearch} aria-label={t.userSearch}
+          className={`${input} py-2 flex-[1_1_240px]`} />
         <label className="flex flex-wrap items-center gap-2 text-sm font-medium">{t.storeFilter}
           <select value={store} onChange={(e) => setStore(e.target.value)} className={`${input} py-2`}>
             <option value="">{t.allStores(users.length)}</option>
@@ -86,7 +93,7 @@ export function UsersPanel({ locale, meId, users, pending, branches }: {
             <option value="">{t.allTeams(users.length)}</option>
             {ROLES.map((r) => <option key={r} value={r}>{d.roles[r]} ({users.filter((u) => u.role === r).length})</option>)}
           </select>
-          {(store || team) && <span className="text-stone-500 font-normal">{t.showing(shownUsers.length)}</span>}
+          {(store || team || words.length > 0) && <span className="text-stone-500 font-normal">{t.showing(shownUsers.length)}</span>}
         </label>
         </div>
         <div className="overflow-x-auto">
