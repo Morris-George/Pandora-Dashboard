@@ -174,6 +174,11 @@ const en = {
       emptyNote: "Leave a text empty to use the standard wording. Receipts print in the language the staff member is using.",
       save: "Save receipt", saved: "Saved. The next receipt uses it.", failed: "Could not save. Check the fields and try again.",
     },
+    menu: {
+      title: "Menu: tab names",
+      note: "Rename the menu tabs. Leave a box empty to keep the built-in name (shown in grey).",
+      english: "English", arabic: "Arabic", save: "Save names", saved: "Saved. The menu shows the new names.", failed: "Could not save. Try again.",
+    },
     mail: {
       title: "Email: mail server for customer notifications",
       note: "Customer emails (received, quote, ready, collected) are sent through this mail server. The password is kept on the server and never shown again.",
@@ -898,6 +903,11 @@ const ar: Dict = {
       arabic: "عربي", english: "إنجليزي",
       emptyNote: "سيب النص فاضي عشان يستخدم الصيغة الأساسية. الإيصال بيتطبع باللغة اللي الموظف شغال بيها.",
       save: "حفظ الإيصال", saved: "اتحفظ. أول إيصال جاي هيستخدمه.", failed: "مقدرناش نحفظ. راجع البيانات وحاول تاني.",
+    },
+    menu: {
+      title: "القائمة: أسماء التبويبات",
+      note: "غيّر أسماء تبويبات القائمة. سيب الخانة فاضية عشان يفضل الاسم الأصلي (اللي باللون الرمادي).",
+      english: "إنجليزي", arabic: "عربي", save: "حفظ الأسماء", saved: "اتحفظ. القائمة بتظهر الأسماء الجديدة.", failed: "ماقدرناش نحفظ. حاول تاني.",
     },
     mail: {
       title: "الإيميل: سيرفر إيميلات إشعارات العملاء",

@@ -157,6 +157,21 @@ export async function testEmail(to?: string): Promise<{ error?: string; to?: str
   return err ? { error: err } : { to: addr.data };
 }
 
+// Menu names from Admin → Menu: { "/tickets": { ar, en } }; empty names fall back to the built-in ones
+export async function saveMenuLabels(input: Record<string, { ar?: string; en?: string }>): Promise<Result> {
+  const me = await requireRole("admin");
+  const { NAV } = await import("@/lib/nav");
+  const clean = (v?: string) => (v ?? "").trim().slice(0, 40);
+  const value = Object.fromEntries(NAV.map((n) => [n.href, { ar: clean(input[n.href]?.ar), en: clean(input[n.href]?.en) }])
+    .filter(([, v]) => (v as { ar: string; en: string }).ar || (v as { ar: string; en: string }).en));
+  const supabase = await createClient();
+  const { error } = await supabase.from("app_settings").upsert({ key: "menu_labels", value, updated_by: me.userId, updated_at: new Date().toISOString() });
+  if (error) return { error: "failed" };
+  await audit(me.userId, "menu_labels_saved", "menu_labels", value);
+  revalidatePath("/", "layout");
+  return {};
+}
+
 // Optional dispatch steps (manager approval, area manager handover) on / off
 export async function setWorkflowStep(step: "manager_approval" | "area_manager", on: boolean): Promise<Result> {
   const me = await requireRole("admin");

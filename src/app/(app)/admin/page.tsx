@@ -8,6 +8,7 @@ import { ErpPanel } from "./erp-panel";
 import { SecurityPanel } from "./security-panel";
 import { WorkflowPanel } from "./workflow-panel";
 import { EmailPanel } from "./email-panel";
+import { MenuPanel, type MenuLabels } from "./menu-panel";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ReceiptPanel } from "./receipt-panel";
 import { StoresPanel } from "./stores-panel";
@@ -56,6 +57,7 @@ export default async function AdminPage() {
   const { data: m } = await createAdminClient().from("mail_settings").select("host, port, username, from_name, from_email, paused, password").maybeSingle();
   const mail = m ? { host: m.host as string | null, port: m.port as number | null, username: m.username as string | null,
     from_name: m.from_name as string | null, from_email: m.from_email as string | null, paused: !!m.paused, hasPassword: !!m.password } : null;
+  const { data: menu } = await supabase.from("app_settings").select("value").eq("key", "menu_labels").maybeSingle();
   const { data: sla } = await supabase.from("sla_rules").select("status, max_days");
   const ORDER = ["received_at_branch", "awaiting_dispatch", "in_transit_to_hq", "received_at_hq", "under_diagnosis", "awaiting_customer_approval", "in_repair", "awaiting_parts", "quality_check", "ready_to_return", "quote_rejected", "unrepairable", "in_transit_to_branch", "ready_for_pickup"];
   const slaRules = (sla ?? []).map((r) => ({ status: r.status as string, days: Number(r.max_days) })).sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status));
@@ -64,6 +66,7 @@ export default async function AdminPage() {
       <StoresPanel locale={locale} stores={(branches ?? []).map((b) => ({ id: b.id, name: b.name, whatsapp: b.whatsapp }))} />
       <SlaPanel locale={locale} rules={slaRules} />
       <ReceiptPanel locale={locale} initial={withDefaults(receipt?.value)} />
+      <MenuPanel locale={locale} initial={(menu?.value ?? {}) as MenuLabels} />
       <EmailPanel locale={locale} myEmail={me.email} initial={{
         host: mail?.host ?? process.env.SMTP_HOST ?? "", port: String(mail?.port ?? process.env.SMTP_PORT ?? 465),
         username: mail?.username ?? process.env.SMTP_USER ?? "", fromName: mail?.from_name ?? "Pandora Maintenance (No Reply)",
