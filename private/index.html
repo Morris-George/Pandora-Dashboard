@@ -41,7 +41,8 @@
 .xlist{display:flex;flex-direction:column;gap:2px;min-width:0}
 .xrow{display:grid;grid-template-columns:minmax(110px,1.2fr) 2fr auto;gap:12px;align-items:center;width:100%;border:0;background:none;color:var(--text);text-align:left;padding:9px 10px;border-radius:10px;cursor:pointer;font-size:12px}
 .xrow:hover,.xrow[aria-pressed="true"]{background:light-dark(#fbf1f5,#33202a)}
-.xrow .xname{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xrow>span:first-child{display:block;min-width:0;overflow:hidden}
+.xrow .xname{display:block;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .xrow .xmeta{display:block;color:var(--muted);font-size:10.5px;font-weight:500;margin-top:2px}
 .xrow .xval{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .xdetail{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
@@ -476,7 +477,7 @@ function renderSku(){
   const hits=all.filter(o=>lc(o.sku).includes(q)||Object.keys(o.names).some(n=>lc(n).includes(q))).sort((a,b)=>(lc(b.sku)===q)-(lc(a.sku)===q)||b.value-a.value);
   if(!hits.length){out.innerHTML='<div class="xempty">No SKU matching “'+esc(sk.q.trim())+'” has sales in these dates. Check the SKU or widen the date range.</div>';return}
   let sel=sk.pick&&m[sk.pick]?m[sk.pick]:null;
-  if(!sel)sel=hits.find(o=>lc(o.sku)===q)||(hits.length===1?hits[0]:null);
+  if(!sel)sel=hits.find(o=>lc(o.sku)===q)||hits[0]; /* nothing picked yet: open the best match so its picture and stock show at once */
   const maxV=Math.max(1,...hits.slice(0,12).map(o=>Math.abs(o.value)));
   const list=hits.length>1||!sel?`<div class="xlist" id="skuList">${hits.slice(0,12).map(o=>`<button class="xrow" type="button" data-sku="${esc(o.sku)}" aria-pressed="${sel&&sel.sku===o.sku}" title="${esc(o.sku)}"><span><span class="xname">${esc(topName(o))}</span><span class="xmeta"><i class="xsku">${esc(o.sku)}</i> · ${num(o.units)} units</span></span><span class="track"><span class="fill" style="display:block;width:${Math.max(2,Math.abs(o.value)/maxV*100)}%"></span></span><span class="xval">${money(o.value)}</span></button>`).join('')}${hits.length>12?`<div class="xmeta" style="padding:6px 10px">Showing 12 of ${hits.length} matches. Type more of the SKU to narrow it down.</div>`:''}</div>`:'';
   let detail='';
