@@ -12,6 +12,7 @@ import { waKind, waMessage, waNumber } from "@/lib/whatsapp";
 import { ExceptionActions } from "./exception-actions";
 import { DeleteTicket } from "./delete-ticket";
 import { EXCEPTIONS, type ExceptionTarget } from "./exceptions";
+import { withDefaults } from "@/lib/receipt-settings";
 
 export const metadata = { title: "Pandora Maintenance" };
 
@@ -91,6 +92,9 @@ export default async function TicketPage({ params, searchParams }: {
     current: i === all.length - 1,
     reason: h.reason,
   }));
+  // Terms & conditions from Admin → Receipt (same text as the intake receipt)
+  const { data: rs } = await supabase.from("app_settings").select("value").eq("key", "receipt").maybeSingle();
+  const terms = withDefaults(rs?.value).termsIntake[locale === "ar" ? "ar" : "en"] || d.receipt.terms;
   const when = new Date(tk.created_at).toLocaleString(locale === "ar" ? "ar-EG" : "en-GB");
 
   return (
@@ -123,9 +127,6 @@ export default async function TicketPage({ params, searchParams }: {
             <a href={`/label/${tk.id}`} target="_blank" rel="noopener" className="rounded-lg border border-stone-900 px-4 py-2 text-sm font-bold">{t.printLabel}</a>
             {(tk.status === "collected" || tk.status === "closed") && (
               <a href={`/receipt/${tk.id}?kind=delivery`} target="_blank" rel="noopener" className="rounded-lg border border-stone-900 px-4 py-2 text-sm font-bold">{t.printDelivery}</a>
-            )}
-            {waHref && (
-              <a href={waHref} target="_blank" rel="noopener" className="rounded-lg bg-emerald-700 text-white px-4 py-2 text-sm font-bold">{t.whatsapp[kind]}</a>
             )}
             <PrintButton label={t.print} />
           </div>
@@ -173,14 +174,15 @@ export default async function TicketPage({ params, searchParams }: {
           </div>
         )}
 
-        {/* Signed on paper at the counter: the customer accepts the condition, accessories and agreed cost */}
-        <div className="grid grid-cols-2 gap-8 pt-6 text-sm">
-          <div><div className="border-b border-stone-400 h-10" /><div className="text-stone-600 mt-1">{t.signCustomer}</div></div>
-          <div><div className="border-b border-stone-400 h-10" /><div className="text-stone-600 mt-1">{t.signStaff}</div></div>
-        </div>
-        <p className="text-xs text-stone-500">{t.terms}</p>
+        <p className="text-xs text-stone-500 whitespace-pre-line">{terms}</p>
 
         <p className="text-xs text-stone-500 border-t border-stone-200 pt-3">{t.footer(d.status[tk.status] ?? tk.status)}</p>
+        {/* The customer confirms the condition and agreed cost on WhatsApp instead of signing */}
+        {waHref && (
+          <div className="no-print">
+            <a href={waHref} target="_blank" rel="noopener" className="inline-block rounded-lg bg-emerald-700 text-white px-4 py-2 text-sm font-bold">{t.whatsapp[kind]}</a>
+          </div>
+        )}
       </section>
 
       {!!timeline.length && (
