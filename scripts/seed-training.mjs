@@ -14,7 +14,7 @@ const USERS = [
   ["associate", "associate", "موظف فرع", true],
   ["manager", "manager", "مدير فرع", true],
   ["manager2", "manager", "مدير فرع تاني (للموافقة على الشحن)", true],
-  ["area", "courier", "مدير المنطقة", false],
+  ["area", "courier", "مدير المنطقة", true],
   ["hq", "hq", "استلام المركز الرئيسي", false],
   ["technician", "technician", "فني", false],
   ["supervisor", "supervisor", "مشرف الصيانة", false],

@@ -10,7 +10,8 @@ import { runErpSync } from "@/lib/erp-sync";
 import { erpConfigured, findItem, getItemPrice } from "@/lib/erpnext";
 
 const ROLES = ["associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin"] as const;
-const BRANCH_ROLES: AppRole[] = ["associate", "manager"];
+// Roles tied to stores; area managers (courier) cover several stores
+const BRANCH_ROLES: AppRole[] = ["associate", "manager", "courier"];
 type Result = { error?: string; password?: string };
 
 // Readable temporary password; the user must change it at first sign-in
@@ -380,7 +381,7 @@ export async function setSalesPersonStore(erpName: string, branchId: string | nu
   const target = sp?.branch_override ?? sp?.branch_id;
   if (sp?.profile_id && target) {
     const { data: p } = await admin.from("profiles").select("role").eq("id", sp.profile_id).single();
-    if (p && BRANCH_ROLES.includes(p.role)) {
+    if (p && (p.role === "associate" || p.role === "manager")) {
       await admin.from("user_branches").delete().eq("user_id", sp.profile_id);
       await admin.from("user_branches").insert({ user_id: sp.profile_id, branch_id: target });
     }
