@@ -143,6 +143,14 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
     setLookupState(r.status);
   }
 
+  // Look the code up by itself once typing stops (scanners that send no Enter, or a pasted code)
+  useEffect(() => {
+    if (lookupState || itemCode.trim().length < 4) return;
+    const timer = setTimeout(() => lookup(), 700);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemCode, lookupState]);
+
   function addPhotos(list: FileList | null) {
     // Copy now: the input is cleared right after, which empties the live FileList
     const files = Array.from(list ?? []);
