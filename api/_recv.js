@@ -59,14 +59,14 @@ async function scansOf(id) {
   const out = await Promise.all(paths.map(async p => ({ team: p.split('/')[3], file: p, data: await store.getJSON(p) })));
   return out.filter(x => x.data && TEAMS[x.team]);
 }
-// per team: {boxes:{box:{code:n}}, people:[{by, pcs, at}]}
+// per team: {boxes:{box:{code:n}}, who:{box:{code:{person:n}}}, people:[{by, pcs, at}]}
 function addUp(files, onlyTeam) {
   const out = {};
-  for (const t of Object.keys(TEAMS)) if (!onlyTeam || t === onlyTeam) out[t] = { boxes: {}, people: [] };
+  for (const t of Object.keys(TEAMS)) if (!onlyTeam || t === onlyTeam) out[t] = { boxes: {}, who: {}, people: [] };
   for (const f of files) {
     if (!out[f.team]) continue;
     const T = out[f.team]; let pcs = 0;
-    for (const [bx, m] of Object.entries(f.data.boxes || {})) for (const [c, n] of Object.entries(m)) { if (!n) continue; const B = T.boxes[bx] || (T.boxes[bx] = {}); B[c] = (B[c] || 0) + n; pcs += n; }
+    for (const [bx, m] of Object.entries(f.data.boxes || {})) for (const [c, n] of Object.entries(m)) { if (!n) continue; const B = T.boxes[bx] || (T.boxes[bx] = {}); B[c] = (B[c] || 0) + n; pcs += n; const W = ((T.who[bx] = T.who[bx] || {})[c] = T.who[bx][c] || {}), nm = f.data.by || '?'; W[nm] = (W[nm] || 0) + n; }
     T.people.push({ by: f.data.by || '', pcs, at: f.data.at || '' });
   }
   return out;
