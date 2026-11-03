@@ -74,6 +74,10 @@ async function build() {
     return { from, to: maxD, ...cur, vs: prev && prev.sales > 0 ? { from: prevFrom, to: prevTo, sales: pc(cur.sales, prev.sales), avgPerStore: pc(cur.avgPerStore, prev.avgPerStore), atv: pc(cur.atv, prev.atv), upt: pc(cur.upt, prev.upt) } : null };
   };
   out.mtd = mk(monthStart, shifted(monthStart, 0, -1), shifted(maxD, 0, -1));
+  // the full month before (complete figures, only when the saved data reaches its first day)
+  const lmFrom = shifted(monthStart, 0, -1);
+  const lmEnd = new Date(Date.UTC(+monthStart.slice(0, 4), +monthStart.slice(5, 7) - 1, 0)).toISOString().slice(0, 10);
+  out.lm = minD <= lmFrom ? { from: lmFrom, to: lmEnd, month: lmFrom.slice(0, 7), ...figures(rows, lmFrom, lmEnd), vs: null } : null;
   out.ytd = mk(yearStart, shifted(yearStart, -1, 0), shifted(maxD, -1, 0));
   return out;
 }
@@ -85,7 +89,7 @@ module.exports = async function handler(req, res) {
   if (!(who.kind === 'env' && who.info.role === 'admin')) return send(res, 403, { ok: false, error: 'Only the super admin and the brand manager can open this report.' }); // area managers, VM and staff never
   if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
   const fresh = new URL(req.url, 'https://x.invalid').searchParams.get('fresh') === '1';
-  const ck = 'overview/c2.json';
+  const ck = 'overview/c3.json';
   if (!fresh) {
     const c = await store.getJSON(ck).catch(() => null);
     if (c && c.ok && Date.now() - Date.parse(c.generatedAt) < CACHE_MIN * 60000) return send(res, 200, c);

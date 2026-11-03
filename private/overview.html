@@ -32,14 +32,13 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
 .chip{display:inline-block;border-radius:12px;padding:2px 10px;font-size:11.5px;font-weight:700}
 .chip.up{background:var(--up-bg);color:var(--up)}.chip.down{background:var(--down-bg);color:var(--down)}
 #out section+section{margin-top:26px}
-.stores{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-@media(max-width:900px){.stores{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){.stores{grid-template-columns:1fr}}
+.stores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:700px){.stores{grid-template-columns:1fr}}
 .st h3{margin:0 0 4px;font-size:16px;font-weight:800}
 .st table{width:100%;border-collapse:collapse;font-size:12.5px}
-.st th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:700;text-align:right;padding:2px 0}
+.st th{padding-left:10px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:700;text-align:right;padding:2px 0}
 .st th:first-child,.st td:first-child{text-align:left}
-.st td{text-align:right;padding:4px 0;border-top:1px solid var(--line);font-weight:700;white-space:nowrap}
+.st td{text-align:right;padding:4px 0 4px 10px;border-top:1px solid var(--line);font-weight:700;white-space:nowrap}
 .st td:first-child{color:var(--ink2);font-weight:600}
 .foot{color:var(--muted);font-size:12px}
 .err{background:var(--down-bg);color:var(--down);border-radius:12px;padding:12px 14px;font-weight:600}
@@ -88,14 +87,16 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
   function stores(d){
     var names=[],seen={};
     (d.ytd.perStore||[]).concat(d.mtd.perStore||[]).forEach(function(x){if(!seen[x.name]){seen[x.name]=1;names.push(x.name)}});
+    var lm={};(d.lm&&d.lm.perStore||[]).forEach(function(x){lm[x.name]=x});
+    var mS=MON[+d.month.slice(5,7)-1].slice(0,3),lS=d.lm?MON[+d.lm.month.slice(5,7)-1].slice(0,3):'',hasLm=!!d.lm;
     var ytd={},mtd={};(d.ytd.perStore||[]).forEach(function(x){ytd[x.name]=x});(d.mtd.perStore||[]).forEach(function(x){mtd[x.name]=x});
     names.sort(function(a,b){return ((ytd[b]||{}).sales||0)-((ytd[a]||{}).sales||0)});
-    function row(l,a,b,f){return '<tr><td>'+l+'</td><td>'+f(a)+'</td><td>'+f(b)+'</td></tr>'}
-    var E=function(x){return x?'EGP '+n(x.sales):'-'},A=function(x){return x?'EGP '+n(x.atv):'-'},O=function(x){return x?n(x.orders):'-'},U=function(x){return x?x.upt.toFixed(1):'-'},S=function(x){return x?x.share.toFixed(1)+'%':'-'};
-    return '<section><h2>Per store</h2><div class="range">Each store, month to date and year to date. Sorted by year to date sales.</div><div class="stores">'+names.map(function(nm){
-      var m=mtd[nm],y=ytd[nm];
-      return '<div class="card st"><h3>'+esc(nm)+'</h3><table><tr><th></th><th>Month</th><th>Year</th></tr>'
-        +row('Sales',m,y,E)+row('Share of chain',m,y,S)+row('Avg ticket',m,y,A)+row('Orders',m,y,O)+row('UPT',m,y,U)+'</table></div>'}).join('')+'</div></section>';
+    function row(l,a,b,c,f){return '<tr><td>'+l+'</td>'+(hasLm?'<td>'+f(c)+'</td>':'')+'<td>'+f(a)+'</td><td>'+f(b)+'</td></tr>'}
+    var E=function(x){return x?n(x.sales):'-'},A=function(x){return x?n(x.atv):'-'},O=function(x){return x?n(x.orders):'-'},U=function(x){return x?x.upt.toFixed(1):'-'},S=function(x){return x?x.share.toFixed(1)+'%':'-'};
+    return '<section><h2>Per store</h2><div class="range">Each store: last full month, this month so far and year to date. Sorted by year to date sales.</div><div class="stores">'+names.map(function(nm){
+      var m=mtd[nm],y=ytd[nm],c=lm[nm];
+      return '<div class="card st"><h3>'+esc(nm)+'</h3><table><tr><th></th>'+(hasLm?'<th>'+lS+'</th>':'')+'<th>'+mS+' 1-'+(+d.upTo.slice(8))+'</th><th>Year</th></tr>'
+        +row('Sales (EGP)',m,y,c,E)+row('Share of chain',m,y,c,S)+row('Avg ticket (EGP)',m,y,c,A)+row('Orders',m,y,c,O)+row('UPT',m,y,c,U)+'</table></div>'}).join('')+'</div></section>';
   }
   // long numbers shrink instead of wrapping onto a second line
   function fit(){
@@ -109,7 +110,7 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
     if(d.empty){out.innerHTML='<div class="err">No sales data yet. Add it on the All Uploads page or press Sync from ERP.</div>';return}
     var m=MON[+d.month.slice(5,7)-1]+' '+d.year;
     sub.textContent='All stores, net of VAT. Sales up to '+dmy(d.upTo)+'. The Online shop is not counted as a store.';
-    out.innerHTML=block('All stores together · month to date: '+m,d.mtd,'vs same days last month')+block('All stores together · year to date: '+d.year,d.ytd,'vs same period last year')+stores(d);
+    out.innerHTML=block('All stores together · '+m+' so far',d.mtd,'vs same days last month')+(d.lm?block('All stores together · '+MON[+d.lm.month.slice(5,7)-1]+' (full month)',d.lm,''):'')+block('All stores together · year to date: '+d.year,d.ytd,'vs same period last year')+stores(d);
     foot.textContent='Updated '+new Date(d.generatedAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'. Figures are saved for 10 minutes; press Refresh for the latest.';
     fit();
   }
