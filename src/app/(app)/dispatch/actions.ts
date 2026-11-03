@@ -4,7 +4,7 @@ import { after } from "next/server";
 import { flushEmails } from "@/lib/email";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireRole } from "@/lib/auth";
+import { requireSession, requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 type Result = { error?: string; batchNo?: string };
@@ -63,6 +63,18 @@ export async function approveBatch(batchId: string): Promise<Result> {
   await requireRole("manager");
   const supabase = await createClient();
   const { error } = await supabase.rpc("approve_batch", { p_batch: z.string().uuid().parse(batchId) });
+  if (error) return { error: errorKey(error.message) };
+  return done();
+}
+
+// Super Admin override: approve a batch they packed themselves, with a reason (checked in the RPC)
+export async function adminApproveBatch(batchId: string, reason: string): Promise<Result> {
+  const me = await requireSession();
+  if (!me.isAdmin) return { error: "forbidden" };
+  const r = z.string().trim().min(1).max(300).safeParse(reason);
+  if (!r.success) return { error: "invalid" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_approve_batch", { p_batch: z.string().uuid().parse(batchId), p_reason: r.data });
   if (error) return { error: errorKey(error.message) };
   return done();
 }

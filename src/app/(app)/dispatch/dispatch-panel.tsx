@@ -5,7 +5,7 @@ import { toast } from "@/components/toast";
 import { BarcodeScan } from "@/components/barcode-scan";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
-import { approveBatch, courierPickup, createOutbound, createReturn, receiveBatch } from "./actions";
+import { adminApproveBatch, approveBatch, courierPickup, createOutbound, createReturn, receiveBatch } from "./actions";
 
 export type ItemRow = { id: string; ticketNo: string; itemName: string; branchId: string; branchName: string };
 export type BatchRow = {
@@ -26,9 +26,9 @@ const BADGE: Record<string, string> = {
   incident: "bg-red-100 text-red-900",
 };
 
-export function DispatchPanel({ locale, role, myBranches, packable: allPackable, returnable: allReturnable, batches: allBatches, areaManager = true }: {
+export function DispatchPanel({ locale, role, myBranches, packable: allPackable, returnable: allReturnable, batches: allBatches, areaManager = true, isAdmin = false }: {
   locale: Locale; role: AppRole; myBranches: { id: string; name: string }[];
-  packable: ItemRow[]; returnable: ItemRow[]; batches: BatchRow[]; areaManager?: boolean;
+  packable: ItemRow[]; returnable: ItemRow[]; batches: BatchRow[]; areaManager?: boolean; isAdmin?: boolean;
 }) {
   const t = dictionaries[locale].dispatch;
   const [busy, start] = useTransition();
@@ -109,6 +109,12 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
                 <BatchHead t={t} b={b} />
                 <span className="flex-1" />
                 {role === "manager" && b.mine && <span className="text-xs text-stone-500">{t.ownBatch}</span>}
+                {isAdmin && b.mine && (
+                  <button type="button" disabled={busy} className="text-xs font-semibold underline"
+                    onClick={(e) => { e.preventDefault(); const why = window.prompt(t.adminApproveReason); if (why?.trim()) run(() => adminApproveBatch(b.id, why)); }}>
+                    {t.adminApprove}
+                  </button>
+                )}
                 <ItemList items={b.items} />
               </label>
             );

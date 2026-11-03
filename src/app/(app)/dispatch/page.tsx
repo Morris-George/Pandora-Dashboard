@@ -59,6 +59,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
       returnable={(returnable ?? []).map(toItem)}
       batches={rows}
       areaManager={areaManager}
+      isAdmin={user.isAdmin}
     />
     </>
   );
