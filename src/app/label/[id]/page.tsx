@@ -49,8 +49,8 @@ export default async function LabelPage({ params }: { params: Promise<{ id: stri
       `}</style>
       <div className="bc" dangerouslySetInnerHTML={{ __html: barcode }} />
       <div className="no" dir="ltr">{tk.ticket_no}</div>
-      <div className="meta"><span>{tk.item_name}</span><span>{store}</span></div>
-      <div className="meta"><span dir="ltr">{date}</span></div>
+      <div className="meta"><span>{tk.item_name}</span></div>
+      <div className="meta"><span>{store} · {date}</span></div>
       </div>
     </>
   );
