@@ -178,6 +178,7 @@ const en = {
       title: "Workflow: dispatch steps",
       note: "Turn optional steps off when the process changes, for example when items go straight to an outside service center. Changes apply to new shipments right away.",
       on: "On", off: "Off (skipped)", turnOn: "Turn on", turnOff: "Turn off", failed: "Could not save. Try again.",
+      testEmail: "Send test email", testSent: (to: string) => `Test email sent to ${to}. Check the inbox and the spam folder.`, testFailed: "Test email failed",
       steps: {
         manager_approval: { name: "Second branch manager approval", on: "A branch manager other than the packer approves the bag before it leaves.", off: "The bag leaves as soon as the store seals it. No approval." },
         area_manager: { name: "Area manager handover", on: "The area manager scans every item to collect the bag and holds custody until it is received.", off: "The receiver scans the bag directly. No area manager step." },
@@ -890,6 +891,7 @@ const ar: Dict = {
       title: "مسار العمل: خطوات الشحن",
       note: "اقفل الخطوات الاختيارية لما طريقة الشغل تتغير، مثلاً لو القطع هتروح مركز صيانة خارجي على طول. التغيير بيطبق على الشحنات الجديدة فورًا.",
       on: "شغالة", off: "مقفولة (بتتخطى)", turnOn: "تشغيل", turnOff: "إيقاف", failed: "ماقدرناش نحفظ. حاول تاني.",
+      testEmail: "إرسال إيميل تجربة", testSent: (to: string) => `اتبعت إيميل تجربة لـ ${to}. بص على الوارد والـ Spam.`, testFailed: "فشل إيميل التجربة",
       steps: {
         manager_approval: { name: "موافقة مدير فرع تاني", on: "مدير فرع غير اللي جهّز الشحنة بيوافق قبل ما الكيس يخرج.", off: "الكيس بيخرج أول ما الفرع يقفله. من غير موافقة." },
         area_manager: { name: "استلام مدير المنطقة", on: "مدير المنطقة بيعمل سكان لكل قطعة وهو بيستلم، والعهدة معاه لحد ما تتسلم.", off: "المستلم بيعمل سكان للكيس على طول. من غير خطوة مدير المنطقة." },

@@ -35,6 +35,19 @@ function render(kind: Kind, name: string, ticketNo: string, item: string, link: 
 </div></body></html>`;
 }
 
+// Super Admin check of the mail server settings: one plain email to the given address
+export async function sendTestEmail(to: string): Promise<string | null> {
+  if (!emailConfigured()) return "not configured";
+  const port = Number(process.env.SMTP_PORT ?? 587);
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST, port, secure: port === 465,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  }).sendMail({
+    from: process.env.EMAIL_FROM, to, subject: "Pandora Maintenance — test email",
+    html: render("received", "Test", "TEST-0000", "Test item", SITE),
+  }).then(() => null, (e: unknown) => String(e).slice(0, 300));
+}
+
 // Sends up to `limit` queued emails. Safe to call often (e.g. in after()).
 export async function flushEmails(limit = 20): Promise<{ sent: number; failed: number }> {
   const out = { sent: 0, failed: 0 };

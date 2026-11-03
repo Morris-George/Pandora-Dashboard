@@ -124,6 +124,14 @@ export async function saveReceiptSettings(input: unknown): Promise<Result> {
   return {};
 }
 
+// Sends one test email to the signed-in Super Admin
+export async function testEmail(): Promise<{ error?: string; to?: string }> {
+  const me = await requireRole("admin");
+  const { sendTestEmail } = await import("@/lib/email");
+  const err = await sendTestEmail(me.email);
+  return err ? { error: err } : { to: me.email };
+}
+
 // Optional dispatch steps (manager approval, area manager handover) on / off
 export async function setWorkflowStep(step: "manager_approval" | "area_manager", on: boolean): Promise<Result> {
   const me = await requireRole("admin");
