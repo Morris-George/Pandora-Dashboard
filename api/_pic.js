@@ -40,3 +40,4 @@ module.exports = async function pic(req, res) {
   if (!/^[A-Z0-9]{4,20}$/.test(base)) return send(res, 200, { ok: true, url: '' });
   return send(res, 200, { ok: true, url: await find(base) });
 };
+module.exports.find = find; // also used by Stock Checker (api/_checker.js), which serves a QR-paired phone that has no sign-in

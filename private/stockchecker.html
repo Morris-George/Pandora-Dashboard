@@ -49,6 +49,13 @@ video{width:100%;height:100%;object-fit:cover;display:block}
 .flag.unk{background:var(--warn);color:#2A1F00}
 .flag.sw{background:var(--bad);color:#2A0B0B}
 .flag.okk{background:var(--ok);color:#10281D}
+.countrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.qty{display:flex;align-items:center;gap:8px}
+.qty em{min-width:2ch;text-align:center}
+.qb{width:44px;height:44px;padding:0;border-radius:50%;font:700 24px/1 var(--ui);background:var(--panel);color:var(--fg);box-shadow:inset 0 0 0 1.5px var(--line);display:grid;place-items:center;flex:none}
+.qb.plus{background:var(--accent);color:#2A1018;box-shadow:none}
+.qb:disabled{opacity:.35;cursor:default}
+.item .qty em{font-size:24px}
 .verdict{display:flex;gap:8px;margin-top:10px}
 .verdict button{flex:1;padding:10px}
 .qrcard{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
@@ -154,7 +161,7 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 
 <details>
   <summary>Product catalog (barcode → name and picture)</summary>
-  <p class="hint">One product per line: <b>barcode, name, picture link</b>. Copy it from Excel (tab-separated also works). The picture link must be a direct image URL. A barcode that is not listed still counts and is flagged “Not in catalog”. The catalog is kept on this device.</p>
+  <p class="hint">One product per line: <b>barcode, name, picture link</b>. Copy it from Excel (tab-separated also works). The picture link must be a direct image URL. Names and pictures now come from the ERP stock list automatically; this catalog is only needed to override one on this device. A barcode ERP does not know still counts and is flagged “Not found in stock list”.</p>
   <textarea id="catText" placeholder="6224000000011, Charm bracelet silver, https://example.com/img/1.jpg&#10;6224000000028, Heart ring, https://example.com/img/2.jpg"></textarea>
   <div class="row">
     <button id="saveCat" type="button">Save catalog</button>
@@ -197,7 +204,7 @@ catalog=load('sc_catalog',{});
 /* ---- who / which store ----
    Signed-in people: the name comes from their account and the store from their role (own store; zone for area managers; every store for the super admin).
    A phone opened from a store's QR code: the store is inside the signed link, the person types their name once. */
-var ctx=null,store='',name='',view=null,lastScan=null,pending=[],filterBy='ALL',polling=0,day='',today='';
+var pin={},adjBusy=0,ctx=null,store='',name='',view=null,lastScan=null,pending=[],filterBy='ALL',polling=0,day='',today='';
 function Q(){return load('sc_queue:'+encodeURIComponent(store),[])}
 function api(path,opt){opt=opt||{};opt.credentials='same-origin';opt.cache='no-store';return fetch(path,opt).then(function(r){return r.json().catch(function(){return{}}).then(function(j){return{ok:r.ok&&j.ok!==false,status:r.status,j:j}})})}
 function post(op,body){body.store=store;if(!body.day)body.day=day||today;if(ctx&&ctx.role==='phone')body.by=name;return api('/api/checker?op='+op,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})}
@@ -222,32 +229,7 @@ function parseCatalog(text){
   return cat;
 }
 function catToText(){return Object.keys(catalog).map(function(k){var c=catalog[k];return [k,c.name,c.img].join(', ')}).join('\n')}
-function refreshCatInfo(){var n=Object.keys(catalog).length;$('catInfo').textContent=n?n+' products in catalog.':'No catalog yet. Scans will show the barcode only.'}
-$('catText').value=catToText();refreshCatInfo();
-$('saveCat').onclick=function(){catalog=parseCatalog($('catText').value);save('sc_catalog',catalog);refreshCatInfo();renderAll()};
-$('addPhotos').onclick=function(){$('catFile').click()};
-$('catFile').onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){$('catText').value=r.result;catalog=parseCatalog(r.result);save('sc_catalog',catalog);refreshCatInfo();renderAll()};r.readAsText(f)};
-
-/* ---- catalog ---- */
-function splitLine(l){
-  var sep=l.indexOf('\t')>-1?'\t':(l.indexOf(';')>-1&&l.indexOf(',')<0?';':',');
-  var out=[],cur='',q=false;
-  for(var i=0;i<l.length;i++){var c=l[i];
-    if(c==='"'){q=!q}else if(c===sep&&!q){out.push(cur.trim());cur=''}else cur+=c}
-  out.push(cur.trim());return out;
-}
-function parseCatalog(text){
-  var cat={},n=0;
-  text.split(/\r?\n/).forEach(function(l){
-    if(!l.trim())return;
-    var p=splitLine(l);
-    if(!p[0]||/^(barcode|sku|code)$/i.test(p[0]))return;
-    cat[p[0]]={name:p[1]||'',img:p[2]||''};n++;
-  });
-  return cat;
-}
-function catToText(){return Object.keys(catalog).map(function(k){var c=catalog[k];return [k,c.name,c.img].join(', ')}).join('\n')}
-function refreshCatInfo(){var n=Object.keys(catalog).length;$('catInfo').textContent=n?n+' products in catalog.':'No catalog yet. Scans will show the barcode only.'}
+function refreshCatInfo(){var n=Object.keys(catalog).length;$('catInfo').textContent=n?n+' products in catalog.':'No catalog typed on this device. Names and pictures come from ERP.'}
 $('catText').value=catToText();refreshCatInfo();
 $('saveCat').onclick=function(){catalog=parseCatalog($('catText').value);save('sc_catalog',catalog);refreshCatInfo();renderAll()};
 $('addPhotos').onclick=function(){$('catFile').click()};
@@ -255,7 +237,20 @@ $('catFile').onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new
 
 /* ---- rendering ---- */
 function esc(s){var d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML}
-function imgTag(code){var c=catalog[code];return c&&c.img?'<img alt="" src="'+esc(c.img)+'" onerror="this.replaceWith(document.createTextNode(\'Picture not found\'))">':'No picture'}
+/* name + picture of a scanned code: the catalog typed on this device wins, otherwise the server's answer (ERP stock list: SKU, product name, picture), so every phone shows the same */
+var known={};
+function dvOf(sku){return String(sku||'').trim().toUpperCase().split('-')[0]}
+function infoOf(code){
+  var c=catalog[code],k=known[code]||{};
+  var img=c&&c.img?c.img:(k.sku?'/api/checker?pic='+encodeURIComponent(dvOf(k.sku))+'&code='+encodeURIComponent(code):'');
+  return {name:(c&&c.name)||k.name||k.sku||'',sku:k.sku||'',img:img,found:!!(c||k.sku||k.name)};
+}
+function imgTag(code){var i=infoOf(code);return i.img?'<img alt="" src="'+esc(i.img)+'" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode(\'No picture\'))">':'No picture'}
+function isPast(){return !!(day&&today&&day!==today)}
+function qtyBtns(code,n){
+  var mine=myCount(code),off=!name||isPast();
+  return '<div class="qty"><button type="button" class="qb" data-adj="-1" data-c="'+esc(code)+'" aria-label="One less"'+((off||mine<1)?' disabled':'')+'>&minus;</button><em>'+n+'</em><button type="button" class="qb plus" data-adj="1" data-c="'+esc(code)+'" aria-label="One more"'+(off?' disabled':'')+'>+</button></div>';
+}
 
 /* ---- store view (from the server) ---- */
 function myCount(code){var it=view&&view.items.find(function(x){return x.c===code});return it?(it.by[name]||0):0}
@@ -263,19 +258,19 @@ function storeCount(code){var it=view&&view.items.find(function(x){return x.c===
 function renderLast(){
   var el=$('last');
   if(!lastScan){el.innerHTML='<div class="empty">No scans yet. The product picture and running count appear here after each scan.</div>';return}
-  var e=lastScan,c=catalog[e.code],n=storeCount(e.code),mine=myCount(e.code);
-  var flag=!c?'<span class="flag unk">Not in catalog</span>':'';
+  var e=lastScan,inf=infoOf(e.code),n=storeCount(e.code),mine=myCount(e.code);
+  var flag=(!inf.found&&e.looked)?'<span class="flag unk">Not found in stock list</span>':'';
   if(e.verdict==='swapped')flag+=' <span class="flag sw">Marked swapped</span>';
   if(e.verdict==='ok')flag+=' <span class="flag okk">Matches</span>';
-  el.innerHTML='<div class="pic">'+imgTag(e.code)+'</div><div><div class="name">'+esc(c&&c.name?c.name:'Unknown item')+'</div><div class="sku">'+esc(e.code)+'</div><div class="count">'+n+'<small>scanned in '+esc(store)+(mine!==n?' · '+mine+' by you':'')+'</small></div>'+flag+
+  el.innerHTML='<div class="pic">'+imgTag(e.code)+'</div><div><div class="name">'+esc(inf.name||(e.looked?'Unknown item':'Looking up…'))+'</div><div class="sku">'+esc(e.code)+(inf.sku&&inf.sku!==e.code?' · '+esc(inf.sku):'')+'</div><div class="countrow"><div class="count">'+n+'<small>scanned in '+esc(store)+(mine!==n?' · '+mine+' by you':'')+'</small></div>'+qtyBtns(e.code,mine)+'</div>'+flag+
    '<div class="verdict"><button type="button" class="ok" data-v="ok">Matches</button><button type="button" class="bad" data-v="swapped">Swapped</button></div></div>';
   [].forEach.call(el.querySelectorAll('[data-v]'),function(b){b.onclick=function(){setVerdict(b.getAttribute('data-v'))}});
 }
 function renderList(){
-  var items=(view?view.items:[]).filter(function(it){return filterBy==='ALL'||(it.by[filterBy]||0)>0}).sort(function(a,b){return b.last-a.last});
+  var items=(view?view.items:[]).filter(function(it){return filterBy==='ALL'||(it.by[filterBy]||0)>0}).sort(function(a,b){return (pin[b.c]!=null?pin[b.c]:b.last)-(pin[a.c]!=null?pin[a.c]:a.last)});
   $('itemsFor').textContent=store?'· '+store:'';
-  $('list').innerHTML=items.length?items.map(function(it){var c=catalog[it.c],cnt=filterBy==='ALL'?it.n:(it.by[filterBy]||0),who=Object.keys(it.by).sort(function(a,b){return it.by[b]-it.by[a]}).map(function(k){return esc(k)+' '+it.by[k]}).join(' · ');
-    return '<div class="item"><div class="th">'+imgTag(it.c)+'</div><div><b>'+esc(c&&c.name?c.name:'Not in catalog')+'</b><span>'+esc(it.c)+'</span>'+(it.sw?'<span class="sw">'+it.sw+' marked swapped</span>':'')+'<span class="by">'+who+'</span></div><em>'+cnt+'</em></div>'}).join(''):'<div class="empty">Nothing scanned yet in this store.</div>';
+  $('list').innerHTML=items.length?items.map(function(it){var inf=infoOf(it.c),cnt=filterBy==='ALL'?it.n:(it.by[filterBy]||0),who=Object.keys(it.by).sort(function(a,b){return it.by[b]-it.by[a]}).map(function(k){return esc(k)+' '+it.by[k]}).join(' · ');
+    return '<div class="item"><div class="th">'+imgTag(it.c)+'</div><div><b>'+esc(inf.name||'Not found in stock list')+'</b><span>'+esc(it.c)+(inf.sku&&inf.sku!==it.c?' · '+esc(inf.sku):'')+'</span>'+(it.sw?'<span class="sw">'+it.sw+' marked swapped</span>':'')+'<span class="by">'+who+'</span></div>'+qtyBtns(it.c,cnt)+'</div>'}).join(''):'<div class="empty">Nothing scanned yet in this store.</div>';
   var mineN=0,mineSk=0;if(view)view.items.forEach(function(it){if(it.by[name]){mineN+=it.by[name];mineSk++}});
   $('totScans').textContent=mineN;$('totSkus').textContent=mineSk;$('totStore').textContent=view?view.total:0;
   var ppl=view?view.people:[];
@@ -317,7 +312,7 @@ function loadMonitor(){
   $('histFor').textContent=store?'· '+store:'';
   $('hist').innerHTML=days.map(function(x){return '<div class="hrow'+(x.day===d?' cur':'')+'" data-day="'+x.day+'"><span>'+fmtDay(x.day)+'</span><span class="hbar"><i style="width:'+(x.scans?Math.max(2,x.scans/mx*100):0)+'%"></i></span><span class="n">'+(x.scans?x.scans+' scans · '+x.people+'p':'—')+'</span></div>'}).join('');
 }
-function setDay(d){day=d||today;lastScan=null;renderDay();refresh()}
+function setDay(d){day=d||today;lastScan=null;pin={};renderDay();refresh()}
 $('dayPick').onchange=function(){setDay(this.value)};
 $('dayToday').onclick=function(){setDay(today)};
 document.addEventListener('click',function(e){var h=e.target.closest('[data-day]');if(h){setDay(h.getAttribute('data-day'));return}var m=e.target.closest('tr.mrow');if(m&&m.getAttribute('data-store')!==store){chooseStore(m.getAttribute('data-store'))}});
@@ -332,7 +327,7 @@ function refresh(){
     if(st!==store)return;
     if(o.status===401){showErr('Please sign in again (or open the QR code again).');return}
     if(!o.ok){showErr(o.j.error||'Could not load this store.');return}
-    showErr('');view=o.j;if(o.j.today)today=o.j.today;if(o.j.days){histDays=o.j.days;daysAt=Date.now();daysStore=st}renderAll();loadMonitor();
+    showErr('');view=o.j;view.items.forEach(function(it){if(it.sku||it.name)known[it.c]={sku:it.sku||'',name:it.name||''}});if(o.j.today)today=o.j.today;if(o.j.days){histDays=o.j.days;daysAt=Date.now();daysStore=st}renderAll();loadMonitor();
   }).catch(function(){showErr('No connection. Scans are kept on this device and sent when it is back.')});
 }
 function flush(){
@@ -355,12 +350,12 @@ function handleCode(raw,source){
   /* show it at once, then save it for this store */
   if(view){var it=view.items.find(function(x){return x.c===code});if(!it){it={c:code,n:0,sw:0,last:0,by:{}};view.items.unshift(it)}it.n++;it.last=now;it.by[name]=(it.by[name]||0)+1;view.total++;
     var p=view.people.find(function(x){return x.name===name});if(p){p.scans++;p.last=now}else view.people.unshift({name:name,scans:1,skus:1,last:now})}
-  lastScan={code:code,t:now,verdict:''};
+  pin={};lastScan={code:code,t:now,verdict:''};
   beep();cam.classList.add('hit');setTimeout(function(){cam.classList.remove('hit')},350);
   renderAll();
   post('scan',{code:code,t:now}).then(function(o){
     if(!o.ok&&o.status!==403){var q=Q();q.push({code:code,t:now});save('sc_queue:'+encodeURIComponent(store),q);showErr('Saved on this device. It will be sent when the connection is back.')}
-    else if(o.ok){if(lastScan&&lastScan.code===code)lastScan.t=o.j.t||now;showErr('');refresh()}
+    else if(o.ok){if(lastScan&&lastScan.code===code)lastScan.t=o.j.t||now;showErr('');refresh().then(function(){if(lastScan&&lastScan.t===(o.j.t||now)&&lastScan.code===code){lastScan.looked=true;renderLast()}})}
     else showErr(o.j.error||'That scan could not be saved.');
   }).catch(function(){var q=Q();q.push({code:code,t:now});save('sc_queue:'+encodeURIComponent(store),q)});
   return true;
@@ -369,6 +364,24 @@ function setVerdict(v){
   if(!lastScan)return;lastScan.verdict=v;renderLast();
   post('verdict',{t:lastScan.t,v:v}).then(function(){refresh()});
 }
+/* plus / minus on an item already scanned (today, your own scans). Shown at once, saved one after another so quick taps never overwrite each other. */
+function adjust(code,d){
+  if(!store||!name||isPast())return;
+  var it=view&&view.items.find(function(x){return x.c===code});
+  if(d<0&&!(it&&(it.by[name]||0)>0))return;
+  if(view){
+    if(!it){it={c:code,n:0,sw:0,last:Date.now(),by:{}};view.items.unshift(it)}
+    if(pin[code]==null)pin[code]=it.last;
+    it.n+=d;it.by[name]=(it.by[name]||0)+d;view.total+=d;
+    if(!it.by[name])delete it.by[name];
+    if(it.n<=0)view.items.splice(view.items.indexOf(it),1);
+    var p=view.people.find(function(x){return x.name===name});if(p)p.scans=Math.max(0,p.scans+d);
+  }
+  renderAll();
+  adjBusy++;
+  adjChain=adjChain.then(function(){return post('adj',{code:code,d:d})}).then(function(o){if(!o.ok)showErr(o.j.error||'That change could not be saved.')}).catch(function(){showErr('No connection. That change was not saved.')}).then(function(){adjBusy--;if(!adjBusy)refresh()});
+}
+var adjChain=Promise.resolve();
 $('undoBtn').onclick=function(){
   post('undo',{}).then(function(o){if(o.ok&&o.j.removed&&lastScan&&lastScan.code===o.j.removed)lastScan=null;refresh()});
 };
@@ -381,7 +394,7 @@ $('resetBtn').onclick=function(){var b=this,old='Reset my scan';armed2(b,old,fun
 $('resetAll').onclick=function(){var b=this,old='Reset the whole store';armed2(b,old,function(){b.textContent=old;lastScan=null;post('reset',{person:'*'}).then(function(){refresh()})},'all')};
 $('csvBtn').onclick=function(){
   var rows=['store,barcode,name,count,marked_swapped,scanned_by'];
-  (view?view.items:[]).forEach(function(it){var c=catalog[it.c];rows.push([ '"'+store.replace(/"/g,'""')+'"',it.c,'"'+(c&&c.name?c.name.replace(/"/g,'""'):'NOT IN CATALOG')+'"',it.n,it.sw||0,'"'+Object.keys(it.by).map(function(k){return k+' '+it.by[k]}).join('; ').replace(/"/g,'""')+'"'].join(','))});
+  (view?view.items:[]).forEach(function(it){var inf=infoOf(it.c);rows.push([ '"'+store.replace(/"/g,'""')+'"',it.c,'"'+(inf.name?inf.name.replace(/"/g,'""'):'NOT FOUND')+'"',it.n,it.sw||0,'"'+Object.keys(it.by).map(function(k){return k+' '+it.by[k]}).join('; ').replace(/"/g,'""')+'"'].join(','))});
   var txt=rows.join('\n');
   var done=function(m){$('note').textContent=m};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){done('Copied. Paste into Excel or Sheets.')},function(){done(txt)})}else done(txt);
@@ -457,6 +470,7 @@ function useName(n){n=String(n||'').replace(/\s+/g,' ').trim().slice(0,40);if(!n
 $('whoForm').onsubmit=function(e){e.preventDefault();useName($('whoName').value)};
 $('chgName').onclick=function(e){e.preventDefault();showWho()};
 document.addEventListener('click',function(e){
+  var ad=e.target.closest('[data-adj]');if(ad){if(!ad.disabled)adjust(ad.getAttribute('data-c'),+ad.getAttribute('data-adj'));return}
   var pk=e.target.closest('[data-pick]');if(pk){useName(pk.getAttribute('data-pick'));return}
   var fl=e.target.closest('[data-filter]');if(fl){filterBy=fl.getAttribute('data-filter');renderList();return}
   var sc=e.target.closest('[data-store]');if(sc){chooseStore(sc.getAttribute('data-store'));return}
@@ -496,7 +510,7 @@ $('showQr').onclick=function(){showQrView(true)};
 function chooseStore(st){
   if(st===store)return;
   if(running){stopCam();$('startBtn').textContent='Start camera'}
-  store=st;view=null;lastScan=null;filterBy='ALL';
+  store=st;view=null;lastScan=null;filterBy='ALL';pin={};
   name=ctx.role==='phone'?String(load('sc_name:'+encodeURIComponent(store),'')||''):ctx.by;
   var chips=$('storeChips');
   chips.innerHTML=ctx.stores.map(function(s){return '<button type="button" class="chip" data-store="'+esc(s)+'" aria-pressed="'+(s===store)+'">'+esc(s)+'</button>'}).join('');

@@ -3,11 +3,14 @@
 //   GET  /api/checker?store=NAME&day=YYYY-MM-DD      one store, one day (default today). Managers get everyone; sales people and QR phones get only their own scans.
 //                                                    Managers also get `days`: the last 30 days of that store with totals.
 //   GET  /api/checker?overview=1&day=YYYY-MM-DD      managers: every store they may see, that day: people, scans, SKUs, last scan
+//   GET  /api/checker?pic=DV&code=BARCODE            the item's picture (pandoraeg.com, else the picture saved on the item in ERP); works for a QR-paired phone too
 //   POST /api/checker?op=scan    {store, code, t?, by?}      add one scan (always on its own day: today, or the day the phone scanned it offline)
+//   POST /api/checker?op=adj     {store, code, d:1|-1}       plus / minus on an item you already scanned today (+1 adds a scan, -1 removes your latest scan of that item)
 //   POST /api/checker?op=verdict {store, day, t, v:'ok'|'swapped'|''}   mark one of YOUR scans
 //   POST /api/checker?op=undo    {store}                     remove YOUR last scan of today
 //   POST /api/checker?op=reset   {store, day, person}        erase YOUR scans of that day (person omitted); another person ('name') or '*' (the whole store that day) = managers only
 // Who: super admin = every store; area managers = the stores of their zone; store managers = their own store; all three are "managers" and see every person.
+//      Item names and SKUs come from the ERP stock list (item code = barcode), so every device shows the same name and picture; no catalog needed on the phone.
 //      Sales people = their own store, their own scans only. A phone opened from a store's QR code (no login) = that one store, its own scans only.
 //      Nobody ever sees another store's scans.
 // Stored per day and person at chk/<store slug>/<YYYY-MM-DD>/<person slug>.json = { store, name, day, ev:[{t, c, v}] } so two phones never overwrite each other.
@@ -104,6 +107,67 @@ function build(st, day, files, me, mgr) {
   return { store: st, day, total, skus: items.size, people, items: [...items.values()].sort((a, b) => b.last - a.last).slice(0, 400), recent: recent.slice(0, 40), me: me || '' };
 }
 
+// ---- barcode -> SKU + name, from the ERP stock list (item code = barcode, item name = SKU, description = product name) ----
+let IDX = null, IDX_AT = 0, IDX_P = null;
+async function buildIndex() {
+  const m = new Map();
+  const add = (k, sku, name) => { k = String(k || '').trim().toUpperCase(); if (!k) return; const o = m.get(k); if (!o) m.set(k, { sku: sku || '', name: name || '' }); else { if (!o.sku && sku) o.sku = sku; if (!o.name && name) o.name = name; } };
+  try {
+    const today = cairoDay(Date.now()), from = today.slice(0, 8) + '01';
+    let c = await store.getJSON('stock/r/' + from + '_' + today + '.json').catch(() => null);
+    if (!(c && c.rows && c.rows.length)) { const ix = (await store.getJSON('stock/index.json').catch(() => null)) || []; if (ix.length) c = await store.getJSON(ix[ix.length - 1]).catch(() => null); }
+    let rows = c && c.rows;
+    if (!(rows && rows.length)) { const s = await store.getJSON('stock/current.json').catch(() => null); rows = s && s.rows; }
+    for (const r of rows || []) { const sku = String(r[1] || '').trim(), name = String(r[9] || '').trim(); add(r[0], sku, name); if (sku) add(sku, sku, name); }
+    const erp = await store.getJSON('rf/erp.json').catch(() => null); // ERP item code -> SKU, saved by the Refill Order sync
+    if (erp && erp.code2sku) for (const k of Object.keys(erp.code2sku)) add(k, erp.code2sku[k], '');
+  } catch (_) { /* names and pictures are a bonus: scanning still works without them */ }
+  return m;
+}
+async function itemInfo(codes) {
+  if (!IDX || Date.now() - IDX_AT > 10 * 60 * 1000) {
+    if (!IDX_P) IDX_P = buildIndex().then(m => { if (m.size || !IDX) { IDX = m; IDX_AT = Date.now(); } return IDX; }).finally(() => { IDX_P = null; });
+    await IDX_P;
+  }
+  const out = {};
+  for (const c of codes) { const o = IDX && IDX.get(String(c).trim().toUpperCase()); if (o && (o.sku || o.name)) out[c] = o; }
+  return out;
+}
+const dvOf = v => String(v || '').trim().toUpperCase().split('-')[0];
+
+// the picture of one item: pandoraeg.com first (same source as the other reports), else the picture saved on the item in ERP
+async function sendPic(res, dv, code) {
+  if (!/^[A-Z0-9_]{4,20}$/.test(dv)) return res.status(404).end();
+  try {
+    const u = await require('./_pic').find(dv);
+    if (u) {
+      const x = new URL(u); x.searchParams.set('width', '600');
+      res.setHeader('Cache-Control', 'private, max-age=86400');
+      res.setHeader('Location', x.toString());
+      return res.status(302).end();
+    }
+  } catch (_) { /* try ERP */ }
+  try {
+    const base = String(process.env.ERP_URL || '').replace(/\/+$/, '');
+    const c = String(code || '').trim();
+    if (!base || !/^[A-Za-z0-9._\-\/ ]{1,40}$/.test(c)) return res.status(404).end();
+    const auth = { Authorization: 'token ' + process.env.ERP_API_KEY + ':' + process.env.ERP_API_SECRET };
+    const r0 = await fetch(base + '/api/resource/Item/' + encodeURIComponent(c), { headers: auth, signal: AbortSignal.timeout(8000) });
+    if (!r0.ok) return res.status(404).end();
+    const d = (await r0.json()).data || {};
+    const im = d.image || d.website_image || d.thumbnail;
+    if (!im) return res.status(404).end();
+    const u2 = /^https?:/.test(im) ? String(im) : base + (String(im).startsWith('/') ? '' : '/') + im;
+    const r = await fetch(u2, { headers: u2.startsWith(base) ? auth : {}, signal: AbortSignal.timeout(10000) });
+    const type = r.headers.get('content-type') || '';
+    if (!r.ok || !/^image\//.test(type)) return res.status(404).end();
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (buf.length > 3e6) return res.status(404).end();
+    res.setHeader('Content-Type', type); res.setHeader('Cache-Control', 'private, max-age=86400'); res.setHeader('X-Content-Type-Options', 'nosniff');
+    return res.status(200).end(buf);
+  } catch (_) { return res.status(404).end(); }
+}
+
 const lastDays = (day, n) => { const out = [], base = Date.parse(day + 'T12:00:00Z'); for (let i = 0; i < n; i++) out.push(new Date(base - i * 86400000).toISOString().slice(0, 10)); return out; };
 
 module.exports = async function handler(req, res) {
@@ -113,6 +177,8 @@ module.exports = async function handler(req, res) {
   const url = new URL(req.url, 'https://x.invalid'), q = url.searchParams;
   const today = cairoDay(Date.now());
   const dayQ = DAY.test(q.get('day') || '') ? q.get('day') : today;
+
+  if (req.method === 'GET' && q.get('pic')) return sendPic(res, dvOf(q.get('pic')), q.get('code'));
 
   if (req.method === 'GET') {
     if (q.get('overview')) {
@@ -125,6 +191,8 @@ module.exports = async function handler(req, res) {
     if (!mayStore(a, st)) return send(res, 403, { ok: false, error: 'That is not your store.' });
     const me = a.role === 'phone' ? cleanName(q.get('by')) : a.by;
     const out = build(canon(st), dayQ, await readDay(canon(st), dayQ), me, manager(a));
+    const info = await itemInfo(out.items.map(i => i.c));
+    for (const it of out.items) { const o = info[it.c]; if (o) { if (o.sku) it.sku = o.sku; if (o.name) it.name = o.name; } }
     if (manager(a) && q.get('days')) { // the last 30 days of this store, for the monitor (asked for now and then, not on every refresh)
       out.days = await Promise.all(lastDays(today, 30).map(async d => ({ day: d, ...summarize(await readDay(canon(st), d)) })));
     }
@@ -159,6 +227,27 @@ module.exports = async function handler(req, res) {
     if (cur.ev.length > MAX_EV) cur.ev.splice(0, cur.ev.length - MAX_EV);
     await store.putJSON(file, cur);
     return send(res, 200, { ok: true, t, day: d, mine: cur.ev.filter(e => e.c === c).length });
+  }
+  if (op === 'adj') {
+    // plus / minus on an item the person already scanned: always today's scans, always the person's own file
+    const c = cleanCode(b.code);
+    if (!c) return send(res, 400, { ok: false, error: 'That code could not be read.' });
+    const file = pathOf(st, today, by);
+    const cur = (await store.getJSON(file).catch(() => null)) || { store: st, name: by, day: today, ev: [] };
+    if (Number(b.d) < 0) {
+      let i = -1; for (let k = cur.ev.length - 1; k >= 0; k--) if (cur.ev[k].c === c) { i = k; break; }
+      if (i < 0) return send(res, 200, { ok: true, mine: 0, removed: false });
+      cur.ev.splice(i, 1);
+      if (cur.ev.length) await store.putJSON(file, cur); else await store.del(file);
+      return send(res, 200, { ok: true, mine: cur.ev.filter(e => e.c === c).length, removed: true });
+    }
+    const last = cur.ev[cur.ev.length - 1];
+    const t = Math.max(Date.now(), last ? last.t + 1 : 0);
+    cur.store = st; cur.name = by; cur.day = today;
+    cur.ev.push({ t, c, v: '' });
+    if (cur.ev.length > MAX_EV) cur.ev.splice(0, cur.ev.length - MAX_EV);
+    await store.putJSON(file, cur);
+    return send(res, 200, { ok: true, t, mine: cur.ev.filter(e => e.c === c).length });
   }
   if (op === 'verdict') {
     const file = pathOf(st, day, by);
