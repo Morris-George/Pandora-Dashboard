@@ -113,7 +113,8 @@ $('pics').onchange=()=>{try{localStorage.setItem('sl.pics',$('pics').checked?'1'
 
 let J=null,WH=[],ITEMS=[],TR=[],F={cat:'',store:'',ab:'',tag:''},SORT={k:'val',d:-1};
 const n=v=>{const x=Number(String(v??'').replace(/,/g,''));return isFinite(x)?x:0};
-const catOf=g=>{const l=String(g||'').toLowerCase();if(l.includes('earring'))return 'Earrings';if(/\bring/.test(l))return 'Rings';if(l.includes('bracelet')||l.includes('bangle'))return 'Bracelets';if(l.includes('necklace')||l.includes('pendant')||l.includes('collier'))return 'Necklaces & Pendants';if(/charm|clip|dangle|spacer|medallion|safety chain/.test(l))return 'Charms';return g?String(g).split(' - ').pop():'Other'};
+// the same five categories as the Category explorer in Pandora Dashboards: item group first, then the item name. No "Other" for jewellery (safety chains go in Charms)
+const catOf=(g,nm)=>{const pick=t=>{t=String(t||'').toLowerCase();if(!t)return '';if(/safety/.test(t))return 'Charms';if(/earring|\bstud|hoop|huggie/.test(t))return 'Earrings';if(/bracelet|bangle/.test(t))return 'Bracelets';if(/pendant|necklace|collier/.test(t))return 'Necklace and Pendant';if(/charm|clip|dangle|spacer|medallion|murano/.test(t))return 'Charms';if(/\bring/.test(t))return 'Rings';return ''};return pick(g)||pick(nm)||(g?String(g).split(' - ').pop():'Other')};
 const ageBucket=d=>d==null?'':d<90?'Under 3 months':d<180?'3 to 6 months':d<365?'6 to 12 months':'Over a year';
 const AGES=['Under 3 months','3 to 6 months','6 to 12 months','Over a year'];
 // which report column is which, by its name
@@ -149,8 +150,8 @@ $('clear').onclick=async()=>{if(!confirm('Forget the report results?'))return;aw
 
 // include: stores and item groups, ticked like the Stock Count card (packaging and maintenance off by default)
 // the ERP item groups, folded into six: the five jewellery groups and everything else
-const GROUPS=['Rings','Bracelets','Earrings','Charms','Necklaces & Pendants','Packaging & Services'];
-const grpOf=g=>{g=String(g||'');return /ring/i.test(g)&&!/ear/i.test(g)?'Rings':/bracelet|bangle/i.test(g)?'Bracelets':/earring/i.test(g)?'Earrings':/charm|clip|spacer|dangle|safety ?chain/i.test(g)?'Charms':/necklace|pendant|chain|collier/i.test(g)?'Necklaces & Pendants':'Packaging & Services'};
+const GROUPS=['Rings','Bracelets','Earrings','Charms','Necklace and Pendant','Packaging & Services'];
+const grpOf=g=>{g=String(g||'');return /ring/i.test(g)&&!/ear/i.test(g)?'Rings':/bracelet|bangle/i.test(g)?'Bracelets':/earring/i.test(g)?'Earrings':/charm|clip|spacer|dangle|safety ?chain/i.test(g)?'Charms':/necklace|pendant|chain|collier/i.test(g)?'Necklace and Pendant':'Packaging & Services'};
 let EX={st:[],gr:null};try{EX=Object.assign(EX,JSON.parse(localStorage.getItem('slow.ex')||'{}'))}catch(_){}
 function colIx(cols,re){return cols.findIndex(c=>re.test(c.label||c.fieldname))}
 function drawIncl(){const all=J.all.snaps,cols=(all.find(x=>x.cols.length)||{}).cols||[],qi=colIx(cols,/qty on hand/i),gi=colIx(cols,/item group/i);
@@ -171,7 +172,7 @@ function build(){
     let age=C.age>=0&&r[C.age]!==''?n(r[C.age]):null;const dt=(C.last>=0&&r[C.last])||(C.idle>=0&&r[C.idle])||'';if(age==null&&dt){const t=Date.parse(dt);if(t)age=Math.round((today-t)/864e5)}
     const grp=C.grp>=0?r[C.grp]:inf.grp,sold=inf.stores||{},elsewhere=Object.entries(sold).filter(([k,v])=>k!==s.store&&v>0).sort((a,b)=>b[1]-a[1]);
     const tags=[];if(inf.order>0)tags.push('ord');if(elsewhere.length)tags.push('move');if(!(inf.sold>0))tags.push('dead');
-    return {sku,ean:r[1]||'',name:C.name>=0?String(r[C.name]).replace(/^\s*[0-9A-Z]+(-[0-9A-Z]{1,4})?-\d{8,14}\s*-?\s*/i,'')||r[C.name]:'',grp,cat:catOf(grp),store:s.store,wh:s.warehouse,qty:C.qty>=0?n(r[C.qty]):1,val:C.val>=0?n(r[C.val]):0,age,ab:ageBucket(age),sold:inf.sold||0,byMonth:inf.byMonth||[],soh:inf.soh||0,order:inf.order||0,elsewhere,soldHere:sold[s.store]||0,tags}})).filter(i=>i.sku&&i.qty>0);
+    return {sku,ean:r[1]||'',name:C.name>=0?String(r[C.name]).replace(/^\s*[0-9A-Z]+(-[0-9A-Z]{1,4})?-\d{8,14}\s*-?\s*/i,'')||r[C.name]:'',grp,cat:catOf(grp,C.name>=0?r[C.name]:''),store:s.store,wh:s.warehouse,qty:C.qty>=0?n(r[C.qty]):1,val:C.val>=0?n(r[C.val]):0,age,ab:ageBucket(age),sold:inf.sold||0,byMonth:inf.byMonth||[],soh:inf.soh||0,order:inf.order||0,elsewhere,soldHere:sold[s.store]||0,tags}})).filter(i=>i.sku&&i.qty>0);
   // transfers: the slow pieces of store Y go to the stores where the SKU sold, best seller first, at most what that store sold in the period
   TR=[];const given={};
   for(const i of ITEMS){let left=i.qty;for(const [to,q] of i.elsewhere){if(left<=0)break;const k=i.sku+'|'+to,room=Math.max(0,Math.ceil(q)-(given[k]||0));const m=Math.min(left,room);if(m<=0)continue;given[k]=(given[k]||0)+m;left-=m;TR.push({i,from:i.store,to,qty:m,soldTo:q})}i.move=i.qty-left}
