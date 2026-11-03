@@ -151,7 +151,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
             <p className="text-sm text-stone-600 mt-1">{t.incomingNote}</p>
           </div>
           {!incoming.length && <p className="text-sm text-stone-600">{t.noneIncoming}</p>}
-          {incoming.map((b) => <ReceiveCard key={b.id} t={t} b={b} busy={busy} run={run} areaManager={areaManager} />)}
+          {incoming.map((b) => <ReceiveCard key={b.id} t={t} b={b} busy={busy} run={run} areaManager={areaManager} isAdmin={isAdmin} />)}
         </section>
       )}
 
@@ -277,7 +277,7 @@ function useItemScan(t: T, b: BatchRow) {
   return { scanned, ui, missing: b.items.length - scanned.length };
 }
 
-function ReceiveCard({ t, b, busy, run, areaManager }: { t: T; b: BatchRow; busy: boolean; run: Run; areaManager: boolean }) {
+function ReceiveCard({ t, b, busy, run, areaManager, isAdmin }: { t: T; b: BatchRow; busy: boolean; run: Run; areaManager: boolean; isAdmin: boolean }) {
   const { scanned, ui, missing } = useItemScan(t, b);
   return (
     <div className="border-t border-stone-100 pt-3 flex flex-col gap-3">
@@ -286,7 +286,7 @@ function ReceiveCard({ t, b, busy, run, areaManager }: { t: T; b: BatchRow; busy
         <>
           {ui}
           {missing > 0 && scanned.length > 0 && <p className="text-sm text-amber-800">{t.missingWarn(missing)}</p>}
-          {b.mine ? <p className="text-xs text-stone-500">{t.errors.sod}</p> : (
+          {b.mine && !isAdmin ? <p className="text-xs text-stone-500">{t.errors.sod}</p> : (
             <button disabled={busy || !scanned.length} className={primary} onClick={() => run(() => receiveBatch(b.id, scanned))}>
               {t.receive(scanned.length, b.items.length)}
             </button>
