@@ -106,6 +106,12 @@ export default async function TrackingPage({ searchParams }: { searchParams: Pro
             <Tile label={t.warranty} value={d.warranty[(tk.warranty_final ?? tk.warranty_provisional) as keyof typeof d.warranty]} />
             <Tile label={t.quoteTotal} value={Number(tk.quote_total) ? Number(tk.quote_total).toLocaleString(locale === "ar" ? "ar-EG" : "en-GB") : "—"} />
           </div>
+          {t.next[tk.status] && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm">
+              <div className="font-semibold">{t.nextTitle} · {t.waitingOn}: {t.next[tk.status][0]}</div>
+              <div className="text-stone-700 mt-0.5">{t.next[tk.status][1]}</div>
+            </div>
+          )}
           <ol className="grid grid-cols-4 sm:grid-cols-8 gap-1" aria-label={t.progress}>
             {t.stages.map((s, i) => (
               <li key={s} className="flex flex-col gap-1">
