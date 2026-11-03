@@ -88,18 +88,15 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
     return html;
   }
   function stores(d){
-    var names=[],seen={};
-    (d.ytd.perStore||[]).concat(d.mtd.perStore||[]).forEach(function(x){if(!seen[x.name]){seen[x.name]=1;names.push(x.name)}});
-    var lm={};(d.lm&&d.lm.perStore||[]).forEach(function(x){lm[x.name]=x});
-    var mS=MON[+d.month.slice(5,7)-1].slice(0,3),lS=d.lm?MON[+d.lm.month.slice(5,7)-1].slice(0,3):'',hasLm=!!d.lm;
-    var ytd={},mtd={};(d.ytd.perStore||[]).forEach(function(x){ytd[x.name]=x});(d.mtd.perStore||[]).forEach(function(x){mtd[x.name]=x});
-    names.sort(function(a,b){return ((ytd[b]||{}).sales||0)-((ytd[a]||{}).sales||0)});
-    function row(l,a,b,c,f){return '<tr><td>'+l+'</td>'+(hasLm?'<td>'+f(c)+'</td>':'')+'<td>'+f(a)+'</td><td>'+f(b)+'</td></tr>'}
-    var E=function(x){return x?n(x.sales):'-'},A=function(x){return x?n(x.atv):'-'},O=function(x){return x?n(x.orders):'-'},U=function(x){return x?x.upt.toFixed(1):'-'},S=function(x){return x?x.share.toFixed(1)+'%':'-'};
-    return '<section><h2>Per store</h2><div class="range">Each store: last full month, this month so far and year to date. Sorted by year to date sales.</div><div class="stores">'+names.map(function(nm){
-      var m=mtd[nm],y=ytd[nm],c=lm[nm];
-      return '<div class="card st"><h3>'+esc(nm)+'</h3><table><tr><th></th>'+(hasLm?'<th>'+lS+'</th>':'')+'<th>'+mS+' 1-'+(+d.upTo.slice(8))+'</th><th>Year</th></tr>'
-        +row('Sales (EGP)',m,y,c,E)+row('Share of chain',m,y,c,S)+row('Avg ticket (EGP)',m,y,c,A)+row('Orders',m,y,c,O)+row('UPT',m,y,c,U)+(y&&y.avgMonth?'<tr><td>Avg per month (EGP)</td>'+(hasLm?'<td>-</td>':'')+'<td>-</td><td>'+n(y.avgMonth)+'</td></tr>':'')+'</table></div>'}).join('')+'</div></section>';
+    var list=(d.ytd.perStore||[]).slice();
+    var E=function(v){return n(v)};
+    return '<section><h2>Per store</h2><div class="range">Each store, year to date ('+dmy(d.ytd.from)+' to '+dmy(d.ytd.to)+'). The average month counts full months only.</div><div class="stores">'+list.map(function(x){
+      return '<div class="card st"><h3>'+esc(x.name)+'</h3><table><tr><th></th><th>Year to date</th><th>Avg month</th></tr>'
+        +'<tr><td>Sales (EGP)</td><td>'+E(x.sales)+'</td><td>'+(x.avgMonth?E(x.avgMonth):'-')+'</td></tr>'
+        +'<tr><td>Share of chain</td><td>'+x.share.toFixed(1)+'%</td><td>-</td></tr>'
+        +'<tr><td>Avg ticket (EGP)</td><td>'+E(x.atv)+'</td><td>-</td></tr>'
+        +'<tr><td>Orders</td><td>'+E(x.orders)+'</td><td>-</td></tr>'
+        +'<tr><td>UPT</td><td>'+x.upt.toFixed(1)+'</td><td>-</td></tr></table></div>'}).join('')+'</div></section>';
   }
   // long numbers shrink instead of wrapping onto a second line
   function fit(){
@@ -113,7 +110,7 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
     if(d.empty){out.innerHTML='<div class="err">No sales data yet. Add it on the All Uploads page or press Sync from ERP.</div>';return}
     var m=MON[+d.month.slice(5,7)-1]+' '+d.year;
     sub.textContent='All stores, net of VAT. Sales up to '+dmy(d.upTo)+'. The Online shop is not counted as a store.';
-    out.innerHTML=block('All stores together · '+m+' so far',d.mtd,'vs same days last month')+(d.lm?block('All stores together · '+MON[+d.lm.month.slice(5,7)-1]+' (full month)',d.lm,''):'')+block('All stores together · year to date: '+d.year,d.ytd,'vs same period last year')+stores(d);
+    out.innerHTML=block('All stores together · year to date: '+d.year,d.ytd,'')+stores(d);
     foot.textContent='Updated '+new Date(d.generatedAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'. Figures are saved for 10 minutes; press Refresh for the latest.';
     fit();
   }
