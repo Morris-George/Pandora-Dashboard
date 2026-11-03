@@ -40,10 +40,18 @@ export function BulkActions({ locale, formId, statuses }: { locale: Locale; form
     router.refresh();
   };
   const word = t.deleteWord;
+  // Tick or untick every row in the table
+  const tickAll = (on: boolean) => {
+    const form = document.getElementById(formId);
+    form?.querySelectorAll<HTMLInputElement>("input[data-bulk]").forEach((i) => { i.checked = on; });
+    form?.dispatchEvent(new Event("change"));
+  };
 
   return (
     <div className="no-print flex flex-wrap items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3 text-sm">
       <span className="font-medium">{t.selected(picked.length)}</span>
+      <button onClick={() => tickAll(true)} className="rounded-lg border border-stone-300 px-3 py-1.5">{t.selectAll}</button>
+      <button disabled={!picked.length} onClick={() => tickAll(false)} className="rounded-lg border border-stone-300 px-3 py-1.5 disabled:opacity-40">{t.unselectAll}</button>
       <button disabled={!picked.length} onClick={() => open("status")}
         className="rounded-lg border border-stone-900 px-3 py-1.5 font-bold disabled:opacity-40">{t.changeStatus}</button>
       <button disabled={!picked.length} onClick={() => open("delete")}

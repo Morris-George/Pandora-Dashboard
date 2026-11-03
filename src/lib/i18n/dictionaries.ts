@@ -321,7 +321,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
   },
   list: {
     bulk: {
-      selected: (n: number) => `${n} selected`, changeStatus: "Change status", delete: "Delete",
+      selected: (n: number) => `${n} selected`, selectAll: "Select all", unselectAll: "Unselect all", changeStatus: "Change status", delete: "Delete",
       statusNote: "Super Admin correction: the tickets move straight to the new status. It is recorded in each ticket's timeline with your reason. Shipments and custody are not changed.",
       deleteNote: "Permanently removes the selected tickets, their history, quotes and photos. It cannot be undone. A copy stays in the audit log.",
       newStatus: "New status", reason: "Reason (required)", deleteWord: "DELETE", typeWord: (w: string) => `Type ${w} to confirm`,
@@ -1062,7 +1062,7 @@ const ar: Dict = {
   },
   list: {
     bulk: {
-      selected: (n: number) => `${n} محدد`, changeStatus: "تغيير الحالة", delete: "حذف",
+      selected: (n: number) => `${n} محدد`, selectAll: "تحديد الكل", unselectAll: "إلغاء تحديد الكل", changeStatus: "تغيير الحالة", delete: "حذف",
       statusNote: "تصحيح من مدير النظام: التيكيتات بتتنقل للحالة الجديدة على طول، وبيتسجل في مسار كل تيكيت مع السبب. الشحنات والعهدة مش بتتغير.",
       deleteNote: "بيمسح التيكيتات المحددة وسجلها وعروض الأسعار والصور نهائيًا ومش هينفع يرجع. بتفضل نسخة في سجل المراجعة.",
       newStatus: "الحالة الجديدة", reason: "السبب (مطلوب)", deleteWord: "حذف", typeWord: (w: string) => `اكتب ${w} للتأكيد`,
