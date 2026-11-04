@@ -143,13 +143,12 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
     var cell=function(v){return '<td'+(v?'':' class="zero"')+'>'+(v?n(v):'-')+'</td>'};
     var head='<tr><th>Store</th>'+m.months.map(function(k){return '<th>'+MON[+k.slice(5)-1].slice(0,3)+(k===partial?'*':'')+'</th>'}).join('')+'<th class="sum">Total</th></tr>';
     var rows=m.stores.map(function(x){return '<tr><td>'+esc(x.name)+'</td>'+m.months.map(function(k){return cell(x.byMonth[k])}).join('')+'<td class="sum">'+n(x.total)+'</td></tr>'}).join('');
-    var tot='<tr class="tot"><td>All stores</td>'+m.months.map(function(k){return '<td>'+n(m.totals[k])+'</td>'}).join('')+'<td class="sum">'+n(m.total)+'</td></tr>';
-    if(m.online){
-      tot+='<tr><td>Online shop</td>'+m.months.map(function(k){return cell(m.online.byMonth[k])}).join('')+'<td class="sum">'+n(m.online.total)+'</td></tr>'
-        +'<tr class="tot"><td>All incl. Online</td>'+m.months.map(function(k){return '<td>'+n(m.totals[k]+(m.online.byMonth[k]||0))+'</td>'}).join('')+'<td class="sum">'+n(m.total+m.online.total)+'</td></tr>';
-    }
+    var tot='';
+    if(m.online)tot+='<tr><td>Online shop</td>'+m.months.map(function(k){return cell(m.online.byMonth[k])}).join('')+'<td class="sum">'+n(m.online.total)+'</td></tr>';
+    var ot=m.online||{byMonth:{},total:0};
+    tot+='<tr class="tot"><td>Total</td>'+m.months.map(function(k){return '<td>'+n(m.totals[k]+(ot.byMonth[k]||0))+'</td>'}).join('')+'<td class="sum">'+n(m.total+ot.total)+'</td></tr>';
     var left=d.monthly.cats.filter(function(c){return off[c]});
-    return '<div class="range">Every store, each month of '+d.year+' (EGP, '+(basis==='net'?'net of VAT':'gross, VAT included')+').'+(m.online?' The Online shop is shown separately below the store total.':'')+(partial?' * '+MON[+partial.slice(5)-1]+' is still running, so far up to '+dmy(d.upTo)+'.':'')+(left.length?' Left out: '+esc(left.join(', '))+'.':'')+'</div><div class="mt"><table>'+head+rows+tot+'</table></div>';
+    return '<div class="range">Every store, each month of '+d.year+' (EGP, '+(basis==='net'?'net of VAT':'gross, VAT included')+').'+(m.online?'':'')+(partial?' * '+MON[+partial.slice(5)-1]+' is still running, so far up to '+dmy(d.upTo)+'.':'')+(left.length?' Left out: '+esc(left.join(', '))+'.':'')+'</div><div class="mt"><table>'+head+rows+tot+'</table></div>';
   }
   function monthly(d){
     var mm=d.monthly;if(!mm||!mm.cells.length)return '';
