@@ -398,7 +398,7 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'slow.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
   }
   if (requestedPath === '/transfer' || requestedPath === '/transfer/' || requestedPath === '/transfer.html') {
-    if (!facts.refill || facts.refill === 'none') return toHome();
+    if (!(facts.staff && facts.staff.role === 'admin')) return toHome();
     return sendFile(res, 'transfer.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
   }
   // its product pictures, in pieces (one response may not pass 4.5 MB); super admin only, kept by the browser for a day

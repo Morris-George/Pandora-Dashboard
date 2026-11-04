@@ -1,7 +1,7 @@
 // Transfer: pick ANY items (not only slow ones) to move between stores. Reached at /api/transfer (rewritten to api/erp.js).
 //   GET /api/transfer   today's stock per SKU and store (ERP "Branches Stock Balance") + what each SKU sold in each store
 //                       over the last 3 months (the nightly ERP sales files), so the page can say where an item sells.
-// Who: anyone with Refill Order access (view and up), the same people as Slow Moving. Read only: nothing is saved except a 10 minute cache.
+// Who: the super admin and the brand manager (overseer) only, like Store Overview. Read only: nothing is saved except a 10 minute cache.
 const store = require('./_store');
 const { whoami } = require('./_auth');
 
@@ -62,8 +62,8 @@ module.exports = async function handler(req, res) {
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   const who = await whoami(req);
   if (!who) return send(res, 401, { ok: false, error: 'sign-in-required' });
-  const lvl = await require('./_refill').levelFor(who);
-  if (lvl === 'none') return send(res, 403, { ok: false, error: 'No access to Transfer. Ask the super admin (Refill Order access).' });
+  const lvl = 'view';
+  if (!(who.kind === 'env' && who.info.role === 'admin')) return send(res, 403, { ok: false, error: 'Only the super admin and the brand manager can open this report.' });
   if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
   if (!(process.env.ERP_URL && process.env.ERP_API_KEY && process.env.ERP_API_SECRET)) return send(res, 503, { ok: false, error: 'ERP is not connected.' });
   const fresh = new URL(req.url, 'https://x.invalid').searchParams.get('fresh');
