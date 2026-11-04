@@ -49,6 +49,10 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
 .mt tr.tot td{background:var(--fill-soft);font-weight:800}.mt tr.tot td:first-child{background:var(--fill-soft)}
 .mt td.sum,.mt th.sum{font-weight:800;border-left:1px solid var(--line)}
 .mt td.zero{color:var(--muted);font-weight:500}
+.mh{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.tg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.tg button{border:0;background:transparent;color:var(--ink2);font:inherit;font-weight:700;font-size:12.5px;padding:6px 16px;cursor:pointer}
+.tg button.on{background:var(--accent);color:#2A1F24}
 .foot{color:var(--muted);font-size:12px}
 .err{background:var(--down-bg);color:var(--down);border-radius:12px;padding:12px 14px;font-weight:600}
 .loading{padding:60px 0;text-align:center;color:var(--ink2)}
@@ -107,17 +111,21 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
         +'<tr><td>Orders</td><td>'+E(x.orders)+'</td><td>-</td></tr>'
         +'<tr><td>UPT</td><td>'+x.upt.toFixed(1)+'</td><td>-</td></tr></table></div>'}).join('')+'</div></section>';
   }
+  var basis='net';
   function monthly(d){
-    var m=d.monthly;if(!m||!m.months.length)return '';
-    var head='<tr><th>Store</th>'+m.months.map(function(k){return '<th>'+MON[+k.slice(5)-1].slice(0,3)+(k===m.partial?'*':'')+'</th>'}).join('')+'<th class="sum">Total</th></tr>';
+    var mm=d.monthly;if(!mm||!mm[basis]||!mm[basis].months.length)return '';
+    var m=mm[basis],partial=mm.partial;
+    var head='<tr><th>Store</th>'+m.months.map(function(k){return '<th>'+MON[+k.slice(5)-1].slice(0,3)+(k===partial?'*':'')+'</th>'}).join('')+'<th class="sum">Total</th></tr>';
     var rows=m.stores.map(function(x){return '<tr><td>'+esc(x.name)+'</td>'+m.months.map(function(k){var v=x.byMonth[k];return '<td'+(v?'':' class="zero"')+'>'+(v?n(v):'-')+'</td>'}).join('')+'<td class="sum">'+n(x.total)+'</td></tr>'}).join('');
     var tot='<tr class="tot"><td>All stores</td>'+m.months.map(function(k){return '<td>'+n(m.totals[k])+'</td>'}).join('')+'<td class="sum">'+n(m.total)+'</td></tr>';
     if(m.online){
       tot+='<tr><td>Online shop</td>'+m.months.map(function(k){var v=m.online.byMonth[k];return '<td'+(v?'':' class="zero"')+'>'+(v?n(v):'-')+'</td>'}).join('')+'<td class="sum">'+n(m.online.total)+'</td></tr>'
         +'<tr class="tot"><td>All incl. Online</td>'+m.months.map(function(k){return '<td>'+n(m.totals[k]+m.online.byMonth[k])+'</td>'}).join('')+'<td class="sum">'+n(m.total+m.online.total)+'</td></tr>';
     }
-    return '<section><h2>Sales by month</h2><div class="range">Every store, each month of '+d.year+' (EGP, net of VAT).'+(m.online?' The Online shop is shown separately below the store total.':'')+(m.partial?' * '+MON[+m.partial.slice(5)-1]+' is still running, so far up to '+dmy(d.upTo)+'.':'')+'</div><div class="mt"><table>'+head+rows+tot+'</table></div></section>';
+    var tg='<div class="tg"><button type="button" data-b="net" class="'+(basis==='net'?'on':'')+'">Net</button><button type="button" data-b="gross" class="'+(basis==='gross'?'on':'')+'">Gross</button></div>';
+    return '<section id="mon"><div class="mh"><h2>Sales by month</h2>'+tg+'</div><div class="range">Every store, each month of '+d.year+' (EGP, '+(basis==='net'?'net of VAT':'gross, VAT included')+').'+(m.online?' The Online shop is shown separately below the store total.':'')+(partial?' * '+MON[+partial.slice(5)-1]+' is still running, so far up to '+dmy(d.upTo)+'.':'')+'</div><div class="mt"><table>'+head+rows+tot+'</table></div></section>';
   }
+  var last=null;
   // long numbers shrink instead of wrapping onto a second line
   function fit(){
     document.querySelectorAll('.val').forEach(function(el){
@@ -126,6 +134,7 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
     });
   }
   function paint(d){
+    last=d;
     if(!d||!d.ok){out.innerHTML='<div class="err">'+esc((d&&d.error)||'Could not load the numbers.')+'</div>';return}
     if(d.empty){out.innerHTML='<div class="err">No sales data yet. Add it on the All Uploads page or press Sync from ERP.</div>';return}
     var m=MON[+d.month.slice(5,7)-1]+' '+d.year;
@@ -142,6 +151,7 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
       .catch(function(){out.innerHTML='<div class="err">Could not reach the server. Try again.</div>'})
       .then(function(){btn.disabled=false});
   }
+  out.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.tg button');if(!b||!last)return;basis=b.getAttribute('data-b');var old=document.getElementById('mon');if(old){var t=document.createElement('div');t.innerHTML=monthly(last);old.replaceWith(t.firstChild)}});
   btn.addEventListener('click',function(){load(true)});
   addEventListener('resize',fit);
   load(false);

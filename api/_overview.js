@@ -86,27 +86,30 @@ function monthlyAvg(rows, yearStart, to) {
 
 // Sales of every store in every month of the year so far (the month still running is flagged as partial).
 function monthTable(all, yearStart, to) {
-  const byS = new Map(), months = new Set(), onl = {};
-  const rows = all.filter(r => !ONLINE.test(String(r[7] || '')));
-  for (const r of all) if (ONLINE.test(String(r[7] || '')) && r[0] >= yearStart && r[0] <= to) { const k = r[0].slice(0, 7); months.add(k); onl[k] = (onl[k] || 0) + (+r[3] || 0); }
-  for (const r of rows) {
-    if (r[0] < yearStart || r[0] > to) continue;
-    const k = r[0].slice(0, 7), br = pretty(r[7] || 'Unspecified'), net = +r[3] || 0;
-    months.add(k);
-    const o = byS.get(br) || {}; o[k] = (o[k] || 0) + net; byS.set(br, o);
-  }
-  const list = [...months].sort();
   const last = new Date(Date.UTC(+to.slice(0, 4), +to.slice(5, 7), 0)).getUTCDate();
-  const stores = [...byS.entries()].map(([name, o]) => {
-    const by = {}; let total = 0;
-    for (const k of list) { by[k] = r0(o[k]); total += o[k] || 0; }
-    return { name, byMonth: by, total: r0(total) };
-  }).filter(x => x.total > 0).sort((a, b) => b.total - a.total);
-  const totals = {};
-  for (const k of list) totals[k] = stores.reduce((a, x) => a + x.byMonth[k], 0);
-  const online = { byMonth: {}, total: 0 };
-  for (const k of list) { online.byMonth[k] = r0(onl[k]); online.total += online.byMonth[k]; }
-  return { online: online.total ? online : null, months: list, partial: +to.slice(8) >= last ? null : to.slice(0, 7), stores, totals, total: stores.reduce((a, x) => a + x.total, 0) };
+  const one = idx => {
+    const byS = new Map(), months = new Set(), onl = {};
+    for (const r of all) {
+      if (r[0] < yearStart || r[0] > to) continue;
+      const k = r[0].slice(0, 7), v = +r[idx] || 0;
+      months.add(k);
+      if (ONLINE.test(String(r[7] || ''))) { onl[k] = (onl[k] || 0) + v; continue; }
+      const br = pretty(r[7] || 'Unspecified'), o = byS.get(br) || {}; o[k] = (o[k] || 0) + v; byS.set(br, o);
+    }
+    const list = [...months].sort();
+    const stores = [...byS.entries()].map(([name, o]) => {
+      const by = {}; let total = 0;
+      for (const k of list) { by[k] = r0(o[k]); total += o[k] || 0; }
+      return { name, byMonth: by, total: r0(total) };
+    }).filter(x => x.total > 0).sort((a, b) => b.total - a.total);
+    const totals = {};
+    for (const k of list) totals[k] = stores.reduce((a, x) => a + x.byMonth[k], 0);
+    const online = { byMonth: {}, total: 0 };
+    for (const k of list) { online.byMonth[k] = r0(onl[k]); online.total += online.byMonth[k]; }
+    return { online: online.total ? online : null, months: list, stores, totals, total: stores.reduce((a, x) => a + x.total, 0) };
+  };
+  const net = one(3), gross = one(4);
+  return { partial: +to.slice(8) >= last ? null : to.slice(0, 7), net, gross };
 }
 
 async function build() {
@@ -144,7 +147,7 @@ module.exports = async function handler(req, res) {
   if (!(who.kind === 'env' && who.info.role === 'admin')) return send(res, 403, { ok: false, error: 'Only the super admin and the brand manager can open this report.' }); // area managers, VM and staff never
   if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
   const fresh = new URL(req.url, 'https://x.invalid').searchParams.get('fresh') === '1';
-  const ck = 'overview/c6.json';
+  const ck = 'overview/c7.json';
   if (!fresh) {
     const c = await store.getJSON(ck).catch(() => null);
     if (c && c.ok && Date.now() - Date.parse(c.generatedAt) < CACHE_MIN * 60000) return send(res, 200, c);
