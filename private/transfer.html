@@ -52,7 +52,7 @@ table.hm{width:auto}table.hm th,table.hm td{text-align:center;padding:9px 12px;b
 .pk{display:flex;flex-direction:column;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:14px;margin-bottom:6px;cursor:pointer;transition:background .12s,border-color .12s;user-select:none}
 .pk:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}
 .pk.sel{background:var(--soft);border-color:var(--accent);box-shadow:inset 5px 0 0 var(--accent)}
-.pk .pkt{display:flex;gap:12px;align-items:center}.pkp{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-left:36px;cursor:default;line-height:1.7}.dst{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--accent);border-radius:999px;padding:2px 4px 2px 12px;background:var(--surface)}.dst input{width:60px;padding:3px 6px;font-weight:700;text-align:center}.dst .x{border:0;background:none;color:var(--ink2);cursor:pointer;padding:2px;display:inline-flex}.pkp select{padding:3px 8px;border-radius:999px}.pk .ck{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;color:transparent}
+.pk .pkt{display:flex;gap:12px;align-items:center}.pkp{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-left:36px;cursor:default;line-height:1.7}.dst{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--accent);border-radius:999px;padding:2px 4px 2px 12px;background:var(--surface)}.dst input{width:60px;padding:3px 6px;font-weight:700;text-align:center}.dst .x{border:0;background:none;color:var(--ink2);cursor:pointer;padding:2px;display:inline-flex}.pkp select{padding:3px 8px;border-radius:999px}.ln{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0}.ln select{max-width:46vw}.ln input{width:70px;text-align:center;font-weight:700}.ln .arr{color:var(--accent)}.ln .x{border:0;background:none;color:var(--ink2);cursor:pointer;padding:2px;display:inline-flex}.pk .ck{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;color:transparent}
 .pk.sel .ck{background:var(--accent);border-color:var(--accent);color:#2A1018}
 .pk .ck .ic{width:15px;height:15px}
 .pk .mid{min-width:0;flex:1}.pk .mid b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -152,36 +152,44 @@ x:'<path d="M6 6l12 12M18 6L6 18"/>'};
 const ic=n=>`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
 
 const fmtd=d=>{if(!d)return '';const t=Date.parse(d);return t?new Date(t).toLocaleDateString([],{day:'numeric',month:'short'}):''};
-let D=null,ITEMS=[],SOLD=new Map(),STK=new Map();
+let D=null,ITEMS=[],SOLD=new Map(),STK=new Map(),PKG=new Map();
 const PK={scope:'',q:'',cat:'',mv:false,only:false,sel:new Map(),lim:300};
 const catOf=(g,nm)=>{const pick=t=>{t=String(t||'').toLowerCase();if(!t)return '';if(/safety/.test(t))return 'Charms';if(/earring|\bstud|hoop|huggie/.test(t))return 'Earrings';if(/bracelet|bangle/.test(t))return 'Bracelets';if(/pendant|necklace|collier/.test(t))return 'Necklace and Pendant';if(/charm|clip|dangle|spacer|medallion|murano/.test(t))return 'Charms';if(/\bring/.test(t))return 'Rings';return ''};return pick(g)||pick(nm)||(g?String(g).split(' - ').pop():'Other')};
-const pkKey=i=>i.sku+'|'+i.store;
-const pkTot=e=>[...e.plan.values()].reduce((a,x)=>a+x,0);
-const pkLeft=e=>e.i.qty-pkTot(e);
+
+const pkAll=()=>[...new Set([...ITEMS.map(i=>i.store),...[...SOLD.keys()].map(k=>k.slice(k.indexOf('|')+1))])].sort();
 const pkStores=()=>[...new Set(ITEMS.map(i=>i.store))].sort();
+const pkQty=(g,st)=>STK.get(g.sku+'|'+st)||0;
+const pkUsed=(e,st,skip)=>e.lines.reduce((a,l,ix)=>a+(ix!==skip&&l.from===st?l.qty:0),0);
+const pkRoom=(e,st,skip)=>Math.max(0,pkQty(e.g,st)-pkUsed(e,st,skip));
+const pkPcs=e=>e.lines.reduce((a,l)=>a+(l.to?l.qty:0),0);
 async function load(fresh){showErr('');$('meta').textContent='Loading stock from ERP…';
   try{D=await api('/api/transfer'+(fresh?'?fresh=1':''));
     ITEMS=D.items.map(r=>({sku:r[0],ean:r[1],name:String(r[2]).replace(/^\s*[0-9A-Z]+(-[0-9A-Z]{1,4})?-\d{8,14}\s*-?\s*/i,'')||r[2],grp:r[3],cat:catOf(r[3],r[2]),store:r[4],qty:r[5]}));
-    SOLD=new Map(D.sales.map(x=>[x[0]+'|'+x[1],{q:x[2],last:x[3]}]));STK=new Map(ITEMS.map(i=>[pkKey(i),i.qty]));
-    for(const [k,e] of [...PK.sel]){const i=ITEMS.find(x=>pkKey(x)===k);if(!i)PK.sel.delete(k);else{e.i=i;let t=0;for(const [s,q] of e.plan){const v=Math.min(q,i.qty-t);e.plan.set(s,v);t+=v}}}
-    $('meta').innerHTML=`Stock in ERP now: <b>${fmt(ITEMS.reduce((a,i)=>a+i.qty,0))}</b> pieces, <b>${fmt(new Set(ITEMS.map(i=>i.sku)).size)}</b> SKUs in <b>${pkStores().length}</b> stores · sales of the last ${D.months} months · loaded ${new Date(D.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}. Samples, main warehouse and transit are left out.`;
+    SOLD=new Map(D.sales.map(x=>[x[0]+'|'+x[1],{q:x[2],last:x[3]}]));STK=new Map(ITEMS.map(i=>[i.sku+'|'+i.store,i.qty]));
+    PKG=new Map();for(const i of ITEMS){const g=PKG.get(i.sku)||PKG.set(i.sku,{sku:i.sku,name:i.name,cat:i.cat,ean:i.ean,items:[]}).get(i.sku);g.items.push(i)}
+    for(const [k,e] of [...PK.sel]){const g=PKG.get(k);if(!g){PK.sel.delete(k);continue}e.g=g;e.lines=e.lines.filter(l=>pkQty(g,l.from)>0);for(let ix=0;ix<e.lines.length;ix++)e.lines[ix].qty=Math.min(e.lines[ix].qty,pkRoom(e,e.lines[ix].from,ix))}
+    $('meta').innerHTML=`Stock in ERP now: <b>${fmt(ITEMS.reduce((a,i)=>a+i.qty,0))}</b> pieces, <b>${fmt(PKG.size)}</b> SKUs in <b>${pkStores().length}</b> stores · sales of the last ${D.months} months · loaded ${new Date(D.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}. Samples, main warehouse and transit are left out.`;
     $('box').hidden=$('foot').hidden=false;pkDraw()}catch(e){$('meta').textContent='';showErr(e.message)}}
 $('reload').onclick=async()=>{const b=$('reload');b.disabled=true;await load(true);b.disabled=false};
-// where the SKU sells: the other stores that sold it in the last months, best seller first, with what they hold now
-function sugOf(i){const out=[];for(const s of pkStores()){if(s===i.store)continue;const o=SOLD.get(i.sku+'|'+s);if(o&&o.q>0)out.push({to:s,sold:o.q,have:STK.get(i.sku+'|'+s)||0})}return out.sort((a,b)=>(b.sold-b.have)-(a.sold-a.have)||b.sold-a.sold)}
-function pkList(){const q=PK.q.trim().toUpperCase();return ITEMS.filter(i=>(!PK.scope||i.store===PK.scope)&&(!PK.cat||i.cat===PK.cat)&&(!PK.only||PK.sel.has(pkKey(i)))&&(!q||i.sku.includes(q)||String(i.name).toUpperCase().includes(q)||String(i.ean).includes(q))&&(!PK.mv||sugOf(i).length)).sort((a,b)=>(PK.sel.has(pkKey(b))-PK.sel.has(pkKey(a)))||(b.qty-a.qty)||a.sku.localeCompare(b.sku))}
-function pkPlanHtml(i){const k=pkKey(i),e=PK.sel.get(k),sg=sugOf(i),so=i.store?(SOLD.get(k)||{}):{};
-  const here=`<span class="have">${so.q?`Sold here: ${fmt(so.q)}`:'Not sold here'}${so.last?` · last sale ${fmtd(so.last)}`:''}</span>`;
-  if(!e)return `<div class="pkp note">${here}${sg.length?' · Sells at: '+sg.map(x=>`<b>${esc(x.to)}</b> ${fmt(x.sold)} <span class="have">(has ${fmt(x.have)})</span>`).join(' · '):''}</div>`;
-  const add=pkStores().filter(st=>st!==i.store&&!e.plan.has(st)),sgs=sg.filter(x=>!e.plan.has(x.to));
-  return `<div class="pkp"><span class="note">Send to:</span>${[...e.plan].map(([st,q])=>{const o=SOLD.get(i.sku+'|'+st);return `<span class="dst"><b>${esc(st)}</b><input type="number" inputmode="numeric" min="0" max="${i.qty}" value="${q}" data-pkq="${esc(st)}" aria-label="Pieces to ${esc(st)}"><small class="note" title="Sold there in the last ${D.months} months · stock there now">sold ${fmt(o?o.q:0)} · has ${fmt(STK.get(i.sku+'|'+st)||0)}</small><button class="x" data-pkdel="${esc(st)}" aria-label="Remove ${esc(st)}">${ic('x')}</button></span>`}).join('')}
-   ${sgs.length?`<span class="note">Suggested:</span>${sgs.map(x=>`<button class="sug" data-pksug="${esc(x.to)}">+ ${esc(x.to)} <small>sold ${fmt(x.sold)} · has ${fmt(x.have)}</small></button>`).join('')}`:''}
-   ${add.length?`<select data-pkadd><option value="">+ Any store</option>${add.map(st=>`<option>${esc(st)}</option>`).join('')}</select>`:''}<span class="note" data-pkleft></span>${here}</div>`}
-function pkLeftTxt(r,e){const el=r.querySelector('[data-pkleft]');if(el)el.innerHTML=`Staying in ${esc(e.i.store)}: <b>${fmt(pkLeft(e))}</b>`}
-function pkRow(i){const k=pkKey(i),e=PK.sel.get(k);
-  return `<div class="pk${e?' sel':''}" data-pk="${esc(k)}"><div class="pkt"><span class="ck">${ic('check')}</span>${pic(i.sku).replace('class="img"','class="img lg"')}<div class="mid"><b title="${esc(i.name)}">${esc(i.name||i.sku)}</b><div class="note">${esc(i.sku)} · <b style="display:inline">${esc(i.store)}</b> · ${esc(i.cat)}</div></div><div class="qt"><b>${fmt(i.qty)}</b> <small class="note">in stock</small></div></div>${pkPlanHtml(i)}</div>`}
-function pkRedo(r){const k=r.dataset.pk,i=ITEMS.find(x=>pkKey(x)===k);if(!i)return;const t=document.createElement('div');t.innerHTML=pkRow(i);const n=t.firstChild;r.replaceWith(n);const e=PK.sel.get(k);if(e)pkLeftTxt(n,e);pkSum();pkDrawScope()}
-function pkDrawScope(){const stores=pkStores(),cn=st=>ITEMS.filter(i=>!st||i.store===st).length,sn=st=>[...PK.sel.values()].filter(e=>(!st||e.i.store===st)&&pkTot(e)>0).length;
+// where the SKU sells: stores that sold it in the last months (best need first), with what they hold now; only where another store can send it
+function sugOf(g){const out=[];for(const s of pkAll()){const o=SOLD.get(g.sku+'|'+s);if(!o||!(o.q>0))continue;if(!g.items.some(i=>i.store!==s))continue;out.push({to:s,sold:o.q,have:pkQty(g,s)})}return out.sort((a,b)=>(b.sold-b.have)-(a.sold-a.have)||b.sold-a.sold)}
+const pkScoped=g=>PK.scope?g.items.filter(i=>i.store===PK.scope):g.items;
+function pkList(){const q=PK.q.trim().toUpperCase();
+  return [...PKG.values()].filter(g=>pkScoped(g).length&&(!PK.cat||g.cat===PK.cat)&&(!PK.only||PK.sel.has(g.sku))&&(!q||g.sku.includes(q)||String(g.name).toUpperCase().includes(q)||String(g.ean).includes(q))&&(!PK.mv||sugOf(g).length))
+   .sort((a,b)=>(PK.sel.has(b.sku)-PK.sel.has(a.sku))||(pkScoped(b).reduce((x,i)=>x+i.qty,0)-pkScoped(a).reduce((x,i)=>x+i.qty,0))||a.sku.localeCompare(b.sku))}
+const hint=(g,st)=>{if(!st)return '';const o=SOLD.get(g.sku+'|'+st);return `sold ${fmt(o?o.q:0)} · has ${fmt(pkQty(g,st))}`};
+function pkLn(e,l,ix){const froms=e.g.items.map(i=>i.store);
+  return `<div class="ln" data-ln="${ix}"><select data-lf aria-label="From store">${froms.map(st=>`<option${st===l.from?' selected':''}>${esc(st)}</option>`).join('')}</select><span class="arr">${ic('arrow')}</span><select data-lt aria-label="To store"><option value="">Choose a store</option>${pkAll().filter(st=>st!==l.from).map(st=>`<option${st===l.to?' selected':''}>${esc(st)}</option>`).join('')}</select><input type="number" inputmode="numeric" min="0" max="${pkQty(e.g,l.from)}" value="${l.qty}" data-lq aria-label="Pieces"><span class="note">pcs</span><small class="note">${hint(e.g,l.to)}</small><button class="x" data-lx aria-label="Remove this line">${ic('x')}</button></div>`}
+const pkStay=e=>'Staying: '+e.g.items.map(i=>`<b>${esc(i.store)}</b> ${fmt(pkRoom(e,i.store))}`).join(' · ');
+function pkPlanHtml(g){const e=PK.sel.get(g.sku),sg=sugOf(g),so=SOLD,have=g.items.map(i=>{const o=so.get(g.sku+'|'+i.store);return `<b>${esc(i.store)}</b> ${fmt(i.qty)}${o&&o.q?` <span class="have">(sold ${fmt(o.q)})</span>`:''}`}).join(' · ');
+  const head=`<div class="note">In stock: ${have}</div>`;
+  if(!e)return `<div class="pkp" style="display:block">${head}${sg.length?`<div class="note">Sells at: ${sg.map(x=>`<b>${esc(x.to)}</b> ${fmt(x.sold)} <span class="have">(has ${fmt(x.have)})</span>`).join(' · ')}</div>`:'<div class="note">No other store sold it in the last '+D.months+' months.</div>'}</div>`;
+  const used=new Set(e.lines.map(l=>l.to)),sgs=sg.filter(x=>!used.has(x.to));
+  return `<div class="pkp" style="display:block">${head}<div class="lns">${e.lines.map((l,ix)=>pkLn(e,l,ix)).join('')}</div><div class="row" style="margin-top:6px"><button class="sug" data-ladd>+ Add a transfer line</button>${sgs.length?`<span class="note">Suggested:</span>${sgs.map(x=>`<button class="sug" data-pksug="${esc(x.to)}">+ ${esc(x.to)} <small>sold ${fmt(x.sold)} · has ${fmt(x.have)}</small></button>`).join('')}`:''}<span class="note" data-pkleft>${pkStay(e)}</span></div></div>`}
+function pkRow(g){const e=PK.sel.get(g.sku),si=pkScoped(g),tot=si.reduce((a,i)=>a+i.qty,0);
+  return `<div class="pk${e?' sel':''}" data-pk="${esc(g.sku)}"><div class="pkt"><span class="ck">${ic('check')}</span>${pic(g.sku).replace('class="img"','class="img lg"')}<div class="mid"><b title="${esc(g.name)}">${esc(g.name||g.sku)}</b><div class="note">${esc(g.sku)} · ${esc(g.cat)} · in stock in <b style="display:inline">${g.items.length}</b> store${g.items.length>1?'s':''}</div></div><div class="qt"><b>${fmt(tot)}</b> <small class="note">in stock</small></div></div>${pkPlanHtml(g)}</div>`}
+function pkRedo(r){const g=PKG.get(r.dataset.pk);if(!g)return;const t=document.createElement('div');t.innerHTML=pkRow(g);r.replaceWith(t.firstChild);pkSum();pkDrawScope()}
+function pkDrawScope(){const stores=pkStores(),cn=st=>new Set(ITEMS.filter(i=>!st||i.store===st).map(i=>i.sku)).size,sn=st=>[...PK.sel.values()].filter(e=>e.lines.some(l=>l.to&&l.qty>0&&(!st||l.from===st))).length;
   $('pkScope').innerHTML=[''].concat(stores).map(st=>`<span class="chip ${PK.scope===st?'on':''}" data-pkscope="${esc(st)}">${st?esc(st):'All stores together'} <b>${fmt(cn(st))}</b>${sn(st)?` <span class="note">· ${sn(st)} to move</span>`:''}</span>`).join('')}
 function pkDraw(){
   if(PK.scope&&!pkStores().includes(PK.scope))PK.scope='';pkDrawScope();
@@ -189,28 +197,30 @@ function pkDraw(){
   $('pkCat').innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option ${c===PK.cat?'selected':''}>${esc(c)}</option>`).join('');
   $('pkMv').classList.toggle('on',PK.mv);$('pkPk').classList.toggle('on',PK.only);
   const l=pkList(),shown=l.slice(0,PK.lim);
-  $('pkCnt').textContent=`${fmt(l.length)} items shown${l.length>shown.length?` (first ${fmt(shown.length)}, search or pick a store to narrow)`:''}`;
-  $('pkList').innerHTML=shown.map(pkRow).join('')+(l.length>shown.length?`<button class="btn" data-pkmore style="margin:6px 0">Show ${fmt(Math.min(300,l.length-shown.length))} more</button>`:'')||'<div class="note" style="padding:20px">No items match.</div>';
-  $('pkList').querySelectorAll('.pk.sel').forEach(r=>pkLeftTxt(r,PK.sel.get(r.dataset.pk)));pkSum()}
-function pkSum(){const v=[...PK.sel.values()].filter(e=>pkTot(e)>0),pcs=v.reduce((a,e)=>a+pkTot(e),0),n=new Set(v.map(e=>e.i.store)).size;
-  $('pkSum').innerHTML=v.length?`<b>${fmt(v.length)}</b> items · <b>${fmt(pcs)}</b> pieces to move · from <b>${n}</b> store${n>1?'s':''}`:'<span class="note">Nothing to move yet. Tap an item, then type the pieces for each store.</span>';
+  $('pkCnt').textContent=`${fmt(l.length)} SKUs shown${l.length>shown.length?` (first ${fmt(shown.length)}, search or pick a store to narrow)`:''}`;
+  $('pkList').innerHTML=shown.map(pkRow).join('')+(l.length>shown.length?`<button class="btn" data-pkmore style="margin:6px 0">Show ${fmt(Math.min(300,l.length-shown.length))} more</button>`:'')||'<div class="note" style="padding:20px">No items match.</div>';pkSum()}
+function pkSum(){const v=[...PK.sel.values()].filter(e=>pkPcs(e)>0),pcs=v.reduce((a,e)=>a+pkPcs(e),0),L=v.flatMap(e=>e.lines.filter(l=>l.to&&l.qty>0)),f=new Set(L.map(l=>l.from)).size,t=new Set(L.map(l=>l.to)).size;
+  $('pkSum').innerHTML=v.length?`<b>${fmt(v.length)}</b> SKUs · <b>${fmt(pcs)}</b> pieces · from <b>${f}</b> store${f>1?'s':''} to <b>${t}</b> store${t>1?'s':''}`:'<span class="note">Nothing to move yet. Tap an item, then set from, to and the pieces.</span>';
   $('pkGo').innerHTML=ic('dl')+' Download Excel';$('pkGo').disabled=!v.length}
 function pkExport(){const rows=[];
-  for(const e of [...PK.sel.values()].sort((a,b)=>a.i.store.localeCompare(b.i.store)||a.i.cat.localeCompare(b.i.cat)||a.i.sku.localeCompare(b.i.sku)))for(const [to,q] of e.plan)if(q>0)rows.push({from:e.i.store,to,sku:e.i.sku,ean:e.i.ean,name:e.i.name,cat:e.i.cat,qty:q});
-  if(!rows.length)return;
+  for(const e of [...PK.sel.values()])for(const l of e.lines)if(l.to&&l.qty>0)rows.push({from:l.from,to:l.to,sku:e.g.sku,ean:e.g.ean,name:e.g.name,cat:e.g.cat,qty:l.qty});
+  rows.sort((a,b)=>a.from.localeCompare(b.from)||a.to.localeCompare(b.to)||a.cat.localeCompare(b.cat)||a.sku.localeCompare(b.sku));if(!rows.length)return;
   const L=r=>({'From store':r.from,'To store':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Pcs':r.qty,'Done':''});
   const wb=XLSX.utils.book_new(),mk=(a,w)=>{const ws=XLSX.utils.json_to_sheet(a);ws['!cols']=w;return ws};
   XLSX.utils.book_append_sheet(wb,mk(rows.map(L),[{wch:16},{wch:20},{wch:16},{wch:15},{wch:42},{wch:20},{wch:6},{wch:7}]),'Transfer list');
   const used=new Set(['Transfer list']);
   for(const st of [...new Set(rows.map(r=>r.from))]){let nm=('Send from '+String(st).replace(/[\\\/?*:\[\]]/g,' ')).slice(0,31),k=2;while(used.has(nm))nm=nm.slice(0,28)+' '+k++;used.add(nm);
-    XLSX.utils.book_append_sheet(wb,mk(rows.filter(r=>r.from===st).sort((a,b)=>String(a.to).localeCompare(b.to)).map(r=>({'Send to':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Pcs':r.qty,'Done':''})),[{wch:22},{wch:16},{wch:15},{wch:42},{wch:20},{wch:6},{wch:7}]),nm)}
+    XLSX.utils.book_append_sheet(wb,mk(rows.filter(r=>r.from===st).map(r=>({'Send to':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Pcs':r.qty,'Done':''})),[{wch:22},{wch:16},{wch:15},{wch:42},{wch:20},{wch:6},{wch:7}]),nm)}
   const fs=[...new Set(rows.map(r=>r.from))];
   XLSX.writeFile(wb,'Transfer '+(fs.length===1?fs[0]:'all stores')+' '+new Date().toISOString().slice(0,10)+'.xlsx')}
 $('pkQ').oninput=()=>{PK.q=$('pkQ').value;PK.lim=300;pkDraw()};$('pkCat').onchange=()=>{PK.cat=$('pkCat').value;PK.lim=300;pkDraw()};
-document.addEventListener('input',e=>{const inp=e.target.closest('[data-pkq]');if(!inp)return;const r=inp.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(!en)return;
-  const st=inp.dataset.pkq,other=pkTot(en)-(en.plan.get(st)||0);let v=Math.max(0,Math.floor(Number(inp.value)||0));const mx=Math.max(0,en.i.qty-other);if(v>mx){v=mx;inp.value=v}
-  en.plan.set(st,v);pkLeftTxt(r,en);pkSum();pkDrawScope()});
-document.addEventListener('change',e=>{const sel=e.target.closest('[data-pkadd]');if(!sel||!sel.value)return;const r=sel.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(!en)return;en.plan.set(sel.value,Math.max(0,pkLeft(en)));pkRedo(r)});
+const pkCtx=el=>{const r=el.closest('.pk'),ln=el.closest('.ln');return r&&ln?{r,e:PK.sel.get(r.dataset.pk),ix:+ln.dataset.ln}:null};
+// the best store to send from: the scope store if it holds the item, else the one with the most room
+const pkFrom=e=>{const hs=e.g.items.filter(i=>pkRoom(e,i.store)>0);return (hs.find(i=>i.store===PK.scope)||hs.sort((a,b)=>pkRoom(e,b.store)-pkRoom(e,a.store))[0]||e.g.items[0]).store};
+document.addEventListener('input',e=>{const inp=e.target.closest('[data-lq]');if(!inp)return;const c=pkCtx(inp);if(!c||!c.e)return;const l=c.e.lines[c.ix];
+  let v=Math.max(0,Math.floor(Number(inp.value)||0));const mx=pkRoom(c.e,l.from,c.ix);if(v>mx){v=mx;inp.value=v}l.qty=v;c.r.querySelector('[data-pkleft]').innerHTML=pkStay(c.e);pkSum();pkDrawScope()});
+document.addEventListener('change',e=>{const f=e.target.closest('[data-lf]'),t=e.target.closest('[data-lt]'),x=f||t;if(!x)return;const c=pkCtx(x);if(!c||!c.e)return;const l=c.e.lines[c.ix];
+  if(f){l.from=f.value;if(l.to===l.from)l.to='';l.qty=Math.min(l.qty||pkRoom(c.e,l.from,c.ix),pkRoom(c.e,l.from,c.ix))}else l.to=t.value;pkRedo(c.r)});
 document.addEventListener('click',e=>{const t=e.target;
   const sc=t.closest('[data-pkscope]');if(sc){PK.scope=sc.dataset.pkscope;PK.lim=300;pkDraw();return}
   if(t.closest('[data-pkmv]')){PK.mv=!PK.mv;PK.lim=300;pkDraw();return}
@@ -218,10 +228,13 @@ document.addEventListener('click',e=>{const t=e.target;
   if(t.closest('[data-pknone]')){PK.sel.clear();pkDraw();return}
   if(t.closest('[data-pkmore]')){PK.lim+=300;pkDraw();return}
   if(t.closest('[data-pkgo]')){pkExport();return}
-  const dl=t.closest('[data-pkdel]');if(dl){const r=dl.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(en){en.plan.delete(dl.dataset.pkdel);pkRedo(r)}return}
-  const sg=t.closest('[data-pksug]');if(sg){const r=sg.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(en){const x=sugOf(en.i).find(y=>y.to===sg.dataset.pksug),want=Math.max(1,x?x.sold-x.have:1);en.plan.set(sg.dataset.pksug,Math.min(want,Math.max(0,pkLeft(en))));pkRedo(r)}return}
+  const lx=t.closest('[data-lx]');if(lx){const c=pkCtx(lx);if(c&&c.e){c.e.lines.splice(c.ix,1);pkRedo(c.r)}return}
+  const la=t.closest('[data-ladd]');if(la){const r=la.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(en){const fr=pkFrom(en);en.lines.push({from:fr,to:'',qty:pkRoom(en,fr)});pkRedo(r)}return}
+  const sg=t.closest('[data-pksug]');if(sg){const r=sg.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(en){const x=sugOf(en.g).find(y=>y.to===sg.dataset.pksug);let fr=pkFrom(en);if(fr===sg.dataset.pksug)fr=(en.g.items.find(i=>i.store!==sg.dataset.pksug&&pkRoom(en,i.store)>0)||en.g.items.find(i=>i.store!==sg.dataset.pksug)).store;
+    en.lines.push({from:fr,to:sg.dataset.pksug,qty:Math.min(Math.max(1,x?x.sold-x.have:1),pkRoom(en,fr))});pkRedo(r)}return}
   if(t.closest('.img img,.pkp'))return;
-  const r=t.closest('[data-pk]');if(r){const i=ITEMS.find(x=>pkKey(x)===r.dataset.pk);if(!i)return;if(PK.sel.has(r.dataset.pk))PK.sel.delete(r.dataset.pk);else PK.sel.set(r.dataset.pk,{i,plan:new Map()});pkRedo(r)}});
+  const r=t.closest('[data-pk]');if(r){const g=PKG.get(r.dataset.pk);if(!g)return;if(PK.sel.has(g.sku))PK.sel.delete(g.sku);else PK.sel.set(g.sku,{g,lines:[]});pkRedo(r)}});
+
 load();
 </script>
 <style>#zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out}#zoom img{width:min(380px,80vw);height:min(380px,80vw);object-fit:contain;padding:10px;border-radius:18px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.35)}.img img,#hitPic img{cursor:zoom-in}</style>
