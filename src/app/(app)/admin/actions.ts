@@ -665,3 +665,16 @@ export async function deleteCategory(name: string): Promise<Result> {
   revalidatePath("/intake");
   return {};
 }
+
+// Admin → Lost item alerts: who gets an email when a bag arrives short or an item is confirmed lost
+export async function saveAlerts(lostEmails: string): Promise<Result> {
+  const me = await requireRole("admin");
+  const list = lostEmails.split(/[,;\s]+/).map((e) => e.trim()).filter(Boolean).slice(0, 10);
+  if (list.some((e) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))) return { error: "invalid" };
+  const value = { lostEmails: list.join(", ") };
+  const supabase = await createClient();
+  const { data: saved, error } = await supabase.from("app_settings").update({ value, updated_by: me.userId, updated_at: new Date().toISOString() }).eq("key", "alerts").select("key");
+  if (error || !saved?.length) return { error: "failed" };
+  await audit(me.userId, "alerts_saved", "alerts", value);
+  return {};
+}

@@ -72,3 +72,10 @@ export async function flushEmails(limit = 20): Promise<{ sent: number; failed: n
   }
   return out;
 }
+
+// Internal staff alert (works even while customer emails are paused)
+export async function sendStaffEmail(to: string[], subject: string, html: string): Promise<string | null> {
+  const c = await mailConfig();
+  if (!c || !to.length) return "not configured";
+  return transport(c).sendMail({ from: c.from, to, subject, html }).then(() => null, (e: unknown) => String(e).slice(0, 300));
+}

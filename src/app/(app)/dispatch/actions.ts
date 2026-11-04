@@ -2,6 +2,7 @@
 
 import { after } from "next/server";
 import { flushEmails } from "@/lib/email";
+import { alertItemLost, alertShortBatch } from "@/lib/alerts";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSession, requireRole } from "@/lib/auth";
@@ -96,8 +97,9 @@ export async function receiveBatch(batchId: string, scanned: string[]): Promise<
   if (!list.success) return { error: "invalid" };
   const supabase = await createClient();
   after(() => flushEmails()); // send any customer email this queues
-  const { error } = await supabase.rpc("receive_batch", { p_batch: z.string().uuid().parse(batchId), p_scanned: list.data });
+  const { data: b, error } = await supabase.rpc("receive_batch", { p_batch: z.string().uuid().parse(batchId), p_scanned: list.data });
   if (error) return { error: errorKey(error.message) };
+  if (b?.status === "incident") after(() => alertShortBatch(batchId)); // email the lost-item alert list
   return done();
 }
 
@@ -118,5 +120,7 @@ export async function markItemLost(batchId: string, ticketNo: string, reason: st
   const supabase = await createClient();
   const { error } = await supabase.rpc("mark_item_lost", { p_batch: z.string().uuid().parse(batchId), p_ticket_no: ticketNo, p_reason: r.data });
   if (error) return { error: errorKey(error.message) };
+  const { data: tk } = await supabase.from("tickets").select("id").eq("ticket_no", ticketNo).maybeSingle();
+  if (tk) after(() => alertItemLost(tk.id, r.data));
   return done();
 }

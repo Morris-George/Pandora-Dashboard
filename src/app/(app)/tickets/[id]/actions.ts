@@ -5,6 +5,8 @@ import { z } from "zod";
 import { requireRole, requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { after } from "next/server";
+import { alertItemLost } from "@/lib/alerts";
 
 import { EXCEPTIONS, type ExceptionTarget } from "./exceptions";
 
@@ -16,6 +18,7 @@ export async function exceptionMove(ticketId: string, to: ExceptionTarget, reaso
   const supabase = await createClient();
   const { error } = await supabase.rpc("transition_ticket", { p_ticket: p.data.id, p_to: p.data.to, p_reason: p.data.reason || null });
   if (error) return { error: error.message.includes("reason") ? "reason" : error.message.includes("may not") ? "denied" : "failed" };
+  if (p.data.to === "lost_in_transit") after(() => alertItemLost(p.data.id, p.data.reason));
   revalidatePath(`/tickets/${p.data.id}`);
   return {};
 }

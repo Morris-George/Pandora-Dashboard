@@ -13,6 +13,7 @@ import { WhatsappPanel } from "./whatsapp-panel";
 import { ContactPanel } from "./contact-panel";
 import { EmailDesignPanel } from "./email-design-panel";
 import { AdminTabs } from "./admin-tabs";
+import { AlertsPanel } from "./alerts-panel";
 import type { CustomerContact } from "./actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ReceiptPanel } from "./receipt-panel";
@@ -66,6 +67,7 @@ export default async function AdminPage() {
   const { data: wa } = await supabase.from("app_settings").select("value").eq("key", "wa_templates").maybeSingle();
   const { data: emailTpl } = await supabase.from("app_settings").select("value").eq("key", "email_templates").maybeSingle();
   const { data: contact } = await supabase.from("app_settings").select("value").eq("key", "customer_contact").maybeSingle();
+  const { data: alerts } = await supabase.from("app_settings").select("value").eq("key", "alerts").maybeSingle();
   const { data: sla } = await supabase.from("sla_rules").select("status, max_days");
   const ORDER = ["received_at_branch", "awaiting_dispatch", "in_transit_to_hq", "received_at_hq", "under_diagnosis", "awaiting_customer_approval", "in_repair", "awaiting_parts", "quality_check", "ready_to_return", "quote_rejected", "unrepairable", "in_transit_to_branch", "ready_for_pickup"];
   const slaRules = (sla ?? []).map((r) => ({ status: r.status as string, days: Number(r.max_days) })).sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status));
@@ -95,6 +97,7 @@ export default async function AdminPage() {
         }))} />
       </>) },
       { title: d.admin.tabs.messages, content: (<>
+        <AlertsPanel locale={locale} initial={(alerts?.value as { lostEmails?: string } | null)?.lostEmails ?? ""} />
         <EmailDesignPanel locale={locale} initial={(emailTpl?.value ?? {}) as never} />
         <WhatsappPanel locale={locale} initial={(wa?.value ?? {}) as Record<string, string>} />
         <ContactPanel locale={locale} initial={(contact?.value ?? {}) as CustomerContact} />

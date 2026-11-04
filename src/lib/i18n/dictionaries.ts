@@ -183,6 +183,11 @@ const en = {
       save: "Save", saved: "Saved.", failed: "Couldn't save. Check the email and try again.",
     },
     tabs: { label: "Admin sections", users: "Users & access", stores: "Stores & workflow", messages: "Customer messages", printing: "Receipt & menu", erp: "ERPNext" },
+    alerts: {
+      title: "Lost item alerts",
+      note: "Email addresses that get an automatic alert when a bag arrives with items missing and when an item is confirmed lost. Separate several addresses with commas.",
+      emails: "Alert emails", save: "Save", saved: "Saved.", invalid: "Check the email addresses.", failed: "Couldn't save. Try again.",
+    },
     emailDesign: {
       title: "Email design",
       note: "How customer emails look and what they say. The preview updates as you type. Placeholders: {name} {ticket} {item}.",
@@ -992,6 +997,11 @@ const ar: Dict = {
       save: "حفظ", saved: "اتحفظ.", failed: "محصلش حفظ، راجع الإيميل وحاول تاني.",
     },
     tabs: { label: "أقسام الإدارة", users: "المستخدمين والصلاحيات", stores: "الفروع وسير العمل", messages: "رسائل العملاء", printing: "الإيصال والقائمة", erp: "ERPNext" },
+    alerts: {
+      title: "تنبيهات القطع المفقودة",
+      note: "الإيميلات اللي يوصلها تنبيه تلقائي لما شحنة توصل ناقصة ولما قطعة يتأكد فقدها. افصل بين أكتر من إيميل بفاصلة.",
+      emails: "إيميلات التنبيه", save: "حفظ", saved: "اتحفظ.", invalid: "راجع الإيميلات.", failed: "محصلش حفظ، حاول تاني.",
+    },
     emailDesign: {
       title: "تصميم الإيميل",
       note: "شكل إيميلات العملاء والكلام المكتوب فيها. المعاينة بتتحدث وإنت بتكتب. الكلمات دي بتتملي لكل عميل: {name} {ticket} {item}.",
