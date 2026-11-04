@@ -598,7 +598,7 @@ const StoreInput = z.object({
 export async function addBranch(name: string, prefix: string): Promise<Result> {
   const me = await requireRole("admin");
   const p = StoreInput.safeParse({ name, prefix });
-  if (!p.success) return { error: "invalid" };
+  if (!p.success) return { error: p.error.issues.some((i) => i.path[0] === "prefix") ? "prefix" : "invalid" };
   const code = (p.data.prefix || p.data.name).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12) + "-" + Date.now().toString(36).slice(-4).toUpperCase();
   const { data, error } = await createAdminClient().from("branches")
     .insert({ name: p.data.name, code, ticket_prefix: p.data.prefix || null }).select("id").single();
@@ -612,7 +612,7 @@ export async function updateBranch(branchId: string, name: string, prefix: strin
   const me = await requireRole("admin");
   z.string().uuid().parse(branchId);
   const p = StoreInput.safeParse({ name, prefix });
-  if (!p.success) return { error: "invalid" };
+  if (!p.success) return { error: p.error.issues.some((i) => i.path[0] === "prefix") ? "prefix" : "invalid" };
   const { error } = await createAdminClient().from("branches").update({ name: p.data.name, ticket_prefix: p.data.prefix || null }).eq("id", branchId);
   if (error) return { error: "failed" };
   await audit(me.userId, "store_edit", branchId, { name: p.data.name, prefix: p.data.prefix });

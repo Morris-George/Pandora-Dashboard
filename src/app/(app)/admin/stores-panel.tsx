@@ -21,7 +21,7 @@ export function StoresPanel({ locale, stores }: { locale: Locale; stores: Store[
     const v = rows[s.id] ?? { name: s.name, prefix: s.prefix, wa: s.whatsapp ?? "" };
     if (v.name !== s.name || v.prefix !== s.prefix) {
       const r = await updateBranch(s.id, v.name, v.prefix).catch(() => ({ error: "failed" }));
-      if (r.error) { setMsg({ id: s.id, ok: false, text: t.failed }); return; }
+      if (r.error) { setMsg({ id: s.id, ok: false, text: r.error === "prefix" ? t.prefixInvalid : t.failed }); return; }
     }
     if (v.wa !== (s.whatsapp ?? "")) {
       const r = await setBranchWhatsapp(s.id, v.wa).catch(() => ({ error: "failed" }));
@@ -64,7 +64,7 @@ export function StoresPanel({ locale, stores }: { locale: Locale; stores: Store[
           <input value={nw.name} onChange={(e) => setNw({ ...nw, name: e.target.value })} placeholder={t.name} className={`${input} flex-[1_1_200px]`} />
           <input value={nw.prefix} onChange={(e) => setNw({ ...nw, prefix: e.target.value })} dir="ltr" placeholder={t.prefix} className={`${input} w-28`} />
           <button disabled={busy || !nw.name.trim()} className={btn}
-            onClick={() => start(async () => { const r = await addBranch(nw.name, nw.prefix); if (r.error) setMsg({ id: "new", ok: false, text: t.failed }); else setNw({ name: "", prefix: "" }); })}>
+            onClick={() => start(async () => { const r = await addBranch(nw.name, nw.prefix); if (r.error) setMsg({ id: "new", ok: false, text: r.error === "prefix" ? t.prefixInvalid : t.failed }); else setNw({ name: "", prefix: "" }); })}>
             + {t.add}
           </button>
           {msg?.id === "new" && <span role="status" className="text-xs text-red-800">{msg.text}</span>}
