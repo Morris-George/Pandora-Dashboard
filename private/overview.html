@@ -112,7 +112,11 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
     var head='<tr><th>Store</th>'+m.months.map(function(k){return '<th>'+MON[+k.slice(5)-1].slice(0,3)+(k===m.partial?'*':'')+'</th>'}).join('')+'<th class="sum">Total</th></tr>';
     var rows=m.stores.map(function(x){return '<tr><td>'+esc(x.name)+'</td>'+m.months.map(function(k){var v=x.byMonth[k];return '<td'+(v?'':' class="zero"')+'>'+(v?n(v):'-')+'</td>'}).join('')+'<td class="sum">'+n(x.total)+'</td></tr>'}).join('');
     var tot='<tr class="tot"><td>All stores</td>'+m.months.map(function(k){return '<td>'+n(m.totals[k])+'</td>'}).join('')+'<td class="sum">'+n(m.total)+'</td></tr>';
-    return '<section><h2>Sales by month</h2><div class="range">Every store, each month of '+d.year+' (EGP, net of VAT).'+(m.partial?' * '+MON[+m.partial.slice(5)-1]+' is still running, so far up to '+dmy(d.upTo)+'.':'')+'</div><div class="mt"><table>'+head+rows+tot+'</table></div></section>';
+    if(m.online){
+      tot+='<tr><td>Online shop</td>'+m.months.map(function(k){var v=m.online.byMonth[k];return '<td'+(v?'':' class="zero"')+'>'+(v?n(v):'-')+'</td>'}).join('')+'<td class="sum">'+n(m.online.total)+'</td></tr>'
+        +'<tr class="tot"><td>All incl. Online</td>'+m.months.map(function(k){return '<td>'+n(m.totals[k]+m.online.byMonth[k])+'</td>'}).join('')+'<td class="sum">'+n(m.total+m.online.total)+'</td></tr>';
+    }
+    return '<section><h2>Sales by month</h2><div class="range">Every store, each month of '+d.year+' (EGP, net of VAT).'+(m.online?' The Online shop is shown separately below the store total.':'')+(m.partial?' * '+MON[+m.partial.slice(5)-1]+' is still running, so far up to '+dmy(d.upTo)+'.':'')+'</div><div class="mt"><table>'+head+rows+tot+'</table></div></section>';
   }
   // long numbers shrink instead of wrapping onto a second line
   function fit(){
