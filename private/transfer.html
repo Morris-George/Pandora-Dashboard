@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head><link rel="icon" type="image/png" href="/favicon.png?v=2">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Transfer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--bg:#FBF6F7;--surface:#FFFFFF;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--accent:#FF93A0;--soft:#FFE4E8;--good:#1F7A4D;--warn:#B7791F;--bad:#C2414F;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--soft:#3A2229;--good:#5CC48E;--warn:#E0A84A;--bad:#FF8A96;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171013;--surface:#241A1E;--ink:#F6EBEE;--ink2:#B9A5AC;--line:#3A2A30;--soft:#3A2229;--good:#5CC48E;--warn:#E0A84A;--bad:#FF8A96;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding:20px 16px 48px}
+.wrap{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}h2{margin:0 0 8px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}h2::before{content:"";width:4px;height:16px;border-radius:2px;background:var(--accent)}
+.sub,.note{color:var(--ink2);font-size:12.5px}.crumb{color:var(--ink2);font-size:12.5px;font-weight:600;text-decoration:none}
+header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0;box-shadow:0 1px 2px rgba(42,31,36,.04),0 4px 14px rgba(42,31,36,.04)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn,select,input{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.btn{cursor:pointer;font-weight:600}.btn.go{background:var(--accent);border-color:var(--accent);color:#2A1018}.btn:disabled{opacity:.5}
+.err{background:var(--accent);color:#2A1018;border-radius:10px;padding:10px 14px;font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.kpi{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 10px 10px 14px;cursor:default}.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}.kpi small{display:block;color:var(--ink2);font-size:11.5px;font-weight:600}.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.tw{overflow:auto;max-height:70vh}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:5px 7px;border-top:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}th{position:sticky;top:0;background:var(--surface);color:var(--ink2);font-size:11.5px;z-index:1;cursor:pointer}
+th.l,td.l{text-align:left}td.name{max-width:260px;overflow:hidden;text-overflow:ellipsis;text-align:left}
+tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr[data-f]{cursor:pointer}
+.img{width:36px;height:36px;border-radius:6px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;vertical-align:middle;font-size:9px;color:var(--ink2)}.img img{width:100%;height:100%;object-fit:cover}.nopic .img{display:none}
+.hb{display:flex;height:12px;border-radius:99px;overflow:hidden;background:var(--soft);min-width:80px}.hb i{display:block;height:100%}
+.tag{font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;margin-right:3px}.t-ord{background:var(--bad);color:#fff}.t-sell{background:var(--good);color:#fff}.t-dead{background:var(--soft);color:var(--bad)}.t-move{background:#8FB8DE;color:#10202A}
+.inclhead{font-size:13px;color:var(--ink2);margin:10px 0 6px;font-weight:700}.inclbox{display:flex;flex-wrap:wrap;gap:8px}.incl{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:600;font-size:13px;cursor:pointer;opacity:.55}.incl.on{opacity:1;border-color:var(--accent)}.incl input{width:16px;height:16px;margin:0}.incl b{font-weight:500;font-size:12px;color:var(--ink2)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer}.chip.on{background:var(--accent);border-color:var(--accent);color:#2A1018}
+.qk{padding:6px 0;border-top:1px solid var(--line)}.qk:first-child{border-top:0}
+.bad{color:var(--bad)}.good{color:var(--good)}
+.trk{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.tk{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px 10px 16px;cursor:pointer;transition:transform .15s,box-shadow .15s;overflow:hidden}.tk::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}.tk:hover,.sc:hover,.star:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(42,31,36,.12)}.tk span{font-size:20px}.tk b{display:block;font-size:17px;font-weight:800}.tk small{color:var(--ink2);font-size:11.5px;font-weight:600}.tk:first-child,.tk:nth-child(2){cursor:default}
+.star{display:flex;gap:12px;align-items:center;margin-top:10px;padding:10px 12px;border-radius:14px;background:var(--soft);cursor:pointer;transition:transform .15s,box-shadow .15s}.star .img{width:56px;height:56px;flex:none}
+.scards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}.sc{border:1px solid var(--line);border-radius:16px;padding:12px;cursor:pointer;background:var(--surface);transition:transform .15s,box-shadow .15s;display:flex;flex-direction:column;gap:8px}
+.stack{display:inline-flex}.stack .img{width:40px;height:40px;margin-left:-10px;border:2px solid var(--surface);border-radius:50%}.stack .img:first-child{margin-left:0}
+.flowrow{display:grid;grid-template-columns:62px 1fr 44px;gap:8px;align-items:center}.flowrow .lbl{font-size:12px;color:var(--ink2);font-weight:600}.flowrow b{text-align:right}
+.rlist,.rl{font-variant-numeric:tabular-nums}.rlist{display:flex;flex-direction:column;gap:6px}.rl{display:grid;grid-template-columns:minmax(70px,auto) 1fr 52px 64px;gap:10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:12px;cursor:pointer;transition:background .15s}.rlist .rl{grid-template-columns:minmax(70px,auto) 20px minmax(70px,auto) 1fr 52px 64px auto}.rl:hover{background:var(--soft)}.rl .arr{color:var(--accent);font-weight:800}.rl .stack .img{width:30px;height:30px}
+table.hm{width:auto}table.hm th,table.hm td{text-align:center;padding:9px 12px;border:1px solid var(--line);font-size:13px}table.hm th{cursor:pointer}.cell{cursor:pointer;font-weight:700;transition:transform .1s}.cell:hover{outline:2px solid var(--accent);outline-offset:-2px}.cell0{color:var(--ink2);opacity:.4}
+#trM{position:fixed;inset:0;z-index:50;background:rgba(23,16,19,.55);display:flex;align-items:center;justify-content:center;padding:14px}#trMB{background:var(--surface);color:var(--ink);border-radius:20px;width:min(720px,100%);max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.mh{display:flex;gap:10px;align-items:center;padding:14px 16px;position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);z-index:2}.mc{padding:12px 16px 18px}.mc h3{margin:16px 0 8px;font-size:14px}
+.tip{background:var(--soft);border-radius:12px;padding:9px 12px;font-size:13px;margin-bottom:6px}.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:640px){.g2{grid-template-columns:1fr}.rl,.rlist .rl{grid-template-columns:1fr auto}.rl .hb,.rlist .rl .arr{display:none}}
+.ir{display:flex;gap:12px;align-items:center;padding:8px 6px;border-top:1px solid var(--line);cursor:pointer;border-radius:10px}.ir:hover{background:var(--soft)}.ir .pc{font-size:16px}.ir small{color:var(--ink2);font-weight:600}
+.img.lg{width:56px;height:56px;border-radius:12px;flex:none}.img.xl{width:min(280px,70vw);height:min(280px,70vw);border-radius:18px;font-size:12px}.bigpic{display:flex;justify-content:center;margin:6px 0}
+.sm{padding:3px 9px;font-size:12px}
+.ic{width:1.1em;height:1.1em;vertical-align:-.2em;flex:none}.tk .ico{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:10px;background:color-mix(in srgb,var(--c) 20%,transparent);color:var(--c);margin-bottom:4px}.tk .ico .ic{width:19px;height:19px}.star .ic,.tip .ic{color:var(--warn)}.flowrow .lbl .ic{color:var(--accent)}.chip .ic{width:1em;height:1em}.mc h3 .ic{color:var(--accent);width:1.15em;height:1.15em}.rl .arr .ic{vertical-align:-.25em}.btn .ic{width:1em;height:1em}
+
+.pk{display:flex;flex-direction:column;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:14px;margin-bottom:6px;cursor:pointer;transition:background .12s,border-color .12s;user-select:none}
+.pk:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.pk.sel{background:var(--soft);border-color:var(--accent);box-shadow:inset 5px 0 0 var(--accent)}
+.pk .pkt{display:flex;gap:12px;align-items:center}.pkp{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-left:36px;cursor:default;line-height:1.7}.dst{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--accent);border-radius:999px;padding:2px 4px 2px 12px;background:var(--surface)}.dst input{width:60px;padding:3px 6px;font-weight:700;text-align:center}.dst .x{border:0;background:none;color:var(--ink2);cursor:pointer;padding:2px;display:inline-flex}.pkp select{padding:3px 8px;border-radius:999px}.pk .ck{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;color:transparent}
+.pk.sel .ck{background:var(--accent);border-color:var(--accent);color:#2A1018}
+.pk .ck .ic{width:15px;height:15px}
+.pk .mid{min-width:0;flex:1}.pk .mid b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk .qt{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pkfoot{padding:12px 16px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--surface)}
+.pk{display:flex;flex-direction:column;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:14px;margin-bottom:6px;cursor:pointer;transition:background .12s,border-color .12s;user-select:none}
+.pk:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.pk.sel{background:var(--soft);border-color:var(--accent);box-shadow:inset 5px 0 0 var(--accent)}
+.pk .pkt{display:flex;gap:12px;align-items:center}.pkp{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-left:36px;cursor:default;line-height:1.7}.dst{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--accent);border-radius:999px;padding:2px 4px 2px 12px;background:var(--surface)}.dst input{width:60px;padding:3px 6px;font-weight:700;text-align:center}.dst .x{border:0;background:none;color:var(--ink2);cursor:pointer;padding:2px;display:inline-flex}.pkp select{padding:3px 8px;border-radius:999px}.pk .ck{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;color:transparent}
+.pk.sel .ck{background:var(--accent);border-color:var(--accent);color:#2A1018}
+.pk .ck .ic{width:15px;height:15px}
+.pk .mid{min-width:0;flex:1}.pk .mid b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk .qt{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.pkctl{display:flex;flex-direction:column;gap:8px}
+.pkfoot{position:sticky;bottom:0;z-index:5;box-shadow:0 -6px 18px rgba(42,31,36,.1);border:1px solid var(--line);border-radius:16px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--surface)}
+.sug{border:1px dashed var(--accent);border-radius:999px;padding:2px 10px;font-size:12px;cursor:pointer;background:transparent;color:var(--ink)}.sug:hover{background:var(--soft)}
+.sug small{color:var(--ink2)}.have{color:var(--ink2);font-size:12px}
+</style>
+</head>
+<body><div class="wrap">
+<header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Transfer</h1><div class="sub">Move any items between stores, not only slow ones. Pick a store, tap the items, type how many pieces go to which store, then download the Excel.</div></div><div class="actions"><label class="note"><input type="checkbox" id="pics" checked> Show pictures</label> <button class="btn" id="reload">Refresh stock from ERP</button></div></header>
+<div class="err" id="err" hidden></div>
+<div class="note" id="meta">Loading stock from ERP…</div>
+<div class="card" id="box" hidden>
+  <div class="pkctl"><div class="chips" id="pkScope"></div>
+  <div class="row"><input type="search" id="pkQ" placeholder="Search SKU, EAN or name" style="flex:1;min-width:160px"><select id="pkCat"></select><span class="chip" id="pkMv" data-pkmv>Sells in another store</span><span class="chip" id="pkPk" data-pkpicked>Only picked</span><button class="btn sm" data-pknone>Clear selection</button></div>
+  <div class="note" id="pkCnt"></div></div>
+  <div id="pkList" style="margin-top:10px"></div>
+</div>
+<div class="pkfoot" id="foot" hidden><div id="pkSum"></div><button class="btn go" id="pkGo" data-pkgo></button></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="/stockcount-pics-1.js" async></script><script src="/stockcount-pics-2.js" async></script><script src="/stockcount-pics-3.js" async></script><script src="/stockcount-pics-4.js" async></script>
+<script>
+/* Sharp pictures: the small built-in picture shows first, the full-size one (from pandoraeg.com, found by our server at /api/pic) replaces it whenever a picture is shown big. */
+window.HD=(function(){const KEY='pandora-hd-v1',M=new Map(),L=new Map(),R=new Map(),F=new Map();let c={};try{c=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+const base=s=>String(s||'').trim().toUpperCase().split('-')[0];
+const big=u=>{try{const x=new URL(String(u).replace(/^http:/,'https:'),location.href);x.searchParams.set('width','900');return x.href}catch(e){return u}};
+function url(sku){const b=base(sku);if(!b||b[0]==='?')return Promise.resolve('');if(c[b])return Promise.resolve(c[b]);
+  if(!M.has(b)){const pr=fetch('/api/pic?sku='+encodeURIComponent(b),{credentials:'same-origin'}).then(r=>r.json()).then(j=>{const u=j&&j.url||'';if(u){c[b]=u;try{localStorage.setItem(KEY,JSON.stringify(c))}catch(e){}}return u}).catch(()=>'');M.set(b,pr);pr.then(u=>{if(!u)M.delete(b)})}return M.get(b)}
+/* load(): finds the full-size picture AND downloads + decodes it ahead of time, so showing it later is instant (no small blurry picture first) */
+function load(sku){const b=base(sku);if(!b||b[0]==='?')return Promise.resolve('');if(R.has(b))return Promise.resolve(R.get(b));if(L.has(b))return L.get(b);
+  if(F.has(b)&&Date.now()-F.get(b)<60000)return Promise.resolve('');
+  const p=url(sku).then(u=>u?new Promise(res=>{const im=new Image();im.referrerPolicy='no-referrer';im.onload=()=>{const d=()=>{R.set(b,im.src);res(im.src)};im.decode?im.decode().then(d,d):d()};im.onerror=()=>res('');im.src=big(u)}):'');
+  L.set(b,p);p.then(s=>{L.delete(b);if(!s)F.set(b,Date.now())});return p}
+/* up(): swaps the small picture for the sharp one. hold=true keeps the small one hidden until the sharp one is ready (max 1.5 s), so the blurry picture is never seen */
+function up(img,sku,hold){if(!img||!sku)return;const t=(img._hd=(img._hd||0)+1),b=base(sku),r=R.get(b);
+  if(r){img.src=r;img.style.opacity='';return}
+  if(hold&&b&&b[0]!=='?'){img.style.transition='opacity .12s';img.style.opacity='0';setTimeout(()=>{if(img._hd===t)img.style.opacity=''},1500)}
+  load(sku).then(s=>{if(img._hd!==t)return;if(s)img.src=s;img.style.opacity=''})}
+const dvOf=img=>{const e=img.closest&&img.closest('[data-hd]');return e?e.dataset.hd:''};
+/* warm-up: pictures that are on screen (or about to be) are fetched in the background, 3 at a time; touching one fetches it straight away */
+const WQ=[];let wbusy=0,wio=null;
+function wpump(){while(wbusy<3&&WQ.length){const s=WQ.shift();wbusy++;load(s).finally(()=>{wbusy--;wpump()})}}
+const SEL='.img img,.ovp img,#hitPic img,#sidePic img';
+let q=0;function scan(){q=0;
+  document.querySelectorAll('.ovp img,#hitPic img').forEach(i=>{if(i._hdSeen)return;i._hdSeen=1;up(i,dvOf(i),true)});
+  if('IntersectionObserver' in window){if(!wio)wio=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;wio.unobserve(e.target);const d=dvOf(e.target);if(d){WQ.push(d);wpump()}}),{rootMargin:'200px'});
+    document.querySelectorAll('.img img,#sidePic img').forEach(i=>{if(i._hdW)return;i._hdW=1;wio.observe(i)})}}
+try{new MutationObserver(()=>{if(!q)q=requestAnimationFrame(scan)}).observe(document.documentElement,{childList:true,subtree:true})}catch(e){}
+['pointerover','pointerdown','touchstart'].forEach(ev=>document.addEventListener(ev,e=>{const i=e.target&&e.target.closest&&e.target.closest(SEL);if(i){const d=dvOf(i);if(d)load(d)}},{capture:true,passive:true}));
+return {up,url,big,dvOf,load}})();
+</script>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Math.round(n||0).toLocaleString('en-US'),money=n=>'EGP '+fmt(n);
+const U=s=>String(s==null?'':s).trim().toUpperCase().replace(/\.0$/,'');
+function showErr(t){$('err').hidden=!t;$('err').textContent=t||''}
+async function api(u,body){const r=await fetch(u,body?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{credentials:'same-origin',cache:'no-store'});
+  if(r.status===401){location.replace('/login.html');throw new Error('Sign in again.')}const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('Error '+r.status));return j}
+/* pictures: built-in pack, then ERP, then pandoraeg.com */
+const PICS=(window.__PICS=window.__PICS||{}),WEBQ=new Map(),dvOf=s=>String(s).split('-')[0];
+const pic=sku=>{const dv=dvOf(sku),v=PICS[dv];return `<span class="img" data-hd="${esc(dv)}">${v?`<img src="data:image/jpeg;base64,${v}" alt="">`:`<img src="/api/refill?img=${encodeURIComponent(dv)}" alt="" loading="lazy" data-dv="${esc(dv)}" onerror="webPic(this)">`}</span>`};
+async function webPic(im){const dv=im.dataset.dv;im.onerror=null;try{if(!WEBQ.has(dv))WEBQ.set(dv,fetch('/api/refill?pics='+encodeURIComponent(dv),{credentials:'same-origin'}).then(r=>r.json()).catch(()=>({})));const j=await WEBQ.get(dv),u=j.map&&j.map[dv];if(u){im.src=(u.startsWith('//')?'https:'+u:u)+(u.includes('?')?'&':'?')+'width=200';return}}catch(_){}im.remove()}
+try{$('pics').checked=localStorage.getItem('sl.pics')!=='0'}catch(_){}
+const applyPics=()=>document.body.classList.toggle('nopic',!$('pics').checked);applyPics();
+$('pics').onchange=()=>{try{localStorage.setItem('sl.pics',$('pics').checked?'1':'0')}catch(_){}applyPics()};
+
+const IC={store:'<path d="M3 9l1.5-5h15L21 9"/><path d="M3 9a3 3 0 006 0 3 3 0 006 0 3 3 0 006 0"/><path d="M5 12v8h14v-8"/><path d="M10 20v-4h4v4"/>',
+grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
+box:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+route:'<circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H15a3.5 3.5 0 000-7H9a3.5 3.5 0 010-7h6.5"/>',
+up:'<path d="M7 17L17 7M8 7h9v9"/>',
+down:'<path d="M17 7L7 17M16 17H7V8"/>',
+truck:'<path d="M2 6h11v10H2zM13 9h4l4 4v3h-8"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+star:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+bulb:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/>',
+pin:'<path d="M12 21s7-6.2 7-11.5A7 7 0 005 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+dl:'<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
+arrow:'<path d="M4 12h16M14 6l6 6-6 6"/>',
+back:'<path d="M20 12H4M10 6l-6 6 6 6"/>',
+x:'<path d="M6 6l12 12M18 6L6 18"/>'};
+const ic=n=>`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
+
+const fmtd=d=>{if(!d)return '';const t=Date.parse(d);return t?new Date(t).toLocaleDateString([],{day:'numeric',month:'short'}):''};
+let D=null,ITEMS=[],SOLD=new Map(),STK=new Map();
+const PK={scope:'',q:'',cat:'',mv:false,only:false,sel:new Map(),lim:300};
+const catOf=(g,nm)=>{const pick=t=>{t=String(t||'').toLowerCase();if(!t)return '';if(/safety/.test(t))return 'Charms';if(/earring|\bstud|hoop|huggie/.test(t))return 'Earrings';if(/bracelet|bangle/.test(t))return 'Bracelets';if(/pendant|necklace|collier/.test(t))return 'Necklace and Pendant';if(/charm|clip|dangle|spacer|medallion|murano/.test(t))return 'Charms';if(/\bring/.test(t))return 'Rings';return ''};return pick(g)||pick(nm)||(g?String(g).split(' - ').pop():'Other')};
+const pkKey=i=>i.sku+'|'+i.store;
+const pkTot=e=>[...e.plan.values()].reduce((a,x)=>a+x,0);
+const pkLeft=e=>e.i.qty-pkTot(e);
+const pkStores=()=>[...new Set(ITEMS.map(i=>i.store))].sort();
+async function load(fresh){showErr('');$('meta').textContent='Loading stock from ERP…';
+  try{D=await api('/api/transfer'+(fresh?'?fresh=1':''));
+    ITEMS=D.items.map(r=>({sku:r[0],ean:r[1],name:String(r[2]).replace(/^\s*[0-9A-Z]+(-[0-9A-Z]{1,4})?-\d{8,14}\s*-?\s*/i,'')||r[2],grp:r[3],cat:catOf(r[3],r[2]),store:r[4],qty:r[5]}));
+    SOLD=new Map(D.sales.map(x=>[x[0]+'|'+x[1],{q:x[2],last:x[3]}]));STK=new Map(ITEMS.map(i=>[pkKey(i),i.qty]));
+    for(const [k,e] of [...PK.sel]){const i=ITEMS.find(x=>pkKey(x)===k);if(!i)PK.sel.delete(k);else{e.i=i;let t=0;for(const [s,q] of e.plan){const v=Math.min(q,i.qty-t);e.plan.set(s,v);t+=v}}}
+    $('meta').innerHTML=`Stock in ERP now: <b>${fmt(ITEMS.reduce((a,i)=>a+i.qty,0))}</b> pieces, <b>${fmt(new Set(ITEMS.map(i=>i.sku)).size)}</b> SKUs in <b>${pkStores().length}</b> stores · sales of the last ${D.months} months · loaded ${new Date(D.at).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}. Samples, main warehouse and transit are left out.`;
+    $('box').hidden=$('foot').hidden=false;pkDraw()}catch(e){$('meta').textContent='';showErr(e.message)}}
+$('reload').onclick=async()=>{const b=$('reload');b.disabled=true;await load(true);b.disabled=false};
+// where the SKU sells: the other stores that sold it in the last months, best seller first, with what they hold now
+function sugOf(i){const out=[];for(const s of pkStores()){if(s===i.store)continue;const o=SOLD.get(i.sku+'|'+s);if(o&&o.q>0)out.push({to:s,sold:o.q,have:STK.get(i.sku+'|'+s)||0})}return out.sort((a,b)=>(b.sold-b.have)-(a.sold-a.have)||b.sold-a.sold)}
+function pkList(){const q=PK.q.trim().toUpperCase();return ITEMS.filter(i=>(!PK.scope||i.store===PK.scope)&&(!PK.cat||i.cat===PK.cat)&&(!PK.only||PK.sel.has(pkKey(i)))&&(!q||i.sku.includes(q)||String(i.name).toUpperCase().includes(q)||String(i.ean).includes(q))&&(!PK.mv||sugOf(i).length)).sort((a,b)=>(PK.sel.has(pkKey(b))-PK.sel.has(pkKey(a)))||(b.qty-a.qty)||a.sku.localeCompare(b.sku))}
+function pkPlanHtml(i){const k=pkKey(i),e=PK.sel.get(k),sg=sugOf(i),so=i.store?(SOLD.get(k)||{}):{};
+  const here=`<span class="have">${so.q?`Sold here: ${fmt(so.q)}`:'Not sold here'}${so.last?` · last sale ${fmtd(so.last)}`:''}</span>`;
+  if(!e)return `<div class="pkp note">${here}${sg.length?' · Sells at: '+sg.map(x=>`<b>${esc(x.to)}</b> ${fmt(x.sold)} <span class="have">(has ${fmt(x.have)})</span>`).join(' · '):''}</div>`;
+  const add=pkStores().filter(st=>st!==i.store&&!e.plan.has(st)),sgs=sg.filter(x=>!e.plan.has(x.to));
+  return `<div class="pkp"><span class="note">Send to:</span>${[...e.plan].map(([st,q])=>{const o=SOLD.get(i.sku+'|'+st);return `<span class="dst"><b>${esc(st)}</b><input type="number" inputmode="numeric" min="0" max="${i.qty}" value="${q}" data-pkq="${esc(st)}" aria-label="Pieces to ${esc(st)}"><small class="note" title="Sold there in the last ${D.months} months · stock there now">sold ${fmt(o?o.q:0)} · has ${fmt(STK.get(i.sku+'|'+st)||0)}</small><button class="x" data-pkdel="${esc(st)}" aria-label="Remove ${esc(st)}">${ic('x')}</button></span>`}).join('')}
+   ${sgs.length?`<span class="note">Suggested:</span>${sgs.map(x=>`<button class="sug" data-pksug="${esc(x.to)}">+ ${esc(x.to)} <small>sold ${fmt(x.sold)} · has ${fmt(x.have)}</small></button>`).join('')}`:''}
+   ${add.length?`<select data-pkadd><option value="">+ Any store</option>${add.map(st=>`<option>${esc(st)}</option>`).join('')}</select>`:''}<span class="note" data-pkleft></span>${here}</div>`}
+function pkLeftTxt(r,e){const el=r.querySelector('[data-pkleft]');if(el)el.innerHTML=`Staying in ${esc(e.i.store)}: <b>${fmt(pkLeft(e))}</b>`}
+function pkRow(i){const k=pkKey(i),e=PK.sel.get(k);
+  return `<div class="pk${e?' sel':''}" data-pk="${esc(k)}"><div class="pkt"><span class="ck">${ic('check')}</span>${pic(i.sku).replace('class="img"','class="img lg"')}<div class="mid"><b title="${esc(i.name)}">${esc(i.name||i.sku)}</b><div class="note">${esc(i.sku)} · <b style="display:inline">${esc(i.store)}</b> · ${esc(i.cat)}</div></div><div class="qt"><b>${fmt(i.qty)}</b> <small class="note">in stock</small></div></div>${pkPlanHtml(i)}</div>`}
+function pkRedo(r){const k=r.dataset.pk,i=ITEMS.find(x=>pkKey(x)===k);if(!i)return;const t=document.createElement('div');t.innerHTML=pkRow(i);const n=t.firstChild;r.replaceWith(n);const e=PK.sel.get(k);if(e)pkLeftTxt(n,e);pkSum();pkDrawScope()}
+function pkDrawScope(){const stores=pkStores(),cn=st=>ITEMS.filter(i=>!st||i.store===st).length,sn=st=>[...PK.sel.values()].filter(e=>(!st||e.i.store===st)&&pkTot(e)>0).length;
+  $('pkScope').innerHTML=[''].concat(stores).map(st=>`<span class="chip ${PK.scope===st?'on':''}" data-pkscope="${esc(st)}">${st?esc(st):'All stores together'} <b>${fmt(cn(st))}</b>${sn(st)?` <span class="note">· ${sn(st)} to move</span>`:''}</span>`).join('')}
+function pkDraw(){
+  if(PK.scope&&!pkStores().includes(PK.scope))PK.scope='';pkDrawScope();
+  const cats=[...new Set(ITEMS.filter(i=>!PK.scope||i.store===PK.scope).map(i=>i.cat))].sort();if(PK.cat&&!cats.includes(PK.cat))PK.cat='';
+  $('pkCat').innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option ${c===PK.cat?'selected':''}>${esc(c)}</option>`).join('');
+  $('pkMv').classList.toggle('on',PK.mv);$('pkPk').classList.toggle('on',PK.only);
+  const l=pkList(),shown=l.slice(0,PK.lim);
+  $('pkCnt').textContent=`${fmt(l.length)} items shown${l.length>shown.length?` (first ${fmt(shown.length)}, search or pick a store to narrow)`:''}`;
+  $('pkList').innerHTML=shown.map(pkRow).join('')+(l.length>shown.length?`<button class="btn" data-pkmore style="margin:6px 0">Show ${fmt(Math.min(300,l.length-shown.length))} more</button>`:'')||'<div class="note" style="padding:20px">No items match.</div>';
+  $('pkList').querySelectorAll('.pk.sel').forEach(r=>pkLeftTxt(r,PK.sel.get(r.dataset.pk)));pkSum()}
+function pkSum(){const v=[...PK.sel.values()].filter(e=>pkTot(e)>0),pcs=v.reduce((a,e)=>a+pkTot(e),0),n=new Set(v.map(e=>e.i.store)).size;
+  $('pkSum').innerHTML=v.length?`<b>${fmt(v.length)}</b> items · <b>${fmt(pcs)}</b> pieces to move · from <b>${n}</b> store${n>1?'s':''}`:'<span class="note">Nothing to move yet. Tap an item, then type the pieces for each store.</span>';
+  $('pkGo').innerHTML=ic('dl')+' Download Excel';$('pkGo').disabled=!v.length}
+function pkExport(){const rows=[];
+  for(const e of [...PK.sel.values()].sort((a,b)=>a.i.store.localeCompare(b.i.store)||a.i.cat.localeCompare(b.i.cat)||a.i.sku.localeCompare(b.i.sku)))for(const [to,q] of e.plan)if(q>0)rows.push({from:e.i.store,to,sku:e.i.sku,ean:e.i.ean,name:e.i.name,cat:e.i.cat,qty:q});
+  if(!rows.length)return;
+  const L=r=>({'From store':r.from,'To store':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Pcs':r.qty,'Done':''});
+  const wb=XLSX.utils.book_new(),mk=(a,w)=>{const ws=XLSX.utils.json_to_sheet(a);ws['!cols']=w;return ws};
+  XLSX.utils.book_append_sheet(wb,mk(rows.map(L),[{wch:16},{wch:20},{wch:16},{wch:15},{wch:42},{wch:20},{wch:6},{wch:7}]),'Transfer list');
+  const used=new Set(['Transfer list']);
+  for(const st of [...new Set(rows.map(r=>r.from))]){let nm=('Send from '+String(st).replace(/[\\\/?*:\[\]]/g,' ')).slice(0,31),k=2;while(used.has(nm))nm=nm.slice(0,28)+' '+k++;used.add(nm);
+    XLSX.utils.book_append_sheet(wb,mk(rows.filter(r=>r.from===st).sort((a,b)=>String(a.to).localeCompare(b.to)).map(r=>({'Send to':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Pcs':r.qty,'Done':''})),[{wch:22},{wch:16},{wch:15},{wch:42},{wch:20},{wch:6},{wch:7}]),nm)}
+  const fs=[...new Set(rows.map(r=>r.from))];
+  XLSX.writeFile(wb,'Transfer '+(fs.length===1?fs[0]:'all stores')+' '+new Date().toISOString().slice(0,10)+'.xlsx')}
+$('pkQ').oninput=()=>{PK.q=$('pkQ').value;PK.lim=300;pkDraw()};$('pkCat').onchange=()=>{PK.cat=$('pkCat').value;PK.lim=300;pkDraw()};
+document.addEventListener('input',e=>{const inp=e.target.closest('[data-pkq]');if(!inp)return;const r=inp.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(!en)return;
+  const st=inp.dataset.pkq,other=pkTot(en)-(en.plan.get(st)||0);let v=Math.max(0,Math.floor(Number(inp.value)||0));const mx=Math.max(0,en.i.qty-other);if(v>mx){v=mx;inp.value=v}
+  en.plan.set(st,v);pkLeftTxt(r,en);pkSum();pkDrawScope()});
+document.addEventListener('change',e=>{const sel=e.target.closest('[data-pkadd]');if(!sel||!sel.value)return;const r=sel.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(!en)return;en.plan.set(sel.value,Math.max(0,pkLeft(en)));pkRedo(r)});
+document.addEventListener('click',e=>{const t=e.target;
+  const sc=t.closest('[data-pkscope]');if(sc){PK.scope=sc.dataset.pkscope;PK.lim=300;pkDraw();return}
+  if(t.closest('[data-pkmv]')){PK.mv=!PK.mv;PK.lim=300;pkDraw();return}
+  if(t.closest('[data-pkpicked]')){PK.only=!PK.only;PK.lim=300;pkDraw();return}
+  if(t.closest('[data-pknone]')){PK.sel.clear();pkDraw();return}
+  if(t.closest('[data-pkmore]')){PK.lim+=300;pkDraw();return}
+  if(t.closest('[data-pkgo]')){pkExport();return}
+  const dl=t.closest('[data-pkdel]');if(dl){const r=dl.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(en){en.plan.delete(dl.dataset.pkdel);pkRedo(r)}return}
+  const sg=t.closest('[data-pksug]');if(sg){const r=sg.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(en){const x=sugOf(en.i).find(y=>y.to===sg.dataset.pksug),want=Math.max(1,x?x.sold-x.have:1);en.plan.set(sg.dataset.pksug,Math.min(want,Math.max(0,pkLeft(en))));pkRedo(r)}return}
+  if(t.closest('.img img,.pkp'))return;
+  const r=t.closest('[data-pk]');if(r){const i=ITEMS.find(x=>pkKey(x)===r.dataset.pk);if(!i)return;if(PK.sel.has(r.dataset.pk))PK.sel.delete(r.dataset.pk);else PK.sel.set(r.dataset.pk,{i,plan:new Map()});pkRedo(r)}});
+load();
+</script>
+<style>#zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out}#zoom img{width:min(380px,80vw);height:min(380px,80vw);object-fit:contain;padding:10px;border-radius:18px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.35)}.img img,#hitPic img{cursor:zoom-in}</style>
+<script>document.addEventListener("click",e=>{const z=document.getElementById("zoom");if(z){z.remove();return}const im=e.target.closest&&e.target.closest(".img img,#hitPic img");if(!im)return;e.stopPropagation();e.preventDefault();const d=document.createElement("div");d.id="zoom";d.innerHTML="<img alt=\"\">";d.firstChild.src=im.src;HD.up(d.firstChild,HD.dvOf(im),true);document.body.appendChild(d)},true);document.addEventListener("keydown",e=>{if(e.key==="Escape"){const z=document.getElementById("zoom");if(z)z.remove()}});</script>
+</body>
+</html>

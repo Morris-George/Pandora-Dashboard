@@ -225,6 +225,7 @@ module.exports = async function handler(req, res) {
     else if (P === '/stockchecker' || P === '/stockchecker.html') id = 'stockchecker';
     else if (P === '/refill' || P === '/refill.html') id = 'refill';
     else if (P === '/slow' || P === '/slow.html') id = 'slow';
+    else if (P === '/transfer' || P === '/transfer.html') id = 'transfer';
     else if (P === '/insights' || P === '/insights.html') id = 'insights';
     else if (P === '/overview' || P === '/overview.html') id = 'overview';
     else if (P === '/distribution' || P === '/distribution.html') id = 'dist';
@@ -395,6 +396,10 @@ module.exports = async function handler(req, res) {
   if (requestedPath === '/slow' || requestedPath === '/slow/' || requestedPath === '/slow.html') {
     if (!facts.refill || facts.refill === 'none') return toHome();
     return sendFile(res, 'slow.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
+  }
+  if (requestedPath === '/transfer' || requestedPath === '/transfer/' || requestedPath === '/transfer.html') {
+    if (!facts.refill || facts.refill === 'none') return toHome();
+    return sendFile(res, 'transfer.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
   }
   // its product pictures, in pieces (one response may not pass 4.5 MB); super admin only, kept by the browser for a day
   const picPart = /^\/stockcount-pics-([1-9])\.js$/.exec(requestedPath);

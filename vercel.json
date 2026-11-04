@@ -47,6 +47,10 @@
       "destination": "/api/erp?overview=1"
     },
     {
+      "source": "/api/transfer",
+      "destination": "/api/erp?transfer=1"
+    },
+    {
       "source": "/api/slow",
       "destination": "/api/erp?slow=1"
     },
