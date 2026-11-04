@@ -182,6 +182,13 @@ const en = {
       english: "Wording (English)", arabic: "Wording (Arabic)", phone: "Phone (optional)", email: "Email (optional)",
       save: "Save", saved: "Saved.", failed: "Couldn't save. Check the email and try again.",
     },
+    emailDesign: {
+      title: "Email design",
+      note: "How customer emails look and what they say. The preview updates as you type. Placeholders: {name} {ticket} {item}.",
+      kinds: { received: "Item received", quote: "Quote ready", ready: "Ready for pickup", collected: "Collected – thank you" } as Record<string, string>,
+      f: { brand: "Header text", headerColor: "Header colour", headerText: "Header text colour", buttonColor: "Button colour", buttonText: "Button text colour", background: "Page background", button: "Button label", greeting: "Greeting", footerAr: "Footer (Arabic)", footerEn: "Footer (English)", subject: "Subject", ar: "Message (Arabic)", en: "Message (English, optional)" } as Record<string, string>,
+      look: "Look", email: "Email", reset: "Restore built-in", save: "Save email design", saved: "Saved.", failed: "Couldn't save. Try again.",
+    },
     wa: {
       title: "WhatsApp messages",
       note: "The text the store sends from its WhatsApp (Ticket memo and Pickup buttons). Use the placeholders below; they are filled in for each customer.",
@@ -980,6 +987,13 @@ const ar: Dict = {
       title: "بيانات التواصل في صفحة العميل", note: "السطر اللي في آخر صفحة تتبع العميل. لو سيبت النص فاضي هيفضل النص الأصلي.",
       english: "النص (إنجليزي)", arabic: "النص (عربي)", phone: "رقم الموبايل (اختياري)", email: "الإيميل (اختياري)",
       save: "حفظ", saved: "اتحفظ.", failed: "محصلش حفظ، راجع الإيميل وحاول تاني.",
+    },
+    emailDesign: {
+      title: "تصميم الإيميل",
+      note: "شكل إيميلات العملاء والكلام المكتوب فيها. المعاينة بتتحدث وإنت بتكتب. الكلمات دي بتتملي لكل عميل: {name} {ticket} {item}.",
+      kinds: { received: "استلام القطعة", quote: "عرض السعر جاهز", ready: "جاهز للاستلام", collected: "تم الاستلام – شكراً" } as Record<string, string>,
+      f: { brand: "نص الهيدر", headerColor: "لون الهيدر", headerText: "لون نص الهيدر", buttonColor: "لون الزرار", buttonText: "لون نص الزرار", background: "لون الخلفية", button: "كلام الزرار", greeting: "التحية", footerAr: "الفوتر (عربي)", footerEn: "الفوتر (إنجليزي)", subject: "العنوان", ar: "الرسالة (عربي)", en: "الرسالة (إنجليزي، اختياري)" } as Record<string, string>,
+      look: "الشكل", email: "الإيميل", reset: "رجّع الأصلي", save: "حفظ تصميم الإيميل", saved: "اتحفظ.", failed: "محصلش حفظ، حاول تاني.",
     },
     wa: {
       title: "رسائل واتساب",

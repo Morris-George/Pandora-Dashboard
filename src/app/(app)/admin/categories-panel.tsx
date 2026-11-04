@@ -14,6 +14,7 @@ export function CategoriesPanel({ locale, categories }: { locale: Locale; catego
   const [busy, start] = useTransition();
   const [error, setError] = useState("");
   const [arDraft, setArDraft] = useState<Record<string, string>>({});
+  const [enDraft, setEnDraft] = useState<Record<string, string>>({});
   const [name, setName] = useState("");
   const [nameAr, setNameAr] = useState("");
   const [req, setReq] = useState(false);
@@ -45,7 +46,18 @@ export function CategoriesPanel({ locale, categories }: { locale: Locale; catego
           return (
             <div key={c.name} className="flex flex-col gap-2 border-t border-stone-100 py-2.5">
             <div className="flex flex-wrap items-center gap-3">
-              <strong className="flex-[1_1_160px]" dir="ltr">{c.name}</strong>
+              {c.system ? <strong className="flex-[1_1_160px]" dir="ltr">{c.name}</strong> : (
+                <span className="flex-[1_1_160px] flex items-center gap-2">
+                  <input value={enDraft[c.name] ?? c.name} onChange={(e) => setEnDraft({ ...enDraft, [c.name]: e.target.value })} dir="ltr"
+                    aria-label={c.name} className={`${input} font-semibold w-56`} />
+                  {enDraft[c.name] !== undefined && enDraft[c.name].trim() && enDraft[c.name] !== c.name && (
+                    <button disabled={busy} className={`${small} border-stone-900`}
+                      onClick={() => run(() => updateCategory(c.name, { name: enDraft[c.name] }), () => { const n = { ...enDraft }; delete n[c.name]; setEnDraft(n); })}>
+                      {t.save}
+                    </button>
+                  )}
+                </span>
+              )}
               <input value={ar} onChange={(e) => setArDraft({ ...arDraft, [c.name]: e.target.value })} dir="rtl"
                 aria-label={`${t.catNameAr} — ${c.name}`} className={`${input} w-48`} />
               {arDraft[c.name] !== undefined && arDraft[c.name] !== c.nameAr && (

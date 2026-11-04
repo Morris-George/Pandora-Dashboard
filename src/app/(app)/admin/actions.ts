@@ -324,13 +324,15 @@ export async function addCategory(input: z.infer<typeof Cat>): Promise<Result> {
   return {};
 }
 
-export async function updateCategory(name: string, patch: { active?: boolean; requiresComment?: boolean; nameAr?: string }): Promise<Result> {
+export async function updateCategory(name: string, patch: { active?: boolean; requiresComment?: boolean; nameAr?: string; name?: string }): Promise<Result> {
   await requireRole("admin");
   const supabase = await createClient();
   const row: Record<string, unknown> = {};
   if (patch.active !== undefined) row.active = patch.active;
   if (patch.requiresComment !== undefined) row.requires_comment = patch.requiresComment;
   if (patch.nameAr !== undefined) row.name_ar = patch.nameAr.trim() || null;
+  // English name: tickets follow the rename (foreign key on update cascade); system categories refuse it
+  if (patch.name !== undefined) { const n = patch.name.trim().slice(0, 80); if (!n) return { error: "failed" }; row.name = n; }
   const { error } = await supabase.from("fault_categories").update(row).eq("name", name);
   if (error) return { error: "failed" };
   revalidatePath("/admin");
@@ -634,6 +636,23 @@ export async function removeBranch(branchId: string): Promise<Result> {
   const { error } = await db.from("branches").update({ active: false }).eq("id", branchId);
   if (error) return { error: "failed" };
   await audit(me.userId, "store_remove", branchId, {});
+  revalidatePath("/admin");
+  return {};
+}
+
+// Admin → Email design: header/button colours, footer, and each email's subject and text
+export async function saveEmailTemplates(input: unknown): Promise<Result> {
+  const me = await requireRole("admin");
+  const { EMAIL_KINDS, EMAIL_DESIGN } = await import("@/lib/email-templates");
+  const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : undefined);
+  const src = (input ?? {}) as { design?: Record<string, unknown>; kinds?: Record<string, Record<string, unknown>> };
+  const design = Object.fromEntries(Object.keys(EMAIL_DESIGN).map((k) => [k, str(src.design?.[k], 400)]).filter(([, v]) => v !== undefined));
+  const kinds = Object.fromEntries(EMAIL_KINDS.map((k) => [k, { subject: str(src.kinds?.[k]?.subject, 200), ar: str(src.kinds?.[k]?.ar, 2000), en: str(src.kinds?.[k]?.en, 2000) }]));
+  const value = { design, kinds };
+  const supabase = await createClient();
+  const { data: saved, error } = await supabase.from("app_settings").update({ value, updated_by: me.userId, updated_at: new Date().toISOString() }).eq("key", "email_templates").select("key");
+  if (error || !saved?.length) return { error: "failed" };
+  await audit(me.userId, "email_templates_saved", "email_templates", {});
   revalidatePath("/admin");
   return {};
 }

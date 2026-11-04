@@ -11,6 +11,7 @@ import { EmailPanel } from "./email-panel";
 import { MenuPanel, type MenuLabels } from "./menu-panel";
 import { WhatsappPanel } from "./whatsapp-panel";
 import { ContactPanel } from "./contact-panel";
+import { EmailDesignPanel } from "./email-design-panel";
 import type { CustomerContact } from "./actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ReceiptPanel } from "./receipt-panel";
@@ -62,6 +63,7 @@ export default async function AdminPage() {
     from_name: m.from_name as string | null, from_email: m.from_email as string | null, paused: !!m.paused, hasPassword: !!m.password } : null;
   const { data: menu } = await supabase.from("app_settings").select("value").eq("key", "menu_labels").maybeSingle();
   const { data: wa } = await supabase.from("app_settings").select("value").eq("key", "wa_templates").maybeSingle();
+  const { data: emailTpl } = await supabase.from("app_settings").select("value").eq("key", "email_templates").maybeSingle();
   const { data: contact } = await supabase.from("app_settings").select("value").eq("key", "customer_contact").maybeSingle();
   const { data: sla } = await supabase.from("sla_rules").select("status, max_days");
   const ORDER = ["received_at_branch", "awaiting_dispatch", "in_transit_to_hq", "received_at_hq", "under_diagnosis", "awaiting_customer_approval", "in_repair", "awaiting_parts", "quality_check", "ready_to_return", "quote_rejected", "unrepairable", "in_transit_to_branch", "ready_for_pickup"];
@@ -72,6 +74,7 @@ export default async function AdminPage() {
       <SlaPanel locale={locale} rules={slaRules} />
       <ReceiptPanel locale={locale} initial={withDefaults(receipt?.value)} />
       <MenuPanel locale={locale} initial={(menu?.value ?? {}) as MenuLabels} />
+      <EmailDesignPanel locale={locale} initial={(emailTpl?.value ?? {}) as never} />
       <WhatsappPanel locale={locale} initial={(wa?.value ?? {}) as Record<string, string>} />
       <ContactPanel locale={locale} initial={(contact?.value ?? {}) as CustomerContact} />
       <EmailPanel locale={locale} myEmail={me.email} initial={{
