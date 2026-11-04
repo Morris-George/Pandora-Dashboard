@@ -228,9 +228,10 @@ function DiagnoseForm({ d, t, busy, run, j, supervisor, costs }: RowProps & { su
           </label>
         </div>
       )}
-      {out && (
+      {warranty && (
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium">{t.quote}</span>
+          {!out && <span className="text-xs text-stone-600">{t.costUnderWarranty}</span>}
           {!!costs.length && (
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs text-stone-600">{t.costs.pick}</span>
@@ -260,7 +261,7 @@ function DiagnoseForm({ d, t, busy, run, j, supervisor, costs }: RowProps & { su
             ticketId: j.id, fault, rootCause: cause, warranty: warranty as "under_warranty" | "out_of_warranty",
             exclusion, overrideReason: reason, quote: parsed,
           }))}>
-          {isOverride ? t.submitOverride : out ? t.submitQuote : t.submitRepair}
+          {isOverride ? t.submitOverride : out || parsed.length ? t.submitQuote : t.submitRepair}
         </button>
         <button className={ghost} onClick={() => setOpen(false)}>{t.cancel}</button>
       </div>

@@ -58,7 +58,7 @@ export async function submitDiagnosis(input: z.infer<typeof Diagnosis>): Promise
   after(() => flushEmails()); // send any customer email this queues
   const { data, error } = await supabase.rpc("submit_diagnosis", {
     p_ticket: d.ticketId, p_fault: d.fault, p_root_cause: d.rootCause, p_warranty: d.warranty,
-    p_exclusion: d.exclusion, p_override_reason: d.overrideReason, p_quote: d.warranty === "out_of_warranty" ? d.quote : [],
+    p_exclusion: d.exclusion, p_override_reason: d.overrideReason, p_quote: d.quote, // a cost can be quoted under warranty too (misuse, extras)
   });
   if (error) return { error: errorKey(error.message) };
   return done(data as string);
