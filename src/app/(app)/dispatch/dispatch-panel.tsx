@@ -5,13 +5,13 @@ import { toast } from "@/components/toast";
 import { BarcodeScan } from "@/components/barcode-scan";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
-import { adminApproveBatch, approveBatch, courierPickup, createOutbound, createReturn, receiveBatch } from "./actions";
+import { adminApproveBatch, approveBatch, courierPickup, createOutbound, createReturn, markItemLost, receiveBatch, receiveLateItem } from "./actions";
 
 export type ItemRow = { id: string; ticketNo: string; itemName: string; branchId: string; branchName: string };
 export type BatchRow = {
   id: string; batchNo: string; direction: "outbound" | "return"; branchId: string; branchName: string; seal: string;
   status: string; mine: boolean; createdAt: string; pickedAt: string | null;
-  items: { ticketNo: string; itemName: string; scanned: boolean }[];
+  items: { ticketNo: string; itemName: string; scanned: boolean; pending?: boolean }[];
 };
 type T = (typeof dictionaries)["en"]["dispatch"];
 type Run = (fn: () => Promise<{ error?: string; batchNo?: string }>, after?: () => void) => void;
@@ -156,6 +156,23 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
           {incoming.map((b) => <ReceiveCard key={b.id} t={t} b={b} busy={busy} run={run} areaManager={areaManager} isAdmin={isAdmin} />)}
         </section>
       )}
+
+      {(() => {
+        // Bags that arrived short: receivers scan late items, Ops confirms lost ones
+        const canReceive = (b: BatchRow) => isAdmin || (b.direction === "outbound" ? ["hq", "technician", "supervisor"].includes(role) : isBranch);
+        const canLose = isAdmin || role === "ops";
+        const open = batches.filter((b) => b.status === "incident" && b.items.some((i) => i.pending) && (canReceive(b) || canLose));
+        if (!open.length) return null;
+        return (
+          <section className={card}>
+            <div>
+              <h2 className="text-lg font-semibold">{t.incidentTitle}</h2>
+              <p className="text-sm text-stone-600 mt-1">{t.incidentNote}</p>
+            </div>
+            {open.map((b) => <IncidentCard key={b.id} t={t} b={b} busy={busy} run={run} receive={canReceive(b)} lose={canLose} />)}
+          </section>
+        );
+      })()}
 
       <section className={card}>
         <h2 className="text-lg font-semibold">{t.recentTitle}</h2>
@@ -389,6 +406,39 @@ function BulkReceive({ t, batches, busy, run }: { t: T; batches: BatchRow[]; bus
         }, () => setScanned([]))}>
         {t.bulkConfirm(rows.length)}
       </button>
+    </div>
+  );
+}
+
+
+function IncidentCard({ t, b, busy, run, receive, lose }: { t: T; b: BatchRow; busy: boolean; run: Run; receive: boolean; lose: boolean }) {
+  const [code, setCode] = useState("");
+  const pending = b.items.filter((i) => i.pending);
+  const take = (c: string) => { if (c.trim()) run(() => receiveLateItem(b.id, c), () => setCode("")); };
+  return (
+    <div className="border-t border-stone-100 pt-3 flex flex-col gap-3">
+      <BatchHead t={t} b={b} />
+      <div className="text-sm font-medium">{t.pendingItems}:</div>
+      {pending.map((i) => (
+        <div key={i.ticketNo} className="flex flex-wrap items-center gap-3 text-sm">
+          <strong dir="ltr">{i.ticketNo}</strong>
+          <span className="text-stone-700">{i.itemName}</span>
+          {lose && (
+            <button type="button" disabled={busy} className="text-xs font-semibold text-red-800 underline"
+              onClick={() => { const why = window.prompt(t.lostReason); if (why?.trim()) run(() => markItemLost(b.id, i.ticketNo, why)); }}>
+              {t.markLost}
+            </button>
+          )}
+        </div>
+      ))}
+      {receive && (
+        <div className="flex flex-wrap items-end gap-2">
+          <input value={code} onChange={(e) => setCode(e.target.value)} dir="ltr" placeholder="MT-1001" aria-label={t.scan}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); take(code); } }} className={`${input} w-52`} />
+          <button disabled={busy || !code.trim()} onClick={() => take(code)} className={primary}>{t.receiveLate}</button>
+          <BarcodeScan label={t.camera} title={t.scan} cancel={t.cancel} denied={t.cameraDenied} onResult={(c) => take(c)} />
+        </div>
+      )}
     </div>
   );
 }

@@ -100,3 +100,23 @@ export async function receiveBatch(batchId: string, scanned: string[]): Promise<
   if (error) return { error: errorKey(error.message) };
   return done();
 }
+
+// Incident batch: an item that arrived later is scanned in on its own
+export async function receiveLateItem(batchId: string, ticketNo: string): Promise<Result> {
+  await requireSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("receive_late_item", { p_batch: z.string().uuid().parse(batchId), p_ticket_no: z.string().trim().min(1).max(40).parse(ticketNo) });
+  if (error) return { error: error.message.includes("not pending") ? "notPending" : errorKey(error.message) };
+  return done();
+}
+
+// Incident batch: Ops confirms an item is lost (ticket → lost_in_transit)
+export async function markItemLost(batchId: string, ticketNo: string, reason: string): Promise<Result> {
+  await requireSession();
+  const r = z.string().trim().min(1).max(300).safeParse(reason);
+  if (!r.success) return { error: "invalid" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("mark_item_lost", { p_batch: z.string().uuid().parse(batchId), p_ticket_no: ticketNo, p_reason: r.data });
+  if (error) return { error: errorKey(error.message) };
+  return done();
+}
