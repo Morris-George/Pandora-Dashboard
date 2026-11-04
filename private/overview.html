@@ -40,6 +40,15 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
 .st th:first-child,.st td:first-child{text-align:left}
 .st td{text-align:right;padding:4px 0 4px 10px;border-top:1px solid var(--line);font-weight:700;white-space:nowrap}
 .st td:first-child{color:var(--ink2);font-weight:600}
+.mt{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:18px}
+.mt table{border-collapse:collapse;width:100%;font-size:12.5px;white-space:nowrap}
+.mt th{padding:10px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:700;text-align:right;background:var(--surface2);position:sticky;top:0}
+.mt td{padding:8px 12px;text-align:right;border-top:1px solid var(--line);font-weight:600}
+.mt th:first-child,.mt td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);font-weight:700;z-index:1}
+.mt th:first-child{background:var(--surface2)}
+.mt tr.tot td{background:var(--fill-soft);font-weight:800}.mt tr.tot td:first-child{background:var(--fill-soft)}
+.mt td.sum,.mt th.sum{font-weight:800;border-left:1px solid var(--line)}
+.mt td.zero{color:var(--muted);font-weight:500}
 .foot{color:var(--muted);font-size:12px}
 .err{background:var(--down-bg);color:var(--down);border-radius:12px;padding:12px 14px;font-weight:600}
 .loading{padding:60px 0;text-align:center;color:var(--ink2)}
@@ -98,6 +107,13 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
         +'<tr><td>Orders</td><td>'+E(x.orders)+'</td><td>-</td></tr>'
         +'<tr><td>UPT</td><td>'+x.upt.toFixed(1)+'</td><td>-</td></tr></table></div>'}).join('')+'</div></section>';
   }
+  function monthly(d){
+    var m=d.monthly;if(!m||!m.months.length)return '';
+    var head='<tr><th>Store</th>'+m.months.map(function(k){return '<th>'+MON[+k.slice(5)-1].slice(0,3)+(k===m.partial?'*':'')+'</th>'}).join('')+'<th class="sum">Total</th></tr>';
+    var rows=m.stores.map(function(x){return '<tr><td>'+esc(x.name)+'</td>'+m.months.map(function(k){var v=x.byMonth[k];return '<td'+(v?'':' class="zero"')+'>'+(v?n(v):'-')+'</td>'}).join('')+'<td class="sum">'+n(x.total)+'</td></tr>'}).join('');
+    var tot='<tr class="tot"><td>All stores</td>'+m.months.map(function(k){return '<td>'+n(m.totals[k])+'</td>'}).join('')+'<td class="sum">'+n(m.total)+'</td></tr>';
+    return '<section><h2>Sales by month</h2><div class="range">Every store, each month of '+d.year+' (EGP, net of VAT).'+(m.partial?' * '+MON[+m.partial.slice(5)-1]+' is still running, so far up to '+dmy(d.upTo)+'.':'')+'</div><div class="mt"><table>'+head+rows+tot+'</table></div></section>';
+  }
   // long numbers shrink instead of wrapping onto a second line
   function fit(){
     document.querySelectorAll('.val').forEach(function(el){
@@ -110,7 +126,7 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
     if(d.empty){out.innerHTML='<div class="err">No sales data yet. Add it on the All Uploads page or press Sync from ERP.</div>';return}
     var m=MON[+d.month.slice(5,7)-1]+' '+d.year;
     sub.textContent='All stores, net of VAT. Sales up to '+dmy(d.upTo)+'. The Online shop is not counted as a store.';
-    out.innerHTML=block('All stores together · year to date: '+d.year,d.ytd,'')+stores(d);
+    out.innerHTML=block('All stores together · year to date: '+d.year,d.ytd,'')+monthly(d)+stores(d);
     foot.textContent='Updated '+new Date(d.generatedAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'. Figures are saved for 10 minutes; press Refresh for the latest.';
     fit();
   }

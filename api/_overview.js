@@ -84,6 +84,27 @@ function monthlyAvg(rows, yearStart, to) {
   return { months, from: [...byM.keys()].sort()[0] || '', to: [...byM.keys()].sort().pop() || '', chain: months ? r0(chain / months) : 0, perStoreAvg: months ? r0(perStoreAvg / months) : 0, byStore };
 }
 
+// Sales of every store in every month of the year so far (the month still running is flagged as partial).
+function monthTable(rows, yearStart, to) {
+  const byS = new Map(), months = new Set();
+  for (const r of rows) {
+    if (r[0] < yearStart || r[0] > to) continue;
+    const k = r[0].slice(0, 7), br = pretty(r[7] || 'Unspecified'), net = +r[3] || 0;
+    months.add(k);
+    const o = byS.get(br) || {}; o[k] = (o[k] || 0) + net; byS.set(br, o);
+  }
+  const list = [...months].sort();
+  const last = new Date(Date.UTC(+to.slice(0, 4), +to.slice(5, 7), 0)).getUTCDate();
+  const stores = [...byS.entries()].map(([name, o]) => {
+    const by = {}; let total = 0;
+    for (const k of list) { by[k] = r0(o[k]); total += o[k] || 0; }
+    return { name, byMonth: by, total: r0(total) };
+  }).filter(x => x.total > 0).sort((a, b) => b.total - a.total);
+  const totals = {};
+  for (const k of list) totals[k] = stores.reduce((a, x) => a + x.byMonth[k], 0);
+  return { months: list, partial: +to.slice(8) >= last ? null : to.slice(0, 7), stores, totals, total: stores.reduce((a, x) => a + x.total, 0) };
+}
+
 async function build() {
   const rows = (await dashRows()).filter(r => r && r[0] && ISO.test(r[0]) && !ONLINE.test(String(r[7] || '')));
   if (!rows.length) return { ok: true, empty: true };
@@ -107,6 +128,7 @@ async function build() {
   const ma = monthlyAvg(rows, yearStart, maxD);
   Object.assign(out.ytd, { months: ma.months, monthsFrom: ma.from, monthsTo: ma.to, avgMonth: ma.chain, avgMonthPerStore: ma.perStoreAvg });
   out.ytd.perStore.forEach(x => { x.avgMonth = ma.byStore[x.name] || 0; });
+  out.monthly = monthTable(rows, yearStart, maxD);
   return out;
 }
 
@@ -117,7 +139,7 @@ module.exports = async function handler(req, res) {
   if (!(who.kind === 'env' && who.info.role === 'admin')) return send(res, 403, { ok: false, error: 'Only the super admin and the brand manager can open this report.' }); // area managers, VM and staff never
   if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
   const fresh = new URL(req.url, 'https://x.invalid').searchParams.get('fresh') === '1';
-  const ck = 'overview/c4.json';
+  const ck = 'overview/c5.json';
   if (!fresh) {
     const c = await store.getJSON(ck).catch(() => null);
     if (c && c.ok && Date.now() - Date.parse(c.generatedAt) < CACHE_MIN * 60000) return send(res, 200, c);
