@@ -182,6 +182,7 @@ const en = {
       english: "Wording (English)", arabic: "Wording (Arabic)", phone: "Phone (optional)", email: "Email (optional)",
       save: "Save", saved: "Saved.", failed: "Couldn't save. Check the email and try again.",
     },
+    tabs: { label: "Admin sections", users: "Users & access", stores: "Stores & workflow", messages: "Customer messages", printing: "Receipt & menu", erp: "ERPNext" },
     emailDesign: {
       title: "Email design",
       note: "How customer emails look and what they say. The preview updates as you type. Placeholders: {name} {ticket} {item}.",
@@ -990,6 +991,7 @@ const ar: Dict = {
       english: "النص (إنجليزي)", arabic: "النص (عربي)", phone: "رقم الموبايل (اختياري)", email: "الإيميل (اختياري)",
       save: "حفظ", saved: "اتحفظ.", failed: "محصلش حفظ، راجع الإيميل وحاول تاني.",
     },
+    tabs: { label: "أقسام الإدارة", users: "المستخدمين والصلاحيات", stores: "الفروع وسير العمل", messages: "رسائل العملاء", printing: "الإيصال والقائمة", erp: "ERPNext" },
     emailDesign: {
       title: "تصميم الإيميل",
       note: "شكل إيميلات العملاء والكلام المكتوب فيها. المعاينة بتتحدث وإنت بتكتب. الكلمات دي بتتملي لكل عميل: {name} {ticket} {item}.",

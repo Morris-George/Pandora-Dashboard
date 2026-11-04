@@ -12,6 +12,7 @@ import { MenuPanel, type MenuLabels } from "./menu-panel";
 import { WhatsappPanel } from "./whatsapp-panel";
 import { ContactPanel } from "./contact-panel";
 import { EmailDesignPanel } from "./email-design-panel";
+import { AdminTabs } from "./admin-tabs";
 import type { CustomerContact } from "./actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ReceiptPanel } from "./receipt-panel";
@@ -25,7 +26,7 @@ export const metadata = { title: "Pandora Maintenance" };
 
 export default async function AdminPage() {
   const me = await requireRole("admin");
-  const { locale } = await getI18n();
+  const { locale, t: d } = await getI18n();
   const supabase = await createClient();
 
   const [{ data: profiles }, { data: links }, { data: branches }, { data: pending }, { data: cats }, { data: reports }, { data: access }, { data: runs }, { data: excl }, { data: sps }, { data: twoStep }, { data: wf }, { data: receipt }] = await Promise.all([
@@ -69,39 +70,49 @@ export default async function AdminPage() {
   const ORDER = ["received_at_branch", "awaiting_dispatch", "in_transit_to_hq", "received_at_hq", "under_diagnosis", "awaiting_customer_approval", "in_repair", "awaiting_parts", "quality_check", "ready_to_return", "quote_rejected", "unrepairable", "in_transit_to_branch", "ready_for_pickup"];
   const slaRules = (sla ?? []).map((r) => ({ status: r.status as string, days: Number(r.max_days) })).sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status));
   return (
-    <div className="flex flex-col gap-6">
-      <StoresPanel locale={locale} stores={(branches ?? []).map((b) => ({ id: b.id, name: b.name, whatsapp: b.whatsapp, prefix: b.ticket_prefix ?? "", hq: b.is_hq }))} />
-      <SlaPanel locale={locale} rules={slaRules} />
-      <ReceiptPanel locale={locale} initial={withDefaults(receipt?.value)} />
-      <MenuPanel locale={locale} initial={(menu?.value ?? {}) as MenuLabels} />
-      <EmailDesignPanel locale={locale} initial={(emailTpl?.value ?? {}) as never} />
-      <WhatsappPanel locale={locale} initial={(wa?.value ?? {}) as Record<string, string>} />
-      <ContactPanel locale={locale} initial={(contact?.value ?? {}) as CustomerContact} />
-      <EmailPanel locale={locale} myEmail={me.email} initial={{
-        host: mail?.host ?? process.env.SMTP_HOST ?? "", port: String(mail?.port ?? process.env.SMTP_PORT ?? 465),
-        username: mail?.username ?? process.env.SMTP_USER ?? "", fromName: mail?.from_name ?? "Pandora Maintenance (No Reply)",
-        fromEmail: mail?.from_email ?? "support@pandoraeg.com", paused: mail ? mail.paused : process.env.EMAIL_PAUSED === "1",
-        hasPassword: mail?.hasPassword || !!process.env.SMTP_PASS,
-      }} />
-      <WorkflowPanel locale={locale} workflow={{ ...WORKFLOW_DEFAULTS, ...(wf?.value as object | null) }} />
-      <SecurityPanel locale={locale} twoStep={twoStep?.value !== false} />
-      <ErpPanel locale={locale} configured={erpConfigured()} excluded={excl ?? []}
-        lastRun={runs?.[0] ? { at: runs[0].started_at, trigger: runs[0].trigger, ok: runs[0].ok, summary: runs[0].summary } : null} />
-      <StaffPanel locale={locale}
-        branches={(branches ?? []).filter((b) => !b.is_hq).map((b) => ({ id: b.id, name: b.name }))}
-        accounts={users.filter((u) => u.active && u.role !== "admin").map((u) => ({ id: u.id, name: `${u.name} · ${u.email}` }))}
-        rows={(sps ?? []).map((r): StaffRow => ({
-          erpName: r.erp_name, erpGroup: r.erp_group, branchId: r.branch_id, override: r.branch_override,
-          profileId: r.profile_id, enabled: r.enabled, ignored: r.ignored, paused: r.sync_paused, isNew: !!lastRunId && r.created_run === lastRunId,
+    <AdminTabs label={d.admin.tabs.label} tabs={[
+      { title: d.admin.tabs.users, content: (<>
+        <UsersPanel locale={locale} meId={me.userId} users={users} pending={pendingRows}
+          branches={(branches ?? []).filter((b) => !b.is_hq).map((b) => ({ id: b.id, name: b.name }))} />
+        <StaffPanel locale={locale}
+          branches={(branches ?? []).filter((b) => !b.is_hq).map((b) => ({ id: b.id, name: b.name }))}
+          accounts={users.filter((u) => u.active && u.role !== "admin").map((u) => ({ id: u.id, name: `${u.name} · ${u.email}` }))}
+          rows={(sps ?? []).map((r): StaffRow => ({
+            erpName: r.erp_name, erpGroup: r.erp_group, branchId: r.branch_id, override: r.branch_override,
+            profileId: r.profile_id, enabled: r.enabled, ignored: r.ignored, paused: r.sync_paused, isNew: !!lastRunId && r.created_run === lastRunId,
+          }))} />
+        <ReportsPanel locale={locale} reports={(reports ?? []).map((r) => ({ key: r.key, financial: r.is_financial }))}
+          grants={Object.fromEntries((access ?? []).map((a) => [`${a.report_key}:${a.role}`, a.level]))} />
+        <SecurityPanel locale={locale} twoStep={twoStep?.value !== false} />
+      </>) },
+      { title: d.admin.tabs.stores, content: (<>
+        <StoresPanel locale={locale} stores={(branches ?? []).map((b) => ({ id: b.id, name: b.name, whatsapp: b.whatsapp, prefix: b.ticket_prefix ?? "", hq: b.is_hq }))} />
+        <WorkflowPanel locale={locale} workflow={{ ...WORKFLOW_DEFAULTS, ...(wf?.value as object | null) }} />
+        <SlaPanel locale={locale} rules={slaRules} />
+        <CategoriesPanel locale={locale} categories={(cats ?? []).map((c) => ({
+          name: c.name, nameAr: c.name_ar ?? "", requiresComment: c.requires_comment, active: c.active, system: c.is_system,
+          erpCode: c.erp_item_code, erpName: c.erp_item_name, cost: c.cost === null ? null : Number(c.cost), costSource: c.cost_source,
         }))} />
-      <UsersPanel locale={locale} meId={me.userId} users={users} pending={pendingRows}
-        branches={(branches ?? []).filter((b) => !b.is_hq).map((b) => ({ id: b.id, name: b.name }))} />
-      <CategoriesPanel locale={locale} categories={(cats ?? []).map((c) => ({
-        name: c.name, nameAr: c.name_ar ?? "", requiresComment: c.requires_comment, active: c.active, system: c.is_system,
-        erpCode: c.erp_item_code, erpName: c.erp_item_name, cost: c.cost === null ? null : Number(c.cost), costSource: c.cost_source,
-      }))} />
-      <ReportsPanel locale={locale} reports={(reports ?? []).map((r) => ({ key: r.key, financial: r.is_financial }))}
-        grants={Object.fromEntries((access ?? []).map((a) => [`${a.report_key}:${a.role}`, a.level]))} />
-    </div>
+      </>) },
+      { title: d.admin.tabs.messages, content: (<>
+        <EmailDesignPanel locale={locale} initial={(emailTpl?.value ?? {}) as never} />
+        <WhatsappPanel locale={locale} initial={(wa?.value ?? {}) as Record<string, string>} />
+        <ContactPanel locale={locale} initial={(contact?.value ?? {}) as CustomerContact} />
+        <EmailPanel locale={locale} myEmail={me.email} initial={{
+          host: mail?.host ?? process.env.SMTP_HOST ?? "", port: String(mail?.port ?? process.env.SMTP_PORT ?? 465),
+          username: mail?.username ?? process.env.SMTP_USER ?? "", fromName: mail?.from_name ?? "Pandora Maintenance (No Reply)",
+          fromEmail: mail?.from_email ?? "support@pandoraeg.com", paused: mail ? mail.paused : process.env.EMAIL_PAUSED === "1",
+          hasPassword: mail?.hasPassword || !!process.env.SMTP_PASS,
+        }} />
+      </>) },
+      { title: d.admin.tabs.printing, content: (<>
+        <ReceiptPanel locale={locale} initial={withDefaults(receipt?.value)} />
+        <MenuPanel locale={locale} initial={(menu?.value ?? {}) as MenuLabels} />
+      </>) },
+      { title: d.admin.tabs.erp, content: (<>
+        <ErpPanel locale={locale} configured={erpConfigured()} excluded={excl ?? []}
+          lastRun={runs?.[0] ? { at: runs[0].started_at, trigger: runs[0].trigger, ok: runs[0].ok, summary: runs[0].summary } : null} />
+      </>) },
+    ]} />
   );
 }
