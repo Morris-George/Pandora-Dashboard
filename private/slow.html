@@ -48,10 +48,24 @@ table.hm{width:auto}table.hm th,table.hm td{text-align:center;padding:9px 12px;b
 .img.lg{width:56px;height:56px;border-radius:12px;flex:none}.img.xl{width:min(280px,70vw);height:min(280px,70vw);border-radius:18px;font-size:12px}.bigpic{display:flex;justify-content:center;margin:6px 0}
 .sm{padding:3px 9px;font-size:12px}
 .ic{width:1.1em;height:1.1em;vertical-align:-.2em;flex:none}.tk .ico{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:10px;background:color-mix(in srgb,var(--c) 20%,transparent);color:var(--c);margin-bottom:4px}.tk .ico .ic{width:19px;height:19px}.star .ic,.tip .ic{color:var(--warn)}.flowrow .lbl .ic{color:var(--accent)}.chip .ic{width:1em;height:1em}.mc h3 .ic{color:var(--accent);width:1.15em;height:1.15em}.rl .arr .ic{vertical-align:-.25em}.btn .ic{width:1em;height:1em}
+
+#stM{position:fixed;inset:0;z-index:60;background:rgba(23,16,19,.55);display:flex;align-items:center;justify-content:center;padding:14px}
+#stB{background:var(--surface);color:var(--ink);border-radius:20px;width:min(980px,100%);height:min(92vh,900px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden}
+#stB .pkctl{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+#pkList{flex:1;overflow:auto;padding:8px 12px}
+.pk{display:flex;gap:12px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:14px;margin-bottom:6px;cursor:pointer;transition:background .12s,border-color .12s;user-select:none}
+.pk:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.pk.sel{background:var(--soft);border-color:var(--accent);box-shadow:inset 5px 0 0 var(--accent)}
+.pk .ck{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;color:transparent}
+.pk.sel .ck{background:var(--accent);border-color:var(--accent);color:#2A1018}
+.pk .ck .ic{width:15px;height:15px}
+.pk .mid{min-width:0;flex:1}.pk .mid b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk .qt{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pkfoot{padding:12px 16px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--surface)}
 </style>
 </head>
 <body><div class="wrap">
-<header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Slow Moving</h1><div class="sub">Slow items store by store, from the ERP Slow Moving report, and where to send them: to the stores where the same SKU sells.</div></div><div class="actions"></div></header>
+<header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Slow Moving</h1><div class="sub">Slow items store by store, from the ERP Slow Moving report, and where to send them: to the stores where the same SKU sells.</div></div><div class="actions"><button class="btn go" id="stBtn">Start transfer</button></div></header>
 <div class="err" id="err" hidden></div>
 <div class="card" id="setup"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Stores and Months</h2><label class="note"><input type="checkbox" id="pics" checked> Show pictures</label></div>
   <div class="note" id="meta" style="margin:4px 0 8px"></div>
@@ -69,6 +83,7 @@ table.hm{width:auto}table.hm th,table.hm td{text-align:center;padding:9px 12px;b
 <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Transfers Between Stores</h2><span class="row"><span class="chips" id="trV"></span><button class="btn" id="trX">Download transfers (Excel)</button></span></div>
   <div class="note" style="margin:4px 0 10px" id="trNote"></div><div id="trIn"></div><div id="tr" style="margin-top:12px"></div></div>
 <div id="trM" hidden><div id="trMB"></div></div>
+<div id="stM" hidden><div id="stB"></div></div>
 <div class="grid2">
   <div class="card"><h2>By Category</h2><div class="note">Click a row to filter.</div><div class="tw" id="byCat"></div></div>
   <div class="card" id="ageCard"><h2>By Age</h2><div class="note">How long the stock has not moved. Click a bar to filter.</div><div id="byAge"></div></div>
@@ -354,6 +369,62 @@ $('xlsx').onclick=()=>{if(!ITEMS.length)return;const wb=XLSX.utils.book_new(),ha
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows().map(i=>({SKU:i.sku,Item:i.name,Category:i.cat,Store:i.store,Pieces:i.qty,...(hasV?{Value:i.val}:{}),Days:i.age,'Sold here':i.soldHere,'Sold elsewhere':i.elsewhere.map(([k,v])=>k+' '+v).join(', '),'Can move':i.move||0,'Sold all stores':i.sold,'In refill order':i.order}))),'Items');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(group('store').map(o=>({Store:o.g,SKUs:o.skus,Pieces:o.qty,...(hasV?{Value:o.val}:{}),'Can move out':o.move,'Sold nowhere':o.dead}))),'By store');
   XLSX.writeFile(wb,'Slow Moving '+new Date().toISOString().slice(0,10)+'.xlsx')};
+/* ---------- Start transfer: pick the slow items to move (all stores together or one store), tap to highlight, download one Excel ---------- */
+IC.check='<path d="M5 12.5l4.5 4.5L19 7.5"/>';IC.search='<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.2-4.2"/>';
+const PK={scope:'',q:'',cat:'',mv:false,sel:new Map(),lim:300};
+const pkKey=i=>i.sku+'|'+i.store;
+function pkDest(){const m=new Map();for(const t of TR){const k=pkKey(t.i);(m.get(k)||m.set(k,[]).get(k)).push({to:t.to,qty:t.qty})}return m}
+let PKD=new Map();
+function pkList(){const q=PK.q.trim().toUpperCase();return ITEMS.filter(i=>(!PK.scope||i.store===PK.scope)&&(!PK.cat||i.cat===PK.cat)&&(!PK.mv||i.move>0)&&(!q||i.sku.includes(q)||String(i.name).toUpperCase().includes(q)||String(i.ean).includes(q))).sort((a,b)=>(b.move-a.move)||(b.qty-a.qty)||a.sku.localeCompare(b.sku))}
+function openPk(){if(!ITEMS.length){showErr('Run the report first, then press Start transfer.');return}
+  showErr('');PKD=pkDest();for(const k of [...PK.sel.keys()])if(!ITEMS.some(i=>pkKey(i)===k))PK.sel.delete(k);
+  $('stB').innerHTML=`<div class="mh"><div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:800">${ic('truck')} Start transfer</div><div class="note">Choose a store or all stores together, then tap each item to move. Tap again to un-select.</div></div><button class="btn sm" data-pkclose aria-label="Close">${ic('x')}</button></div>
+  <div class="pkctl"><div class="chips" id="pkScope"></div><div class="row"><input type="search" id="pkQ" placeholder="Search SKU, EAN or name" style="flex:1;min-width:160px"><select id="pkCat"></select><span class="chip" id="pkMv" data-pkmv>Can move to a store only</span><button class="btn sm" data-pkall>Select all shown</button><button class="btn sm" data-pknone>Clear selection</button></div><div class="note" id="pkCnt"></div></div>
+  <div id="pkList"></div>
+  <div class="pkfoot"><div id="pkSum"></div><button class="btn go" id="pkGo" data-pkgo>${ic('dl')} Download Excel</button></div>`;
+  $('pkQ').value=PK.q;$('pkQ').oninput=()=>{PK.q=$('pkQ').value;PK.lim=300;pkDraw()};$('pkCat').onchange=()=>{PK.cat=$('pkCat').value;PK.lim=300;pkDraw()};
+  $('stM').hidden=false;document.body.style.overflow='hidden';pkDraw()}
+function closePk(){$('stM').hidden=true;document.body.style.overflow=''}
+function pkDraw(){
+  const stores=[...new Set(ITEMS.map(i=>i.store))].sort(),cn=st=>ITEMS.filter(i=>!st||i.store===st).length,sn=st=>[...PK.sel.values()].filter(i=>!st||i.store===st).length;
+  if(PK.scope&&!stores.includes(PK.scope))PK.scope='';
+  $('pkScope').innerHTML=[''].concat(stores).map(st=>`<span class="chip ${PK.scope===st?'on':''}" data-pkscope="${esc(st)}">${st?esc(st):'All stores together'} <b>${fmt(cn(st))}</b>${sn(st)?` <span class="note">· ${sn(st)} picked</span>`:''}</span>`).join('');
+  const cats=[...new Set(ITEMS.filter(i=>!PK.scope||i.store===PK.scope).map(i=>i.cat))].sort();if(PK.cat&&!cats.includes(PK.cat))PK.cat='';
+  $('pkCat').innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option ${c===PK.cat?'selected':''}>${esc(c)}</option>`).join('');
+  $('pkMv').classList.toggle('on',PK.mv);
+  const l=pkList(),shown=l.slice(0,PK.lim);
+  $('pkCnt').textContent=`${fmt(l.length)} items shown${l.length>shown.length?` (first ${fmt(shown.length)})`:''}`;
+  $('pkList').innerHTML=shown.map(i=>{const k=pkKey(i),d=PKD.get(k)||[],on=PK.sel.has(k);
+    return `<div class="pk${on?' sel':''}" data-pk="${esc(k)}"><span class="ck">${ic('check')}</span>${pic(i.sku).replace('class="img"','class="img lg"')}<div class="mid"><b title="${esc(i.name)}">${esc(i.name||i.sku)}</b><div class="note">${esc(i.sku)} · <b style="display:inline">${esc(i.store)}</b>${i.age!=null?` · ${fmt(i.age)} days`:''}</div></div>
+    <div class="note" style="max-width:220px;text-align:right">${d.length?'to '+d.slice(0,3).map(x=>`<b style="display:inline">${esc(x.to)}</b> ${fmt(x.qty)}`).join(', ')+(d.length>3?' …':''):'sold nowhere else'}</div><div class="qt"><b>${fmt(i.qty)}</b> <small class="note">pcs</small></div></div>`}).join('')+(l.length>shown.length?`<button class="btn" data-pkmore style="margin:6px 0">Show ${fmt(Math.min(300,l.length-shown.length))} more</button>`:'')||'<div class="note" style="padding:20px">No items match.</div>';
+  pkSum()}
+function pkSum(){const v=[...PK.sel.values()];$('pkSum').innerHTML=v.length?`<b>${fmt(v.length)}</b> items picked · <b>${fmt(v.reduce((a,i)=>a+i.qty,0))}</b> pieces · from <b>${new Set(v.map(i=>i.store)).size}</b> store${new Set(v.map(i=>i.store)).size>1?'s':''}`:'<span class="note">Nothing picked yet.</span>';$('pkGo').disabled=!v.length}
+function pkExport(){const v=[...PK.sel.values()];if(!v.length)return;const rows=[];
+  for(const i of v.sort((a,b)=>a.store.localeCompare(b.store)||a.cat.localeCompare(b.cat)||a.sku.localeCompare(b.sku))){const d=PKD.get(pkKey(i))||[];let left=i.qty;
+    for(const x of d){rows.push({from:i.store,to:x.to,sku:i.sku,ean:i.ean,name:i.name,cat:i.cat,qty:x.qty});left-=x.qty}
+    if(left>0)rows.push({from:i.store,to:d.length?'Rest: no store sells it':'No store sold it',sku:i.sku,ean:i.ean,name:i.name,cat:i.cat,qty:left})}
+  const L=r=>({'From store':r.from,'To store':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Pcs':r.qty,'Done':''});
+  const wb=XLSX.utils.book_new(),mk=(a,w)=>{const ws=XLSX.utils.json_to_sheet(a);ws['!cols']=w;return ws};
+  XLSX.utils.book_append_sheet(wb,mk(rows.map(L),[{wch:16},{wch:20},{wch:16},{wch:15},{wch:42},{wch:20},{wch:6},{wch:7}]),'Transfer list');
+  const used=new Set(['Transfer list']);
+  for(const st of [...new Set(rows.map(r=>r.from))]){let nm='Send from '+String(st).replace(/[\\\/?*:\[\]]/g,' ');nm=nm.slice(0,31);let k=2;while(used.has(nm))nm=nm.slice(0,28)+' '+k++;used.add(nm);
+    XLSX.utils.book_append_sheet(wb,mk(rows.filter(r=>r.from===st).sort((a,b)=>String(a.to).localeCompare(b.to)).map(r=>({'Send to':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Pcs':r.qty,'Done':''})),[{wch:22},{wch:16},{wch:15},{wch:42},{wch:20},{wch:6},{wch:7}]),nm)}
+  XLSX.writeFile(wb,'Slow Moving transfer '+(new Set(v.map(i=>i.store)).size===1?v[0].store:'all stores')+' '+new Date().toISOString().slice(0,10)+'.xlsx')}
+$('stBtn').onclick=openPk;
+$('stM').addEventListener('click',e=>{const t=e.target;
+  if(t===$('stM')||t.closest('[data-pkclose]')){closePk();return}
+  const sc=t.closest('[data-pkscope]');if(sc){PK.scope=sc.dataset.pkscope;PK.lim=300;pkDraw();return}
+  if(t.closest('[data-pkmv]')){PK.mv=!PK.mv;PK.lim=300;pkDraw();return}
+  if(t.closest('[data-pkall]')){pkList().forEach(i=>PK.sel.set(pkKey(i),i));pkDraw();return}
+  if(t.closest('[data-pknone]')){PK.sel.clear();pkDraw();return}
+  if(t.closest('[data-pkmore]')){PK.lim+=300;pkDraw();return}
+  if(t.closest('[data-pkgo]')){pkExport();return}
+  if(t.closest('.img img'))return; // tapping the picture only enlarges it
+  const r=t.closest('[data-pk]');if(r){const k=r.dataset.pk,i=ITEMS.find(x=>pkKey(x)===k);if(!i)return;if(PK.sel.has(k)){PK.sel.delete(k);r.classList.remove('sel')}else{PK.sel.set(k,i);r.classList.add('sel')}pkSum();pkDrawScope()}});
+function pkDrawScope(){const stores=[...new Set(ITEMS.map(i=>i.store))].sort(),cn=st=>ITEMS.filter(i=>!st||i.store===st).length,sn=st=>[...PK.sel.values()].filter(i=>!st||i.store===st).length;
+  $('pkScope').innerHTML=[''].concat(stores).map(st=>`<span class="chip ${PK.scope===st?'on':''}" data-pkscope="${esc(st)}">${st?esc(st):'All stores together'} <b>${fmt(cn(st))}</b>${sn(st)?` <span class="note">· ${sn(st)} picked</span>`:''}</span>`).join('')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('stM').hidden&&!document.getElementById('zoom'))closePk()});
+
 load();
 </script>
 <style>#zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out}#zoom img{width:min(380px,80vw);height:min(380px,80vw);object-fit:contain;padding:10px;border-radius:18px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.35)}.img img,#hitPic img{cursor:zoom-in}</style>
