@@ -68,7 +68,8 @@ export default async function TicketPage({ params, searchParams }: {
     : { data: null };
   const { data: waTpl } = await supabase.from("app_settings").select("value").eq("key", "wa_templates").maybeSingle();
   const waHref = customer?.mobile ? `https://wa.me/${waNumber(customer.mobile)}?text=${encodeURIComponent(waMessage(kind, {
-    name: customer.full_name ?? "", ticketNo: tk.ticket_no, item: tk.item_name, store: branch, link: trackUrl,
+    name: customer.full_name ?? "", ticketNo: tk.ticket_no, item: tk.item_name, store: branch,
+    link: `${process.env.APP_BASE_URL ?? ""}/t/${tk.tracking_token.slice(0, 10)}`, // short link for WhatsApp
     quote: lastQuote?.total != null ? money(Number(lastQuote.total)) : undefined,
   }, (waTpl?.value ?? {}) as WaTemplates))}` : null;
 

@@ -47,7 +47,7 @@ export default async function PickupPage({ searchParams }: { searchParams: Promi
       // "Ready for pickup" (or reminder) message from the store's WhatsApp
       waHref: c?.mobile ? waLink(c.mobile, waMessage(waKind(t.status), {
         name: c.full_name ?? "", ticketNo: t.ticket_no, item: t.item_name,
-        store: (t.branches as unknown as { name: string } | null)?.name ?? "", link: `${process.env.APP_BASE_URL ?? ""}/track/${t.tracking_token}`,
+        store: (t.branches as unknown as { name: string } | null)?.name ?? "", link: `${process.env.APP_BASE_URL ?? ""}/t/${t.tracking_token.slice(0, 10)}`,
       }, (waTpl?.value ?? {}) as WaTemplates)) : null,
     };
   }).sort((a, b) => (a.readyAt ?? "").localeCompare(b.readyAt ?? ""));

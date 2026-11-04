@@ -25,7 +25,7 @@ export async function middleware(request: NextRequest) {
   const user = data?.claims?.sub;
   const path = request.nextUrl.pathname;
   // Cron calls carry their own secret (checked in the route)
-  const isPublic = path.startsWith("/login") || path === "/track" || path.startsWith("/track/") || path === "/api/cron/erp-sync";
+  const isPublic = path.startsWith("/login") || path === "/track" || path.startsWith("/track/") || path.startsWith("/t/") || path === "/api/cron/erp-sync";
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
