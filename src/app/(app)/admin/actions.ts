@@ -158,6 +158,20 @@ export async function testEmail(to?: string): Promise<{ error?: string; to?: str
 }
 
 // Menu names from Admin → Menu: { "/tickets": { ar, en } }; empty names fall back to the built-in ones
+export type CustomerContact = { en?: string; ar?: string; phone?: string; email?: string };
+export async function saveCustomerContact(input: CustomerContact): Promise<Result> {
+  const me = await requireRole("admin");
+  const clean = (x?: string, n = 200) => (x ?? "").trim().slice(0, n);
+  const email = clean(input.email, 120);
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "invalid" };
+  const value = { en: clean(input.en), ar: clean(input.ar), phone: clean(input.phone, 30), email };
+  const supabase = await createClient();
+  const { data: saved, error } = await supabase.from("app_settings").update({ value, updated_by: me.userId, updated_at: new Date().toISOString() }).eq("key", "customer_contact").select("key");
+  if (error || !saved?.length) return { error: "failed" };
+  await audit(me.userId, "customer_contact_saved", "customer_contact", value);
+  return {};
+}
+
 export async function saveWaTemplates(input: Record<string, string>): Promise<Result> {
   const me = await requireRole("admin");
   const { WA_KINDS } = await import("@/lib/whatsapp");

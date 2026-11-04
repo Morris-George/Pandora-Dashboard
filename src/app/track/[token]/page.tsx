@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getI18n } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { LangToggle } from "@/app/lang-toggle";
 import { Brand } from "@/components/brand";
 import { QuoteResponse } from "./quote-response";
@@ -28,6 +29,9 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
   const supabase = await createClient();
   const { data } = /^[0-9a-f]{32}$/.test(token) ? await supabase.rpc("track_ticket", { p_token: token }) : { data: null };
   const tk = data as Tracked | null;
+  // Contact line from Admin → Customer page contact (customers aren't signed in, so read it server-side)
+  const { data: cc } = await createAdminClient().from("app_settings").select("value").eq("key", "customer_contact").maybeSingle();
+  const contact = (cc?.value ?? {}) as { en?: string; ar?: string; phone?: string; email?: string };
   const loc = locale === "ar" ? "ar-EG" : "en-GB";
   const fmt = (s: string) => new Date(s).toLocaleString(loc, { dateStyle: "medium", timeStyle: "short" });
   const money = (n: number) => Number(n).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -38,7 +42,11 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
       <div className="mx-auto w-full max-w-lg flex flex-col gap-5">
         <div className="flex items-center justify-between rise"><Brand /><LangToggle label={d.switchTo} className="border-stone-200 bg-white/80 hover:bg-white" /></div>
         {body}
-        <p className="text-xs text-stone-500 text-center">{t.help}</p>
+        <p className="text-xs text-stone-500 text-center flex flex-wrap justify-center gap-x-3">
+          <span>{(locale === "ar" ? contact.ar : contact.en) || t.help}</span>
+          {contact.phone && <a href={`tel:${contact.phone.replace(/[^0-9+]/g, "")}`} dir="ltr" className="underline">{contact.phone}</a>}
+          {contact.email && <a href={`mailto:${contact.email}`} dir="ltr" className="underline">{contact.email}</a>}
+        </p>
       </div>
     </main>
   );

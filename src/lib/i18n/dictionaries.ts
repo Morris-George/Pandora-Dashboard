@@ -174,6 +174,11 @@ const en = {
       emptyNote: "Leave a text empty to use the standard wording. Receipts print in the language the staff member is using.",
       save: "Save receipt", saved: "Saved. The next receipt uses it.", failed: "Could not save. Check the fields and try again.",
     },
+    contact: {
+      title: "Customer page contact", note: "The line at the bottom of the customer tracking page. Empty wording keeps the built-in text.",
+      english: "Wording (English)", arabic: "Wording (Arabic)", phone: "Phone (optional)", email: "Email (optional)",
+      save: "Save", saved: "Saved.", failed: "Couldn't save. Check the email and try again.",
+    },
     wa: {
       title: "WhatsApp messages",
       note: "The text the store sends from its WhatsApp (Ticket memo and Pickup buttons). Use the placeholders below; they are filled in for each customer.",
@@ -956,6 +961,11 @@ const ar: Dict = {
       arabic: "عربي", english: "إنجليزي",
       emptyNote: "سيب النص فاضي عشان يستخدم الصيغة الأساسية. الإيصال بيتطبع باللغة اللي الموظف شغال بيها.",
       save: "حفظ الإيصال", saved: "اتحفظ. أول إيصال جاي هيستخدمه.", failed: "مقدرناش نحفظ. راجع البيانات وحاول تاني.",
+    },
+    contact: {
+      title: "بيانات التواصل في صفحة العميل", note: "السطر اللي في آخر صفحة تتبع العميل. لو سيبت النص فاضي هيفضل النص الأصلي.",
+      english: "النص (إنجليزي)", arabic: "النص (عربي)", phone: "رقم الموبايل (اختياري)", email: "الإيميل (اختياري)",
+      save: "حفظ", saved: "اتحفظ.", failed: "محصلش حفظ، راجع الإيميل وحاول تاني.",
     },
     wa: {
       title: "رسائل واتساب",
