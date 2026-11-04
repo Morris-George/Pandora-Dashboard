@@ -30,7 +30,7 @@ export default async function AdminPage() {
   const [{ data: profiles }, { data: links }, { data: branches }, { data: pending }, { data: cats }, { data: reports }, { data: access }, { data: runs }, { data: excl }, { data: sps }, { data: twoStep }, { data: wf }, { data: receipt }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email, role, active, source, must_change_password, erp_created_run").order("full_name"),
     supabase.from("user_branches").select("user_id, branch_id"),
-    supabase.from("branches").select("id, name, is_hq, whatsapp").eq("active", true).order("name"),
+    supabase.from("branches").select("id, name, is_hq, whatsapp, ticket_prefix").eq("active", true).order("name"),
     supabase.from("role_change_requests").select("id, user_id, new_role, requested_by").eq("status", "pending"),
     supabase.from("fault_categories").select("name, name_ar, requires_comment, active, is_system, erp_item_code, erp_item_name, cost, cost_source").order("sort_order"),
     supabase.from("reports").select("key, is_financial"),
@@ -68,7 +68,7 @@ export default async function AdminPage() {
   const slaRules = (sla ?? []).map((r) => ({ status: r.status as string, days: Number(r.max_days) })).sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status));
   return (
     <div className="flex flex-col gap-6">
-      <StoresPanel locale={locale} stores={(branches ?? []).map((b) => ({ id: b.id, name: b.name, whatsapp: b.whatsapp }))} />
+      <StoresPanel locale={locale} stores={(branches ?? []).map((b) => ({ id: b.id, name: b.name, whatsapp: b.whatsapp, prefix: b.ticket_prefix ?? "", hq: b.is_hq }))} />
       <SlaPanel locale={locale} rules={slaRules} />
       <ReceiptPanel locale={locale} initial={withDefaults(receipt?.value)} />
       <MenuPanel locale={locale} initial={(menu?.value ?? {}) as MenuLabels} />

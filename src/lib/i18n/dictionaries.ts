@@ -153,9 +153,11 @@ const en = {
       invalid: "Each target must be more than 0 and at most 365 days.", failed: "Could not save. Reload the page and try again.",
     },
     stores: {
-      title: "Stores — WhatsApp number",
+      title: "Stores",
       note: "Each store's WhatsApp number. It is printed on the receipts and the customer can tap it on the tracking page to chat with the store.",
       whatsapp: "WhatsApp", save: "Save", saved: "Saved", invalid: "Not a valid number",
+      name: "Store name", prefix: "Ticket prefix", add: "Add store", remove: "Remove", failed: "Could not save.",
+      removeConfirm: (n: string) => `Remove ${n}? It disappears from the lists; its old tickets are kept.`,
     },
     dlg: { save: "Save", cancel: "Cancel", confirm: "Confirm", next: "Next", merge: "Merge (same person)", linkOnly: "Only link", mergeTitle: "Same person?", manager: "Branch Manager", associate: "Branch Associate" },
     receipt: {
@@ -950,9 +952,11 @@ const ar: Dict = {
       invalid: "كل مدة لازم تكون أكبر من 0 ولحد 365 يوم.", failed: "مقدرناش نحفظ. اعمل تحديث للصفحة وجرب تاني.",
     },
     stores: {
-      title: "الفروع — رقم واتساب",
+      title: "الفروع",
       note: "رقم واتساب كل فرع. بيتطبع على الإيصالات، والعميل يقدر يدوس عليه من صفحة التتبع ويكلم الفرع.",
       whatsapp: "واتساب", save: "حفظ", saved: "اتحفظ", invalid: "الرقم مش صحيح",
+      name: "اسم الفرع", prefix: "بادئة التيكيت", add: "إضافة فرع", remove: "حذف", failed: "مقدرناش نحفظ.",
+      removeConfirm: (n: string) => `حذف ${n}؟ هيختفي من القوائم، والتيكيتات القديمة بتاعته هتفضل موجودة.`,
     },
     dlg: { save: "حفظ", cancel: "إلغاء", confirm: "تأكيد", next: "التالي", merge: "دمج (نفس الشخص)", linkOnly: "ربط بس", mergeTitle: "نفس الشخص؟", manager: "مدير فرع", associate: "موظف فرع" },
     receipt: {

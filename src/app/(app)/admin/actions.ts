@@ -592,3 +592,48 @@ export async function saveSla(rows: { status: string; days: number }[]): Promise
   revalidatePath("/tickets");
   return {};
 }
+
+// Admin → Stores: add a store, rename it / change its ticket prefix, or remove it.
+// Removing only hides the store (active = false) so its old tickets keep their store.
+const StoreInput = z.object({
+  name: z.string().trim().min(1).max(80),
+  prefix: z.string().trim().max(12).regex(/^[A-Za-z0-9.]*$/),
+});
+
+export async function addBranch(name: string, prefix: string): Promise<Result> {
+  const me = await requireRole("admin");
+  const p = StoreInput.safeParse({ name, prefix });
+  if (!p.success) return { error: "invalid" };
+  const code = (p.data.prefix || p.data.name).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12) + "-" + Date.now().toString(36).slice(-4).toUpperCase();
+  const { data, error } = await createAdminClient().from("branches")
+    .insert({ name: p.data.name, code, ticket_prefix: p.data.prefix || null }).select("id").single();
+  if (error) return { error: "failed" };
+  await audit(me.userId, "store_add", data.id, { name: p.data.name, prefix: p.data.prefix });
+  revalidatePath("/admin");
+  return {};
+}
+
+export async function updateBranch(branchId: string, name: string, prefix: string): Promise<Result> {
+  const me = await requireRole("admin");
+  z.string().uuid().parse(branchId);
+  const p = StoreInput.safeParse({ name, prefix });
+  if (!p.success) return { error: "invalid" };
+  const { error } = await createAdminClient().from("branches").update({ name: p.data.name, ticket_prefix: p.data.prefix || null }).eq("id", branchId);
+  if (error) return { error: "failed" };
+  await audit(me.userId, "store_edit", branchId, { name: p.data.name, prefix: p.data.prefix });
+  revalidatePath("/admin");
+  return {};
+}
+
+export async function removeBranch(branchId: string): Promise<Result> {
+  const me = await requireRole("admin");
+  z.string().uuid().parse(branchId);
+  const db = createAdminClient();
+  const { data: b } = await db.from("branches").select("is_hq").eq("id", branchId).single();
+  if (!b || b.is_hq) return { error: "invalid" };
+  const { error } = await db.from("branches").update({ active: false }).eq("id", branchId);
+  if (error) return { error: "failed" };
+  await audit(me.userId, "store_remove", branchId, {});
+  revalidatePath("/admin");
+  return {};
+}
