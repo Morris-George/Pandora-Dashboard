@@ -185,8 +185,8 @@ const en = {
     tabs: { label: "Admin sections", users: "Users & access", stores: "Stores & workflow", messages: "Customer messages", printing: "Receipt & menu", erp: "ERPNext" },
     alerts: {
       title: "Lost item alerts",
-      note: "Email addresses that get an automatic alert when a bag arrives with items missing and when an item is confirmed lost. Separate several addresses with commas.",
-      emails: "Alert emails", save: "Save", saved: "Saved.", invalid: "Check the email addresses.", failed: "Couldn't save. Try again.",
+      note: "Email addresses that get an automatic alert when a bag arrives with items missing and when an item is confirmed lost. Add as many addresses as you need (up to 10), then press Save.",
+      emails: "Alert emails", add: "Add email", remove: "Remove", save: "Save", saved: "Saved.", invalid: "Check the email addresses.", failed: "Couldn't save. Try again.",
     },
     emailDesign: {
       title: "Email design",
@@ -999,8 +999,8 @@ const ar: Dict = {
     tabs: { label: "أقسام الإدارة", users: "المستخدمين والصلاحيات", stores: "الفروع وسير العمل", messages: "رسائل العملاء", printing: "الإيصال والقائمة", erp: "ERPNext" },
     alerts: {
       title: "تنبيهات القطع المفقودة",
-      note: "الإيميلات اللي يوصلها تنبيه تلقائي لما شحنة توصل ناقصة ولما قطعة يتأكد فقدها. افصل بين أكتر من إيميل بفاصلة.",
-      emails: "إيميلات التنبيه", save: "حفظ", saved: "اتحفظ.", invalid: "راجع الإيميلات.", failed: "محصلش حفظ، حاول تاني.",
+      note: "الإيميلات اللي يوصلها تنبيه تلقائي لما شحنة توصل ناقصة ولما قطعة يتأكد فقدها. ضيف الإيميلات اللي محتاجها (لحد 10) ودوس حفظ.",
+      emails: "إيميلات التنبيه", add: "إضافة إيميل", remove: "حذف", save: "حفظ", saved: "اتحفظ.", invalid: "راجع الإيميلات.", failed: "محصلش حفظ، حاول تاني.",
     },
     emailDesign: {
       title: "تصميم الإيميل",
