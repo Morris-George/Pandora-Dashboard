@@ -54,7 +54,7 @@ const en = {
     queues: {
       toSend: "To pack & send to HQ", toApprove: "Batches to approve", toPickup: "Ready for the customer",
       inTransit: "In transit", toDiagnose: "To receive & diagnose", inRepair: "In repair / parts / QC",
-      toReturn: "To send back to stores", quotes: "Quotes waiting for customers", lost: "Lost in transit",
+      toReturn: "To send back to stores", rejected: "Rejected quotes to return", quotes: "Quotes waiting for customers", lost: "Lost in transit",
     } as Record<string, string>,
   },
   roles: {
@@ -844,7 +844,7 @@ const ar: Dict = {
     queues: {
       toSend: "للتجهيز والشحن للمركز", toApprove: "شحنات محتاجة موافقة", toPickup: "جاهزة للعميل",
       inTransit: "في الطريق", toDiagnose: "للاستلام والتشخيص", inRepair: "في الصيانة / قطع غيار / جودة",
-      toReturn: "للرجوع للفروع", quotes: "عروض أسعار مستنية العميل", lost: "مفقود أثناء النقل",
+      toReturn: "للرجوع للفروع", rejected: "عروض مرفوضة للإرجاع", quotes: "عروض أسعار مستنية العميل", lost: "مفقود أثناء النقل",
     } as Record<string, string>,
   },
   roles: {

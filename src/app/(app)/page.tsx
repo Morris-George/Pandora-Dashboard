@@ -13,7 +13,9 @@ const QUEUES: Queue[] = [
   { key: "inTransit", statuses: ["in_transit_to_hq", "in_transit_to_branch"], href: "/dispatch", roles: ["courier", "hq", "associate", "manager", "ops"] },
   { key: "toDiagnose", statuses: ["received_at_hq", "under_diagnosis"], href: "/diagnosis", roles: ["hq", "technician", "supervisor"] },
   { key: "inRepair", statuses: ["in_repair", "awaiting_parts", "quality_check"], href: "/diagnosis", roles: ["technician", "supervisor"] },
-  { key: "toReturn", statuses: ["ready_to_return", "quote_rejected", "unrepairable"], href: "/dispatch", roles: ["supervisor", "cs"] },
+  { key: "toReturn", statuses: ["ready_to_return", "quote_rejected", "unrepairable"], href: "/dispatch", roles: ["supervisor"] },
+  // Customer Service only handles rejected quotes (Return unrepaired, on Quote approval)
+  { key: "rejected", statuses: ["quote_rejected"], href: "/quotes", roles: ["cs"] },
   { key: "quotes", statuses: ["awaiting_customer_approval"], href: "/quotes", roles: ["cs", "supervisor"] },
   { key: "lost", statuses: ["lost_in_transit"], href: "/tickets?status=lost_in_transit", roles: ["ops"] },
 ];
