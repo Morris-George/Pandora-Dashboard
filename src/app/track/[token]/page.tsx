@@ -119,17 +119,6 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
         </section>
       )}
 
-      <section className="rise bg-white rounded-2xl border border-stone-200 p-6 flex flex-col gap-2">
-        <h2 className="text-lg font-semibold">{t.historyTitle}</h2>
-        <ol className="flex flex-col">
-          {tk.history.slice().reverse().map((h, i) => (
-            <li key={i} className="flex justify-between gap-3 border-t border-stone-100 py-2 text-sm">
-              <span>{t.status[h.status] ?? t.status.default}</span>
-              <span className="text-stone-500 text-xs whitespace-nowrap">{fmt(h.at)}</span>
-            </li>
-          ))}
-        </ol>
-      </section>
     </>,
   );
 }
