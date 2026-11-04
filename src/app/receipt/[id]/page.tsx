@@ -41,7 +41,8 @@ export default async function ReceiptPage({ params, searchParams }: { params: Pr
   ]) : [{ data: null }, { data: null }, { data: null }];
 
   const url = `${process.env.APP_BASE_URL ?? ""}/track/${tk.tracking_token}`;
-  const qr = await QRCode.toString(url, { type: "svg", margin: 0, width: 150 });
+  const site = cfg.website && (/^https?:\/\//.test(cfg.website) ? cfg.website : `https://${cfg.website}`);
+  const qr = await QRCode.toString(cfg.qrTarget === "website" && site ? site : url, { type: "svg", margin: 0, width: 150 });
   const when = new Date(tk.created_at).toLocaleString(locale === "ar" ? "ar-EG" : "en-GB", { dateStyle: "short", timeStyle: "short" });
   const mobile = cfg.showMobile && c?.mobile ? `${c.mobile.slice(0, 3)}•••••${c.mobile.slice(-3)}` : "";
   const terms = (delivery ? cfg.termsDelivery : cfg.termsIntake)[lang] || (delivery ? t.deliveryTerms : t.terms);
@@ -99,7 +100,7 @@ export default async function ReceiptPage({ params, searchParams }: { params: Pr
         <>
           <div className="flex flex-col items-center gap-1">
             <span dangerouslySetInnerHTML={{ __html: qr }} />
-            {cfg.showScanText && <div className="text-center text-[11px]">{t.scan}</div>}
+            {cfg.showScanText && <div className="text-center text-[11px]">{cfg.qrTarget === "website" && site ? cfg.website : t.scan}</div>}
           </div>
           <hr />
         </>

@@ -110,7 +110,11 @@ const ReceiptInput = z.object({
   customLogo: z.string().max(420_000).refine((v) => !v || /^data:image\/(png|jpeg);base64,/.test(v)),
   storeLine: z.string().max(120), phone: z.string().max(40), website: z.string().max(80),
   showMobile: z.boolean(), showItemCode: z.boolean(), showQr: z.boolean(), showAgreed: z.boolean(),
+  showCustomer: z.boolean(), showFault: z.boolean(), showAccessories: z.boolean(), showWhatsapp: z.boolean(),
+  showScanText: z.boolean(), showTerms: z.boolean(), showSignature: z.boolean(), showFooter: z.boolean(),
+  qrTarget: z.enum(["tracking", "website"]),
   termsIntake: bi, termsDelivery: bi, footer: bi,
+  labelWidth: z.number().min(20).max(120), labelHeight: z.number().min(10).max(100),
 });
 
 // Admin → Receipt layout

@@ -18,6 +18,7 @@ export type ReceiptSettings = {
   showTerms: boolean;
   showSignature: boolean;
   showFooter: boolean;
+  qrTarget: "tracking" | "website"; // QR opens the customer's tracking page or the website above
   termsIntake: Bilingual;
   termsDelivery: Bilingual;
   footer: Bilingual;
@@ -29,7 +30,7 @@ export const RECEIPT_DEFAULTS: ReceiptSettings = {
   logo: "pandora", customLogo: "", storeLine: "", phone: "", website: "",
   showMobile: true, showItemCode: true, showQr: true, showAgreed: true,
   showCustomer: true, showFault: true, showAccessories: true, showWhatsapp: true,
-  showScanText: true, showTerms: true, showSignature: false, showFooter: true, // signature line off by default
+  showScanText: true, showTerms: true, showSignature: true, showFooter: true, qrTarget: "tracking",
   termsIntake: { ar: "", en: "" }, termsDelivery: { ar: "", en: "" }, footer: { ar: "", en: "" },
   labelWidth: 50, labelHeight: 30,
 };

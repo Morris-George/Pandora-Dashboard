@@ -48,6 +48,15 @@ export function ReceiptPanel({ locale, initial }: { locale: Locale; initial: Rec
 
       <div className="grid gap-5 md:grid-cols-2">
         <fieldset className="flex flex-col gap-2">
+          <legend className="text-sm font-medium mb-1">{t.qrTarget}</legend>
+          {(["tracking", "website"] as const).map((v) => (
+            <label key={v} className="flex items-center gap-2 text-sm">
+              <input type="radio" checked={s.qrTarget === v} onChange={() => set("qrTarget", v)} disabled={v === "website" && !s.website.trim()} />
+              {t.qrOptions[v]}
+            </label>
+          ))}
+        </fieldset>
+        <fieldset className="flex flex-col gap-2">
           <legend className="text-sm font-medium mb-1">{t.logo}</legend>
           {(["pandora", "custom", "none"] as const).map((v) => (
             <label key={v} className="flex items-center gap-2 text-sm">
