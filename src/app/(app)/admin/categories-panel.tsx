@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
-import { addCategory, setCategoryCost, syncCategoryCosts, updateCategory } from "./actions";
+import { addCategory, setCategoryCost, syncCategoryCosts, deleteCategory, updateCategory } from "./actions";
 import { toast } from "@/components/toast";
 
 type Cat = { name: string; nameAr: string; requiresComment: boolean; active: boolean; system: boolean; erpCode: string | null; erpName: string | null; cost: number | null; costSource: string | null };
@@ -78,6 +78,10 @@ export function CategoriesPanel({ locale, categories }: { locale: Locale; catego
                   <button disabled={busy} className={`${small} border-red-800 text-red-800 w-20`}
                     onClick={() => run(() => updateCategory(c.name, { active: !c.active }))}>
                     {c.active ? t.catRemove : t.catRestore}
+                  </button>
+                  <button disabled={busy} className={`${small} border-red-800 bg-red-800 text-white w-20`}
+                    onClick={() => { if (window.confirm(t.catDeleteConfirm(c.name))) run(() => deleteCategory(c.name)); }}>
+                    {t.catDelete}
                   </button>
                 </>
               )}

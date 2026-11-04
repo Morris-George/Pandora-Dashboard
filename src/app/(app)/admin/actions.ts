@@ -656,3 +656,19 @@ export async function saveEmailTemplates(input: unknown): Promise<Result> {
   revalidatePath("/admin");
   return {};
 }
+
+// Delete a fault category for good, only when no ticket uses it (otherwise hide it). "Other" is protected.
+export async function deleteCategory(name: string): Promise<Result> {
+  const me = await requireRole("admin");
+  const db = createAdminClient();
+  const { data: c } = await db.from("fault_categories").select("is_system").eq("name", name).maybeSingle();
+  if (!c || c.is_system) return { error: "failed" };
+  const { count } = await db.from("tickets").select("id", { count: "exact", head: true }).eq("fault_category", name);
+  if (count) return { error: "inUse" };
+  const { error } = await db.from("fault_categories").delete().eq("name", name);
+  if (error) return { error: error.code === "23503" ? "inUse" : "failed" };
+  await audit(me.userId, "category_deleted", name, {});
+  revalidatePath("/admin");
+  revalidatePath("/intake");
+  return {};
+}
