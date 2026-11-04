@@ -182,3 +182,18 @@ async function syncSalesPersons(
     }
   }
 }
+
+// Every fault category linked to an ERPNext item takes its current price (nightly cron and Admin button)
+export async function syncFaultCosts(): Promise<number> {
+  const { getItemPrice } = await import("@/lib/erpnext");
+  const db = createAdminClient();
+  const { data } = await db.from("fault_categories").select("name, erp_item_code, cost").not("erp_item_code", "is", null);
+  let synced = 0;
+  for (const c of data ?? []) {
+    const price = await getItemPrice(c.erp_item_code!).catch(() => null);
+    if (price === null) continue;
+    await db.from("fault_categories").update({ cost: price, cost_source: "erp" }).eq("name", c.name);
+    synced++;
+  }
+  return synced;
+}

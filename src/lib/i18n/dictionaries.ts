@@ -318,7 +318,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     catRequires: "Comment required",
     catOptional: "Comment optional",
     catCost: {
-      note: "Cost: link each category to an ERPNext service item code to take its price, or type a cost. Both can be edited any time; a typed cost wins over ERPNext.",
+      note: "Cost: link each category to an ERPNext service item code to take its price, or type a cost. A linked category always takes the ERPNext price; it is refreshed every night and with the button below. Type a cost only for categories without a code.",
       label: "Cost", code: "ERPNext item code", codePh: "ERPNext item code", cost: "Cost", costPh: "Cost (before VAT)",
       beforeVat: "EGP before VAT", noPrice: "no price in ERPNext — type one", sync: "Refresh costs from ERPNext",
       source: { erp: "ERPNext", manual: "typed" },
@@ -1126,7 +1126,7 @@ const ar: Dict = {
     catRequires: "الملاحظات مطلوبة",
     catOptional: "الملاحظات اختيارية",
     catCost: {
-      note: "التكلفة: اربط كل نوع عطل بكود صنف خدمة في ERPNext عشان ياخد سعره، أو اكتب التكلفة بنفسك. الاتنين ينفع يتعدلوا في أي وقت، والتكلفة المكتوبة بتتقدم على ERPNext.",
+      note: "التكلفة: اربط كل نوع عطل بكود صنف خدمة في ERPNext عشان ياخد سعره، أو اكتب التكلفة بنفسك. النوع المربوط بكود بياخد سعر ERPNext دايماً، وبيتحدث كل ليلة ومن الزرار اللي تحت. اكتب التكلفة بنفسك بس للأنواع اللي مالهاش كود.",
       label: "التكلفة", code: "كود الصنف في ERPNext", codePh: "كود الصنف في ERPNext", cost: "التكلفة", costPh: "التكلفة (قبل الضريبة)",
       beforeVat: "جنيه قبل الضريبة", noPrice: "مفيش سعر في ERPNext — اكتب التكلفة", sync: "تحديث التكاليف من ERPNext",
       source: { erp: "ERPNext", manual: "مكتوبة" },

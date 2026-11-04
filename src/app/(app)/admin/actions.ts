@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireRole, type AppRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { syncFaultCosts } from "@/lib/erp-sync";
 import { runErpSync } from "@/lib/erp-sync";
 import { erpConfigured, findItem, getItemPrice } from "@/lib/erpnext";
 
@@ -546,11 +547,10 @@ export async function setCategoryCost(name: string, itemCode: string, cost: stri
     if (!item) return { error: "erpNotFound" };
     row.erp_item_code = item.itemCode;
     row.erp_item_name = item.itemName;
-    if (typed === null) {
-      const price = await getItemPrice(item.itemCode);
-      row.cost = price;
-      row.cost_source = price === null ? null : "erp";
-    }
+    // Linked: ERPNext price wins; the typed cost is used only when ERPNext has no price
+    const price = await getItemPrice(item.itemCode);
+    if (price !== null) { row.cost = price; row.cost_source = "erp"; }
+    else if (typed === null) { row.cost = null; row.cost_source = null; }
   }
   const supabase = await createClient();
   const { error } = await supabase.from("fault_categories").update(row).eq("name", name);
@@ -565,17 +565,10 @@ export async function setCategoryCost(name: string, itemCode: string, cost: stri
 export async function syncCategoryCosts(): Promise<Result & { synced?: number }> {
   await requireRole("admin");
   if (!erpConfigured()) return { error: "erp" };
-  const supabase = await createClient();
-  const { data } = await supabase.from("fault_categories").select("name, erp_item_code, cost_source").not("erp_item_code", "is", null);
-  let synced = 0;
-  for (const c of data ?? []) {
-    if (c.cost_source === "manual") continue;
-    const price = await getItemPrice(c.erp_item_code!);
-    if (price === null) continue;
-    await supabase.from("fault_categories").update({ cost: price, cost_source: "erp" }).eq("name", c.name);
-    synced++;
-  }
+  const synced = await syncFaultCosts();
   revalidatePath("/admin");
+  revalidatePath("/intake");
+  revalidatePath("/diagnosis");
   return { synced };
 }
 

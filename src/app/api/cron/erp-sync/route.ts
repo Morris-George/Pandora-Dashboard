@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runErpSync } from "@/lib/erp-sync";
+import { runErpSync, syncFaultCosts } from "@/lib/erp-sync";
 import { flushEmails } from "@/lib/email";
 
 export const maxDuration = 60;
@@ -11,6 +11,7 @@ export async function GET(req: Request) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
   const summary = await runErpSync("cron");
+  const costs = await syncFaultCosts().catch(() => -1); // fault category prices from ERPNext
   const emails = await flushEmails(100); // catch-up for anything not sent at the time
-  return NextResponse.json({ ok: summary.errors.length === 0, summary, emails });
+  return NextResponse.json({ ok: summary.errors.length === 0, summary, costs, emails });
 }
