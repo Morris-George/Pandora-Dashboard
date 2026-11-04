@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { toast } from "@/components/toast";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
-import { completeRepair, decideOverride, moveTicket, startDiagnosis, submitDiagnosis } from "./actions";
+import { completeRepair, decideOverride, lookupCostItem, moveTicket, startDiagnosis, submitDiagnosis } from "./actions";
 
 export type Job = {
   id: string; ticketNo: string; itemName: string; itemCode: string | null; branchName: string;
@@ -245,7 +245,14 @@ function DiagnoseForm({ d, t, busy, run, j, supervisor, costs }: RowProps & { su
           )}
           {lines.map((l, i) => (
             <div key={i} className="flex flex-wrap gap-2">
-              <input value={l.desc} onChange={(e) => setLine(i, "desc", e.target.value)} placeholder={t.lineDesc} aria-label={t.lineDesc} className={`${input} flex-[1_1_220px]`} />
+              <input value={l.desc} onChange={(e) => setLine(i, "desc", e.target.value)} placeholder={t.lineDescErp} aria-label={t.lineDesc} className={`${input} flex-[1_1_220px]`}
+                onBlur={async () => {
+                  // An ERPNext item code (no spaces) → its name and price
+                  const code = l.desc.trim();
+                  if (!code || /\s/.test(code) || l.price.trim()) return;
+                  const r = await lookupCostItem(code);
+                  if (r.name) setLines((ls) => ls.map((x, n) => (n === i ? { ...x, desc: `${r.name} (${code})`, price: r.price != null ? String(r.price) : x.price } : x)));
+                }} />
               <input value={l.qty} onChange={(e) => setLine(i, "qty", e.target.value)} inputMode="decimal" aria-label={t.qty} className={`${input} w-20`} dir="ltr" />
               <input value={l.price} onChange={(e) => setLine(i, "price", e.target.value)} inputMode="decimal" placeholder={t.price} aria-label={t.price} className={`${input} w-32`} dir="ltr" />
               {lines.length > 1 && <button className="text-xs text-red-800" onClick={() => setLines(lines.filter((_, n) => n !== i))}>{t.removeLine}</button>}

@@ -107,6 +107,17 @@ export async function moveTicket(ticketId: string, step: keyof typeof STEPS, rea
 
 // ---- Repair cost items (Super Admin): product item code -> ERPNext cost item with its price
 
+// Quote line typed as an ERPNext item code: fill its name and price (before VAT) from ERPNext
+export async function lookupCostItem(code: string): Promise<{ name?: string; price?: number | null; error?: string }> {
+  await requireRole("technician", "supervisor");
+  const c = code.trim().slice(0, 60);
+  if (!c || /\s/.test(c)) return { error: "invalid" };
+  if (!erpConfigured()) return { error: "erp" };
+  const erp = await findItem(c).catch(() => null);
+  if (!erp) return { error: "notFound" };
+  return { name: erp.itemName, price: await getItemPrice(erp.itemCode).catch(() => null) };
+}
+
 async function requireSuperAdmin() {
   const me = await requireRole("admin");
   if (!me.isAdmin) throw new Error("forbidden");

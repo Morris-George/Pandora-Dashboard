@@ -471,6 +471,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     } as Record<string, string>,
   },
   diag: {
+    lineDescErp: "Description or ERPNext item code",
     costUnderWarranty: "Optional under warranty: add a cost (e.g. misuse) and the customer gets a quote. Leave empty for a free repair.",
     qcBack: "Sent back by QC",
     costs: {
@@ -1261,6 +1262,7 @@ const ar: Dict = {
     } as Record<string, string>,
   },
   diag: {
+    lineDescErp: "الوصف أو كود الصنف في ERPNext",
     costUnderWarranty: "اختياري في الضمان: ضيف تكلفة (مثلاً سوء استخدام) والعميل هيوصله عرض سعر. سيبها فاضية لو الإصلاح مجاني.",
     qcBack: "رجع من فحص الجودة",
     costs: {
