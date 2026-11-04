@@ -127,6 +127,10 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
     if (c) { setFullName(c.full_name); setEmail(c.email ?? ""); }
   }
 
+  // Details that came from ERPNext can't be changed by hand
+  const erpLocked = lookupState === "found";
+  const lockedCls = "bg-stone-100 text-stone-700 cursor-not-allowed";
+
   async function lookup(code = itemCode) {
     if (!code.trim() || lookupState === "busy") return;
     setLookupState("busy");
@@ -269,14 +273,14 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
             className="sm:row-span-2 h-40 w-40 object-contain rounded-lg border border-stone-200 bg-stone-50" />
         )}
         <label className={label}>{t.item}
-          <input value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder={t.itemPh} className={input} />
+          <input value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder={t.itemPh} readOnly={erpLocked} className={`${input} ${erpLocked ? lockedCls : ""}`} />
         </label>
         <label className={label}>{t.barcode}
-          <input value={itemBarcode} onChange={(e) => setItemBarcode(e.target.value)} dir="ltr" className={input} />
+          <input value={itemBarcode} onChange={(e) => setItemBarcode(e.target.value)} dir="ltr" readOnly={erpLocked} className={`${input} ${erpLocked ? lockedCls : ""}`} />
         </label>
         {(itemDescription || lookupState === "found") && (
           <label className={`${label} sm:col-span-2`}>{t.itemDescription}
-            <textarea value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} rows={2} className={input} />
+            <textarea value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} rows={2} readOnly={erpLocked} className={`${input} ${erpLocked ? lockedCls : ""}`} />
           </label>
         )}
         <label className="sm:col-span-2 flex items-center gap-2 text-sm font-medium cursor-pointer">
