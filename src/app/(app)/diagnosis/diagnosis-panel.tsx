@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { toast } from "@/components/toast";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/client";
+import { compressImage } from "@/lib/compress-image";
 import { completeRepair, decideOverride, lookupCostItem, moveTicket, startDiagnosis, submitDiagnosis } from "./actions";
 
 export type Job = {
@@ -287,6 +289,7 @@ function DiagnoseForm({ d, t, busy, run, j, supervisor, costs }: RowProps & { su
 function RepairRow({ d, t, busy, run, j, technician }: RowProps & { technician: boolean }) {
   const [parts, setParts] = useState<{ code: string; qty: string }[]>([]);
   const [waitReason, setWaitReason] = useState("");
+  const [photos, setPhotos] = useState<File[]>([]);
   const set = (i: number, k: "code" | "qty", v: string) => setParts(parts.map((p, n) => (n === i ? { ...p, [k]: v } : p)));
   const clean = parts.filter((p) => p.code.trim()).map((p) => ({ code: p.code.trim(), qty: Number(p.qty) || 0 }));
 
@@ -306,8 +309,12 @@ function RepairRow({ d, t, busy, run, j, technician }: RowProps & { technician: 
             ))}
             <button className="self-start text-sm underline" onClick={() => setParts([...parts, { code: "", qty: "1" }])}>{t.addPart}</button>
           </div>
+          <label className="flex flex-col gap-1.5 text-sm font-medium">{t.afterPhotos}
+            <input type="file" accept="image/*" capture="environment" multiple onChange={(e) => setPhotos([...(e.target.files ?? [])].slice(0, 6))} className="text-sm font-normal" />
+          </label>
           <div className="flex flex-wrap gap-2 items-end">
-            <button disabled={busy || clean.some((p) => p.qty <= 0)} className={primary} onClick={() => run(() => completeRepair(j.id, clean), () => setParts([]))}>{t.complete}</button>
+            <button disabled={busy || clean.some((p) => p.qty <= 0)} className={primary}
+              onClick={() => run(async () => { const up = await uploadAfterPhotos(j.id, photos); if (up) return { error: up }; return completeRepair(j.id, clean); }, () => { setParts([]); setPhotos([]); })}>{t.complete}</button>
             <input value={waitReason} onChange={(e) => setWaitReason(e.target.value)} placeholder={t.partsReason} aria-label={t.partsReason} className={`${input} flex-[1_1_220px]`} />
             <button disabled={busy || !waitReason.trim()} className={ghost} onClick={() => run(() => moveTicket(j.id, "awaiting_parts", waitReason))}>{t.waitParts}</button>
           </div>
@@ -331,4 +338,18 @@ function QcRow({ d, t, busy, run, j, supervisor }: RowProps & { supervisor: bool
       ) : <span className="text-xs text-stone-500">{t.waitingQc}</span>}
     </div>
   );
+}
+
+// Optional after-repair photos go to the same private bucket as the intake photos; the customer sees them on the tracking page
+async function uploadAfterPhotos(ticketId: string, files: File[]): Promise<string | undefined> {
+  if (!files.length) return;
+  const supabase = createClient();
+  for (let i = 0; i < files.length; i++) {
+    const f = await compressImage(files[i]);
+    const path = `${ticketId}/after_repair-${i + 1}-${Date.now()}.${(f.name.split(".").pop() || "jpg").toLowerCase()}`;
+    const up = await supabase.storage.from("ticket-media").upload(path, f, { contentType: f.type || "image/jpeg" });
+    if (up.error) return "failed";
+    const row = await supabase.from("ticket_media").insert({ ticket_id: ticketId, stage: "after_repair", storage_path: path });
+    if (row.error) return "failed";
+  }
 }

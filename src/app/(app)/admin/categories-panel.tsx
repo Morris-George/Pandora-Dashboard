@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useAsk } from "@/components/ask";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import { addCategory, setCategoryCost, syncCategoryCosts, deleteCategory, updateCategory } from "./actions";
 import { toast } from "@/components/toast";
@@ -12,6 +13,7 @@ const small = "rounded-lg border px-2.5 py-1.5 text-xs disabled:opacity-40";
 export function CategoriesPanel({ locale, categories }: { locale: Locale; categories: Cat[] }) {
   const t = dictionaries[locale].admin;
   const [busy, start] = useTransition();
+  const [ask, askDialog] = useAsk();
   const [error, setError] = useState("");
   const [arDraft, setArDraft] = useState<Record<string, string>>({});
   const [enDraft, setEnDraft] = useState<Record<string, string>>({});
@@ -30,6 +32,7 @@ export function CategoriesPanel({ locale, categories }: { locale: Locale; catego
 
   return (
     <section className="bg-white rounded-2xl border border-stone-200 p-6 flex flex-col gap-4">
+      {askDialog}
       <div>
         <h2 className="text-lg font-semibold">{t.catTitle}</h2>
         <p className="text-sm text-stone-600 mt-1">{t.catNote}</p>
@@ -80,7 +83,7 @@ export function CategoriesPanel({ locale, categories }: { locale: Locale; catego
                     {c.active ? t.catRemove : t.catRestore}
                   </button>
                   <button disabled={busy} className={`${small} border-red-800 bg-red-800 text-white w-20`}
-                    onClick={() => { if (window.confirm(t.catDeleteConfirm(c.name))) run(() => deleteCategory(c.name)); }}>
+                    onClick={async () => { if (await ask({ title: t.catDelete, message: t.catDeleteConfirm(c.name), confirmLabel: t.catDelete, cancelLabel: t.dlg.cancel, danger: true })) run(() => deleteCategory(c.name)); }}>
                     {t.catDelete}
                   </button>
                 </>

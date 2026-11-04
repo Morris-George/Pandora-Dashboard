@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useAsk } from "@/components/ask";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import { addBranch, removeBranch, setBranchWhatsapp, updateBranch } from "./actions";
 
@@ -14,7 +15,9 @@ type Store = { id: string; name: string; whatsapp: string | null; prefix: string
 // Admin → Stores: add, rename, change ticket prefix, remove, and each store's WhatsApp number
 export function StoresPanel({ locale, stores }: { locale: Locale; stores: Store[] }) {
   const t = dictionaries[locale].admin.stores;
+  const cancel = dictionaries[locale].admin.dlg.cancel;
   const [busy, start] = useTransition();
+  const [ask, askDialog] = useAsk();
   const [rows, setRows] = useState(Object.fromEntries(stores.map((s) => [s.id, { name: s.name, prefix: s.prefix, wa: s.whatsapp ?? "" }])));
   const [msg, setMsg] = useState<{ id: string; ok: boolean; text: string } | null>(null);
   const [nw, setNw] = useState({ name: "", prefix: "" });
@@ -36,6 +39,7 @@ export function StoresPanel({ locale, stores }: { locale: Locale; stores: Store[
 
   return (
     <section className="bg-white rounded-2xl border border-stone-200 p-6 flex flex-col gap-4">
+      {askDialog}
       <div>
         <h2 className="text-lg font-semibold">{t.title}</h2>
         <p className="text-sm text-stone-600 mt-1 max-w-2xl">{t.note}</p>
@@ -58,7 +62,7 @@ export function StoresPanel({ locale, stores }: { locale: Locale; stores: Store[
                 <button disabled={busy || !dirty || !v.name.trim()} onClick={() => save(s)} className={saveBtn}>{t.save}</button>
                 {s.hq ? <span /> : (
                   <button disabled={busy} className={removeBtn}
-                    onClick={() => { if (window.confirm(t.removeConfirm(s.name))) start(async () => { const r = await removeBranch(s.id); if (r.error) setMsg({ id: s.id, ok: false, text: t.failed }); }); }}>
+                    onClick={async () => { if (await ask({ title: t.remove, message: t.removeConfirm(s.name), confirmLabel: t.remove, cancelLabel: cancel, danger: true })) start(async () => { const r = await removeBranch(s.id); if (r.error) setMsg({ id: s.id, ok: false, text: t.failed }); }); }}>
                     {t.remove}
                   </button>
                 )}

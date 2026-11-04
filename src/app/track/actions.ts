@@ -30,3 +30,13 @@ export async function respond(token: string, last4: string, approve: boolean, re
   }
   return {};
 }
+
+export async function sendFeedback(token: string, rating: number, comment: string): Promise<{ error?: string }> {
+  const p = z.object({ token: z.string().regex(/^[0-9a-f]{32}$/), rating: z.number().int().min(1).max(5), comment: z.string().max(1000) })
+    .safeParse({ token, rating, comment: comment.trim() });
+  if (!p.success) return { error: "invalid" };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("track_feedback", { p_token: p.data.token, p_rating: p.data.rating, p_comment: p.data.comment });
+  if (error || !data) return { error: "failed" };
+  return {};
+}

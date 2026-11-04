@@ -1,7 +1,7 @@
 // Customer email look and wording, edited in Admin → Email design (app_settings 'email_templates').
 // Shared by the sender (server) and the live preview in Admin (client).
-export type EmailKind = "received" | "quote" | "ready" | "collected";
-export const EMAIL_KINDS: EmailKind[] = ["received", "quote", "ready", "collected"];
+export type EmailKind = "received" | "quote" | "ready" | "reminder" | "collected";
+export const EMAIL_KINDS: EmailKind[] = ["received", "quote", "ready", "reminder", "collected"];
 
 export type EmailDesign = {
   brand: string; headerColor: string; headerText: string; buttonColor: string; buttonText: string;
@@ -22,7 +22,8 @@ export const EMAIL_COPY: Record<EmailKind, EmailCopy> = {
   received: { subject: "استلمنا قطعتك للصيانة — {ticket}", ar: "استلمنا قطعتك في الفرع وهنبعتها للصيانة. تقدر تتابع حالتها من الرابط.", en: "We received your piece at the store and will send it for repair. Follow its status from the link." },
   quote: { subject: "عرض سعر الصيانة جاهز — {ticket}", ar: "عرض سعر الصيانة جاهز. افتح الرابط عشان توافق أو ترفض.", en: "Your repair quote is ready. Open the link to approve or reject it." },
   ready: { subject: "قطعتك جاهزة للاستلام — {ticket}", ar: "قطعتك جاهزة للاستلام من الفرع. هات معاك رقم التيكيت.", en: "Your piece is ready for pickup at the store. Please bring your ticket number." },
-  collected: { subject: "شكراً لاستلام قطعتك — {ticket}", ar: "تم تسليم قطعتك. شكراً لاختيارك باندورا.", en: "Your piece has been collected. Thank you for choosing Pandora." },
+  reminder: { subject: "قطعتك لسه مستنياك في الفرع — {ticket}", ar: "نفكّرك إن قطعتك جاهزة ومستنياك في الفرع. هات معاك إيصال الاستلام.", en: "A reminder that your piece is ready and waiting for you at the store. Please bring your receipt." },
+  collected: { subject: "شكراً لاستلام قطعتك — {ticket}", ar: "تم تسليم قطعتك. شكراً لاختيارك باندورا. يسعدنا تقييمك لتجربتك من الرابط.", en: "Your piece has been collected. Thank you for choosing Pandora. We'd love your rating from the link." },
 };
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { runErpSync, syncFaultCosts } from "@/lib/erp-sync";
 import { flushEmails } from "@/lib/email";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 60;
 
@@ -12,6 +13,7 @@ export async function GET(req: Request) {
   }
   const summary = await runErpSync("cron");
   const costs = await syncFaultCosts().catch(() => -1); // fault category prices from ERPNext
+  const { data: reminders } = await createAdminClient().rpc("queue_pickup_reminders"); // 3 / 7 / 14 days ready for pickup
   const emails = await flushEmails(100); // catch-up for anything not sent at the time
-  return NextResponse.json({ ok: summary.errors.length === 0, summary, costs, emails });
+  return NextResponse.json({ ok: summary.errors.length === 0, summary, costs, reminders, emails });
 }

@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { LangToggle } from "@/app/lang-toggle";
 import { Brand } from "@/components/brand";
 import { QuoteResponse } from "./quote-response";
+import { FeedbackForm } from "./feedback-form";
 
 export const metadata = { title: "Pandora — Track your repair", robots: { index: false } };
 
@@ -19,6 +20,7 @@ const STEP: Record<string, number> = {
 type Tracked = {
   ticket_no: string; item_name: string; status: string; branch: string; branch_whatsapp: string | null; first_name: string; created_at: string;
   warranty: string; amount_due: number; history: { status: string; at: string }[];
+  eta: string | null; media: { stage: string; path: string }[]; rated: boolean;
   quote: { status: string; lines: { desc: string; qty: number; price: number }[]; subtotal: number; tax: number; total: number } | null;
 };
 
@@ -62,6 +64,13 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
   }
 
   const step = STEP[tk.status] ?? 0;
+  // Before (intake) and after-repair photos, as short-lived signed links
+  const { data: signed } = tk.media.length
+    ? await createAdminClient().storage.from("ticket-media").createSignedUrls(tk.media.map((m) => m.path), 3600)
+    : { data: [] };
+  const photos = tk.media.map((m, i) => ({ stage: m.stage, url: signed?.[i]?.signedUrl })).filter((p): p is { stage: string; url: string } => !!p.url);
+  const before = photos.filter((p) => p.stage === "intake"), after = photos.filter((p) => p.stage === "after_repair");
+  const day = (s: string) => new Date(s).toLocaleDateString(loc, { weekday: "long", day: "numeric", month: "long" });
   const stopped = ["lost_in_transit", "cancelled"].includes(tk.status);
   const lastAt = tk.history.length ? tk.history[tk.history.length - 1].at : tk.created_at;
   const waitingQuote = tk.status === "awaiting_customer_approval" && tk.quote?.status === "sent";
@@ -85,6 +94,12 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
           <div className="text-sm text-stone-600 mt-1">{t.statusNote[tk.status] ?? ""}</div>
           <div className="text-xs text-stone-500 mt-2">{t.updated(fmt(lastAt))}</div>
         </div>
+        {tk.eta && !stopped && (
+          <div className="rounded-xl border border-stone-200 px-4 py-3 flex items-center justify-between gap-3">
+            <span className="text-sm text-stone-600">{t.eta}</span>
+            <span className="text-sm font-semibold">{day(tk.eta)}</span>
+          </div>
+        )}
         {!stopped && (
           <ol className="flex flex-col" aria-label={t.progress}>
             {t.steps.map((s, i) => (
@@ -105,6 +120,34 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
           <p className="text-sm">{Number(tk.amount_due) > 0 ? t.payAtPickup(money(tk.amount_due)) : t.freePickup}</p>
         )}
       </section>
+
+      {photos.length > 0 && (
+        <section className="rise bg-white rounded-2xl border border-stone-200 p-6 flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">{t.photosTitle}</h2>
+          {[[t.before, before], [t.after, after]].map(([label, list]) => (list as typeof photos).length > 0 && (
+            <div key={label as string} className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-stone-600">{label as string}</span>
+              <div className="grid grid-cols-3 gap-2">
+                {(list as typeof photos).map((p) => (
+                  <a key={p.url} href={p.url} target="_blank" rel="noopener" className="block aspect-square overflow-hidden rounded-lg border border-stone-200 bg-stone-50">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.url} alt={label as string} className="w-full h-full object-cover" loading="lazy" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {["collected", "closed"].includes(tk.status) && (
+        <section className="rise bg-white rounded-2xl border border-stone-200 p-6 flex flex-col gap-3">
+          <h2 className="text-lg font-semibold">{t.rateTitle}</h2>
+          {tk.rated ? <p className="text-sm text-emerald-800 font-medium">{t.rateThanks}</p> : (
+            <><p className="text-sm text-stone-600">{t.rateNote}</p><FeedbackForm locale={locale} token={token} /></>
+          )}
+        </section>
+      )}
 
       {tk.quote && (
         <section className="rise bg-white rounded-2xl border border-stone-200 p-6 flex flex-col gap-3">

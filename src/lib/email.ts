@@ -57,7 +57,7 @@ export async function flushEmails(limit = 20): Promise<{ sent: number; failed: n
   for (const r of rows ?? []) {
     const t = r.tickets as unknown as { ticket_no: string; item_name: string; tracking_token: string; customers: { full_name: string } | null } | null;
     if (!t) continue;
-    const kind = r.kind as Kind;
+    const kind = (r.kind.startsWith("reminder") ? "reminder" : r.kind) as Kind; // reminder3/7/14 share one template
     const err = await smtp.sendMail({
       from: c.from, to: r.to_email, headers: { "Auto-Submitted": "auto-generated", "X-Auto-Response-Suppress": "All" }, subject: emailSubject(tpl, kind, t.ticket_no),
       html: renderEmail(tpl, kind, t.customers?.full_name ?? "", t.ticket_no, t.item_name, `${SITE}/track/${t.tracking_token}`),

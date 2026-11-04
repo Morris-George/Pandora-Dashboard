@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "@/components/toast";
 import { BarcodeScan } from "@/components/barcode-scan";
+import { useAsk } from "@/components/ask";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
 import { adminApproveBatch, approveBatch, courierPickup, createOutbound, createReturn, markItemLost, receiveBatch, receiveLateItem } from "./actions";
@@ -32,6 +33,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
 }) {
   const t = dictionaries[locale].dispatch;
   const [busy, start] = useTransition();
+  const [ask, askDialog] = useAsk();
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [picked, setPicked] = useState<string[]>([]); // batches ticked for approval
@@ -62,6 +64,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
 
   return (
     <div className="flex flex-col gap-6">
+      {askDialog}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t.title}</h1>
         {myBranches.length > 1 && (
@@ -111,7 +114,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
                 {role === "manager" && b.mine && <span className="text-xs text-stone-500">{t.ownBatch}</span>}
                 {isAdmin && b.mine && (
                   <button type="button" disabled={busy} className="text-xs font-semibold underline"
-                    onClick={(e) => { e.preventDefault(); const why = window.prompt(t.adminApproveReason); if (why?.trim()) run(() => adminApproveBatch(b.id, why)); }}>
+                    onClick={async (e) => { e.preventDefault(); const why = await ask({ title: t.adminApprove, message: t.adminApproveReason, input: true, confirmLabel: t.adminApprove, cancelLabel: t.cancel }); if (why?.trim()) run(() => adminApproveBatch(b.id, why)); }}>
                     {t.adminApprove}
                   </button>
                 )}
@@ -413,10 +416,12 @@ function BulkReceive({ t, batches, busy, run }: { t: T; batches: BatchRow[]; bus
 
 function IncidentCard({ t, b, busy, run, receive, lose }: { t: T; b: BatchRow; busy: boolean; run: Run; receive: boolean; lose: boolean }) {
   const [code, setCode] = useState("");
+  const [ask, askDialog] = useAsk();
   const pending = b.items.filter((i) => i.pending);
   const take = (c: string) => { if (c.trim()) run(() => receiveLateItem(b.id, c), () => setCode("")); };
   return (
     <div className="border-t border-stone-100 pt-3 flex flex-col gap-3">
+      {askDialog}
       <BatchHead t={t} b={b} />
       <div className="text-sm font-medium">{t.pendingItems}:</div>
       {pending.map((i) => (
@@ -425,7 +430,7 @@ function IncidentCard({ t, b, busy, run, receive, lose }: { t: T; b: BatchRow; b
           <span className="text-stone-700">{i.itemName}</span>
           {lose && (
             <button type="button" disabled={busy} className="text-xs font-semibold text-red-800 underline"
-              onClick={() => { const why = window.prompt(t.lostReason); if (why?.trim()) run(() => markItemLost(b.id, i.ticketNo, why)); }}>
+              onClick={async () => { const why = await ask({ title: `${t.markLost} · ${i.ticketNo}`, message: t.lostReason, input: true, confirmLabel: t.markLost, cancelLabel: t.cancel, danger: true }); if (why?.trim()) run(() => markItemLost(b.id, i.ticketNo, why)); }}>
               {t.markLost}
             </button>
           )}
