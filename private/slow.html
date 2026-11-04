@@ -56,7 +56,7 @@ table.hm{width:auto}table.hm th,table.hm td{text-align:center;padding:9px 12px;b
 .pk{display:flex;flex-direction:column;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:14px;margin-bottom:6px;cursor:pointer;transition:background .12s,border-color .12s;user-select:none}
 .pk:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}
 .pk.sel{background:var(--soft);border-color:var(--accent);box-shadow:inset 5px 0 0 var(--accent)}
-.pk .pkt{display:flex;gap:12px;align-items:center}.pkp{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-left:36px;cursor:default;line-height:1.7}.dst{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--accent);border-radius:999px;padding:2px 4px 2px 12px;background:var(--surface)}.dst input{width:60px;padding:3px 6px;font-weight:700;text-align:center}.dst .x{border:0;background:none;color:var(--ink2);cursor:pointer;padding:2px;display:inline-flex}.pkp select{padding:3px 8px;border-radius:999px}.pk .ck{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;color:transparent}
+.pk .pkt{display:flex;gap:12px;align-items:center}.pkp{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-left:36px;cursor:default;line-height:1.7}.dst{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--accent);border-radius:999px;padding:2px 4px 2px 12px;background:var(--surface)}.dst input{width:60px;padding:3px 6px;font-weight:700;text-align:center}.dst .x{border:0;background:none;color:var(--ink2);cursor:pointer;padding:2px;display:inline-flex}.pkp select{padding:3px 8px;border-radius:999px}.ln{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0}.ln select{max-width:46vw}.ln input{width:70px;text-align:center;font-weight:700}.ln .arr{color:var(--accent)}.ln .x{border:0;background:none;color:var(--ink2);cursor:pointer;padding:2px;display:inline-flex}.pk .ck{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;color:transparent}
 .pk.sel .ck{background:var(--accent);border-color:var(--accent);color:#2A1018}
 .pk .ck .ic{width:15px;height:15px}
 .pk .mid{min-width:0;flex:1}.pk .mid b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -369,76 +369,87 @@ $('xlsx').onclick=()=>{if(!ITEMS.length)return;const wb=XLSX.utils.book_new(),ha
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows().map(i=>({SKU:i.sku,Item:i.name,Category:i.cat,Store:i.store,Pieces:i.qty,...(hasV?{Value:i.val}:{}),Days:i.age,'Sold here':i.soldHere,'Sold elsewhere':i.elsewhere.map(([k,v])=>k+' '+v).join(', '),'Can move':i.move||0,'Sold all stores':i.sold,'In refill order':i.order}))),'Items');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(group('store').map(o=>({Store:o.g,SKUs:o.skus,Pieces:o.qty,...(hasV?{Value:o.val}:{}),'Can move out':o.move,'Sold nowhere':o.dead}))),'By store');
   XLSX.writeFile(wb,'Slow Moving '+new Date().toISOString().slice(0,10)+'.xlsx')};
-/* ---------- Start transfer: pick the slow items, see every suggested store, type how many pieces go to which store, download one Excel ---------- */
+/* ---------- Start transfer: one row per SKU (merged across stores), shows every store it is slow in, and the from -> to lines with the pieces you type ---------- */
 IC.check='<path d="M5 12.5l4.5 4.5L19 7.5"/>';
 const PK={scope:'',q:'',cat:'',mv:false,sel:new Map(),lim:300};
-const pkKey=i=>i.sku+'|'+i.store;
-function pkDest(){const m=new Map();for(const t of TR){const k=pkKey(t.i);(m.get(k)||m.set(k,[]).get(k)).push({to:t.to,qty:t.qty})}return m}
-let PKD=new Map();
-const pkTot=e=>[...e.plan.values()].reduce((a,x)=>a+x,0);
-const pkStores=()=>[...new Set([...ITEMS.map(i=>i.store),...ITEMS.flatMap(i=>i.elsewhere.map(x=>x[0]))])].sort();
-function pkList(){const q=PK.q.trim().toUpperCase();return ITEMS.filter(i=>(!PK.scope||i.store===PK.scope)&&(!PK.cat||i.cat===PK.cat)&&(!PK.mv||i.move>0)&&(!q||i.sku.includes(q)||String(i.name).toUpperCase().includes(q)||String(i.ean).includes(q))).sort((a,b)=>(b.move-a.move)||(b.qty-a.qty)||a.sku.localeCompare(b.sku))}
+let PKG=new Map(),PKD=new Map();
+const pkAll=()=>[...new Set([...ITEMS.map(i=>i.store),...ITEMS.flatMap(i=>i.elsewhere.map(x=>x[0]))])].sort();
+const pkQty=(g,st)=>g.items.filter(i=>i.store===st).reduce((a,i)=>a+i.qty,0);
+const pkUsed=(e,st,skip)=>e.lines.reduce((a,l,ix)=>a+(ix!==skip&&l.from===st?l.qty:0),0);
+const pkRoom=(e,st,skip)=>Math.max(0,pkQty(e.g,st)-pkUsed(e,st,skip));
+const pkPcs=e=>e.lines.reduce((a,l)=>a+(l.to?l.qty:0),0);
+function pkBuild(){PKG=new Map();for(const i of ITEMS){const g=PKG.get(i.sku)||PKG.set(i.sku,{sku:i.sku,name:i.name,cat:i.cat,ean:i.ean,items:[]}).get(i.sku);g.items.push(i)}
+  PKD=new Map();for(const t of TR){(PKD.get(t.i.sku)||PKD.set(t.i.sku,[]).get(t.i.sku)).push({from:t.from,to:t.to,qty:t.qty})}}
+const pkScoped=g=>PK.scope?g.items.filter(i=>i.store===PK.scope):g.items;
+function pkList(){const q=PK.q.trim().toUpperCase();
+  return [...PKG.values()].filter(g=>{const si=pkScoped(g);return si.length&&(!PK.cat||g.cat===PK.cat)&&(!PK.mv||si.some(i=>i.move>0))&&(!q||g.sku.includes(q)||String(g.name).toUpperCase().includes(q)||String(g.ean).includes(q))})
+   .sort((a,b)=>(pkScoped(b).reduce((x,i)=>x+i.move,0)-pkScoped(a).reduce((x,i)=>x+i.move,0))||(pkScoped(b).reduce((x,i)=>x+i.qty,0)-pkScoped(a).reduce((x,i)=>x+i.qty,0))||a.sku.localeCompare(b.sku))}
 function openPk(){if(!ITEMS.length){showErr('Run the report first, then press Start transfer.');return}
-  showErr('');PKD=pkDest();for(const [k,e] of [...PK.sel]){const i=ITEMS.find(x=>pkKey(x)===k);if(!i)PK.sel.delete(k);else e.i=i}
-  $('stB').innerHTML=`<div class="mh"><div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:800">${ic('truck')} Start transfer</div><div class="note">Choose a store or all stores together. Tap an item to pick it, then type how many pieces go to each store.</div></div><button class="btn sm" data-pkclose aria-label="Close">${ic('x')}</button></div>
+  showErr('');pkBuild();
+  for(const [k,e] of [...PK.sel]){const g=PKG.get(k);if(!g){PK.sel.delete(k);continue}e.g=g;e.lines=e.lines.filter(l=>pkQty(g,l.from)>0);for(let ix=0;ix<e.lines.length;ix++)e.lines[ix].qty=Math.min(e.lines[ix].qty,pkRoom(e,e.lines[ix].from,ix))}
+  $('stB').innerHTML=`<div class="mh"><div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:800">${ic('truck')} Start transfer</div><div class="note">Each SKU appears once, with every store where it is slow. Tap it to pick it, then set from which store, to which store and how many pieces.</div></div><button class="btn sm" data-pkclose aria-label="Close">${ic('x')}</button></div>
   <div class="pkctl"><div class="chips" id="pkScope"></div><div class="row"><input type="search" id="pkQ" placeholder="Search SKU, EAN or name" style="flex:1;min-width:160px"><select id="pkCat"></select><span class="chip" id="pkMv" data-pkmv>Can move to a store only</span><button class="btn sm" data-pkall>Select all shown</button><button class="btn sm" data-pknone>Clear selection</button></div><div class="note" id="pkCnt"></div></div>
   <div id="pkList"></div>
   <div class="pkfoot"><div id="pkSum"></div><button class="btn go" id="pkGo" data-pkgo>${ic('dl')} Download Excel</button></div>`;
   $('pkQ').value=PK.q;$('pkQ').oninput=()=>{PK.q=$('pkQ').value;PK.lim=300;pkDraw()};$('pkCat').onchange=()=>{PK.cat=$('pkCat').value;PK.lim=300;pkDraw()};
   $('stM').hidden=false;document.body.style.overflow='hidden';pkDraw()}
 function closePk(){$('stM').hidden=true;document.body.style.overflow=''}
-function pkLeft(e){return e.i.qty-pkTot(e)}
-function pkPlanHtml(i){const k=pkKey(i),e=PK.sel.get(k),d=PKD.get(k)||[],sold=new Map(i.elsewhere);
-  if(!e)return `<div class="pkp note">${d.length?'Suggested: '+d.map(x=>`<b>${esc(x.to)}</b> ${fmt(x.qty)}`).join(' · '):'No other store sold it, no suggestion.'}</div>`;
-  const add=pkStores().filter(st=>st!==i.store&&!e.plan.has(st));
-  return `<div class="pkp"><span class="note">Send to:</span>${[...e.plan].map(([st,q])=>`<span class="dst"><b>${esc(st)}</b><input type="number" inputmode="numeric" min="0" max="${i.qty}" value="${q}" data-pkq="${esc(st)}" aria-label="Pieces to ${esc(st)}">${sold.has(st)?`<small class="note" title="Sold there in the last ${J.months} months">sold ${fmt(sold.get(st))}</small>`:''}<button class="x" data-pkdel="${esc(st)}" aria-label="Remove ${esc(st)}">${ic('x')}</button></span>`).join('')}
-   ${add.length?`<select data-pkadd><option value="">+ Add a store</option>${add.map(st=>`<option>${esc(st)}</option>`).join('')}</select>`:''}<span class="note" data-pkleft></span></div>`}
-function pkLeftTxt(r,e){const el=r.querySelector('[data-pkleft]');if(el){const l=pkLeft(e);el.innerHTML=`Staying in ${esc(e.i.store)}: <b>${fmt(l)}</b>`}}
-function pkRow(i){const k=pkKey(i),e=PK.sel.get(k);
-  return `<div class="pk${e?' sel':''}" data-pk="${esc(k)}"><div class="pkt"><span class="ck">${ic('check')}</span>${pic(i.sku).replace('class="img"','class="img lg"')}<div class="mid"><b title="${esc(i.name)}">${esc(i.name||i.sku)}</b><div class="note">${esc(i.sku)} · <b style="display:inline">${esc(i.store)}</b>${i.age!=null?` · ${fmt(i.age)} days`:''}</div></div><div class="qt"><b>${fmt(i.qty)}</b> <small class="note">pcs</small></div></div>${pkPlanHtml(i)}</div>`}
-function pkRedo(r){const i=ITEMS.find(x=>pkKey(x)===r.dataset.pk);if(!i)return;const t=document.createElement('div');t.innerHTML=pkRow(i);const n=t.firstChild;r.replaceWith(n);const e=PK.sel.get(r.dataset.pk);if(e)pkLeftTxt(n,e);pkSum();pkDrawScope()}
-function pkDrawScope(){const stores=[...new Set(ITEMS.map(i=>i.store))].sort(),cn=st=>ITEMS.filter(i=>!st||i.store===st).length,sn=st=>[...PK.sel.values()].filter(e=>(!st||e.i.store===st)&&pkTot(e)>0).length;
-  $('pkScope').innerHTML=[''].concat(stores).map(st=>`<span class="chip ${PK.scope===st?'on':''}" data-pkscope="${esc(st)}">${st?esc(st):'All stores together'} <b>${fmt(cn(st))}</b>${sn(st)?` <span class="note">· ${sn(st)} picked</span>`:''}</span>`).join('')}
+function pkLines(g){ // the suggestion, from the transfers table, for the chosen store (or every store)
+  return (PKD.get(g.sku)||[]).filter(x=>!PK.scope||x.from===PK.scope).map(x=>({from:x.from,to:x.to,qty:x.qty}))}
+function pkLn(e,l,ix){const froms=e.g.items.map(i=>i.store);
+  return `<div class="ln" data-ln="${ix}"><select data-lf aria-label="From store">${froms.map(st=>`<option${st===l.from?' selected':''}>${esc(st)}</option>`).join('')}</select><span class="arr">${ic('arrow')}</span><select data-lt aria-label="To store"><option value="">Choose a store</option>${pkAll().filter(st=>st!==l.from).map(st=>`<option${st===l.to?' selected':''}>${esc(st)}</option>`).join('')}</select><input type="number" inputmode="numeric" min="0" max="${pkQty(e.g,l.from)}" value="${l.qty}" data-lq aria-label="Pieces"><span class="note">pcs</span><button class="x" data-lx aria-label="Remove this line">${ic('x')}</button></div>`}
+function pkStay(e){return 'Staying: '+e.g.items.map(i=>`<b>${esc(i.store)}</b> ${fmt(pkRoom(e,i.store))}`).join(' · ')}
+function pkPlanHtml(g){const e=PK.sel.get(g.sku),slow=g.items.map(i=>`<b>${esc(i.store)}</b> ${fmt(i.qty)}${i.age!=null?` <span class="have">(${fmt(i.age)} d)</span>`:''}`).join(' · ');
+  const head=`<div class="note">Slow in: ${slow}</div>`;
+  if(!e){const L=pkLines(g),by=new Map();L.forEach(l=>(by.get(l.from)||by.set(l.from,[]).get(l.from)).push(l));
+    return `<div class="pkp" style="display:block">${head}<div class="note">${L.length?'Suggested: '+[...by].map(([f,a])=>`from <b>${esc(f)}</b> to ${a.map(l=>`<b>${esc(l.to)}</b> ${fmt(l.qty)}`).join(', ')}`).join(' · '):'No other store sold it, no suggestion.'}</div></div>`}
+  return `<div class="pkp" style="display:block">${head}<div class="lns">${e.lines.map((l,ix)=>pkLn(e,l,ix)).join('')}</div><div class="row" style="margin-top:6px"><button class="sug" data-ladd>+ Add a transfer line</button><span class="note" data-pkleft>${pkStay(e)}</span></div></div>`}
+function pkRow(g){const e=PK.sel.get(g.sku),si=pkScoped(g),tot=si.reduce((a,i)=>a+i.qty,0);
+  return `<div class="pk${e?' sel':''}" data-pk="${esc(g.sku)}"><div class="pkt"><span class="ck">${ic('check')}</span>${pic(g.sku).replace('class="img"','class="img lg"')}<div class="mid"><b title="${esc(g.name)}">${esc(g.name||g.sku)}</b><div class="note">${esc(g.sku)} · ${esc(g.cat)} · slow in <b style="display:inline">${g.items.length}</b> store${g.items.length>1?'s':''}</div></div><div class="qt"><b>${fmt(tot)}</b> <small class="note">pcs slow</small></div></div>${pkPlanHtml(g)}</div>`}
+function pkRedo(r){const g=PKG.get(r.dataset.pk);if(!g)return;const t=document.createElement('div');t.innerHTML=pkRow(g);r.replaceWith(t.firstChild);pkSum();pkDrawScope()}
+function pkDrawScope(){const stores=[...new Set(ITEMS.map(i=>i.store))].sort(),cn=st=>new Set(ITEMS.filter(i=>!st||i.store===st).map(i=>i.sku)).size,sn=st=>[...PK.sel.values()].filter(e=>e.lines.some(l=>l.to&&l.qty>0&&(!st||l.from===st))).length;
+  $('pkScope').innerHTML=[''].concat(stores).map(st=>`<span class="chip ${PK.scope===st?'on':''}" data-pkscope="${esc(st)}">${st?esc(st):'All stores together'} <b>${fmt(cn(st))}</b>${sn(st)?` <span class="note">· ${sn(st)} to move</span>`:''}</span>`).join('')}
 function pkDraw(){
-  const stores=[...new Set(ITEMS.map(i=>i.store))].sort();if(PK.scope&&!stores.includes(PK.scope))PK.scope='';
-  pkDrawScope();
+  const stores=[...new Set(ITEMS.map(i=>i.store))];if(PK.scope&&!stores.includes(PK.scope))PK.scope='';pkDrawScope();
   const cats=[...new Set(ITEMS.filter(i=>!PK.scope||i.store===PK.scope).map(i=>i.cat))].sort();if(PK.cat&&!cats.includes(PK.cat))PK.cat='';
   $('pkCat').innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option ${c===PK.cat?'selected':''}>${esc(c)}</option>`).join('');
   $('pkMv').classList.toggle('on',PK.mv);
   const l=pkList(),shown=l.slice(0,PK.lim);
-  $('pkCnt').textContent=`${fmt(l.length)} items shown${l.length>shown.length?` (first ${fmt(shown.length)})`:''}`;
-  $('pkList').innerHTML=shown.map(pkRow).join('')+(l.length>shown.length?`<button class="btn" data-pkmore style="margin:6px 0">Show ${fmt(Math.min(300,l.length-shown.length))} more</button>`:'')||'<div class="note" style="padding:20px">No items match.</div>';
-  $('pkList').querySelectorAll('.pk.sel').forEach(r=>pkLeftTxt(r,PK.sel.get(r.dataset.pk)));pkSum()}
-function pkSum(){const v=[...PK.sel.values()].filter(e=>pkTot(e)>0),pcs=v.reduce((a,e)=>a+pkTot(e),0),n=new Set(v.map(e=>e.i.store)).size;
-  $('pkSum').innerHTML=v.length?`<b>${fmt(v.length)}</b> items · <b>${fmt(pcs)}</b> pieces to move · from <b>${n}</b> store${n>1?'s':''}`:'<span class="note">Nothing to move yet. Tap an item, then type the pieces for each store.</span>';$('pkGo').disabled=!v.length}
-function pkSelect(i,on){const k=pkKey(i);if(on)PK.sel.set(k,{i,plan:new Map((PKD.get(k)||[]).map(x=>[x.to,x.qty]))});else PK.sel.delete(k)}
+  $('pkCnt').textContent=`${fmt(l.length)} SKUs shown${l.length>shown.length?` (first ${fmt(shown.length)})`:''}`;
+  $('pkList').innerHTML=shown.map(pkRow).join('')+(l.length>shown.length?`<button class="btn" data-pkmore style="margin:6px 0">Show ${fmt(Math.min(300,l.length-shown.length))} more</button>`:'')||'<div class="note" style="padding:20px">No items match.</div>';pkSum()}
+function pkSum(){const v=[...PK.sel.values()].filter(e=>pkPcs(e)>0),pcs=v.reduce((a,e)=>a+pkPcs(e),0),L=v.flatMap(e=>e.lines.filter(l=>l.to&&l.qty>0)),f=new Set(L.map(l=>l.from)).size,t=new Set(L.map(l=>l.to)).size;
+  $('pkSum').innerHTML=v.length?`<b>${fmt(v.length)}</b> SKUs · <b>${fmt(pcs)}</b> pieces · from <b>${f}</b> store${f>1?'s':''} to <b>${t}</b> store${t>1?'s':''}`:'<span class="note">Nothing to move yet. Tap an item, then set from, to and the pieces.</span>';$('pkGo').disabled=!v.length}
+function pkSelect(g,on){if(on)PK.sel.set(g.sku,{g,lines:pkLines(g).filter(l=>pkQty(g,l.from)>0)});else PK.sel.delete(g.sku);
+  const e=PK.sel.get(g.sku);if(e)for(let ix=0;ix<e.lines.length;ix++)e.lines[ix].qty=Math.min(e.lines[ix].qty,pkRoom(e,e.lines[ix].from,ix))}
 function pkExport(){const rows=[];
-  for(const e of [...PK.sel.values()].sort((a,b)=>a.i.store.localeCompare(b.i.store)||a.i.cat.localeCompare(b.i.cat)||a.i.sku.localeCompare(b.i.sku)))for(const [to,q] of e.plan)if(q>0)rows.push({from:e.i.store,to,sku:e.i.sku,ean:e.i.ean,name:e.i.name,cat:e.i.cat,qty:q});
-  if(!rows.length)return;
+  for(const e of [...PK.sel.values()])for(const l of e.lines)if(l.to&&l.qty>0)rows.push({from:l.from,to:l.to,sku:e.g.sku,ean:e.g.ean,name:e.g.name,cat:e.g.cat,qty:l.qty});
+  rows.sort((a,b)=>a.from.localeCompare(b.from)||a.to.localeCompare(b.to)||a.cat.localeCompare(b.cat)||a.sku.localeCompare(b.sku));if(!rows.length)return;
   const L=r=>({'From store':r.from,'To store':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Pcs':r.qty,'Done':''});
   const wb=XLSX.utils.book_new(),mk=(a,w)=>{const ws=XLSX.utils.json_to_sheet(a);ws['!cols']=w;return ws};
   XLSX.utils.book_append_sheet(wb,mk(rows.map(L),[{wch:16},{wch:20},{wch:16},{wch:15},{wch:42},{wch:20},{wch:6},{wch:7}]),'Transfer list');
   const used=new Set(['Transfer list']);
   for(const st of [...new Set(rows.map(r=>r.from))]){let nm=('Send from '+String(st).replace(/[\\\/?*:\[\]]/g,' ')).slice(0,31),k=2;while(used.has(nm))nm=nm.slice(0,28)+' '+k++;used.add(nm);
-    XLSX.utils.book_append_sheet(wb,mk(rows.filter(r=>r.from===st).sort((a,b)=>String(a.to).localeCompare(b.to)).map(r=>({'Send to':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Pcs':r.qty,'Done':''})),[{wch:22},{wch:16},{wch:15},{wch:42},{wch:20},{wch:6},{wch:7}]),nm)}
+    XLSX.utils.book_append_sheet(wb,mk(rows.filter(r=>r.from===st).map(r=>({'Send to':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Pcs':r.qty,'Done':''})),[{wch:22},{wch:16},{wch:15},{wch:42},{wch:20},{wch:6},{wch:7}]),nm)}
   const fs=[...new Set(rows.map(r=>r.from))];
   XLSX.writeFile(wb,'Slow Moving transfer '+(fs.length===1?fs[0]:'all stores')+' '+new Date().toISOString().slice(0,10)+'.xlsx')}
 $('stBtn').onclick=openPk;
-$('stM').addEventListener('input',e=>{const inp=e.target.closest('[data-pkq]');if(!inp)return;const r=inp.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(!en)return;
-  const st=inp.dataset.pkq,other=pkTot(en)-(en.plan.get(st)||0);let v=Math.max(0,Math.floor(Number(inp.value)||0));const mx=Math.max(0,en.i.qty-other);if(v>mx){v=mx;inp.value=v}
-  en.plan.set(st,v);pkLeftTxt(r,en);pkSum();pkDrawScope()});
-$('stM').addEventListener('change',e=>{const sel=e.target.closest('[data-pkadd]');if(!sel||!sel.value)return;const r=sel.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(!en)return;en.plan.set(sel.value,Math.max(0,pkLeft(en)));pkRedo(r)});
+const pkCtx=el=>{const r=el.closest('.pk'),ln=el.closest('.ln');return r&&ln?{r,e:PK.sel.get(r.dataset.pk),ix:+ln.dataset.ln}:null};
+$('stM').addEventListener('input',e=>{const inp=e.target.closest('[data-lq]');if(!inp)return;const c=pkCtx(inp);if(!c||!c.e)return;const l=c.e.lines[c.ix];
+  let v=Math.max(0,Math.floor(Number(inp.value)||0));const mx=pkRoom(c.e,l.from,c.ix);if(v>mx){v=mx;inp.value=v}l.qty=v;c.r.querySelector('[data-pkleft]').innerHTML=pkStay(c.e);pkSum();pkDrawScope()});
+$('stM').addEventListener('change',e=>{const f=e.target.closest('[data-lf]'),t=e.target.closest('[data-lt]');const x=f||t;if(!x)return;const c=pkCtx(x);if(!c||!c.e)return;const l=c.e.lines[c.ix];
+  if(f){l.from=f.value;if(l.to===l.from)l.to='';l.qty=Math.min(l.qty||pkRoom(c.e,l.from,c.ix),pkRoom(c.e,l.from,c.ix))}else l.to=t.value;pkRedo(c.r)});
 $('stM').addEventListener('click',e=>{const t=e.target;
   if(t===$('stM')||t.closest('[data-pkclose]')){closePk();return}
   const sc=t.closest('[data-pkscope]');if(sc){PK.scope=sc.dataset.pkscope;PK.lim=300;pkDraw();return}
   if(t.closest('[data-pkmv]')){PK.mv=!PK.mv;PK.lim=300;pkDraw();return}
-  if(t.closest('[data-pkall]')){pkList().forEach(i=>{if(!PK.sel.has(pkKey(i)))pkSelect(i,true)});pkDraw();return}
+  if(t.closest('[data-pkall]')){pkList().forEach(g=>{if(!PK.sel.has(g.sku))pkSelect(g,true)});pkDraw();return}
   if(t.closest('[data-pknone]')){PK.sel.clear();pkDraw();return}
   if(t.closest('[data-pkmore]')){PK.lim+=300;pkDraw();return}
   if(t.closest('[data-pkgo]')){pkExport();return}
-  const dl=t.closest('[data-pkdel]');if(dl){const r=dl.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(en){en.plan.delete(dl.dataset.pkdel);pkRedo(r)}return}
-  if(t.closest('.img img,.pkp'))return; // tapping the picture only enlarges it; the send-to line is for typing
-  const r=t.closest('[data-pk]');if(r){const i=ITEMS.find(x=>pkKey(x)===r.dataset.pk);if(!i)return;pkSelect(i,!PK.sel.has(r.dataset.pk));pkRedo(r)}});
+  const lx=t.closest('[data-lx]');if(lx){const c=pkCtx(lx);if(c&&c.e){c.e.lines.splice(c.ix,1);pkRedo(c.r)}return}
+  const la=t.closest('[data-ladd]');if(la){const r=la.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(en){const fr=(en.g.items.find(i=>pkRoom(en,i.store)>0)||en.g.items[0]).store;en.lines.push({from:fr,to:'',qty:pkRoom(en,fr)});pkRedo(r)}return}
+  if(t.closest('.img img,.pkp'))return; // tapping the picture only enlarges it; the lines are for typing
+  const r=t.closest('[data-pk]');if(r){const g=PKG.get(r.dataset.pk);if(!g)return;pkSelect(g,!PK.sel.has(g.sku));pkRedo(r)}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('stM').hidden&&!document.getElementById('zoom'))closePk()});
 
 load();
