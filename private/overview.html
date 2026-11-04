@@ -53,6 +53,14 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
 .tg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
 .tg button{border:0;background:transparent;color:var(--ink2);font:inherit;font-weight:700;font-size:12.5px;padding:6px 16px;cursor:pointer}
 .tg button.on{background:var(--accent);color:#2A1F24}
+.mc{display:flex;gap:8px;align-items:center}
+.pw{position:relative}
+.fb{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:6px 14px;font:inherit;font-weight:700;font-size:12.5px;cursor:pointer}.fb:hover{background:var(--hover)}
+.pop{position:absolute;right:0;top:calc(100% + 6px);z-index:5;min-width:190px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:0 10px 30px rgba(42,31,36,.18);display:flex;flex-direction:column;gap:6px}
+.pop .pt{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);font-weight:700;margin-bottom:2px}
+.pop label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer}
+.pop input{accent-color:#FF93A0;width:15px;height:15px}
+.pa{display:flex;gap:6px;margin-top:4px}.pa button{flex:1;border:1px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:8px;padding:4px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .foot{color:var(--muted);font-size:12px}
 .err{background:var(--down-bg);color:var(--down);border-radius:12px;padding:12px 14px;font-weight:600}
 .loading{padding:60px 0;text-align:center;color:var(--ink2)}
@@ -111,19 +119,45 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
         +'<tr><td>Orders</td><td>'+E(x.orders)+'</td><td>-</td></tr>'
         +'<tr><td>UPT</td><td>'+x.upt.toFixed(1)+'</td><td>-</td></tr></table></div>'}).join('')+'</div></section>';
   }
-  var basis='net';
-  function monthly(d){
-    var mm=d.monthly;if(!mm||!mm[basis]||!mm[basis].months.length)return '';
-    var m=mm[basis],partial=mm.partial;
+  var basis='net',off={};
+  try{off=JSON.parse(localStorage.getItem('ov_off')||'{}')||{}}catch(e){off={}}
+  function saveOff(){try{localStorage.setItem('ov_off',JSON.stringify(off))}catch(e){}}
+  // adds the cells up for the chosen basis, leaving out the unticked categories
+  function sum(d){
+    var mm=d.monthly,ix=basis==='net'?3:4,months={},st={},onl={byMonth:{},total:0},any=false;
+    mm.cells.forEach(function(c){
+      if(off[c[2]])return;
+      months[c[1]]=1;any=true;
+      if(c[5]){onl.byMonth[c[1]]=(onl.byMonth[c[1]]||0)+c[ix];onl.total+=c[ix];return}
+      var o=st[c[0]]||(st[c[0]]={name:c[0],byMonth:{},total:0});
+      o.byMonth[c[1]]=(o.byMonth[c[1]]||0)+c[ix];o.total+=c[ix];
+    });
+    var list=Object.keys(months).sort(),stores=Object.keys(st).map(function(k){return st[k]}).filter(function(x){return x.total>0}).sort(function(a,b){return b.total-a.total});
+    var totals={},total=0;list.forEach(function(k){totals[k]=0;stores.forEach(function(x){totals[k]+=x.byMonth[k]||0})});
+    stores.forEach(function(x){total+=x.total});
+    return{months:list,stores:stores,totals:totals,total:total,online:onl.total?onl:null,any:any};
+  }
+  function table(d){
+    var m=sum(d),partial=d.monthly.partial;
+    if(!m.any||!m.months.length)return '<div class="range">Nothing ticked. Tick at least one category.</div>';
+    var cell=function(v){return '<td'+(v?'':' class="zero"')+'>'+(v?n(v):'-')+'</td>'};
     var head='<tr><th>Store</th>'+m.months.map(function(k){return '<th>'+MON[+k.slice(5)-1].slice(0,3)+(k===partial?'*':'')+'</th>'}).join('')+'<th class="sum">Total</th></tr>';
-    var rows=m.stores.map(function(x){return '<tr><td>'+esc(x.name)+'</td>'+m.months.map(function(k){var v=x.byMonth[k];return '<td'+(v?'':' class="zero"')+'>'+(v?n(v):'-')+'</td>'}).join('')+'<td class="sum">'+n(x.total)+'</td></tr>'}).join('');
+    var rows=m.stores.map(function(x){return '<tr><td>'+esc(x.name)+'</td>'+m.months.map(function(k){return cell(x.byMonth[k])}).join('')+'<td class="sum">'+n(x.total)+'</td></tr>'}).join('');
     var tot='<tr class="tot"><td>All stores</td>'+m.months.map(function(k){return '<td>'+n(m.totals[k])+'</td>'}).join('')+'<td class="sum">'+n(m.total)+'</td></tr>';
     if(m.online){
-      tot+='<tr><td>Online shop</td>'+m.months.map(function(k){var v=m.online.byMonth[k];return '<td'+(v?'':' class="zero"')+'>'+(v?n(v):'-')+'</td>'}).join('')+'<td class="sum">'+n(m.online.total)+'</td></tr>'
-        +'<tr class="tot"><td>All incl. Online</td>'+m.months.map(function(k){return '<td>'+n(m.totals[k]+m.online.byMonth[k])+'</td>'}).join('')+'<td class="sum">'+n(m.total+m.online.total)+'</td></tr>';
+      tot+='<tr><td>Online shop</td>'+m.months.map(function(k){return cell(m.online.byMonth[k])}).join('')+'<td class="sum">'+n(m.online.total)+'</td></tr>'
+        +'<tr class="tot"><td>All incl. Online</td>'+m.months.map(function(k){return '<td>'+n(m.totals[k]+(m.online.byMonth[k]||0))+'</td>'}).join('')+'<td class="sum">'+n(m.total+m.online.total)+'</td></tr>';
     }
+    var left=d.monthly.cats.filter(function(c){return off[c]});
+    return '<div class="range">Every store, each month of '+d.year+' (EGP, '+(basis==='net'?'net of VAT':'gross, VAT included')+').'+(m.online?' The Online shop is shown separately below the store total.':'')+(partial?' * '+MON[+partial.slice(5)-1]+' is still running, so far up to '+dmy(d.upTo)+'.':'')+(left.length?' Left out: '+esc(left.join(', '))+'.':'')+'</div><div class="mt"><table>'+head+rows+tot+'</table></div>';
+  }
+  function monthly(d){
+    var mm=d.monthly;if(!mm||!mm.cells.length)return '';
     var tg='<div class="tg"><button type="button" data-b="net" class="'+(basis==='net'?'on':'')+'">Net</button><button type="button" data-b="gross" class="'+(basis==='gross'?'on':'')+'">Gross</button></div>';
-    return '<section id="mon"><div class="mh"><h2>Sales by month</h2>'+tg+'</div><div class="range">Every store, each month of '+d.year+' (EGP, '+(basis==='net'?'net of VAT':'gross, VAT included')+').'+(m.online?' The Online shop is shown separately below the store total.':'')+(partial?' * '+MON[+partial.slice(5)-1]+' is still running, so far up to '+dmy(d.upTo)+'.':'')+'</div><div class="mt"><table>'+head+rows+tot+'</table></div></section>';
+    var pop='<div class="pw"><button type="button" class="fb" id="fbtn" aria-haspopup="true" aria-expanded="false">Filter</button><div class="pop" id="fpop" hidden><div class="pt">Include in the table</div>'
+      +mm.cats.map(function(c,i){return '<label><input type="checkbox" data-c="'+i+'"'+(off[c]?'':' checked')+'> '+esc(c)+'</label>'}).join('')
+      +'<div class="pa"><button type="button" data-all="1">All</button><button type="button" data-all="0">None</button></div></div></div>';
+    return '<section id="mon"><div class="mh"><h2>Sales by month</h2><div class="mc">'+pop+tg+'</div></div><div id="montbl">'+table(d)+'</div></section>';
   }
   var last=null;
   // long numbers shrink instead of wrapping onto a second line
@@ -151,7 +185,21 @@ section .range{color:var(--ink2);font-size:12.5px;margin-bottom:12px}
       .catch(function(){out.innerHTML='<div class="err">Could not reach the server. Try again.</div>'})
       .then(function(){btn.disabled=false});
   }
-  out.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.tg button');if(!b||!last)return;basis=b.getAttribute('data-b');var old=document.getElementById('mon');if(old){var t=document.createElement('div');t.innerHTML=monthly(last);old.replaceWith(t.firstChild)}});
+  function redraw(){var t=document.getElementById('montbl');if(t&&last)t.innerHTML=table(last)}
+  out.addEventListener('click',function(e){
+    if(!last)return;
+    var t=e.target,b=t.closest&&t.closest('.tg button');
+    if(b){basis=b.getAttribute('data-b');document.querySelectorAll('.tg button').forEach(function(x){x.classList.toggle('on',x===b)});redraw();return}
+    var f=t.closest&&t.closest('#fbtn');
+    if(f){var p=document.getElementById('fpop');p.hidden=!p.hidden;f.setAttribute('aria-expanded',String(!p.hidden));return}
+    var a=t.closest&&t.closest('.pa button');
+    if(a){var on=a.getAttribute('data-all')==='1';last.monthly.cats.forEach(function(c){off[c]=!on});document.querySelectorAll('#fpop input').forEach(function(i){i.checked=on});saveOff();redraw()}
+  });
+  out.addEventListener('change',function(e){
+    var i=e.target;if(!last||!i.matches||!i.matches('#fpop input'))return;
+    off[last.monthly.cats[+i.getAttribute('data-c')]]=!i.checked;saveOff();redraw();
+  });
+  document.addEventListener('click',function(e){var p=document.getElementById('fpop');if(p&&!p.hidden&&!(e.target.closest&&e.target.closest('.pw'))){p.hidden=true;var f=document.getElementById('fbtn');if(f)f.setAttribute('aria-expanded','false')}});
   btn.addEventListener('click',function(){load(true)});
   addEventListener('resize',fit);
   load(false);

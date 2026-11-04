@@ -87,29 +87,17 @@ function monthlyAvg(rows, yearStart, to) {
 // Sales of every store in every month of the year so far (the month still running is flagged as partial).
 function monthTable(all, yearStart, to) {
   const last = new Date(Date.UTC(+to.slice(0, 4), +to.slice(5, 7), 0)).getUTCDate();
-  const one = idx => {
-    const byS = new Map(), months = new Set(), onl = {};
-    for (const r of all) {
-      if (r[0] < yearStart || r[0] > to) continue;
-      const k = r[0].slice(0, 7), v = +r[idx] || 0;
-      months.add(k);
-      if (ONLINE.test(String(r[7] || ''))) { onl[k] = (onl[k] || 0) + v; continue; }
-      const br = pretty(r[7] || 'Unspecified'), o = byS.get(br) || {}; o[k] = (o[k] || 0) + v; byS.set(br, o);
-    }
-    const list = [...months].sort();
-    const stores = [...byS.entries()].map(([name, o]) => {
-      const by = {}; let total = 0;
-      for (const k of list) { by[k] = r0(o[k]); total += o[k] || 0; }
-      return { name, byMonth: by, total: r0(total) };
-    }).filter(x => x.total > 0).sort((a, b) => b.total - a.total);
-    const totals = {};
-    for (const k of list) totals[k] = stores.reduce((a, x) => a + x.byMonth[k], 0);
-    const online = { byMonth: {}, total: 0 };
-    for (const k of list) { online.byMonth[k] = r0(onl[k]); online.total += online.byMonth[k]; }
-    return { online: online.total ? online : null, months: list, stores, totals, total: stores.reduce((a, x) => a + x.total, 0) };
-  };
-  const net = one(3), gross = one(4);
-  return { partial: +to.slice(8) >= last ? null : to.slice(0, 7), net, gross };
+  const m = new Map(), cats = new Set();
+  for (const r of all) {
+    if (r[0] < yearStart || r[0] > to) continue;
+    const onl = ONLINE.test(String(r[7] || '')), st = onl ? 'Online shop' : pretty(r[7] || 'Unspecified'), cat = String(r[8] || 'Other'), mo = r[0].slice(0, 7);
+    cats.add(cat);
+    const k = st + '|' + mo + '|' + cat, o = m.get(k) || [st, mo, cat, 0, 0, onl ? 1 : 0];
+    o[3] += +r[3] || 0; o[4] += +r[4] || 0; m.set(k, o);
+  }
+  // one cell per store, month and category (net and gross): the page adds them up, so it can leave categories out
+  const cells = [...m.values()].map(o => [o[0], o[1], o[2], r0(o[3]), r0(o[4]), o[5]]);
+  return { partial: +to.slice(8) >= last ? null : to.slice(0, 7), cats: [...cats].sort(), cells };
 }
 
 async function build() {
@@ -147,7 +135,7 @@ module.exports = async function handler(req, res) {
   if (!(who.kind === 'env' && who.info.role === 'admin')) return send(res, 403, { ok: false, error: 'Only the super admin and the brand manager can open this report.' }); // area managers, VM and staff never
   if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
   const fresh = new URL(req.url, 'https://x.invalid').searchParams.get('fresh') === '1';
-  const ck = 'overview/c7.json';
+  const ck = 'overview/c8.json';
   if (!fresh) {
     const c = await store.getJSON(ck).catch(() => null);
     if (c && c.ok && Date.now() - Date.parse(c.generatedAt) < CACHE_MIN * 60000) return send(res, 200, c);
