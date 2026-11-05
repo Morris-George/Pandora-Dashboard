@@ -193,7 +193,7 @@ p.hint{color:var(--mute);font-size:13px;line-height:1.5;margin:8px 0}
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 (function(){
-var COOLDOWN=4000; /* same gap between two counted scans as Stock Count */
+var COOLDOWN=2000; /* gap between two counted scans (same as Stock Count) */
 var $=function(i){return document.getElementById(i)};
 var video=$('video'),cam=$('cam'),stateEl=$('state'),camMsg=$('camMsg'),fill=$('coolFill');
 var catalog={},stream=null,facing='environment',coolUntil=0,running=false,rafId=0,detector=null,zxReader=null;
