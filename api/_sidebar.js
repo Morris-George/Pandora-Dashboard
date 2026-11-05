@@ -1,8 +1,9 @@
-// Report list on the left for the super admin (and the brand manager, who sees everything the same way).
+// Report list on the left for everyone who can open more than one report (super admin, brand manager, area managers, store managers,
+// sales people, VM, Finance...). It only ever lists the reports that person can open.
 // Injected by api/site.js into every report page, so the report can be changed in one click instead of going Home first.
 // Same sections and order as the home screen (including the order the super admin saved there), same pink look.
 const BASE = [
-  ['Sales', ['overview', 'insights', 'dashboards', 'staff', 'daily', 'film']],
+  ['Sales', ['overview', 'insights', 'dashboards', 'staff', 'mysales', 'mysales2', 'storeteam', 'daily', 'film']],
   ['Stock', ['stock', 'stockcount', 'stockchecker', 'slow', 'transfer']],
   ['Ordering', ['refill', 'dist', 'recv']],
   ['Visual Merchandising', ['vmzones', 'zonestock', 'vm']],
@@ -12,9 +13,10 @@ const BASE = [
 // facts = what api/_apps.js sessionFacts() returned. Returns null when this person does not get the list.
 async function dataFor(facts) {
   try {
-    if (!(facts && facts.staff && facts.staff.role === 'admin')) return null;
+    if (!facts) return null;
     const { appsFor } = require('./_apps');
     const apps = appsFor(facts).filter(a => a.id !== 'film'); // the launch film is a presentation, not a report
+    if (apps.length < 2) return null; // one report only: nothing to switch to
     let saved = [];
     try { saved = (await require('./_store').getJSON('access/home.json')) || []; } catch (_) {}
     const order = Array.isArray(saved) && saved.length
@@ -42,7 +44,7 @@ html.pzs-on.pzs-ready body{transition:margin-left .2s ease}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:.18s}
 html.pzs-on.pzs-min body{margin-left:92px!important}
 .pzs{--s-bg:#fff;--s-ink:#282522;--s-mut:#817a74;--s-line:#e9e2dc;--s-soft:#FFE4E8;--s-acc:#FF93A0;--s-on:#2A1018;--s-acct:#2A1F24;
-position:fixed;z-index:40;top:12px;left:12px;bottom:12px;width:220px;display:flex;flex-direction:column;background:var(--s-bg);color:var(--s-ink);border:1px solid var(--s-line);border-radius:20px;font:600 13px/1.3 "Plus Jakarta Sans",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;word-spacing:.09em;overflow:hidden}
+direction:ltr;position:fixed;z-index:40;top:12px;left:12px;bottom:12px;width:220px;display:flex;flex-direction:column;background:var(--s-bg);color:var(--s-ink);border:1px solid var(--s-line);border-radius:20px;font:600 13px/1.3 "Plus Jakarta Sans",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;word-spacing:.09em;overflow:hidden}
 html.pzs-ready .pzs{transition:width .2s ease,transform .2s ease}
 :root[data-theme="dark"] .pzs{--s-bg:#211f1d;--s-ink:#f7f2ed;--s-mut:#b7aea6;--s-line:#3a3530;--s-soft:#33202a;--s-acct:#FF93A0}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pzs{--s-bg:#211f1d;--s-ink:#f7f2ed;--s-mut:#b7aea6;--s-line:#3a3530;--s-soft:#33202a;--s-acct:#FF93A0}}
@@ -108,6 +110,9 @@ const ICONS = {
   access: '<rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   daily: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M8 15l2.5-2.5 2 2 3.5-3.5"/>',
   schedule: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h3M13 14h3M8 17h3"/>',
+  mysales: '<path d="M3 17l5-5 4 4 8-9M15 7h5v5"/>',
+  mysales2: '<path d="M3 17l5-5 4 4 8-9M15 7h5v5"/>',
+  storeteam: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.4c1.9.8 3 2.6 3 5.6"/>',
   activity: '<path d="M3 12h4l3-8 4 16 3-8h4"/>'
 };
 const DEF = '<rect x="4" y="4" width="16" height="16" rx="3"/>';

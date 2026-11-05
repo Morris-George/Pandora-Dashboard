@@ -204,7 +204,7 @@ module.exports = async function handler(req, res) {
   const facts = await sessionFacts(req);
   const signedIn = facts.dash || facts.staff || facts.hr;
   const multi = appsFor(facts).length > 1;
-  const sideData = await SIDEBAR.dataFor(facts); // null unless the super admin / brand manager
+  const sideData = await SIDEBAR.dataFor(facts); // null when this person can open only one report
   const chromeFor = (kind, m) => withChrome(kind, m, sideData && Object.assign({}, sideData, { path: requestedPath }));
   const toLogin = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/login.html'); return res.status(302).end(); };
   const toHome = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/'); return res.status(302).end(); };
