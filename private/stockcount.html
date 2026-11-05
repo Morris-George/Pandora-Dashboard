@@ -2036,6 +2036,16 @@ const CAM_GAP=4000; /* minimum time between two counted scans */
 const cam={scanAt:0,waiting:false,cand:"",candN:0,candAt:0,on:false,stream:null,track:null,det:null,zx:null,timer:0,last:"",lastAt:0,count:0,lastRaw:"",torch:false,cv:null,busy:false};
 let phoneMode=false,phoneDone=false;
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>rej(new Error("Could not load the scanner library. Check the internet connection."));document.head.appendChild(s);});}
+/* watchdog: if the camera loop goes quiet (phone froze the video, the camera track ended, a step never answered) it restarts by itself, so a long count of thousands of scans keeps going */
+setInterval(()=>{
+  if(!cam.on||document.hidden)return;
+  if(!cam.track||cam.track.readyState==="ended"){const z=$("#camZone").value;closeCam();openCam().then(()=>{if(z)$("#camZone").value=z;});return;}
+  if(Date.now()-(cam.beat||0)>6000){cam.busy=false;camLoop(cam.gen=(cam.gen||0)+1);}
+},3000);
+let camWL=null;
+function camWakeOn(){try{if(navigator.wakeLock&&!camWL)navigator.wakeLock.request("screen").then(l=>{camWL=l;l.addEventListener("release",()=>{camWL=null;});},()=>{});}catch(e){}}
+function camWakeOff(){try{if(camWL){camWL.release();camWL=null;}}catch(e){}}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&cam.on)camWakeOn();});
 function camSay(t){$("#camMsg").textContent=t||"";}
 async function openCam(){
   if(!S||locked()||cam.on)return;
@@ -2068,7 +2078,7 @@ async function openCam(){
       cam.zx=new Z.MultiFormatReader();cam.hints=h;
       cam.cv=document.createElement("canvas");
     }
-    cam.on=true;cam.scanAt=0;cam.waiting=false;
+    cam.on=true;cam.scanAt=0;cam.waiting=false;cam.busy=false;cam.beat=Date.now();camWakeOn();
     camSay("Point the camera at a barcode. It scans by itself.");
     camLoop(cam.gen=(cam.gen||0)+1);
   }catch(e){
@@ -2078,13 +2088,14 @@ async function openCam(){
   }
 }
 function closeCam(){
-  cam.on=false;clearTimeout(cam.timer);
+  cam.on=false;clearTimeout(cam.timer);camWakeOff();
   if(cam.stream){cam.stream.getTracks().forEach(t=>t.stop());cam.stream=null;}
   $("#camVideo").srcObject=null;$("#cam").hidden=true;document.body.style.overflow="";
   if(S&&!locked()&&!phoneMode)setTimeout(()=>scanEl.focus(),30);
 }
 async function camLoop(g){
   if(!cam.on||g!==cam.gen)return;
+  cam.beat=Date.now();
   if(warnOpen){cam.timer=setTimeout(()=>camLoop(g),200);return;}
   const v=$("#camVideo");let raw="";
   if(!($("#camZone").value||"").trim()){camSay("Choose a zone to start scanning");$("#camZone").classList.add("need");cam.waiting=true;cam.timer=setTimeout(()=>camLoop(g),200);return;}
@@ -2094,7 +2105,7 @@ async function camLoop(g){
   if(v.readyState>=2&&v.videoWidth&&!cam.busy){
     cam.busy=true;
     try{
-      if(cam.det){const r=await cam.det.detect(v);if(r&&r.length){const vals=r.map(x=>String(x.rawValue||"").trim()).filter(Boolean);raw=vals.find(x=>lookup(x)>=0)||vals.find(gtinOk)||"";}}
+      if(cam.det){const r=await Promise.race([cam.det.detect(v),new Promise(res=>setTimeout(()=>res([]),1500))]);if(r&&r.length){const vals=r.map(x=>String(x.rawValue||"").trim()).filter(Boolean);raw=vals.find(x=>lookup(x)>=0)||vals.find(gtinOk)||"";}}
       else{
         const c=cam.cv,w=Math.min(v.videoWidth,960),h=Math.round(v.videoHeight*w/v.videoWidth);
         if(c.width!==w||c.height!==h){c.width=w;c.height=h;}
@@ -2105,7 +2116,7 @@ async function camLoop(g){
     }catch(e){raw="";}
     cam.busy=false;
   }
-  if(raw)camHit(String(raw).trim());
+  try{if(raw)camHit(String(raw).trim());}catch(e){} /* an error while saving one scan must never stop the camera */
   if(v.requestVideoFrameCallback){try{v.requestVideoFrameCallback(()=>camLoop(g));return;}catch(e){}}
   cam.timer=setTimeout(()=>camLoop(g),0);
 }

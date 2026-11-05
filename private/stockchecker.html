@@ -246,7 +246,7 @@ function infoOf(code){
   var img=c&&c.img?c.img:(k.sku?'/api/checker?pic='+encodeURIComponent(dvOf(k.sku))+'&code='+encodeURIComponent(code):'');
   return {name:(c&&c.name)||k.name||k.sku||'',sku:k.sku||'',img:img,found:!!(c||k.sku||k.name)};
 }
-function imgTag(code){var i=infoOf(code);return i.img?'<img alt="" src="'+esc(i.img)+'" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode(\'No picture\'))">':'No picture'}
+function imgTag(code,small){var i=infoOf(code),u=i.img;if(u&&small&&u.indexOf('/api/checker?pic=')===0)u+='&w=160';return u?'<img alt="" src="'+esc(u)+'" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode(\'No picture\'))">':'No picture'}
 function isPast(){return !!(day&&today&&day!==today)}
 function qtyBtns(code,n){
   var mine=myCount(code),off=!name||isPast();
@@ -267,12 +267,14 @@ function renderLast(){
    '<div class="verdict"><button type="button" class="ok" data-v="ok">Matches</button><button type="button" class="bad" data-v="swapped">Swapped</button></div></div>';
   [].forEach.call(el.querySelectorAll('[data-v]'),function(b){b.onclick=function(){setVerdict(b.getAttribute('data-v'))}});
 }
+var listLim=40;
 function renderList(){
   var items=(view?view.items:[]).filter(function(it){return filterBy==='ALL'||(it.by[filterBy]||0)>0}).sort(function(a,b){return (pin[b.c]!=null?pin[b.c]:b.last)-(pin[a.c]!=null?pin[a.c]:a.last)});
   $('itemsFor').textContent=store?'· '+store:'';
+  var hidden=Math.max(0,items.length-listLim);items=items.slice(0,listLim);
   $('list').innerHTML=items.length?items.map(function(it){var inf=infoOf(it.c),cnt=filterBy==='ALL'?it.n:(it.by[filterBy]||0),who=Object.keys(it.by).sort(function(a,b){return it.by[b]-it.by[a]}).map(function(k){return esc(k)+' '+it.by[k]}).join(' · ');
-    return '<div class="item"><div class="th">'+imgTag(it.c)+'</div><div><b>'+esc(inf.name||'Not found in stock list')+'</b><span>'+esc(it.c)+(inf.sku&&inf.sku!==it.c?' · '+esc(inf.sku):'')+'</span>'+(it.sw?'<span class="sw">'+it.sw+' marked swapped</span>':'')+'<span class="by">'+who+'</span></div>'+qtyBtns(it.c,cnt)+'</div>'}).join(''):'<div class="empty">Nothing scanned yet in this store.</div>';
-  var mineN=0,mineSk=0;if(view)view.items.forEach(function(it){if(it.by[name]){mineN+=it.by[name];mineSk++}});
+    return '<div class="item"><div class="th">'+imgTag(it.c,true)+'</div><div><b>'+esc(inf.name||'Not found in stock list')+'</b><span>'+esc(it.c)+(inf.sku&&inf.sku!==it.c?' · '+esc(inf.sku):'')+'</span>'+(it.sw?'<span class="sw">'+it.sw+' marked swapped</span>':'')+'<span class="by">'+who+'</span></div>'+qtyBtns(it.c,cnt)+'</div>'}).join('')+(hidden?'<button type="button" class="chip" id="moreItems" style="margin:8px auto;display:block">Show 40 more ('+hidden+' hidden, still counted)</button>':''):'<div class="empty">Nothing scanned yet in this store.</div>';
+  var mineN=0,mineSk=0;if(view){if(view.mineScans!=null){mineN=view.mineScans;mineSk=view.mineSkus}else view.items.forEach(function(it){if(it.by[name]){mineN+=it.by[name];mineSk++}})}
   $('totScans').textContent=mineN;$('totSkus').textContent=mineSk;$('totStore').textContent=view?view.total:0;
   var ppl=view?view.people:[];
   var f=$('whoFilter');f.hidden=ppl.length<2;
@@ -319,8 +321,10 @@ $('dayToday').onclick=function(){setDay(today)};
 document.addEventListener('click',function(e){var h=e.target.closest('[data-day]');if(h){setDay(h.getAttribute('data-day'));return}var m=e.target.closest('tr.mrow');if(m&&m.getAttribute('data-store')!==store){chooseStore(m.getAttribute('data-store'))}});
 function renderAll(){renderLast();renderList();renderWho();renderPeople();renderDay();$('whoStore').textContent=store;$('qrStore').textContent=store}
 
+var refreshAt=0;
 function refresh(){
   if(!store)return Promise.resolve();
+  refreshAt=Date.now();
   var by=ctx&&ctx.role==='phone'?'&by='+encodeURIComponent(name):'';
   var st=store;
   var wantDays=isMgr()&&(Date.now()-daysAt>120000||daysStore!==st);
@@ -340,7 +344,8 @@ function flush(){
 }
 
 /* ---- scan handling ---- */
-function beep(){try{var a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=880;g.gain.value=.12;o.connect(g);g.connect(a.destination);o.start();setTimeout(function(){o.stop();a.close()},110)}catch(e){}if(navigator.vibrate)navigator.vibrate(60)}
+var actx=null;
+function beep(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();var o=actx.createOscillator(),g=actx.createGain();o.frequency.value=880;g.gain.value=.12;o.connect(g);g.connect(actx.destination);o.start();o.stop(actx.currentTime+.11);o.onended=function(){try{o.disconnect();g.disconnect()}catch(e){}}}catch(e){}try{if(navigator.vibrate)navigator.vibrate(60)}catch(e){}}
 function handleCode(raw,source){
   var code=String(raw||'').trim();if(!code)return false;
   if(!store){return false}
@@ -349,14 +354,14 @@ function handleCode(raw,source){
   var now=Date.now();if(now<coolUntil)return false;
   coolUntil=now+COOLDOWN;
   /* show it at once, then save it for this store */
-  if(view){var it=view.items.find(function(x){return x.c===code});if(!it){it={c:code,n:0,sw:0,last:0,by:{}};view.items.unshift(it)}it.n++;it.last=now;it.by[name]=(it.by[name]||0)+1;view.total++;
+  if(view){var it=view.items.find(function(x){return x.c===code});if(!it){it={c:code,n:0,sw:0,last:0,by:{}};view.items.unshift(it)}var wasMine=(it.by[name]||0)>0;it.n++;it.last=now;it.by[name]=(it.by[name]||0)+1;view.total++;if(view.mineScans!=null){view.mineScans++;if(!wasMine)view.mineSkus++}
     var p=view.people.find(function(x){return x.name===name});if(p){p.scans++;p.last=now}else view.people.unshift({name:name,scans:1,skus:1,last:now})}
   pin={};lastScan={code:code,t:now,verdict:''};
   beep();cam.classList.add('hit');setTimeout(function(){cam.classList.remove('hit')},350);
   renderAll();
   post('scan',{code:code,t:now}).then(function(o){
     if(!o.ok&&o.status!==403){var q=Q();q.push({code:code,t:now});save('sc_queue:'+encodeURIComponent(store),q);showErr('Saved on this device. It will be sent when the connection is back.')}
-    else if(o.ok){if(lastScan&&lastScan.code===code)lastScan.t=o.j.t||now;showErr('');refresh().then(function(){if(lastScan&&lastScan.t===(o.j.t||now)&&lastScan.code===code){lastScan.looked=true;renderLast()}})}
+    else if(o.ok){if(lastScan&&lastScan.code===code)lastScan.t=o.j.t||now;showErr('');var lk=function(){if(lastScan&&lastScan.t===(o.j.t||now)&&lastScan.code===code){lastScan.looked=true;renderLast()}};/* reload the store only when the item name is not known yet, otherwise at most every 10 seconds (a full reload after every scan is what slowed the phone down) */if(!known[code]||Date.now()-refreshAt>10000)refresh().then(lk);else lk()}
     else showErr(o.j.error||'That scan could not be saved.');
   }).catch(function(){var q=Q();q.push({code:code,t:now});save('sc_queue:'+encodeURIComponent(store),q)});
   return true;
@@ -373,7 +378,7 @@ function adjust(code,d){
   if(view){
     if(!it){it={c:code,n:0,sw:0,last:Date.now(),by:{}};view.items.unshift(it)}
     if(pin[code]==null)pin[code]=it.last;
-    it.n+=d;it.by[name]=(it.by[name]||0)+d;view.total+=d;
+    var wasMine2=(it.by[name]||0)>0;it.n+=d;it.by[name]=(it.by[name]||0)+d;view.total+=d;if(view.mineScans!=null){view.mineScans=Math.max(0,view.mineScans+d);if(!wasMine2&&it.by[name]>0)view.mineSkus++;if(wasMine2&&!it.by[name])view.mineSkus=Math.max(0,view.mineSkus-1)}
     if(!it.by[name])delete it.by[name];
     if(it.n<=0)view.items.splice(view.items.indexOf(it),1);
     var p=view.people.find(function(x){return x.name===name});if(p)p.scans=Math.max(0,p.scans+d);
@@ -415,7 +420,7 @@ requestAnimationFrame(tickUI);
 var scn={gen:0,cand:'',candN:0,candAt:0,last:'',lastAt:0,busy:false,cv:null,zx:null,hints:null,track:null,torch:false};
 var WANT=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code','data_matrix'];
 function stopCam(){
-  running=false;scn.gen++;clearTimeout(rafId);
+  running=false;scn.gen++;clearTimeout(rafId);wakeOff();
   if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
   video.srcObject=null;$('torchBtn').hidden=true;
 }
@@ -447,6 +452,7 @@ function camNext(g){
 }
 function camLoop(g){
   if(!running||g!==scn.gen)return;
+  scn.beat=Date.now();
   var v=video;
   if(Date.now()<coolUntil||scn.busy||!(v.readyState>=2&&v.videoWidth)){
     if(Date.now()<coolUntil){rafId=setTimeout(function(){camLoop(g)},150);return}
@@ -468,10 +474,21 @@ function camLoop(g){
       try{return scn.zx.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(c))),scn.hints).getText()}catch(e){return ''}
     });
   }
-  p.catch(function(){return ''}).then(function(raw){scn.busy=false;if(raw)camHit(String(raw).trim());camNext(g)});
+  p.catch(function(){return ''}).then(function(raw){scn.busy=false;try{if(raw)camHit(String(raw).trim())}catch(e){}/* an error while saving one scan must never stop the camera */camNext(g)});
 }
 /* a step that never answers (some phones never resolve play() / autofocus / format checks) must not freeze the start */
 function within(p,ms,dflt){return new Promise(function(res){var done=false,t=setTimeout(function(){if(!done){done=true;res(dflt)}},ms);Promise.resolve(p).then(function(v){if(!done){done=true;clearTimeout(t);res(v)}},function(){if(!done){done=true;clearTimeout(t);res(dflt)}})})}
+/* watchdog: if the camera loop goes quiet (phone froze the video, track ended, a step never answered) it is restarted by itself, so a long count keeps going */
+setInterval(function(){
+  if(!running||document.hidden)return;
+  var dead=!stream||!scn.track||scn.track.readyState==='ended';
+  if(dead){startCam();return}
+  if(Date.now()-(scn.beat||0)>6000){scn.busy=false;scn.gen++;camLoop(scn.gen)}
+},3000);
+/* keep the screen on while scanning */
+var wl=null;
+function wakeOn(){try{if(navigator.wakeLock&&!wl)navigator.wakeLock.request('screen').then(function(l){wl=l;l.addEventListener('release',function(){wl=null})},function(){})}catch(e){}}
+function wakeOff(){try{if(wl){wl.release();wl=null}}catch(e){}}
 function startCam(){
   stopCam();
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){camMsg.hidden=false;camMsg.textContent='Camera needs a secure (https) page. Open this file from an https link.';return}
@@ -497,7 +514,7 @@ function startCam(){
       h.set(Z.DecodeHintType.TRY_HARDER,true);
       scn.zx=new Z.MultiFormatReader();scn.hints=h;scn.cv=document.createElement('canvas');
     }
-    running=true;scn.busy=false;scn.cand='';scn.candN=0;
+    running=true;scn.busy=false;scn.cand='';scn.candN=0;scn.beat=Date.now();wakeOn();
     camLoop(scn.gen);
   }).catch(camError);
 }

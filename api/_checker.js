@@ -21,7 +21,7 @@ const { CANON, canon } = require('./_daily');
 
 const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
-const MAX_EV = 5000;
+const MAX_EV = 30000; // one person, one store, one day (a full store count is about 7,000 scans)
 const COOLDOWN_MS = 900; // the page keeps 2 seconds; the server only stops obvious double posts
 const cairoDay = t => new Date(t).toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' }); // YYYY-MM-DD in Cairo time
 
@@ -89,12 +89,14 @@ function summarize(files) {
 function build(st, day, files, me, mgr) {
   const shown = mgr ? files : files.filter(f => String(f.name).toLowerCase() === String(me).toLowerCase()); // sales people and phones only ever get their own scans
   const people = [], items = new Map(), recent = [];
-  let total = 0;
+  let total = 0, mineN = 0;
+  const mineSk = new Set(), meLow = String(me || '').toLowerCase();
   for (const f of shown) {
     const skus = new Set();
     let last = 0;
     for (const e of f.ev) {
       total++; skus.add(e.c); if (e.t > last) last = e.t;
+      if (String(f.name).toLowerCase() === meLow) { mineN++; mineSk.add(e.c); }
       let o = items.get(e.c); if (!o) items.set(e.c, o = { c: e.c, n: 0, sw: 0, last: 0, by: {} });
       o.n++; if (e.v === 'swapped') o.sw++; if (e.t > o.last) o.last = e.t;
       o.by[f.name] = (o.by[f.name] || 0) + 1;
@@ -104,7 +106,7 @@ function build(st, day, files, me, mgr) {
   }
   people.sort((a, b) => b.last - a.last);
   recent.sort((a, b) => b.t - a.t);
-  return { store: st, day, total, skus: items.size, people, items: [...items.values()].sort((a, b) => b.last - a.last).slice(0, 400), recent: recent.slice(0, 40), me: me || '' };
+  return { store: st, day, total, skus: items.size, mineScans: mineN, mineSkus: mineSk.size, people, items: [...items.values()].sort((a, b) => b.last - a.last).slice(0, 400), recent: recent.slice(0, 40), me: me || '' };
 }
 
 // ERP item names read "583050C00-18-5700303037288": the SKU, then the barcode (same reading as the Slow Moving report)
@@ -189,12 +191,12 @@ function builtPic(dv) {
 }
 
 // the picture of one item: the full-size pandoraeg.com picture (same as the other reports), then the built-in small one (same source as the other reports), else the picture saved on the item in ERP
-async function sendPic(res, dv, code) {
+async function sendPic(res, dv, code, w) {
   if (!/^[A-Z0-9_]{4,20}$/.test(dv)) return res.status(404).end();
   try {
     const u = await require('./_pic').find(dv);
     if (u) {
-      const x = new URL(u); x.searchParams.set('width', '900'); // full size, like the other reports
+      const x = new URL(u); x.searchParams.set('width', String(w || 900)); // full size by default, small (list thumbnails) when the page asks for it
       res.setHeader('Cache-Control', 'private, max-age=86400');
       res.setHeader('Location', x.toString());
       return res.status(302).end();
@@ -234,7 +236,7 @@ module.exports = async function handler(req, res) {
   const today = cairoDay(Date.now());
   const dayQ = DAY.test(q.get('day') || '') ? q.get('day') : today;
 
-  if (req.method === 'GET' && q.get('pic')) return sendPic(res, dvOf(q.get('pic')), q.get('code'));
+  if (req.method === 'GET' && q.get('pic')) return sendPic(res, dvOf(q.get('pic')), q.get('code'), Math.min(900, Math.max(60, Number(q.get('w')) || 900)));
 
   if (req.method === 'GET') {
     if (q.get('overview')) {
