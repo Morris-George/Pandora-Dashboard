@@ -5,6 +5,7 @@ const { appsFor, sessionFacts, greetName } = require('./_apps');
 const pair = require('./_pair');
 const MOTION = require('./_motion');
 const HEADER = require('./_header');
+const SIDEBAR = require('./_sidebar');
 
 const PRIVATE_DIR = path.join(process.cwd(), 'private');
 
@@ -61,14 +62,15 @@ function chromeScript(kind, multi) {
   '})();</script>';
 }
 
-function withChrome(kind, multi) {
+// side: the report list for the super admin (api/_sidebar.js), shown on report pages only (never on Home, sign-in or the launch film)
+function withChrome(kind, multi, side) {
   return function (buf) {
     let html = buf.toString('utf8');
     const h = html.search(/<\/head>/i);
     if (h !== -1) html = html.slice(0, h) + THEME_HEAD + html.slice(h);
     const i = html.lastIndexOf('</body>');
     const at = i === -1 ? html.length : i;
-    html = html.slice(0, at) + chromeScript(kind, multi) + (kind === 'login' ? '' : BEACON) + HEADER + html.slice(at);
+    html = html.slice(0, at) + chromeScript(kind, multi) + (kind === 'login' ? '' : BEACON) + HEADER + (side && kind !== 'home' && kind !== 'login' ? SIDEBAR.inject(side) : '') + html.slice(at);
     return Buffer.from(html, 'utf8');
   };
 }
@@ -200,6 +202,8 @@ module.exports = async function handler(req, res) {
   const facts = await sessionFacts(req);
   const signedIn = facts.dash || facts.staff || facts.hr;
   const multi = appsFor(facts).length > 1;
+  const sideData = await SIDEBAR.dataFor(facts); // null unless the super admin / brand manager
+  const chromeFor = (kind, m) => withChrome(kind, m, sideData);
   const toLogin = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/login.html'); return res.status(302).end(); };
   const toHome = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/'); return res.status(302).end(); };
   if (!signedIn && !facts.vm && !facts.sc) return toLogin();
@@ -239,7 +243,7 @@ module.exports = async function handler(req, res) {
     const label = facts.vm || facts.sc || facts.hr ? facts.vmName : facts.staff ? (facts.staff.role === 'staff' || facts.staff.role === 'store' ? facts.staff.name : facts.staff.label) : 'Pandora Dashboards';
     const homeOrder = (await require('./_store').getJSON('access/home.json').catch(() => null)) || [];
     const boot = JSON.stringify({ ok: true, label, greet: greetName(facts), apps: appsFor(facts), homeOrder }).replace(/</g, '\\u003c');
-    const chrome = withChrome('home', multi);
+    const chrome = chromeFor('home', multi);
     return sendFile(res, 'home.html', 'text/html; charset=utf-8', function (buf) {
       let html = buf.toString('utf8');
       const h = html.search(/<\/head>/i);
@@ -268,7 +272,7 @@ module.exports = async function handler(req, res) {
     } else {
       page = requestedPath.startsWith('/staff/person') ? 'person.html' : 'staff.html';
     }
-    const chrome = withChrome('staff', multi);
+    const chrome = chromeFor('staff', multi);
     const info = JSON.stringify(roleInfo).replace(/</g, '\\u003c');
     return sendFile(res, page, 'text/html; charset=utf-8', function (buf) {
       let html = buf.toString('utf8');
@@ -285,25 +289,25 @@ module.exports = async function handler(req, res) {
       res.setHeader('Cache-Control', 'no-store');
       try { return res.status(200).json(await require('./_film').build()); } catch (e) { return res.status(200).json({ ok: false, error: String((e && e.message) || e).slice(0, 160) }); }
     }
-    return sendFile(res, 'film.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+    return sendFile(res, 'film.html', 'text/html; charset=utf-8', withChrome('staff', multi, null));
   }
 
   // Report access (super admin only, not the Overseer): who may open which report
   if (requestedPath === '/access' || requestedPath === '/access/' || requestedPath === '/access.html') {
     if (!(facts.staff && facts.staff.role === 'admin' && !facts.staff.overseer)) return toHome();
-    return sendFile(res, 'access.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+    return sendFile(res, 'access.html', 'text/html; charset=utf-8', chromeFor('staff', multi));
   }
 
   // Activity (super admin; the Overseer only after the super admin switches it on inside the page)
   if (requestedPath === '/activity' || requestedPath === '/activity/' || requestedPath === '/activity.html') {
     if (!facts.activity) return toHome();
-    return sendFile(res, 'activity.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+    return sendFile(res, 'activity.html', 'text/html; charset=utf-8', chromeFor('staff', multi));
   }
 
   // All Uploads (super admin only) and the file readers it shares with the Dashboards page
   if (requestedPath === '/uploads' || requestedPath === '/uploads/' || requestedPath === '/uploads.html') {
     if (!(facts.staff && facts.staff.role === 'admin')) return toHome();
-    return sendFile(res, 'uploads.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+    return sendFile(res, 'uploads.html', 'text/html; charset=utf-8', chromeFor('staff', multi));
   }
   if (requestedPath === '/parsers.js') {
     if (!(facts.staff && facts.staff.role === 'admin') && !facts.dash) return res.status(404).end();
@@ -313,20 +317,20 @@ module.exports = async function handler(req, res) {
   // Daily Store Report: everyone with a Staff Performance login (sales people and store managers: their own store; area managers: their zone; super admin: all)
   if (requestedPath === '/daily' || requestedPath === '/daily/' || requestedPath === '/daily.html') {
     if (!facts.staff) return toHome();
-    return sendFile(res, 'daily.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+    return sendFile(res, 'daily.html', 'text/html; charset=utf-8', chromeFor('staff', multi));
   }
 
   // Weekly Schedule: managers (super admin, area managers, store managers) plan; sales people only look at their own store's who works Morning, Between and Night shifts
   if (requestedPath === '/schedule' || requestedPath === '/schedule/' || requestedPath === '/schedule.html') {
     if (!facts.staff && !facts.hr) return toHome();
-    return sendFile(res, 'schedule.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+    return sendFile(res, 'schedule.html', 'text/html; charset=utf-8', chromeFor('staff', multi));
   }
 
   // VM Zones: the VM account and the super admin place collections in store zones and see the effect on sales
   if (requestedPath === '/vm/zones' || requestedPath === '/vm/zones/' || requestedPath === '/vmzones.html') {
     const admin = !!facts.staff && facts.staff.role === 'admin';
     if (!admin && !facts.vm) return toHome();
-    return sendFile(res, 'vmzones.html', 'text/html; charset=utf-8', withChrome('vm', multi));
+    return sendFile(res, 'vmzones.html', 'text/html; charset=utf-8', chromeFor('vm', multi));
   }
 
   // Zone stock: what is in each VM zone; store managers open it for their own store
@@ -334,14 +338,14 @@ module.exports = async function handler(req, res) {
     const admin = !!facts.staff && facts.staff.role === 'admin';
     const mgr = !!facts.staff && facts.staff.role === 'store';
     if (!admin && !mgr && !facts.vm) return toHome();
-    return sendFile(res, 'zonestock.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
+    return sendFile(res, 'zonestock.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
 
   // VM report: the VM account (view only) and the super admin (who feeds it)
   if (requestedPath === '/vm' || requestedPath === '/vm/' || requestedPath === '/vm.html') {
     const admin = !!facts.staff && facts.staff.role === 'admin';
     if (!admin && !facts.vm) return toHome();
-    const chrome = withChrome('vm', multi);
+    const chrome = chromeFor('vm', multi);
     const info = JSON.stringify({ role: admin ? 'admin' : 'vm' });
     return sendFile(res, 'vm.html', 'text/html; charset=utf-8', function (buf) {
       let html = buf.toString('utf8');
@@ -355,51 +359,51 @@ module.exports = async function handler(req, res) {
   if (requestedPath === '/stock' || requestedPath === '/stock/' || requestedPath === '/stock.html') {
     const okStock = !!facts.vm || (!!facts.staff && facts.staff.role !== 'staff' && facts.staff.role !== 'store');
     if (!okStock) return toHome();
-    return sendFile(res, 'stock.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
+    return sendFile(res, 'stock.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
 
   // Stock Count: super admin and the Stock Count only accounts
   if (requestedPath === '/stockcount' || requestedPath === '/stockcount/' || requestedPath === '/stockcount.html') {
     if (!(facts.staff && facts.staff.role === 'admin') && !facts.sc) return toHome();
-    return sendFile(res, 'stockcount.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+    return sendFile(res, 'stockcount.html', 'text/html; charset=utf-8', chromeFor('staff', multi));
   }
   // Stock Checker: sales people and store managers (their own store), area managers (their zone) and the super admin. Each store's scans stay separate (api/_checker.js).
   if (requestedPath === '/stockchecker' || requestedPath === '/stockchecker/' || requestedPath === '/stockchecker.html') {
     const onlineStaff = !!(facts.staff && facts.staff.who && facts.staff.who.info && facts.staff.who.info.self && /online|e-?commerce|website/i.test(facts.staff.who.info.self.store || ''));
     if (!(facts.staff && !facts.staff.overseer) || onlineStaff) return toHome();
-    return sendFile(res, 'stockchecker.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+    return sendFile(res, 'stockchecker.html', 'text/html; charset=utf-8', chromeFor('staff', multi));
   }
   // Refill Order: whoever the super admin gave access to (Staff approvals)
   if (requestedPath === '/refill' || requestedPath === '/refill/' || requestedPath === '/refill.html') {
     if (!facts.refill || facts.refill === 'none') return toHome();
-    return sendFile(res, 'refill.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
+    return sendFile(res, 'refill.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   // Orders Distribution and Slow Moving
   if (requestedPath === '/distribution' || requestedPath === '/distribution/' || requestedPath === '/distribution.html') {
     if (!facts.dist || facts.dist === 'none') return toHome();
-    return sendFile(res, 'distribution.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
+    return sendFile(res, 'distribution.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   if (requestedPath === '/receiving' || requestedPath === '/receiving/' || requestedPath === '/receiving.html') {
     if (!facts.recv || facts.recv === 'none') return toHome();
-    return sendFile(res, 'receiving.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
+    return sendFile(res, 'receiving.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   // Sales Intelligence: super admin, brand manager and area managers (the server keeps area managers to their zone)
   if (requestedPath === '/insights' || requestedPath === '/insights/' || requestedPath === '/insights.html') {
     if (!facts.dash) return toHome();
-    return sendFile(res, 'insights.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+    return sendFile(res, 'insights.html', 'text/html; charset=utf-8', chromeFor('staff', multi));
   }
   // Store Overview: super admin and brand manager (overseer) only
   if (requestedPath === '/overview' || requestedPath === '/overview/' || requestedPath === '/overview.html') {
     if (!(facts.staff && facts.staff.role === 'admin')) return toHome();
-    return sendFile(res, 'overview.html', 'text/html; charset=utf-8', withChrome('staff', multi));
+    return sendFile(res, 'overview.html', 'text/html; charset=utf-8', chromeFor('staff', multi));
   }
   if (requestedPath === '/slow' || requestedPath === '/slow/' || requestedPath === '/slow.html') {
     if (!facts.refill || facts.refill === 'none') return toHome();
-    return sendFile(res, 'slow.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
+    return sendFile(res, 'slow.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   if (requestedPath === '/transfer' || requestedPath === '/transfer/' || requestedPath === '/transfer.html') {
     if (!(facts.staff && facts.staff.role === 'admin')) return toHome();
-    return sendFile(res, 'transfer.html', 'text/html; charset=utf-8', withChrome(facts.vm ? 'vm' : 'staff', multi));
+    return sendFile(res, 'transfer.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   // its product pictures, in pieces (one response may not pass 4.5 MB); super admin only, kept by the browser for a day
   const picPart = /^\/stockcount-pics-([1-9])\.js$/.exec(requestedPath);
@@ -417,7 +421,7 @@ module.exports = async function handler(req, res) {
   // Pandora Dashboards
   if (requestedPath === '/dashboards' || requestedPath === '/dashboards/' || requestedPath === '/index.html') {
     if (!facts.dash) return toHome();
-    return sendFile(res, 'index.html', 'text/html; charset=utf-8', withChrome('dashboards', multi));
+    return sendFile(res, 'index.html', 'text/html; charset=utf-8', chromeFor('dashboards', multi));
   }
 
   res.setHeader('Cache-Control', 'no-store');
