@@ -322,7 +322,7 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
         <legend className="text-sm font-semibold mb-2">{t.fault}</legend>
         <div className="flex flex-wrap gap-2">
           {categories.map((c) => (
-            <button key={c.name} type="button" onClick={() => { setFault(c.name); if (c.cost !== null && !agreed) setAgreed(String(c.cost)); }} aria-pressed={fault === c.name}
+            <button key={c.name} type="button" onClick={() => { setFault(c.name); if (c.cost !== null) setAgreed(String(c.cost)); }} aria-pressed={fault === c.name}
               className={`rounded-full border border-stone-900 px-4 py-2 text-sm ${fault === c.name ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-white"}`}>
               {c.label}
             </button>
