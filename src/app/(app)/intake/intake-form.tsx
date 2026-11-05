@@ -18,6 +18,9 @@ const MAX_PHOTOS = 6;
 const input = "rounded-lg border border-stone-300 px-3 py-2.5 font-normal focus:outline-2 focus:outline-stone-900";
 const label = "flex flex-col gap-1.5 text-sm font-medium";
 
+// 1500.00 → 1,500.00 for display; the stored value stays plain digits
+const withCommas = (v: string) => { const [i, d] = v.split("."); return i.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (d !== undefined ? "." + d : ""); };
+
 async function sha256(file: File) {
   const buf = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -333,9 +336,9 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder={t.commentPh} className={input} />
         </label>
         <label className={label}>{t.agreedAmount}
-          <input value={agreed} onChange={(e) => setAgreed(e.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" dir="ltr" placeholder="0" className={`${input} max-w-48`} />
+          <input value={withCommas(agreed)} onChange={(e) => setAgreed(e.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" dir="ltr" placeholder="0" className={`${input} max-w-48`} />
           <span className="text-xs text-stone-500 font-normal">{t.agreedHint}</span>
-          {category?.cost != null && <span className="text-xs text-emerald-800 font-normal">{t.standardCost(Math.round(category.cost).toFixed(2))}</span>}
+          {category?.cost != null && <span className="text-xs text-emerald-800 font-normal">{t.standardCost(withCommas(Math.round(category.cost).toFixed(2)))}</span>}
         </label>
         {!!previous.length && (
           <p role="alert" className="rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm p-3">
