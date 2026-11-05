@@ -322,7 +322,7 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
         <legend className="text-sm font-semibold mb-2">{t.fault}</legend>
         <div className="flex flex-wrap gap-2">
           {categories.map((c) => (
-            <button key={c.name} type="button" onClick={() => { setFault(c.name); if (c.cost !== null) setAgreed(String(c.cost)); }} aria-pressed={fault === c.name}
+            <button key={c.name} type="button" onClick={() => { setFault(c.name); if (c.cost !== null) setAgreed(Math.round(c.cost).toFixed(2)); }} aria-pressed={fault === c.name}
               className={`rounded-full border border-stone-900 px-4 py-2 text-sm ${fault === c.name ? "bg-[var(--accent)] text-[var(--on-accent)]" : "bg-white"}`}>
               {c.label}
             </button>
@@ -335,7 +335,7 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
         <label className={label}>{t.agreedAmount}
           <input value={agreed} onChange={(e) => setAgreed(e.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" dir="ltr" placeholder="0" className={`${input} max-w-48`} />
           <span className="text-xs text-stone-500 font-normal">{t.agreedHint}</span>
-          {category?.cost != null && <span className="text-xs text-emerald-800 font-normal">{t.standardCost(category.cost.toFixed(2))}</span>}
+          {category?.cost != null && <span className="text-xs text-emerald-800 font-normal">{t.standardCost(Math.round(category.cost).toFixed(2))}</span>}
         </label>
         {!!previous.length && (
           <p role="alert" className="rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm p-3">
