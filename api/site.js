@@ -67,10 +67,12 @@ function withChrome(kind, multi, side) {
   return function (buf) {
     let html = buf.toString('utf8');
     const h = html.search(/<\/head>/i);
-    if (h !== -1) html = html.slice(0, h) + THEME_HEAD + html.slice(h);
+    const showSide = !!side && kind !== 'home' && kind !== 'login';
+    if (h !== -1) html = html.slice(0, h) + THEME_HEAD + (showSide ? SIDEBAR.parts.head(side) : '') + html.slice(h);
+    if (showSide) html = html.replace(/<body[^>]*>/i, m => m + SIDEBAR.parts.body(side, side.path));
     const i = html.lastIndexOf('</body>');
     const at = i === -1 ? html.length : i;
-    html = html.slice(0, at) + chromeScript(kind, multi) + (kind === 'login' ? '' : BEACON) + HEADER + (side && kind !== 'home' && kind !== 'login' ? SIDEBAR.inject(side) : '') + html.slice(at);
+    html = html.slice(0, at) + chromeScript(kind, multi) + (kind === 'login' ? '' : BEACON) + HEADER + (showSide ? SIDEBAR.parts.tail() : '') + html.slice(at);
     return Buffer.from(html, 'utf8');
   };
 }
@@ -203,7 +205,7 @@ module.exports = async function handler(req, res) {
   const signedIn = facts.dash || facts.staff || facts.hr;
   const multi = appsFor(facts).length > 1;
   const sideData = await SIDEBAR.dataFor(facts); // null unless the super admin / brand manager
-  const chromeFor = (kind, m) => withChrome(kind, m, sideData);
+  const chromeFor = (kind, m) => withChrome(kind, m, sideData && Object.assign({}, sideData, { path: requestedPath }));
   const toLogin = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/login.html'); return res.status(302).end(); };
   const toHome = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/'); return res.status(302).end(); };
   if (!signedIn && !facts.vm && !facts.sc) return toLogin();

@@ -34,10 +34,16 @@ async function dataFor(facts) {
 }
 
 const CSS = String.raw`<style id="pandora-side-css">
-html.pzs-on body{margin-left:244px!important;transition:margin-left .2s ease}
+html.pzs-on body{margin-left:244px!important;animation:none!important}
+html.pzs-on.pzs-ready body{transition:margin-left .2s ease}
+@view-transition{navigation:auto}
+.pzs{view-transition-name:pzs}
+::view-transition-group(pzs),::view-transition-old(pzs),::view-transition-new(pzs){animation:none}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.18s}
 html.pzs-on.pzs-min body{margin-left:92px!important}
 .pzs{--s-bg:#fff;--s-ink:#282522;--s-mut:#817a74;--s-line:#e9e2dc;--s-soft:#FFE4E8;--s-acc:#FF93A0;--s-on:#2A1018;--s-acct:#2A1F24;
-position:fixed;z-index:40;top:12px;left:12px;bottom:12px;width:220px;display:flex;flex-direction:column;background:var(--s-bg);color:var(--s-ink);border:1px solid var(--s-line);border-radius:20px;font:600 13px/1.3 "Plus Jakarta Sans",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;word-spacing:.09em;transition:width .2s ease,transform .2s ease;overflow:hidden}
+position:fixed;z-index:40;top:12px;left:12px;bottom:12px;width:220px;display:flex;flex-direction:column;background:var(--s-bg);color:var(--s-ink);border:1px solid var(--s-line);border-radius:20px;font:600 13px/1.3 "Plus Jakarta Sans",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;word-spacing:.09em;overflow:hidden}
+html.pzs-ready .pzs{transition:width .2s ease,transform .2s ease}
 :root[data-theme="dark"] .pzs{--s-bg:#211f1d;--s-ink:#f7f2ed;--s-mut:#b7aea6;--s-line:#3a3530;--s-soft:#33202a;--s-acct:#FF93A0}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pzs{--s-bg:#211f1d;--s-ink:#f7f2ed;--s-mut:#b7aea6;--s-line:#3a3530;--s-soft:#33202a;--s-acct:#FF93A0}}
 .pzs *{box-sizing:border-box}
@@ -56,7 +62,7 @@ position:fixed;z-index:40;top:12px;left:12px;bottom:12px;width:220px;display:fle
 .pzs-a.on{background:var(--s-acc);color:var(--s-on)}.pzs-a.on .pzs-ic{background:rgba(255,255,255,.6);color:var(--s-on)}
 .pzs-foot{flex:0 0 auto;border-top:1px solid var(--s-line);padding:8px}
 .pzs-btn{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;color:var(--s-mut);font:inherit;padding:6px 8px;border-radius:14px;cursor:pointer}.pzs-btn:hover{background:var(--s-soft);color:var(--s-ink)}
-.pzs-btn svg{width:15px;height:15px;flex:0 0 28px;transition:transform .2s}
+.pzs-btn svg{width:15px;height:15px;flex:0 0 28px}
 .pzs-fab{display:none}.pzs-dim{display:none}
 html.pzs-min .pzs{width:68px}
 html.pzs-min .pzs-top div,html.pzs-min .pzs-t,html.pzs-min .pzs-btn span{display:none}
@@ -77,7 +83,7 @@ html.pzs-open .pzs{transform:none;box-shadow:0 18px 50px rgba(0,0,0,.28)}
 html.pzs-open .pzs-dim{display:block;position:fixed;z-index:38;inset:0;background:rgba(20,12,14,.4)}
 }
 @media print{.pzs,.pzs-fab,.pzs-dim{display:none!important}html.pzs-on body{margin-left:0!important}}
-@media (prefers-reduced-motion:reduce){.pzs,html.pzs-on body,.pzs-btn svg{transition:none}}
+@media (prefers-reduced-motion:reduce){html.pzs-ready .pzs,html.pzs-on.pzs-ready body{transition:none}@view-transition{navigation:none}}
 </style>`;
 
 // Small outline icons (same style as the home screen). Reports without one of their own get a plain square.
@@ -106,44 +112,50 @@ const ICONS = {
 };
 const DEF = '<rect x="4" y="4" width="16" height="16" rx="3"/>';
 
-const JS = String.raw`<script>(function(){try{
-var D=window.__PZSIDE;if(!D||!D.groups||!D.groups.length||document.querySelector('.pzs'))return;
-var IC=__ICONS__,DEF=__DEF__;
-function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function norm(p){p=String(p||'/').split('?')[0].split('#')[0].replace(/\/+$/,'');return p||'/'}
-var here=norm(location.pathname).replace(/\.html$/,'');
-if(here==='/index')here='/dashboards';
-// the page you are on: the longest matching address wins (so /staff/accounts is not mistaken for /staff)
-var best='',bestLen=-1;
-D.groups.forEach(function(g){g.items.forEach(function(it){var h=norm(it.h);if((here===h||here.indexOf(h+'/')===0)&&h.length>bestLen){best=it.id;bestLen=h.length}})});
-function svg(id){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(IC[id]||DEF)+'</svg>'}
-var h='<a class="pzs-top" href="/" title="Home"><img src="/pandora-logo.png" alt="Pandora"><div><b>Pandora</b><small>All reports</small></div></a><nav class="pzs-list" aria-label="Reports">';
-D.groups.forEach(function(g){
-  h+='<div class="pzs-h">'+esc(g.name)+'</div>';
-  g.items.forEach(function(it){h+='<a class="pzs-a'+(it.id===best?' on':'')+'" href="'+esc(it.h)+'" title="'+esc(it.t)+'"'+(it.id===best?' aria-current="page"':'')+'><span class="pzs-ic">'+svg(it.id)+'</span><span class="pzs-t">'+esc(it.t)+'</span></a>'});
-});
-h+='</nav><div class="pzs-foot"><button type="button" class="pzs-btn" id="pzsMin" title="Make the list smaller"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span>Make smaller</span></button></div>';
-var nav=document.createElement('aside');nav.className='pzs';nav.innerHTML=h;
-var fab=document.createElement('button');fab.type='button';fab.className='pzs-fab';fab.setAttribute('aria-label','Open the reports list');
-fab.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
-var dim=document.createElement('div');dim.className='pzs-dim';
-var root=document.documentElement;
-document.body.appendChild(nav);document.body.appendChild(fab);document.body.appendChild(dim);
-root.classList.add('pzs-on');
-var KEY='pandora-side-min';
-try{if(localStorage.getItem(KEY)==='1')root.classList.add('pzs-min')}catch(e){}
-document.getElementById('pzsMin').addEventListener('click',function(){var m=root.classList.toggle('pzs-min');try{localStorage.setItem(KEY,m?'1':'0')}catch(e){}});
-function open(v){root.classList.toggle('pzs-open',v)}
-fab.addEventListener('click',function(){open(true)});dim.addEventListener('click',function(){open(false)});
-document.addEventListener('keydown',function(e){if(e.key==='Escape')open(false)});
-// keep the current report in view when the list is long
-var on=nav.querySelector('.pzs-a.on');if(on&&on.scrollIntoView){try{on.scrollIntoView({block:'center'})}catch(e){}}
-}catch(e){}})();</script>`;
+const esc = x => String(x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = p => (String(p || '/').split('?')[0].split('#')[0].replace(/\/+$/, '') || '/');
+const svg = id => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[id] || DEF) + '</svg>';
 
-// The block that goes into the page. `data` comes from dataFor().
-function inject(data) {
-  const boot = '<script>window.__PZSIDE=' + JSON.stringify(data).replace(/</g, '\\u003c') + ';</script>';
-  return CSS + boot + JS.replace('__ICONS__', JSON.stringify(ICONS)).replace('__DEF__', JSON.stringify(DEF));
+// In <head>: the layout is decided before the first paint (list open or small, as the person left it), so nothing jumps or fades in.
+const HEAD_JS = '<script>(function(){var r=document.documentElement;r.classList.add("pzs-on");try{if(localStorage.getItem("pandora-side-min")==="1")r.classList.add("pzs-min")}catch(e){}})();</script>';
+
+// The list itself, drawn by the server straight after <body> so it is already there on the first paint.
+// The page you are on is the longest matching address (so /staff/accounts is not mistaken for /staff).
+function html(data, path) {
+  let here = norm(path).replace(/\.html$/, '');
+  if (here === '/index') here = '/dashboards';
+  let best = '', len = -1;
+  data.groups.forEach(g => g.items.forEach(it => { const h = norm(it.h); if ((here === h || here.indexOf(h + '/') === 0) && h.length > len) { best = it.id; len = h.length; } }));
+  let h = '<aside class="pzs" aria-label="Reports"><a class="pzs-top" href="/" title="Home"><img src="/pandora-logo.png" alt="Pandora"><div><b>Pandora</b><small>All reports</small></div></a><nav class="pzs-list">';
+  data.groups.forEach(g => {
+    h += '<div class="pzs-h">' + esc(g.name) + '</div>';
+    g.items.forEach(it => { h += '<a class="pzs-a' + (it.id === best ? ' on' : '') + '" href="' + esc(it.h) + '" title="' + esc(it.t) + '"' + (it.id === best ? ' aria-current="page"' : '') + '><span class="pzs-ic">' + svg(it.id) + '</span><span class="pzs-t">' + esc(it.t) + '</span></a>'; });
+  });
+  h += '</nav><div class="pzs-foot"><button type="button" class="pzs-btn" id="pzsMin" title="Make the list smaller"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span>Make smaller</span></button></div></aside>';
+  h += '<button type="button" class="pzs-fab" aria-label="Open the reports list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><div class="pzs-dim"></div>';
+  // keep the list scrolled exactly where it was on the previous report (or bring the current report into view the first time)
+  h += '<script>(function(){try{var l=document.querySelector(".pzs-list"),v=sessionStorage.getItem("pzsScroll");if(v!==null)l.scrollTop=+v;else{var o=l.querySelector(".on");if(o)l.scrollTop=Math.max(0,o.offsetTop-l.clientHeight/2+20)}}catch(e){}})();</script>';
+  return h;
 }
 
-module.exports = { dataFor, inject, BASE };
+// At the end of the page: buttons only. Nothing here changes how the list looks.
+const TAIL_JS = String.raw`<script>(function(){try{
+var r=document.documentElement,l=document.querySelector('.pzs-list');if(!l)return;
+function save(){try{sessionStorage.setItem('pzsScroll',l.scrollTop)}catch(e){}}
+l.addEventListener('scroll',save,{passive:true});addEventListener('pagehide',save);
+document.getElementById('pzsMin').addEventListener('click',function(){var m=r.classList.toggle('pzs-min');try{localStorage.setItem('pandora-side-min',m?'1':'0')}catch(e){}});
+function open(v){r.classList.toggle('pzs-open',v)}
+document.querySelector('.pzs-fab').addEventListener('click',function(){open(true)});
+document.querySelector('.pzs-dim').addEventListener('click',function(){open(false)});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')open(false)});
+// animations are allowed only after the first paint, so opening a report never slides or fades the list
+requestAnimationFrame(function(){requestAnimationFrame(function(){r.classList.add('pzs-ready')})});
+}catch(e){}})();</script>`;
+
+const parts = {
+  head: data => CSS + HEAD_JS,
+  body: (data, path) => html(data, path),
+  tail: () => TAIL_JS
+};
+
+module.exports = { dataFor, parts, BASE };
