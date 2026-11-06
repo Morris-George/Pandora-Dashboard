@@ -190,7 +190,7 @@ const num=n=>Number(n||0).toLocaleString('en-US');
 function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
 
 // ---- state ----
-let D=null,DAILY=null,P=null,TAB='overview',SEL='',SHOW=100,METRIC='users',STATUS='all',Q='',TQ='',KIND='all',SORT={k:'lastSeen',dir:-1};
+let D=null,DAILY=null,P=null,TAB='overview',SEL='',SHOW=100,METRIC='users',STATUS='all',Q='',TQ='',KIND='all',SORT={k:'secs',dir:-1};
 const F={preset:'7',from:'',to:'',group:'all',store:'',person:'',page:''};
 try{const s=JSON.parse(localStorage.getItem('pandora.activity')||'{}');if(['today','yesterday','7','30','90'].includes(s.preset))F.preset=s.preset;if(['overview','people','timeline','stores'].includes(s.tab))TAB=s.tab}catch(_){}
 const save=()=>{try{localStorage.setItem('pandora.activity',JSON.stringify({preset:F.preset==='custom'?'7':F.preset,tab:TAB}))}catch(_){}};
@@ -591,6 +591,7 @@ function renderStores(){
     const sum=k=>ags.reduce((n,a)=>n+a[k],0),seen=ps.map(p=>p.lastSeen).filter(Boolean).sort().pop()||'';
     return{s,n:ps.length,active:ags.filter(a=>a.activeDays>0).length,logins:sum('logins'),views:sum('views'),actions:sum('actions'),secs:sum('secs'),pct:DAILY&&DAILY.stores?dailyPct(s.daily):null,seen};
   });
+  rows.sort((a,b)=>b.secs-a.secs||String(a.s.name).localeCompare(b.s.name)); // most time in use first
   $('stores').innerHTML=rows.length?rows.map(r=>`<tr class="st${F.store===r.s.key?' sel':''}" data-store="${esc(r.s.key)}" tabindex="0"><td><div class="nm">${esc(r.s.name)}</div></td><td class="n">${r.n}</td><td class="n">${r.active}${r.n&&!r.active?' <span class="tag warn">none</span>':''}</td><td class="n">${num(r.logins)}</td><td class="n">${num(r.views)}</td><td class="n">${num(r.actions)}</td><td class="n">${esc(dur(r.secs))}</td><td>${r.pct==null?'<span class="note">–</span>':`<span class="mini" title="${r.pct}% of shifts typed in"><i style="width:${r.pct}%"></i></span><span class="pct">${r.pct}%</span>`}</td><td>${r.seen?esc(ago(r.seen)):'<span class="note">never</span>'}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">No stores yet.</td></tr>';
   renderDaily();
 }
