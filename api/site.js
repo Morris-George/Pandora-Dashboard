@@ -1,5 +1,6 @@
 
 const fs = require('fs');
+const { LAMP } = require('./_lamp');
 const path = require('path');
 const { appsFor, sessionFacts, greetName } = require('./_apps');
 const pair = require('./_pair');
@@ -72,7 +73,7 @@ function withChrome(kind, multi, side) {
     if (showSide) html = html.replace(/<body[^>]*>/i, m => m + SIDEBAR.parts.body(side, side.path));
     const i = html.lastIndexOf('</body>');
     const at = i === -1 ? html.length : i;
-    html = html.slice(0, at) + chromeScript(kind, multi) + (kind === 'login' ? '' : BEACON) + HEADER + (showSide ? SIDEBAR.parts.tail() : '') + html.slice(at);
+    html = html.slice(0, at) + chromeScript(kind, multi) + (kind === 'login' ? '' : LAMP + BEACON) + HEADER + (showSide ? SIDEBAR.parts.tail() : '') + html.slice(at);
     return Buffer.from(html, 'utf8');
   };
 }

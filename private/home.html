@@ -70,26 +70,6 @@ body.ready .sec.swap{animation:swap .22s ease-out!important}
 @keyframes pop{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:none}}
 @keyframes rise{to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.intro{display:none}.sec,.hero,.tabs{opacity:1;transform:none;animation:none!important}.tile,.tile *{transition:none!important}}
-/* lamp pull-cord replaces the sun/moon switch on this page (small screens keep the normal switch) */
-.lamp{display:none}
-@media (min-width:901px){#themeBtn{display:none!important}
-.lamp{display:block;position:fixed;top:0;right:26px;width:64px;z-index:100;opacity:0;--p:0px}
-body.go .lamp{animation:lampin .9s cubic-bezier(.2,.9,.3,1) .5s forwards}}
-@keyframes lampin{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:none}}
-.lamp svg{display:block;width:64px;height:auto;overflow:visible}
-.lamp .wire{stroke:var(--muted);stroke-width:1.6}
-.lamp .shade{fill:var(--accent)}.lamp .rim{fill:light-dark(#e8707f,#e8707f)}
-.lamp .bulb{fill:light-dark(#c9c2bb,#4a4440);transition:fill .3s,filter .3s}
-.lamp.on .bulb{fill:#ffe08a;filter:drop-shadow(0 0 7px rgba(255,214,110,.95))}
-.lamp .beam{position:absolute;left:50%;top:44px;width:230px;height:250px;margin-left:-115px;pointer-events:none;z-index:-1;opacity:0;transition:opacity .35s;clip-path:polygon(38% 0,62% 0,100% 100%,0 100%);background:linear-gradient(to bottom,rgba(255,224,138,.55),rgba(255,224,138,0))}
-.lamp.on .beam{opacity:1}
-.pullb{position:absolute;left:44px;top:42px;width:22px;margin-left:-11px;padding:0;border:0;background:none;cursor:grab;touch-action:none;display:flex;flex-direction:column;align-items:center;-webkit-tap-highlight-color:transparent}
-.pullb:active{cursor:grabbing}
-.pullb:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:8px}
-.pullb .cl{display:block;width:1.8px;height:calc(40px + var(--p));background:var(--muted);transition:height .45s cubic-bezier(.3,1.9,.5,1)}
-.pullb .ball{display:block;width:13px;height:13px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px var(--soft);margin-top:-1px}
-.lamp.drag .cl{transition:none}
-.themefade,.themefade *{transition:background-color .45s,color .45s,border-color .45s,fill .45s!important}
 [hidden]{display:none!important}
 .nores{text-align:center;color:var(--muted);font-size:14px;padding:30px}
 .empty{color:var(--muted);font-size:14px;text-align:center}
@@ -107,9 +87,6 @@ body.go .lamp{animation:lampin .9s cubic-bezier(.2,.9,.3,1) .5s forwards}}
 </style></head>
 <body data-nopw>
 <div class="intro"><img class="logo" src="/pandora-logo.png" alt="Pandora"></div>
-<div class="lamp" id="lamp"><span class="beam"></span>
-<svg viewBox="0 0 64 56" aria-hidden="true"><line class="wire" x1="32" y1="-2" x2="32" y2="18"/><path class="shade" d="M9 44Q9 22 32 19Q55 22 55 44Z"/><rect class="rim" x="7" y="42" width="50" height="4" rx="2"/><ellipse class="bulb" cx="32" cy="48" rx="8" ry="6"/></svg>
-<button class="pullb" id="pull" type="button" role="switch" aria-checked="false" aria-label="Lamp: pull to switch between light and dark mode"><span class="cl"></span><span class="ball"></span></button></div>
 <main class="wrap">
 <header class="hero"><div class="hl"><img class="mark logo" src="/pandora-logo.png" alt=""><div><p class="eyebrow" id="date">&nbsp;</p><h1 class="title" id="hello">&nbsp;</h1><p class="sub" id="sub">Choose what you want to open.</p></div></div>
 <div class="find" id="findbox" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="find" type="search" placeholder="Find a report" autocomplete="off" aria-label="Find a report"><kbd>/</kbd></div></header>
@@ -197,20 +174,6 @@ document.addEventListener('click',async e=>{
     if(!r||!r.ok){alert('Could not save the order.');return}
     LAST.homeOrder=home;EDIT=null;paint(LAST)}
 });
-// lamp cord: pull it down for light mode, pull again for dark mode (same saved choice as the normal switch)
-(function(){const L=document.getElementById('lamp'),B=document.getElementById('pull'),root=document.documentElement;
-  const cur=()=>root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
-  const sync=()=>{const light=cur()==='light';L.classList.toggle('on',light);B.setAttribute('aria-checked',light);B.title=light?'Pull the cord: dark mode':'Pull the cord: light mode'};
-  const flip=()=>{const n=cur()==='dark'?'light':'dark';root.classList.add('themefade');root.setAttribute('data-theme',n);try{localStorage.setItem('pandora-theme',n)}catch(e){}sync();setTimeout(()=>root.classList.remove('themefade'),600)};
-  const tug=px=>{L.style.setProperty('--p',px+'px');setTimeout(()=>L.style.setProperty('--p','0px'),110)};
-  let y0=null,dy=0;sync();
-  B.addEventListener('pointerdown',e=>{y0=e.clientY;dy=0;L.classList.add('drag');try{B.setPointerCapture(e.pointerId)}catch(_){}});
-  B.addEventListener('pointermove',e=>{if(y0==null)return;dy=Math.max(0,Math.min(38,e.clientY-y0));L.style.setProperty('--p',dy+'px')});
-  B.addEventListener('pointerup',()=>{if(y0==null)return;const m=dy;y0=null;L.classList.remove('drag');
-    if(m<4){tug(24);flip()}else{L.style.setProperty('--p',m+'px');requestAnimationFrame(()=>L.style.setProperty('--p','0px'));if(m>=16)flip()}});
-  B.addEventListener('pointercancel',()=>{y0=null;L.classList.remove('drag');L.style.setProperty('--p','0px')});
-  B.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();tug(24);flip()}});
-})();
 // the logo shows alone first, then lifts away and the page builds in
 const reveal=()=>{document.body.classList.add('go');setTimeout(()=>document.body.classList.add('ready'),2200)};
 if(matchMedia('(prefers-reduced-motion: reduce)').matches)reveal();else setTimeout(reveal,1300);
