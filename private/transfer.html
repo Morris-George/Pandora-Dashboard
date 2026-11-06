@@ -187,7 +187,7 @@ function pkPlanHtml(g){const e=PK.sel.get(g.sku),sg=sugOf(g),so=SOLD,have=g.item
   const used=new Set(e.lines.map(l=>l.to)),sgs=sg.filter(x=>!used.has(x.to));
   return `<div class="pkp" style="display:block">${head}<div class="lns">${e.lines.map((l,ix)=>pkLn(e,l,ix)).join('')}</div><div class="row" style="margin-top:6px"><button class="sug" data-ladd>+ Add a transfer line</button>${sgs.length?`<span class="note">Suggested:</span>${sgs.map(x=>`<button class="sug" data-pksug="${esc(x.to)}">+ ${esc(x.to)} <small>sold ${fmt(x.sold)} · has ${fmt(x.have)}</small></button>`).join('')}`:''}<span class="note" data-pkleft>${pkStay(e)}</span></div></div>`}
 function pkRow(g){const e=PK.sel.get(g.sku),si=pkScoped(g),tot=si.reduce((a,i)=>a+i.qty,0);
-  return `<div class="pk${e?' sel':''}" data-pk="${esc(g.sku)}"><div class="pkt"><span class="ck">${ic('check')}</span>${pic(g.sku).replace('class="img"','class="img lg"')}<div class="mid"><b title="${esc(g.name)}">${esc(g.name||g.sku)}</b><div class="note">${esc(g.sku)} · ${esc(g.cat)} · in stock in <b style="display:inline">${g.items.length}</b> store${g.items.length>1?'s':''}</div></div><div class="qt"><b>${fmt(tot)}</b> <small class="note">in stock</small></div></div>${pkPlanHtml(g)}</div>`}
+  return `<div class="pk${e?' sel':''}" data-pk="${esc(g.sku)}"><div class="pkt"><span class="ck">${ic('check')}</span>${pic(g.sku).replace('class="img"','class="img lg"')}<div class="mid"><b title="${esc(g.name)}">${esc(g.name||g.sku)}</b><div class="note">${esc(g.sku)} · ${esc(g.cat)} · in stock in <b style="display:inline">${g.items.length}</b> store${g.items.length>1?'s':''}</div></div><div class="qt">${(D.prices||{})[g.sku]?`<div class="note" title="Latest selling price per piece, VAT included">EGP <b style="display:inline">${fmt(D.prices[g.sku])}</b> each</div>`:''}<b>${fmt(tot)}</b> <small class="note">in stock</small></div></div>${pkPlanHtml(g)}</div>`}
 function pkRedo(r){const g=PKG.get(r.dataset.pk);if(!g)return;const t=document.createElement('div');t.innerHTML=pkRow(g);r.replaceWith(t.firstChild);pkSum();pkDrawScope()}
 function pkDrawScope(){const stores=pkStores(),cn=st=>new Set(ITEMS.filter(i=>!st||i.store===st).map(i=>i.sku)).size,sn=st=>[...PK.sel.values()].filter(e=>e.lines.some(l=>l.to&&l.qty>0&&(!st||l.from===st))).length;
   $('pkScope').innerHTML=[''].concat(stores).map(st=>`<span class="chip ${PK.scope===st?'on':''}" data-pkscope="${esc(st)}">${st?esc(st):'All stores together'} <b>${fmt(cn(st))}</b>${sn(st)?` <span class="note">· ${sn(st)} to move</span>`:''}</span>`).join('')}
@@ -203,14 +203,14 @@ function pkSum(){const v=[...PK.sel.values()].filter(e=>pkPcs(e)>0),pcs=v.reduce
   $('pkSum').innerHTML=v.length?`<b>${fmt(v.length)}</b> SKUs · <b>${fmt(pcs)}</b> pieces · from <b>${f}</b> store${f>1?'s':''} to <b>${t}</b> store${t>1?'s':''}`:'<span class="note">Nothing to move yet. Tap an item, then set from, to and the pieces.</span>';
   $('pkGo').innerHTML=ic('dl')+' Download Excel';$('pkGo').disabled=!v.length}
 function pkExport(){const rows=[];
-  for(const e of [...PK.sel.values()])for(const l of e.lines)if(l.to&&l.qty>0)rows.push({from:l.from,to:l.to,sku:e.g.sku,ean:e.g.ean,name:e.g.name,cat:e.g.cat,qty:l.qty});
+  for(const e of [...PK.sel.values()])for(const l of e.lines)if(l.to&&l.qty>0)rows.push({price:((D&&D.prices)||{})[e.g.sku]||'',from:l.from,to:l.to,sku:e.g.sku,ean:e.g.ean,name:e.g.name,cat:e.g.cat,qty:l.qty});
   rows.sort((a,b)=>a.from.localeCompare(b.from)||a.to.localeCompare(b.to)||a.cat.localeCompare(b.cat)||a.sku.localeCompare(b.sku));if(!rows.length)return;
-  const L=r=>({'From store':r.from,'To store':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Pcs':r.qty,'Done':''});
+  const L=r=>({'From store':r.from,'To store':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Price (EGP)':r.price,'Pcs':r.qty,'Done':''});
   const wb=XLSX.utils.book_new(),mk=(a,w)=>{const ws=XLSX.utils.json_to_sheet(a);ws['!cols']=w;return ws};
-  XLSX.utils.book_append_sheet(wb,mk(rows.map(L),[{wch:16},{wch:20},{wch:16},{wch:15},{wch:42},{wch:20},{wch:6},{wch:7}]),'Transfer list');
+  XLSX.utils.book_append_sheet(wb,mk(rows.map(L),[{wch:16},{wch:20},{wch:16},{wch:15},{wch:42},{wch:20},{wch:11},{wch:6},{wch:7}]),'Transfer list');
   const used=new Set(['Transfer list']);
   for(const st of [...new Set(rows.map(r=>r.from))]){let nm=('Send from '+String(st).replace(/[\\\/?*:\[\]]/g,' ')).slice(0,31),k=2;while(used.has(nm))nm=nm.slice(0,28)+' '+k++;used.add(nm);
-    XLSX.utils.book_append_sheet(wb,mk(rows.filter(r=>r.from===st).map(r=>({'Send to':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Pcs':r.qty,'Done':''})),[{wch:22},{wch:16},{wch:15},{wch:42},{wch:20},{wch:6},{wch:7}]),nm)}
+    XLSX.utils.book_append_sheet(wb,mk(rows.filter(r=>r.from===st).map(r=>({'Send to':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Price (EGP)':r.price,'Pcs':r.qty,'Done':''})),[{wch:22},{wch:16},{wch:15},{wch:42},{wch:20},{wch:11},{wch:6},{wch:7}]),nm)}
   const fs=[...new Set(rows.map(r=>r.from))];
   XLSX.writeFile(wb,'Transfer '+(fs.length===1?fs[0]:'all stores')+' '+new Date().toISOString().slice(0,10)+'.xlsx')}
 $('pkQ').oninput=()=>{PK.q=$('pkQ').value;PK.lim=300;pkDraw()};$('pkCat').onchange=()=>{PK.cat=$('pkCat').value;PK.lim=300;pkDraw()};

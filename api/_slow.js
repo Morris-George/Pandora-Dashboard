@@ -186,11 +186,16 @@ async function enrich(skus, months) {
   for (const s of want) info[s] = { sold: Math.round(lastN.reduce((a, m) => a + ((erp.sold[m] || {})[s] || 0), 0)), byMonth: lastN.map(m => Math.round((erp.sold[m] || {})[s] || 0)), soh: Math.round((erp.soh || {})[s] || 0), grp: (erp.grp || {})[s] || '', stores: {}, order: 0 };
   // per store, by store code (dash/f/erp-YYYY-MM.json rows: [date, invoice, qty, net, gross, sku, name, branch, ...])
   const now = cairo(), keys = [];
-  for (let k = 0; k <= months; k++) keys.push(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1)).toISOString().slice(0, 7));
+  for (let k = 0; k <= Math.max(months, 12); k++) keys.push(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1)).toISOString().slice(0, 7));
   const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - months, now.getUTCDate())).toISOString().slice(0, 10);
   for (const m of keys) {
     const f = await store.getJSON('dash/f/erp-' + m + '.json'); if (!f || !Array.isArray(f.rows)) continue;
-    for (const r of f.rows) { if (r[0] < from) continue; const s = skuOf(r[5]); if (!want.has(s)) continue; const c = storeOf(r[7], st.stores) || String(r[7] || '?'); info[s].stores[c] = (info[s].stores[c] || 0) + (Number(r[2]) || 0); }
+    for (const r of f.rows) {
+      const s = skuOf(r[5]); if (!want.has(s)) continue;
+      // shelf price: the latest real sale of the SKU in the last 12 months, price with VAT per piece
+      const q = Number(r[2]) || 0, g = Number(r[4]) || 0;
+      if (q > 0 && g > 0 && r[0] >= (info[s].pd || '')) { info[s].pd = r[0]; info[s].price = Math.round(g / q); }
+      if (r[0] < from) continue; const c = storeOf(r[7], st.stores) || String(r[7] || '?'); info[s].stores[c] = (info[s].stores[c] || 0) + (Number(r[2]) || 0); }
   }
   const idx = (await store.getJSON('rf/orders/index.json')) || [];
   const last = idx.length ? await store.getJSON('rf/orders/' + idx[idx.length - 1].id + '.json') : null;

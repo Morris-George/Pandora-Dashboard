@@ -37,13 +37,16 @@ async function build() {
   }
   // what each SKU sold per store in the last MONTHS months, and the last sale date (dash/f/erp-YYYY-MM.json rows: [date, invoice, qty, net, gross, sku, name, branch, ...])
   const now = new Date(Date.now() + 3 * 3600 * 1000), keys = [];
-  for (let k = 0; k <= MONTHS; k++) keys.push(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1)).toISOString().slice(0, 7));
+  for (let k = 0; k <= Math.max(MONTHS, 12); k++) keys.push(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1)).toISOString().slice(0, 7));
   const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - MONTHS, now.getUTCDate())).toISOString().slice(0, 10);
-  const have = new Set(Object.values(agg).map(a => a.sk)), sold = {}, meta = {};
+  const have = new Set(Object.values(agg).map(a => a.sk)), sold = {}, meta = {}, prices = {}, pdate = {};
   for (const m of keys) {
     const f = await store.getJSON('dash/f/erp-' + m + '.json'); if (!f || !Array.isArray(f.rows)) continue;
     for (const r of f.rows) {
       const sk = skuOf(r[5]); if (!have.has(sk)) continue;
+      // shelf price: latest real sale in the last 12 months, price with VAT per piece
+      const pq = Number(r[2]) || 0, pg = Number(r[4]) || 0, pd = String(r[0] || '').slice(0, 10);
+      if (pq > 0 && pg > 0 && pd >= (pdate[sk] || '')) { pdate[sk] = pd; prices[sk] = Math.round(pg / pq); }
       const c = storeOf(r[7], st.stores) || String(r[7] || ''); if (!c) continue;
       const q = Number(r[2]) || 0; if (!(q > 0)) continue;
       const dt = String(r[0] || '').slice(0, 10), isRecent = dt >= from;
@@ -55,7 +58,7 @@ async function build() {
   }
   const items = Object.values(agg).map(a => [a.sk, eanFromName(a.name || meta[a.sk]), a.name || meta[a.sk] || a.sk, a.grp, a.c, Math.round(a.q * 10) / 10]);
   const sales = Object.entries(sold).filter(([, o]) => o.q > 0 || o.last).map(([k, o]) => { const i = k.indexOf('|'); return [k.slice(0, i), k.slice(i + 1), Math.round(o.q), o.last]; });
-  return { at: new Date().toISOString(), months: MONTHS, items, sales };
+  return { at: new Date().toISOString(), months: MONTHS, items, sales, prices };
 }
 
 module.exports = async function handler(req, res) {
