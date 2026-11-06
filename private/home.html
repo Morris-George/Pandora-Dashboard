@@ -63,6 +63,10 @@ body.go .intro{opacity:0;visibility:hidden}body.go .intro .logo{transform:transl
 body.go .hero{animation:rise .6s cubic-bezier(.2,.8,.2,1) .25s forwards}
 body.go .tabs{animation:rise .6s cubic-bezier(.2,.8,.2,1) .4s forwards}
 body.go .sec{animation:rise .6s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(.5s + var(--g) * .09s)}
+/* once the page has built in, switching sections is instant (a short fade only) */
+body.ready .sec,body.ready .hero,body.ready .tabs{opacity:1;transform:none;animation:none!important}
+body.ready .sec.swap{animation:swap .22s ease-out!important}
+@keyframes swap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes pop{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:none}}
 @keyframes rise{to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.intro{display:none}.sec,.hero,.tabs{opacity:1;transform:none;animation:none!important}.tile,.tile *{transition:none!important}}
@@ -160,7 +164,7 @@ document.addEventListener('keydown',e=>{if(e.key==='/'&&!/^(INPUT|TEXTAREA|SELEC
 document.getElementById('apps').addEventListener('pointermove',e=>{const t=e.target.closest&&e.target.closest('.tile');if(!t)return;const r=t.getBoundingClientRect();t.style.setProperty('--mx',(e.clientX-r.left)+'px');t.style.setProperty('--my',(e.clientY-r.top)+'px')});
 document.addEventListener('click',async e=>{
   const t=e.target.closest?e.target.closest('button,[data-tab]')||e.target:e.target,mv=(l,i,d)=>{const j=i+d;if(j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]]};
-  if(t.dataset&&t.dataset.tab){TAB=t.dataset.tab;document.getElementById('find').value='';document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tab===TAB));applyFind();return}
+  if(t.dataset&&t.dataset.tab){TAB=t.dataset.tab;document.getElementById('find').value='';document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tab===TAB));document.body.classList.add('ready');applyFind();document.querySelectorAll('.sec:not([hidden])').forEach(x=>{x.classList.remove('swap');void x.offsetWidth;x.classList.add('swap')});return}
   if(t.id==='edopen'){e.preventDefault();EDIT=VIS.filter(v=>v[0]!=='More');paint(LAST);return}
   if(t.id==='edcancel'){EDIT=null;paint(LAST);return}
   if(t.dataset&&t.dataset.sec){mv(EDIT,+t.dataset.sec,+t.dataset.d);paint(LAST);return}
@@ -171,7 +175,7 @@ document.addEventListener('click',async e=>{
     LAST.homeOrder=home;EDIT=null;paint(LAST)}
 });
 // the logo shows alone first, then lifts away and the page builds in
-const reveal=()=>document.body.classList.add('go');
+const reveal=()=>{document.body.classList.add('go');setTimeout(()=>document.body.classList.add('ready'),2200)};
 if(matchMedia('(prefers-reduced-motion: reduce)').matches)reveal();else setTimeout(reveal,1300);
 // the server already put who-you-are and what-you-can-open into the page, so it draws at once (no loading flash)
 async function badge(){
