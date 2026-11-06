@@ -170,6 +170,19 @@ html[lang="ar"] *{letter-spacing:0!important;text-transform:none!important}
 html[dir="rtl"] .brow .fill{border-radius:5px 0 0 5px}
 html[dir="rtl"] .bullet .track{border-radius:5px 0 0 5px}
 html[dir="rtl"] .brow .n{unicode-bidi:plaintext;text-align:right}
+.pthumb{width:42px;height:42px;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--surface2);color:var(--muted);font-size:15px;line-height:1;display:grid;place-items:center;overflow:hidden;cursor:zoom-in;transition:transform .15s,border-color .15s}
+.pthumb:hover,.pthumb:focus-visible{transform:scale(1.08);border-color:var(--accent);outline:none}
+.pthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.pmodal{position:fixed;inset:0;z-index:60;background:rgba(20,12,14,.45);display:grid;place-items:center;padding:20px}.pmodal[hidden]{display:none}
+.pmodal .pcard{background:var(--surface);color:var(--text);border-radius:18px;padding:14px 14px 16px;width:min(340px,100%);box-shadow:0 18px 50px rgba(0,0,0,.28);animation:ppop .16s ease-out}
+.pmodal .pbig{width:100%;aspect-ratio:1/1;border-radius:12px;background:var(--surface2);display:grid;place-items:center;overflow:hidden;color:var(--muted);font-size:12px;text-align:center}
+.pmodal .pbig img{width:100%;height:100%;object-fit:contain;display:block}
+.pmodal .pname{margin:12px 2px 2px;font-weight:700;font-size:13px;line-height:1.35}.pmodal .pinfo{margin:0 2px;color:var(--muted);font-size:11.5px}
+.pmodal .pclose{float:right;border:0;background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;margin:-4px -2px 4px 8px}
+@keyframes ppop{from{transform:scale(.92);opacity:0}to{transform:none;opacity:1}}
+.prow{display:grid;grid-template-columns:46px minmax(90px,170px) 1fr 104px;gap:10px;align-items:center;padding:5px 6px;border-radius:8px}
+.prow .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.prow .track{height:14px;position:relative}.prow .fill{display:block;height:100%;background:var(--mute);border-radius:0 5px 5px 0;min-width:2px}.prow.top .fill{background:var(--accent)}.prow .val{text-align:end;font-weight:700;white-space:nowrap;min-width:0}.prow .val small{display:block;font-weight:500;color:var(--ink2);font-size:11px;margin-top:-2px}
+.allbtn{border:1px solid var(--line);background:var(--surface);color:var(--accent-text);font:inherit;font-weight:700;font-size:12.5px;border-radius:999px;padding:5px 12px;cursor:pointer}.allbtn:hover{border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -531,6 +544,7 @@ function tips(G){
   return out.slice(0,4);
 }
 
+const VIEW={allItems:false};
 function render(){
   const {d,X,P,pi,M,B,bname,alone,storeCount,rankStore}=CTX, me=P[pi], ar=AR(), bn=lb(bname);
   const G=groupRows().sort((a,b)=>b.a-a.a), topG=G[0], pc=pcs();
@@ -568,9 +582,11 @@ function render(){
     bars(shown.map((g,i)=>({name:g.name,val:g.a,txt:'EGP '+nf0.format(g.a),sub:nf0.format(g.q)+' '+pc,top:i===0,tip:`${g.name} · EGP ${nf0.format(g.a)} · ${nf0.format(g.q)} ${pc}`})))+`</section>`;
 
   if(X.hasItem&&me.item.size){
-    const items=[...me.item.entries()].map(([k,v])=>{const it=d.items&&d.items[k]; const nm=Array.isArray(it)?(it[0]||it[1]||'Item'):String(it||'Item'); return{name:nm,a:v.a*VAT,q:v.q}}).sort((a,b)=>b.a-a.a).slice(0,5);
-    h+=`<section class="card"><div class="cardhead"><h2>${H('Your top products','أفضل منتجاتك')}</h2><span class="meta">${ar?'حسب المبيعات':'By sales'}</span></div>`+
-      bars(items.map((x,i)=>({name:x.name,val:x.a,txt:'EGP '+nf0.format(x.a),sub:nf0.format(x.q)+' '+pc,top:i===0,tip:`${x.name} · EGP ${nf0.format(x.a)}`})))+`</section>`;
+    const all=[...me.item.entries()].map(([k,v])=>{const it=d.items&&d.items[k]; const nm=Array.isArray(it)?(it[0]||it[1]||'Item'):String(it||'Item'); const sku=Array.isArray(it)?(it[1]||it[0]||''):String(it||''); return{name:nm,sku,a:v.a*VAT,q:v.q}}).sort((a,b)=>b.a-a.a);
+    const items=VIEW.allItems?all:all.slice(0,5), mx=Math.max(...items.map(x=>x.a),0)||1;
+    h+=`<section class="card"><div class="cardhead"><h2>${H('Your top products','أفضل منتجاتك')}</h2><span class="meta">${VIEW.allItems?(ar?`كل المنتجات (${all.length})`:`All products (${all.length})`):(ar?'حسب المبيعات':'By sales')}</span></div><div class="bars">`+
+      items.map((x,i)=>`<div class="prow${i===0?' top':''}" data-tip="${esc(x.name+' · EGP '+nf0.format(x.a))}">${PPic.thumb({sku:x.sku,name:x.name},nf0.format(x.q)+' '+pc)}<span class="n" title="${esc(x.name)}">${esc(x.name)}</span><span class="track"><span class="fill" style="width:${Math.max(0,x.a)/mx*100}%"></span></span><span class="val num">EGP ${nf0.format(x.a)}<small>${nf0.format(x.q)} ${pc}</small></span></div>`).join('')+`</div>`+
+      (all.length>5?`<div style="margin-top:10px;text-align:center"><button type="button" class="allbtn" data-allitems="1">${VIEW.allItems?(ar?'عرض الأفضل فقط':'Show top 5 only'):(ar?`عرض كل المنتجات (${all.length})`:`View all products (${all.length})`)}</button></div>`:'')+`</section>`;
   }
 
   if(X.hasDate){
@@ -585,10 +601,11 @@ function render(){
       :`<b>Want to see your best days and top products?</b> Open <a href="/staff" style="color:var(--accent-text);font-weight:700">Staff Performance</a> and load the sales file again.`}</section>`;
   }
   h+=`</div>`;
-  $('out').innerHTML=h;fitNums();
+  $('out').innerHTML=h;fitNums();PPic.fill($('out'));
 }
 
 /* ---------- events ---------- */
+document.addEventListener('click',e=>{const a=e.target.closest('[data-allitems]'); if(a&&CTX){VIEW.allItems=!VIEW.allItems;render();return}});
 document.addEventListener('click',e=>{const c=e.target.closest('[data-cat]'); if(c&&CTX){VIEW.cat=c.dataset.cat;render()}});
 $('langBtn').onclick=()=>setLang(AR()?'en':'ar');
 $('cleanBtn').onclick=()=>document.body.classList.add('clean');
@@ -603,6 +620,96 @@ document.addEventListener('focusout',()=>tip.classList.remove('on'));
 document.addEventListener('scroll',()=>tip.classList.remove('on'),{passive:true});
 applyLang();
 build();
+</script>
+<div class="pmodal" id="pModal" hidden><div class="pcard" role="dialog" aria-modal="true" aria-label="Product picture"><button type="button" class="pclose" id="pClose" aria-label="Close">&times;</button><div class="pbig" id="pBig"></div><div class="pname" id="pName"></div><div class="pinfo" id="pInfo"></div></div></div>
+<script>
+/* Product thumbnails beside product rows: built-in pictures first (super admin), then the pandoraeg.com site; click a thumbnail to enlarge it. */
+window.PPic=(function(){
+  const KEY='pandora-pics-v1',D=(window.__PICS=window.__PICS||{});
+  let cache={};try{cache=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+  const key=s=>String(s||'').trim().toUpperCase(),base=s=>key(s).split('-')[0];
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const https=u=>u?String(u).replace(/^http:/,'https:'):u;
+  const tried=new Map(); let loadedPack=false, queue=[], busy=0;
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(cache))}catch(e){}}
+  function builtin(sku){const v=D[base(sku)];return v?'data:image/jpeg;base64,'+v:''}
+  function loadPack(){ /* the 4 picture files only open for the super admin; for anyone else they are simply refused */
+    if(loadedPack)return;loadedPack=true;let left=4;
+    for(let i=1;i<=4;i++){const sc=document.createElement('script');sc.src='/stockcount-pics-'+i+'.js';sc.async=true;sc.onload=sc.onerror=()=>{if(--left===0)fill(document)};document.head.appendChild(sc)}
+  }
+  async function lookup(sku){
+    const b=base(sku);if(!b||b==='—')return '';
+    if(cache[key(sku)])return cache[key(sku)];if(cache[b])return cache[b];
+    try{
+      const r=await fetch('/api/pic?sku='+encodeURIComponent(b),{credentials:'same-origin'}); /* the server asks pandoraeg.com: the browser is not allowed to */
+      const j=await r.json();const u=j&&j.url;
+      if(u){cache[b]=u;save();return u}
+    }catch(e){}
+    return '';
+  }
+  function pump(){
+    while(busy<3&&queue.length){const job=queue.shift();busy++;lookup(job.sku).then(job.done).finally(()=>{busy--;pump()})}
+  }
+  function get(sku){
+    const bi=builtin(sku);if(bi)return Promise.resolve(bi);
+    const b=base(sku);if(cache[key(sku)])return Promise.resolve(cache[key(sku)]);if(cache[b])return Promise.resolve(cache[b]);
+    if(!tried.has(b))tried.set(b,new Promise(res=>{queue.push({sku,done:res});pump()}));
+    return tried.get(b);
+  }
+  function show(btn,u){if(!u||btn.querySelector('img'))return;const im=new Image();im.alt='';im.referrerPolicy='no-referrer';im.onload=()=>{btn.textContent='';btn.appendChild(im)};im.src=https(u)}
+  /* Preloading: the full-size picture is found, downloaded and decoded in the background (for thumbnails on screen, or as soon as one is touched), so opening it shows the sharp picture at once. */
+  const R=new Map(),L=new Map(),F=new Map();
+  function loadBig(sku){
+    const b=base(sku);if(!b||b==='—')return Promise.resolve('');
+    if(R.has(b))return Promise.resolve(R.get(b).src);if(L.has(b))return L.get(b);
+    if(F.has(b)&&Date.now()-F.get(b)<60000)return Promise.resolve('');
+    const p=lookup(sku).then(u=>u?new Promise(res=>{const im=new Image();im.referrerPolicy='no-referrer';im.onload=()=>{const d=()=>{R.set(b,{src:im.src,u});res(im.src)};im.decode?im.decode().then(d,d):d()};im.onerror=()=>res('');im.src=big(u)}):'');
+    L.set(b,p);p.then(s=>{L.delete(b);if(!s)F.set(b,Date.now())});return p;
+  }
+  let wio=null;const wq=[];let wbusy=0;
+  function wpump(){while(wbusy<3&&wq.length){const s=wq.shift();wbusy++;loadBig(s).finally(()=>{wbusy--;wpump()})}}
+  function watch(root){
+    if(!('IntersectionObserver' in window))return;
+    if(!wio)wio=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;wio.unobserve(e.target);wq.push(e.target.dataset.sku);wpump()}),{rootMargin:'200px'});
+    (root||document).querySelectorAll('.pthumb:not([data-w])').forEach(b=>{b.dataset.w='1';wio.observe(b)});
+  }
+  ['pointerover','pointerdown','touchstart'].forEach(ev=>document.addEventListener(ev,e=>{const t=e.target&&e.target.closest&&e.target.closest('.pthumb');if(t)loadBig(t.dataset.sku)},{capture:true,passive:true}));
+  let io=null;
+  function fill(root){
+    loadPack();watch(root);
+    const btns=(root||document).querySelectorAll('.pthumb:not(:has(img))');
+    btns.forEach(b=>{
+      const bi=builtin(b.dataset.sku);if(bi){show(b,bi);return}
+      if(!('IntersectionObserver' in window)){get(b.dataset.sku).then(u=>show(b,u));return}
+      if(!io)io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;io.unobserve(e.target);get(e.target.dataset.sku).then(u=>show(e.target,u))}),{rootMargin:'120px'});
+      io.observe(b);
+    });
+  }
+  function thumb(p,info){return `<button type="button" class="pthumb" data-sku="${esc(p.sku)}" data-name="${esc(p.name)}" data-info="${esc(info||'')}" title="Click to enlarge" aria-label="Enlarge picture of ${esc(p.name)}">◇</button>`}
+  const modal=()=>document.getElementById('pModal');
+  function big(u){try{const x=new URL(https(u),location.href);if(/shopify|pandoraeg/i.test(x.hostname)){x.searchParams.set('width','900');x.searchParams.delete('height')}return x.href}catch(e){return https(u)}}
+  async function open(btn){
+    const m=modal(),box=document.getElementById('pBig');
+    document.getElementById('pName').textContent=btn.dataset.name||'';
+    document.getElementById('pInfo').textContent=[btn.dataset.sku,btn.dataset.info].filter(Boolean).join(' · ');
+    const mine=btn.querySelector('img'),token=btn;open.t=token;
+    const sharp=(src)=>{const im=new Image();im.alt=btn.dataset.name||'';im.referrerPolicy='no-referrer';im.src=src;return im};
+    const hit=R.get(base(btn.dataset.sku));
+    box.textContent='';
+    /* already preloaded: show the sharp picture immediately */
+    if(hit){box.appendChild(sharp(hit.src));m.hidden=false;show(btn,hit.u);return}
+    /* not ready yet: never show the small blurry picture first; wait for the sharp one (small one only as a fallback after 1.5 s or if there is no sharp one) */
+    box.textContent='Loading picture…';m.hidden=false;
+    const fb=setTimeout(()=>{if(open.t===token&&mine&&!box.querySelector('img')){box.textContent='';const im=new Image();im.alt=btn.dataset.name||'';im.src=mine.src;box.appendChild(im)}},1500);
+    const s=await loadBig(btn.dataset.sku);clearTimeout(fb);if(open.t!==token)return;
+    if(!s){if(box.querySelector('img'))return;if(mine){box.textContent='';const im=new Image();im.alt=btn.dataset.name||'';im.src=mine.src;box.appendChild(im)}else box.textContent='No picture for this item';return}
+    box.textContent='';box.appendChild(sharp(s));const r=R.get(base(btn.dataset.sku));if(r)show(btn,r.u);
+  }
+  function close(){open.t=null;modal().hidden=true}
+  document.addEventListener('click',e=>{const b=e.target.closest('.pthumb');if(b){e.preventDefault();open(b);return}if(e.target.id==='pModal'||e.target.id==='pClose')close()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal().hidden)close()});
+  return {thumb,fill};
+})();
 </script>
 </body>
 </html>
