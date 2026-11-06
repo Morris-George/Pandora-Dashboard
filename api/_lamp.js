@@ -3,7 +3,7 @@
 const LAMP = String.raw`<style id="pandora-lamp-css">
 .pandora-lamp{display:none}
 @media (min-width:701px){html.haslamp #themeBtn{display:none!important}
-.pandora-lamp{display:block;position:fixed;top:0;left:50%;margin-left:-32px;width:64px;z-index:2147483000;--p:0px;animation:plampin .9s cubic-bezier(.2,.9,.3,1) .3s both}}
+.pandora-lamp{display:block;position:fixed;top:0;left:50%;margin-left:-32px;width:64px;z-index:2147483000;will-change:transform;--p:0px;animation:plampin .9s cubic-bezier(.2,.9,.3,1) .3s both}}
 @keyframes plampin{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:none}}
 .pandora-lamp svg{display:block;width:64px;height:auto;overflow:visible}
 .pandora-lamp .wire{stroke:#9a928b;stroke-width:1.6}
@@ -24,7 +24,7 @@ const LAMP = String.raw`<style id="pandora-lamp-css">
 </style><script>(function(){try{
 var root=document.documentElement,L=document.createElement("div");L.className="pandora-lamp hideclean";
 L.innerHTML='<span class="beam"></span><svg viewBox="0 0 64 56" aria-hidden="true"><line class="wire" x1="32" y1="-2" x2="32" y2="18"/><path class="shade" d="M9 44Q9 22 32 19Q55 22 55 44Z"/><rect class="rim" x="7" y="42" width="50" height="4" rx="2"/><ellipse class="bulb" cx="32" cy="48" rx="8" ry="6"/></svg><button class="pullb" type="button" role="switch" aria-checked="false" aria-label="Lamp: pull to switch between light and dark mode"><span class="cl"></span><span class="ball"></span></button>';
-document.body.appendChild(L);root.classList.add("haslamp");
+root.appendChild(L);root.classList.add("haslamp");
 var B=L.querySelector(".pullb");
 function cur(){return root.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")}
 function sync(){var light=cur()==="light";L.classList.toggle("on",light);B.setAttribute("aria-checked",light);B.title=light?"Pull the cord: dark mode":"Pull the cord: light mode"}
