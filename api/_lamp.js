@@ -1,8 +1,6 @@
 // The lamp pull-cord that replaces the sun/moon switch on every page except sign-in (small screens keep the normal switch).
 // Pull the cord down: light mode on. Pull it again: dark mode. It saves the same choice ("pandora-theme") as the old switch.
 const LAMP = String.raw`<style id="pandora-lamp-css">
-/* touch tablets: scroll inside the page instead of the whole window, so the browser's address bar stays put and the buttons stay exactly on top */
-@media screen and (pointer:coarse) and (min-width:701px){html{height:100%;overflow:hidden!important}body{height:100%;overflow-y:auto!important;overscroll-behavior:none;-webkit-overflow-scrolling:touch}}
 .pandora-lamp{display:none}
 @media (min-width:701px){html.haslamp #themeBtn{display:none!important}
 .pandora-lamp{display:block;position:fixed;top:0;left:50%;margin-left:-75px;width:150px;height:58px;z-index:9998;--p:0px;
@@ -24,7 +22,7 @@ background:light-dark(#ffffff,#201d1b);border:1px solid rgba(128,128,128,.28);bo
 .pandora-lamp.drag .cl{transition:none}
 .themefade,.themefade *{transition:background-color .45s,color .45s,border-color .45s,fill .45s!important}
 </style><script>(function(){try{
-var root=document.documentElement,L=document.createElement("div");L.className="pandora-lamp hideclean";
+var root=document.documentElement;var L=document.createElement("div");L.className="pandora-lamp hideclean";
 L.innerHTML='<span class="beam"></span><svg viewBox="0 0 64 56" aria-hidden="true"><line class="wire" x1="32" y1="-2" x2="32" y2="18"/><path class="shade" d="M9 44Q9 22 32 19Q55 22 55 44Z"/><rect class="rim" x="7" y="42" width="50" height="4" rx="2"/><ellipse class="bulb" cx="32" cy="48" rx="8" ry="6"/></svg><button class="pullb" type="button" role="switch" aria-checked="false" aria-label="Lamp: pull to switch between light and dark mode"><span class="cl"></span><span class="ball"></span></button>';
 (document.body||root).appendChild(L);root.classList.add("haslamp");
 var B=L.querySelector(".pullb");
@@ -40,4 +38,8 @@ if(m<4){tug(24);flip()}else{L.style.setProperty("--p",m+"px");requestAnimationFr
 B.addEventListener("pointercancel",function(){y0=null;L.classList.remove("drag");L.style.setProperty("--p","0px")});
 B.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tug(24);flip()}});
 }catch(e){}})();</script>`;
-module.exports = { LAMP };
+// Every page, sign-in included: on touch tablets the page scrolls inside itself, so the browser's address bar does not slide away
+// and the fixed buttons (Log out, All Uploads, the lamp) stay exactly on top.
+const SCROLLFIX = '<style id="pandora-scrollfix">@media screen and (min-width:701px){html.tscroll{height:100%;overflow:hidden!important}html.tscroll body{height:100%;overflow-y:auto!important;overscroll-behavior:none;-webkit-overflow-scrolling:touch}}</style>' +
+  '<script>(function(){try{if((navigator.maxTouchPoints||0)>0||matchMedia("(pointer:coarse)").matches||matchMedia("(hover:none)").matches)document.documentElement.classList.add("tscroll")}catch(e){}})();</script>';
+module.exports = { LAMP, SCROLLFIX };

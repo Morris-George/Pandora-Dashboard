@@ -1,6 +1,6 @@
 
 const fs = require('fs');
-const { LAMP } = require('./_lamp');
+const { LAMP, SCROLLFIX } = require('./_lamp');
 const path = require('path');
 const { appsFor, sessionFacts, greetName } = require('./_apps');
 const pair = require('./_pair');
@@ -69,7 +69,7 @@ function withChrome(kind, multi, side) {
     let html = buf.toString('utf8');
     const h = html.search(/<\/head>/i);
     const showSide = !!side && kind !== 'home' && kind !== 'login';
-    if (h !== -1) html = html.slice(0, h) + THEME_HEAD + (showSide ? SIDEBAR.parts.head(side) : '') + html.slice(h);
+    if (h !== -1) html = html.slice(0, h) + THEME_HEAD + SCROLLFIX + (showSide ? SIDEBAR.parts.head(side) : '') + html.slice(h);
     if (showSide) html = html.replace(/<body[^>]*>/i, m => m + SIDEBAR.parts.body(side, side.path));
     const i = html.lastIndexOf('</body>');
     const at = i === -1 ? html.length : i;
