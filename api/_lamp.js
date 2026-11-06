@@ -1,6 +1,8 @@
 // The lamp pull-cord that replaces the sun/moon switch on every page except sign-in (small screens keep the normal switch).
 // Pull the cord down: light mode on. Pull it again: dark mode. It saves the same choice ("pandora-theme") as the old switch.
 const LAMP = String.raw`<style id="pandora-lamp-css">
+/* touch tablets: scroll inside the page instead of the whole window, so the browser's address bar stays put and the buttons stay exactly on top */
+@media screen and (pointer:coarse) and (min-width:701px){html{height:100%;overflow:hidden!important}body{height:100%;overflow-y:auto!important;overscroll-behavior:none;-webkit-overflow-scrolling:touch}}
 .pandora-lamp{display:none}
 @media (min-width:701px){html.haslamp #themeBtn{display:none!important}
 .pandora-lamp{display:block;position:fixed;top:0;left:50%;margin-left:-75px;width:150px;height:58px;z-index:9998;--p:0px;
