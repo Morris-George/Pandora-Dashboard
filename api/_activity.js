@@ -325,12 +325,13 @@ async function overview(rangeDays) {
     people.push(p);
   };
   accts.forEach(a => add(a, byKey.get(a.key)));
-  recs.filter(r => !seen.has(r.key) && r.key !== 'system').forEach(r => add({ key: r.key, name: r.name, username: r.username, role: r.role, label: r.label, store: r.store, status: 'removed' }, r));
+  // people whose account was removed are no longer shown anywhere: not in the list, the totals, the pages or the feed
+  const live = recs.filter(r => r.key === 'system' || seen.has(r.key));
 
   // totals per day, pages and actions
   const series = days.map(day => ({ day, logins: 0, users: 0, views: 0, actions: 0, secs: 0 }));
   const pageAgg = new Map(), actAgg = new Map();
-  for (const r of recs) {
+  for (const r of live) {
     if (r.key === 'system') continue;
     series.forEach(s => {
       const d = r.days && r.days[s.day]; if (!d) return;
@@ -343,7 +344,7 @@ async function overview(rangeDays) {
 
   // the feed: every event in the range, newest first, with the person
   const feed = [];
-  for (const r of recs) for (const e of r.events || []) {
+  for (const r of live) for (const e of r.events || []) {
     if (cairoDay(Date.parse(e.t)) < first) continue;
     feed.push({ ...e, w: r.key, who: r.name, role: r.role, label: r.label, store: r.store || '', pl: e.p ? pageLabel(e.p) : '' });
   }
