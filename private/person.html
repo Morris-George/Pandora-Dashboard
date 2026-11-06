@@ -545,6 +545,8 @@ function tips(G){
 }
 
 const VIEW={allItems:false};
+/* The picture lookup needs the Pandora code (e.g. 569416C01): take it from the item code or, if that is something else, from the item name. */
+const skuOf=it=>{const a=(Array.isArray(it)?it:[it]).map(s=>String(s||'').toUpperCase());for(const re of [/\d{6}[A-Z]\d{2}/,/\b\d{6}\b/]){for(const s of a){const m=s.match(re);if(m)return m[0]}}return String(a[1]||a[0]||'')};
 function render(){
   const {d,X,P,pi,M,B,bname,alone,storeCount,rankStore}=CTX, me=P[pi], ar=AR(), bn=lb(bname);
   const G=groupRows().sort((a,b)=>b.a-a.a), topG=G[0], pc=pcs();
@@ -582,7 +584,7 @@ function render(){
     bars(shown.map((g,i)=>({name:g.name,val:g.a,txt:'EGP '+nf0.format(g.a),sub:nf0.format(g.q)+' '+pc,top:i===0,tip:`${g.name} · EGP ${nf0.format(g.a)} · ${nf0.format(g.q)} ${pc}`})))+`</section>`;
 
   if(X.hasItem&&me.item.size){
-    const all=[...me.item.entries()].map(([k,v])=>{const it=d.items&&d.items[k]; const nm=Array.isArray(it)?(it[0]||it[1]||'Item'):String(it||'Item'); const sku=Array.isArray(it)?(it[1]||it[0]||''):String(it||''); return{name:nm,sku,a:v.a*VAT,q:v.q}}).sort((a,b)=>b.a-a.a);
+    const all=[...me.item.entries()].map(([k,v])=>{const it=d.items&&d.items[k]; const nm=Array.isArray(it)?(it[0]||it[1]||'Item'):String(it||'Item'); const sku=skuOf(it); return{name:nm,sku,a:v.a*VAT,q:v.q}}).sort((a,b)=>b.a-a.a);
     const items=VIEW.allItems?all:all.slice(0,5), mx=Math.max(...items.map(x=>x.a),0)||1;
     h+=`<section class="card"><div class="cardhead"><h2>${H('Your top products','أفضل منتجاتك')}</h2><span class="meta">${VIEW.allItems?(ar?`كل المنتجات (${all.length})`:`All products (${all.length})`):(ar?'حسب المبيعات':'By sales')}</span></div><div class="bars">`+
       items.map((x,i)=>`<div class="prow${i===0?' top':''}" data-tip="${esc(x.name+' · EGP '+nf0.format(x.a))}">${PPic.thumb({sku:x.sku,name:x.name},nf0.format(x.q)+' '+pc)}<span class="n" title="${esc(x.name)}">${esc(x.name)}</span><span class="track"><span class="fill" style="width:${Math.max(0,x.a)/mx*100}%"></span></span><span class="val num">EGP ${nf0.format(x.a)}<small>${nf0.format(x.q)} ${pc}</small></span></div>`).join('')+`</div>`+
@@ -696,6 +698,7 @@ window.PPic=(function(){
     const sharp=(src)=>{const im=new Image();im.alt=btn.dataset.name||'';im.referrerPolicy='no-referrer';im.src=src;return im};
     const hit=R.get(base(btn.dataset.sku));
     box.textContent='';
+    const own=builtin(btn.dataset.sku);if(own&&!hit){box.appendChild(sharp(own));m.hidden=false;return}
     /* already preloaded: show the sharp picture immediately */
     if(hit){box.appendChild(sharp(hit.src));m.hidden=false;show(btn,hit.u);return}
     /* not ready yet: never show the small blurry picture first; wait for the sharp one (small one only as a fallback after 1.5 s or if there is no sharp one) */
