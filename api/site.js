@@ -1,6 +1,5 @@
 
 const fs = require('fs');
-const { LAMP, SCROLLFIX } = require('./_lamp');
 const path = require('path');
 const { appsFor, sessionFacts, greetName } = require('./_apps');
 const pair = require('./_pair');
@@ -52,7 +51,7 @@ function chromeScript(kind, multi) {
   't.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";' +
   'document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("pandora-theme",n)}catch(e){}sync()});' +
   'if(kind==="staff"||kind==="dashboards"||kind==="vm"){if(multi){var hm=mk("Home");hm.addEventListener("click",function(){window.__pandoraGo?window.__pandoraGo("/"):(location.href="/")});place(hm);}}' +
-  'if(kind!=="login")place(t);' +
+  'place(t);' +
   'if(kind!=="login"){' +
   'var lo=mk("Log out");lo.addEventListener("click",function(){lo.style.minWidth=lo.offsetWidth+"px";lo.disabled=true;lo.style.opacity=".55";lo.style.whiteSpace="nowrap";' +
   'try{localStorage.removeItem("storeStaffSummary.v1");sessionStorage.removeItem("storeStaffSummary.v1")}catch(e){}' +
@@ -69,11 +68,11 @@ function withChrome(kind, multi, side) {
     let html = buf.toString('utf8');
     const h = html.search(/<\/head>/i);
     const showSide = !!side && kind !== 'home' && kind !== 'login';
-    if (h !== -1) html = html.slice(0, h) + THEME_HEAD + SCROLLFIX + (showSide ? SIDEBAR.parts.head(side) : '') + html.slice(h);
+    if (h !== -1) html = html.slice(0, h) + THEME_HEAD + (showSide ? SIDEBAR.parts.head(side) : '') + html.slice(h);
     if (showSide) html = html.replace(/<body[^>]*>/i, m => m + SIDEBAR.parts.body(side, side.path));
     const i = html.lastIndexOf('</body>');
     const at = i === -1 ? html.length : i;
-    html = html.slice(0, at) + chromeScript(kind, multi) + (kind === 'login' ? '' : LAMP + BEACON) + HEADER + (showSide ? SIDEBAR.parts.tail() : '') + html.slice(at);
+    html = html.slice(0, at) + chromeScript(kind, multi) + (kind === 'login' ? '' : BEACON) + HEADER + (showSide ? SIDEBAR.parts.tail() : '') + html.slice(at);
     return Buffer.from(html, 'utf8');
   };
 }
