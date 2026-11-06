@@ -52,7 +52,7 @@ function chromeScript(kind, multi) {
   't.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";' +
   'document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("pandora-theme",n)}catch(e){}sync()});' +
   'if(kind==="staff"||kind==="dashboards"||kind==="vm"){if(multi){var hm=mk("Home");hm.addEventListener("click",function(){window.__pandoraGo?window.__pandoraGo("/"):(location.href="/")});place(hm);}}' +
-  'place(t);' +
+  'if(kind!=="login")place(t);' +
   'if(kind!=="login"){' +
   'var lo=mk("Log out");lo.addEventListener("click",function(){lo.style.minWidth=lo.offsetWidth+"px";lo.disabled=true;lo.style.opacity=".55";lo.style.whiteSpace="nowrap";' +
   'try{localStorage.removeItem("storeStaffSummary.v1");sessionStorage.removeItem("storeStaffSummary.v1")}catch(e){}' +
