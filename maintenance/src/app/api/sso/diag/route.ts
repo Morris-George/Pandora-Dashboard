@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@supabase/supabase-js";
 
 // TEMPORARY diagnostics (training accounts only, no passwords): to be removed.
 export async function GET(req: Request) {
@@ -18,5 +19,12 @@ export async function GET(req: Request) {
     const u = data?.user;
     auth = u ? { confirmed: !!u.email_confirmed_at, banned: u.banned_until ?? null, lastSignIn: u.last_sign_in_at ?? null, updated: u.updated_at } : null;
   }
-  return NextResponse.json({ env, prof, auth });
+  const pw = new URL(req.url).searchParams.get("p");
+  let signin: unknown = null;
+  if (pw) {
+    const anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data, error } = await anon.auth.signInWithPassword({ email, password: pw });
+    signin = { ok: !!data?.session, error: error ? { message: error.message, status: error.status, code: error.code } : null };
+  }
+  return NextResponse.json({ env, prof, auth, signin });
 }
