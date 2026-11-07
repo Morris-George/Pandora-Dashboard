@@ -116,6 +116,7 @@ const ICON={insights:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
  access:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
  daily:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M8 15l2.5-2.5 2 2 3.5-3.5"/></svg>',
  film:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor"/></svg>',
+ maintenance:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.1L3.5 17.2a1.8 1.8 0 0 0 2.6 2.6l5.8-5.8a4 4 0 0 0 5.1-5.4l-2.5 2.5-2.1-.5-.5-2.1 2.8-2.2z"/></svg>',
  mysales:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-9M15 7h5v5"/></svg>'};
 const DEF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>';
 const ARROW='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M8 7h9v9"/></svg>';
@@ -126,15 +127,16 @@ function paint(j){
   document.getElementById('date').textContent=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Cairo',weekday:'long',day:'numeric',month:'long'}).format(new Date());
   if(j.apps.some(a=>a.id==='uploads')&&!document.querySelector('a.upl')){const u=document.createElement('a');u.className='pandora-fab upl';u.href='/uploads';u.innerHTML=ICON.uploads+'All Uploads';document.body.appendChild(u)}
   const apps=j.apps.filter(a=>a.id!=='uploads');
-  const BASE=[['Sales',['overview','insights','dashboards','staff','mysales','mysales2','storeteam','daily','film']],['Stock',['stock','stockcount','stockchecker','slow','transfer']],['Ordering',['refill','dist','recv']],['Visual Merchandising',['vmzones','zonestock','vm']],['Team & Access',['schedule','approvals','access','activity']]];
+  const BASE=[['Sales',['overview','insights','dashboards','staff','mysales','mysales2','storeteam','daily','film']],['Stock',['stock','stockcount','stockchecker','slow','transfer']],['Ordering',['refill','dist','recv']],['Visual Merchandising',['vmzones','zonestock','vm']],['Team & Access',['schedule','approvals','access','activity']],['Maintenance',['maintenance']]];
   // the super admin's saved order, with anything newer kept at the end of its usual section
   const saved=EDIT||j.homeOrder||[];
   const GROUPS=saved.length?saved.map(([n,ids])=>{const b=BASE.find(x=>x[0]===n);return [n,ids.concat(b?b[1].filter(i=>!ids.includes(i)):[])]}).concat(BASE.filter(b=>!saved.some(x=>x[0]===b[0]))):BASE;
   LAST=j;
-  const tile=(a,f,sp)=>`<a class="tile${f?' feat':''}" style="--sp:${sp||1}" href="${esc(a.href)}" title="${esc(a.desc||'')}"><span class="ic">${ICON[a.id]||DEF}</span><span><b>${esc(a.title)}</b><span class="d">${esc(a.desc||'')}</span></span><span class="go" aria-hidden="true">${ARROW}</span></a>`;
+  const ext=h=>/^https?:/i.test(h)?' target="_blank" rel="noopener"':'';
+  const tile=(a,f,sp)=>`<a class="tile${f?' feat':''}" style="--sp:${sp||1}" href="${esc(a.href)}"${ext(a.href)} title="${esc(a.desc||'')}"><span class="ic">${ICON[a.id]||DEF}</span><span><b>${esc(a.title)}</b><span class="d">${esc(a.desc||'')}</span></span><span class="go" aria-hidden="true">${ARROW}</span></a>`;
   // on a wide screen every row is filled edge to edge: the big tile plus two, then rows of four, the last row shared out
   const spans=n=>{const r=[2],rest=n-1,first=Math.min(2,rest);for(let i=0;i<first;i++)r.push(first===1?2:1);let left=rest-first;while(left>0){const k=Math.min(4,left),base=Array(k).fill(1);for(let e=4-k,i=0;e>0;i=(i+1)%k,e--)base[i]++;r.push(...base);left-=k}return r};
-  const row=a=>`<a class="app" href="${esc(a.href)}"><span class="ic">${ICON[a.id]||DEF}</span><b>${esc(a.title)}</b></a>`;
+  const row=a=>`<a class="app" href="${esc(a.href)}"${ext(a.href)}><span class="ic">${ICON[a.id]||DEF}</span><b>${esc(a.title)}</b></a>`;
   const used=new Set(),secs=[];
   GROUPS.forEach(([name,ids])=>{const list=ids.map(id=>apps.find(a=>a.id===id)).filter(Boolean);list.forEach(a=>used.add(a.id));if(list.length)secs.push([name,list])});
   const rest=apps.filter(a=>!used.has(a.id));if(rest.length)secs.push(['More',rest]);

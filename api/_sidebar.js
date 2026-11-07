@@ -7,7 +7,8 @@ const BASE = [
   ['Stock', ['stock', 'stockcount', 'stockchecker', 'slow', 'transfer']],
   ['Ordering', ['refill', 'dist', 'recv']],
   ['Visual Merchandising', ['vmzones', 'zonestock', 'vm']],
-  ['Team & Access', ['schedule', 'approvals', 'access', 'activity', 'uploads']]
+  ['Team & Access', ['schedule', 'approvals', 'access', 'activity', 'uploads']],
+  ['Maintenance', ['maintenance']]
 ];
 
 // facts = what api/_apps.js sessionFacts() returned. Returns null when this person does not get the list.
