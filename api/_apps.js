@@ -28,7 +28,7 @@ const APPS = [
   { id: 'transfer', title: 'Transfer', desc: 'Move any items between stores: pick the items, type how many pieces go to which store, and download the transfer list in Excel.', href: '/transfer', allow: f => !!f.staff && f.staff.role === 'admin' },
   { id: 'dist', title: 'Orders Distribution', desc: 'Split a new shipment to the stores by stock, sell out and store priority, and scan it in the warehouse.', href: '/distribution', allow: f => !!f.dist && f.dist !== 'none' },
   { id: 'recv', title: 'Shipment Receiving', desc: 'Upload the commercial invoice, count the shipment box by box (Finance and Warehouse), and match the three.', href: '/receiving', allow: f => !!f.recv && f.recv !== 'none' },
-  { id: 'maintenance', title: 'Maintenance', desc: 'Log store maintenance faults and follow their repair costs.', href: '/maintenance', allow: f => !!f.staff && f.staff.role === 'admin' && !f.staff.overseer },
+  { id: 'maintenance', title: 'Maintenance', desc: 'Log store maintenance faults and follow their repair costs.', href: '/api/maintenance-open', allow: f => !!f.staff && f.staff.role === 'admin' && !f.staff.overseer },
   { id: 'vm', title: 'VM Report', desc: 'The Visual Merchandiser report.', href: '/vm', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') }
 ];
 

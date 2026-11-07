@@ -34,6 +34,7 @@ module.exports = {
   configured,
   login: (email, password) => call('/api/sso/login', 'POST', { email, password }),
   ticketCookie,
+  session: name => call('/api/sso/session', 'POST', { name }),
   list: () => call('/api/sso/users', 'GET'),
   setPassword: (id, password) => call('/api/sso/users', 'POST', { action: 'setpassword', id, password }),
   setActive: (id, active) => call('/api/sso/users', 'POST', { action: 'setactive', id, active }),
