@@ -29,10 +29,19 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
   const supabase = await createClient();
 
   const queues = QUEUES.filter((q) => me.fullAccess || q.roles.includes(me.role));
-  const [{ data: open }, sla] = await Promise.all([
-    supabase.from("tickets").select("status, status_since, branch_id, branches(name)").in("status", OPEN).limit(5000), // RLS: own stores only
+  const [{ data: all }, sla] = await Promise.all([
+    supabase.from("tickets").select("id, status, status_since, branch_id, branches(name)").in("status", OPEN).limit(5000), // RLS: own stores only
     loadSla(supabase),
   ]);
+  // Area Manager and Courier: only the bags assigned to them (waiting for their pickup) or in their hands
+  let open = all;
+  if (!me.fullAccess && (me.role === "courier" || me.role === "delivery")) {
+    const { data: bags } = await supabase.from("dispatch_batches").select("courier_id, pickup_by, batch_items(ticket_id)").eq("status", "in_transit");
+    const mine = new Set((bags ?? []).filter((b) => b.courier_id ? b.courier_id === me.userId
+      : (b.pickup_by === "courier" ? "delivery" : "courier") === me.role)
+      .flatMap((b) => ((b.batch_items ?? []) as { ticket_id: string }[]).map((i) => i.ticket_id)));
+    open = (all ?? []).filter((r) => mine.has(r.id));
+  }
   const now = Date.now();
   const cards = queues.map((q) => {
     const rows = (open ?? []).filter((r) => q.statuses.includes(r.status));
