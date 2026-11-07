@@ -366,10 +366,10 @@ export function IntakeForm({ locale, branches, categories }: { locale: Locale; b
             <div className="h-28 grid grid-rows-2 gap-2">
               <label className="rounded-lg border border-dashed border-stone-400 flex items-center justify-center text-sm font-medium text-stone-700 cursor-pointer bg-stone-50 hover:bg-stone-100">
                 {t.takePhoto}
-                <input type="file" accept="image/*" capture="environment" className="sr-only"
+                <input type="file" accept="image/*" capture="environment" multiple className="sr-only"
                   onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
               </label>
-              <label className="rounded-lg border border-dashed border-stone-300 flex items-center justify-center text-xs text-stone-600 cursor-pointer bg-white hover:bg-stone-50">
+              <label className="rounded-lg border border-dashed border-stone-400 flex items-center justify-center text-sm font-medium text-stone-700 cursor-pointer bg-white hover:bg-stone-50 text-center px-1">
                 {t.addPhoto}
                 <input type="file" accept="image/*" multiple className="sr-only"
                   onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
