@@ -15,7 +15,7 @@ export type BatchRow = {
   items: { ticketNo: string; itemName: string; scanned: boolean; pending?: boolean }[];
 };
 type T = (typeof dictionaries)["en"]["dispatch"];
-type Run = (fn: () => Promise<{ error?: string; batchNo?: string }>, after?: () => void) => void;
+type Run = (fn: () => Promise<{ error?: string; batchNo?: string; awb?: string }>, after?: () => void) => void;
 
 const card = "bg-white rounded-2xl border border-stone-200 p-6 flex flex-col gap-4";
 const input = "rounded-lg border border-stone-300 px-3 py-2.5 text-sm focus:outline-2 focus:outline-stone-900";
@@ -50,7 +50,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
       const r = await fn();
       if (r.error) { setError(t.errors[r.error] ?? t.errors.failed); return; }
       toast();
-      if (r.batchNo) setNotice(t.created(r.batchNo));
+      if (r.batchNo) setNotice(t.created(r.batchNo, r.awb ?? ""));
       after?.();
     });
 
@@ -211,10 +211,9 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
 function PackCard({ t, title, note, empty, nested, busy, run, branches, items, onCreate }: {
   t: T; title: string; note?: string; empty?: string; nested?: boolean; busy: boolean; run: Run;
   branches: { id: string; name: string }[]; items: ItemRow[];
-  onCreate: (branchId: string, seal: string, ids: string[]) => Promise<{ error?: string; batchNo?: string }>;
+  onCreate: (branchId: string, seal: string, ids: string[]) => Promise<{ error?: string; batchNo?: string; awb?: string }>;
 }) {
   const [picked, setPicked] = useState<string[]>([]);
-  const [seal, setSeal] = useState("");
   // "All stores": every store's items are listed; one bag holds one store, taken from the ticked items
   const many = branches.length > 1;
   const shown = items.filter((i) => branches.some((b) => b.id === i.branchId));
@@ -243,12 +242,10 @@ function PackCard({ t, title, note, empty, nested, busy, run, branches, items, o
             ))}
           </div>
           <div className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1.5 text-sm font-medium">{t.seal}
-              <input value={seal} onChange={(e) => setSeal(e.target.value)} dir="ltr" className={`${input} w-48`} />
-            </label>
+            <p className="text-sm text-stone-600 basis-full">{t.awbAuto}</p>
             {mixed && <p className="text-sm text-amber-800 basis-full">{t.oneStore}</p>}
-            <button disabled={busy || !chosen.length || !seal.trim() || mixed} className={primary}
-              onClick={() => run(() => onCreate(branchId, seal, chosen), () => { setPicked([]); setSeal(""); })}>
+            <button disabled={busy || !chosen.length || mixed} className={primary}
+              onClick={() => run(() => onCreate(branchId, "", chosen), () => setPicked([]))}>
               {t.create(chosen.length)}
             </button>
           </div>
