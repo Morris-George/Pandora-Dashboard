@@ -38,6 +38,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [printId, setPrintId] = useState(""); // the bag just created: print its AWB label
+  const [awb, setAwb] = useState(""); // incoming: the AWB scanned on arrival opens that bag
   const [picked, setPicked] = useState<string[]>([]); // batches ticked for approval
   // Store filter: "all" or one store; every section below shows only that store
   const [store, setStore] = useState("all");
@@ -60,6 +61,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
   const awaiting = batches.filter((b) => b.direction === "outbound" && b.status === "awaiting_approval");
   const incoming = batches.filter((b) => b.status === "in_transit" &&
     ((["hq", "technician", "supervisor"].includes(role) && b.direction === "outbound") || (isBranch && b.direction === "return")));
+  const opened = awb.trim() ? incoming.find((b) => b.seal.toUpperCase() === awb.trim().toUpperCase()) : undefined;
   const fmt = (s: string) => new Date(s).toLocaleString(locale === "ar" ? "ar-EG" : "en-GB", { dateStyle: "short", timeStyle: "short" });
 
   // Return items grouped by destination branch
@@ -164,10 +166,26 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
             <h2 className="text-lg font-semibold">{t.incomingTitle}</h2>
             <p className="text-sm text-stone-600 mt-1">{t.incomingNote}</p>
           </div>
-          {!incoming.length && <p className="text-sm text-stone-600">{t.noneIncoming}</p>}
-          <BulkReceive t={t} busy={busy} run={run}
-            batches={incoming.filter((b) => !(areaManager && !b.pickedAt) && (!b.mine || isAdmin))} />
-          {incoming.map((b) => <ReceiveCard key={b.id} t={t} b={b} busy={busy} run={run} areaManager={areaManager} isAdmin={isAdmin} />)}
+          {!incoming.length ? <p className="text-sm text-stone-600">{t.noneIncoming}</p> : (
+            <div className="rounded-xl border border-stone-300 bg-stone-50 p-4 flex flex-col gap-2">
+              <strong className="text-sm">{t.awbFirst}</strong>
+              <div className="flex flex-wrap items-end gap-2">
+                <input value={awb} onChange={(e) => setAwb(e.target.value)} dir="ltr" placeholder="AWB-…" aria-label={t.sealOnBag}
+                  className={`${input} w-60 bg-white`} />
+                <BarcodeScan label={t.camera} title={t.sealOnBag} cancel={t.cancel} denied={t.cameraDenied} onResult={(c) => setAwb(c.trim())} />
+                {awb && <button type="button" className="text-sm underline" onClick={() => setAwb("")}>{t.clear}</button>}
+              </div>
+              {awb.trim() && !opened && <p className="text-sm text-red-800">{t.awbUnknown(awb.trim())}</p>}
+            </div>
+          )}
+          {/* Scanning the AWB opens that bag: its items are listed and ticked as they are scanned; anything not scanned is reported short */}
+          {opened ? <ReceiveCard key={opened.id} t={t} b={opened} busy={busy} run={run} areaManager={areaManager} isAdmin={isAdmin} />
+            : incoming.map((b) => (
+              <div key={b.id} className="border-t border-stone-100 pt-3 flex flex-col gap-1">
+                <BatchHead t={t} b={b} />
+                <p className="text-xs text-stone-500">{areaManager && !b.pickedAt ? t.notCollectedYet : t.scanAwbToOpen}</p>
+              </div>
+            ))}
         </section>
       )}
 
@@ -398,52 +416,6 @@ function waitingOn(t: T, b: BatchRow): string {
   if (b.status === "incident") return t.wait.ops;
   return "";
 }
-
-// One scan box for every incoming batch: scan all bags' items, then confirm them in one go
-function BulkReceive({ t, batches, busy, run }: { t: T; batches: BatchRow[]; busy: boolean; run: Run }) {
-  const [scanned, setScanned] = useState<string[]>([]);
-  const [code, setCode] = useState("");
-  const [warn, setWarn] = useState("");
-  if (batches.length < 2) return null;
-  const owner = new Map(batches.flatMap((b) => b.items.map((i) => [i.ticketNo.toUpperCase(), b.id] as const)));
-  const add = (raw = code) => {
-    const c = raw.trim().toUpperCase();
-    if (!c) return;
-    if (!owner.has(c)) setWarn(t.unknown(c));
-    else { setWarn(""); setScanned((s) => (s.includes(c) ? s : [...s, c])); }
-    setCode("");
-  };
-  const rows = batches.map((b) => ({ b, got: b.items.filter((i) => scanned.includes(i.ticketNo.toUpperCase())).map((i) => i.ticketNo) }))
-    .filter((r) => r.got.length);
-  const partial = rows.filter((r) => r.got.length < r.b.items.length).length;
-  return (
-    <div className="rounded-xl border border-stone-300 bg-stone-50 p-4 flex flex-col gap-3">
-      <div>
-        <strong>{t.bulkTitle}</strong>
-        <p className="text-sm text-stone-600">{t.bulkNote}</p>
-      </div>
-      <div className="flex flex-wrap items-end gap-2">
-        <input value={code} onChange={(e) => setCode(e.target.value)} dir="ltr" placeholder="MT-1001" aria-label={t.scan}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} className={`${input} w-52`} />
-        <button onClick={() => add()} className="rounded-lg border border-stone-900 px-4 py-2.5 text-sm">{t.add}</button>
-        <BarcodeScan label={t.camera} title={t.scan} cancel={t.cancel} denied={t.cameraDenied} onResult={(c) => add(c)} />
-      </div>
-      {warn && <p className="text-sm text-red-800">{warn}</p>}
-      {rows.map((r) => (
-        <div key={r.b.id} className="text-sm"><strong dir="ltr">{r.b.batchNo}</strong> · {r.b.branchName} · {r.got.length}/{r.b.items.length}</div>
-      ))}
-      {partial > 0 && <p className="text-sm text-amber-800">{t.bulkPartial(partial)}</p>}
-      <button disabled={busy || !rows.length} className={`${primary} self-start disabled:opacity-40`}
-        onClick={() => run(async () => {
-          for (const r of rows) { const x = await receiveBatch(r.b.id, r.got); if (x.error) return x; }
-          return {};
-        }, () => setScanned([]))}>
-        {t.bulkConfirm(rows.length)}
-      </button>
-    </div>
-  );
-}
-
 
 function IncidentCard({ t, b, busy, run, receive, lose }: { t: T; b: BatchRow; busy: boolean; run: Run; receive: boolean; lose: boolean }) {
   const [code, setCode] = useState("");
