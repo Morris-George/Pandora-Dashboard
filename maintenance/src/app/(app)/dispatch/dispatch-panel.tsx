@@ -251,6 +251,10 @@ function PackCard({ t, title, note, empty, nested, busy, run, branches, items, o
   const chosenStores = [...new Set(shown.filter((i) => chosen.includes(i.id)).map((i) => i.branchId))];
   const branchId = chosenStores.length === 1 ? chosenStores[0] : branches[0]?.id ?? "";
   const mixed = chosenStores.length > 1;
+  // Courier pickup: the packer types the courier company's real AWB; Area Manager: the system makes AWB-<store>-000001
+  const defPick = (shown.find((i) => i.branchId === branchId) ?? shown[0])?.pickup;
+  const byCourier = !!defPick && (pickup || defPick) === "courier";
+  const [awbNo, setAwbNo] = useState("");
 
   return (
     <section className={nested ? "border-t border-stone-200 pt-4 flex flex-col gap-3" : card}>
@@ -288,11 +292,20 @@ function PackCard({ t, title, note, empty, nested, busy, run, branches, items, o
                       <span><b>{k === "courier" ? t.pickupCourier : t.pickupAreaManager}</b><span className="block text-xs text-stone-600">{k === "courier" ? t.pickupCourierNote : t.pickupAreaManagerNote}</span></span>
                     </label>
                   ))}
+                  {cur === "courier" && (
+                    <label className="flex flex-col gap-1 text-sm font-medium mt-1">{t.courierAwb}
+                      <input value={awbNo} onChange={(e) => setAwbNo(e.target.value)} dir="ltr" required className={`${input} w-64`} />
+                      <span className="text-xs font-normal text-stone-600">{t.courierAwbNote}</span>
+                    </label>
+                  )}
                 </fieldset>
               );
             })()}
-            <button disabled={busy || !chosen.length || mixed} className={primary}
-              onClick={() => run(() => onCreate(branchId, "", chosen, pickup || undefined), () => { setPicked([]); setPickup(""); })}>
+            <button disabled={busy || !chosen.length || mixed || (byCourier && !awbNo.trim())} className={primary}
+              onClick={() => run(async () => {
+                const r = await onCreate(branchId, byCourier ? awbNo.trim() : "", chosen, pickup || undefined);
+                return byCourier ? { ...r, batchId: undefined } : r; // courier bags carry the courier's own waybill: no label to print
+              }, () => { setPicked([]); setPickup(""); setAwbNo(""); })}>
               {t.create(chosen.length)}
             </button>
           </div>

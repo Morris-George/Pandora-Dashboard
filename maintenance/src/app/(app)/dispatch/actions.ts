@@ -16,6 +16,7 @@ function errorKey(message: string): string {
   if (message.includes("not collected this batch")) return "notCollected";
   if (message.includes("SoD")) return "sod";
   if (message.includes("does not match")) return "sealMismatch";
+  if (message.includes("dispatch_batches_seal_unique")) return "awbUsed";
   if (message.includes("already collected")) return "stale";
   if (message.includes("seal")) return "seal";
   if (message.includes("at least one")) return "empty";
