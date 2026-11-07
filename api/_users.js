@@ -104,4 +104,10 @@ const envPwKey = user => 'users/envpw/' + nameKey('envpw', String(user || '').re
 const getEnvPw = async user => { const r = await store.getJSON(envPwKey(user)); return r && r.pass ? r : null; };
 const setEnvPw = async (user, password) => store.putJSON(envPwKey(user), { username: String(user), pass: hashPassword(password), at: new Date().toISOString() });
 
-module.exports = { getEnvPw, setEnvPw, envOff, setEnvOff, normUsername, normalizePhone, hashPassword, verifyPassword, burn, getUser, putUser, listUsers, createUser, createSpecial, removeUser, linkUser, phoneTaken, getJSONByPhone, claimOwner, nameKey };
+// "Log out from all devices": the super admin records a moment for a person; every sign-in that started at or before it stops working
+// (api/_auth.js checks it on every request). Signing in again afterwards works as normal. key: 'env:<username>' (super admin, area managers) or 'u:<username>'.
+const outKey = key => 'users/signout/' + nameKey('signout', String(key || '').toLowerCase()) + '.json';
+const signedOutAt = async key => { const r = await store.getJSON(outKey(key)); return r && Number(r.at) ? Number(r.at) : 0; };
+const signOutAll = async key => store.putJSON(outKey(key), { key: String(key), at: Math.floor(Date.now() / 1000) });
+
+module.exports = { signedOutAt, signOutAll, getEnvPw, setEnvPw, envOff, setEnvOff, normUsername, normalizePhone, hashPassword, verifyPassword, burn, getUser, putUser, listUsers, createUser, createSpecial, removeUser, linkUser, phoneTaken, getJSONByPhone, claimOwner, nameKey };

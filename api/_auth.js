@@ -2,7 +2,7 @@
 //  - super admin and area managers: usernames/passwords in Vercel settings (cookie staff_auth)
 //  - sales people who signed up themselves and were approved (cookie staffer_auth, its own signing key)
 const crypto = require('crypto');
-const { PROJECTS, readCookie, staffSession, roleInfo } = require('./_projects');
+const { PROJECTS, readCookie, staffSession, roleInfo, normName } = require('./_projects');
 const users = require('./_users');
 const store = require('./_store');
 
@@ -88,10 +88,15 @@ async function lift(req, who, key, user) {
   return { kind: 'env', account, user: who.user, lifted: id, info: { ...roleInfo(account), overseer: true } };
 }
 
+// A sign-in lasts 8 hours, so when it began = its expiry minus 8 hours. "Log out from all devices" kills every sign-in that began at or before the moment it was pressed.
+const cookieStart = token => { try { return Number(Buffer.from(String(token).split('.')[0], 'base64url').toString('utf8').split('\n')[1]) - MAX_AGE; } catch (_) { return 0; } };
+const signedOut = async (key, token) => { try { const at = await users.signedOutAt(key); return !!at && at >= cookieStart(token); } catch (_) { return false; } };
+
 async function whoamiNow(req) {
   const secret = process.env.PANDORA_AUTH_SECRET;
   const account = staffSession(readCookie(req, PROJECTS.staff.cookie), secret);
   if (account) {
+    if (store.configured() && await signedOut('env:' + normName(account.user), readCookie(req, PROJECTS.staff.cookie))) return null;
     // a switched-off area manager is signed out at once (the super admin can never be switched off)
     if (account.role !== 'admin' && store.configured() && await users.envOff(account.user)) return null;
     const who = { kind: 'env', account, info: roleInfo(account) };
@@ -100,6 +105,7 @@ async function whoamiNow(req) {
   const u = stafferUsername(readCookie(req, STAFFER_COOKIE), secret);
   if (u && store.configured()) {
     const rec = await users.getUser(u);
+    if (rec && rec.status === 'active' && await signedOut('u:' + rec.username, readCookie(req, STAFFER_COOKIE))) return null;
     if (rec && rec.status === 'active') return rec.role === 'overseer' ? whoFromRec(rec) : lift(req, whoFromRec(rec), 'u:' + rec.username, rec.username);
   }
   return null;

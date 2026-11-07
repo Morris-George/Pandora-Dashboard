@@ -113,6 +113,15 @@ module.exports = activity.wrap('accounts', async function handler(req, res) {
       await store.putJSON(ACCESS, acc);
       return send(res, 200, { ok: true });
     }
+    if (b.action === 'signoutall') {
+      // Log a person out of every device: the super admin, an area manager or any other account. Their next request asks them to sign in again.
+      const env = staffAccounts().find(a => normName(a.user) === normName(b.username));
+      let key = env ? 'env:' + normName(env.user) : '';
+      if (!key) { const r = await users.getUser(users.normUsername(b.username)); if (r) key = 'u:' + r.username; }
+      if (!key) return send(res, 404, { ok: false, error: 'Account not found.' });
+      await users.signOutAll(key);
+      return send(res, 200, { ok: true, self: !!(who.account && env && normName(who.account.user) === normName(env.user)) });
+    }
     if (b.action === 'envdisable' || b.action === 'envenable') {
       // area managers (accounts kept in Vercel settings): switch off / on, same as anyone else. The super admin cannot be switched off.
       const mgr = staffAccounts().find(a => a.role !== 'admin' && normName(a.user) === normName(b.username));
