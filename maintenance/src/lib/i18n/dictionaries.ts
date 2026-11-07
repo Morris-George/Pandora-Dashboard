@@ -222,7 +222,7 @@ const en = {
       note: "Turn optional steps off when the process changes, for example when items go straight to an outside service center. Changes apply to new shipments right away.",
       on: "On", off: "Off (skipped)", turnOn: "Turn on", turnOff: "Turn off", failed: "Could not save. Try again.",
       steps: {
-        area_manager: { name: "Area manager handover", on: "The courier scans every item to collect the bag and holds custody until it is received.", off: "The receiver scans the bag directly. No courier step." },
+        area_manager: { name: "Courier pickup", on: "The courier picks up the sealed bag, scans the AWB and every item, and holds custody until HQ (or the store) receives it.", off: "No courier step: the receiver scans the bag directly when it arrives." },
         override_approval: { name: "Supervisor approval of warranty changes", on: "When the technician changes the store's warranty result, a supervisor approves it first.", off: "The technician's warranty decision applies at once. The reason is still recorded." },
         supervisor_qc: { name: "Supervisor quality check", on: "A finished repair goes to the supervisor for a quality check before it is returned.", off: "A finished repair goes straight to the return list. No quality check." },
         cs_quote: { name: "Customer Service records quote answers", on: "Customer Service contacts the customer and records the approval or rejection of the quote.", off: "The store records the customer's answer (Quote approval appears in the store's menu). The customer can still answer from the tracking link." },
