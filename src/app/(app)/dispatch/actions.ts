@@ -8,7 +8,7 @@ import { z } from "zod";
 import { requireSession, requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
-type Result = { error?: string; batchNo?: string };
+type Result = { error?: string; batchNo?: string; awb?: string };
 
 // Map database exceptions to dictionary error keys
 function errorKey(message: string): string {
@@ -24,40 +24,40 @@ function errorKey(message: string): string {
   return "failed";
 }
 
-const done = (batchNo?: string): Result => {
+const done = (batchNo?: string, awb?: string): Result => {
   revalidatePath("/dispatch");
   revalidatePath("/tickets");
-  return { batchNo };
+  return { batchNo, awb };
 };
 
 const NewBatch = z.object({
   branchId: z.string().uuid(),
-  seal: z.string().trim().min(1).max(40),
+  seal: z.string().trim().max(40), // empty: the database makes the AWB number (AWB-<store>-000001)
   ticketIds: z.array(z.string().uuid()).min(1).max(100),
 });
 
 export async function createOutbound(input: z.infer<typeof NewBatch>): Promise<Result> {
   await requireRole("associate", "manager");
   const p = NewBatch.safeParse(input);
-  if (!p.success) return { error: !input.seal?.trim() ? "seal" : "invalid" };
+  if (!p.success) return { error: "invalid" };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_outbound_batch", {
     p_branch: p.data.branchId, p_seal: p.data.seal, p_tickets: p.data.ticketIds,
   });
   if (error) return { error: errorKey(error.message) };
-  return done(data?.batch_no);
+  return done(data?.batch_no, data?.seal_no);
 }
 
 export async function createReturn(input: z.infer<typeof NewBatch>): Promise<Result> {
   await requireRole("supervisor");
   const p = NewBatch.safeParse(input);
-  if (!p.success) return { error: !input.seal?.trim() ? "seal" : "invalid" };
+  if (!p.success) return { error: "invalid" };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_return_batch", {
     p_branch: p.data.branchId, p_seal: p.data.seal, p_tickets: p.data.ticketIds,
   });
   if (error) return { error: errorKey(error.message) };
-  return done(data?.batch_no);
+  return done(data?.batch_no, data?.seal_no);
 }
 
 export async function approveBatch(batchId: string): Promise<Result> {

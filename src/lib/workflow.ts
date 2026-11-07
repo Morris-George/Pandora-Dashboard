@@ -7,7 +7,7 @@ export type Workflow = {
   cs_quote: boolean; supervisor_assign: boolean;
 };
 export const WORKFLOW_DEFAULTS: Workflow = {
-  manager_approval: true, area_manager: true, override_approval: true, supervisor_qc: true, cs_quote: true, supervisor_assign: true,
+  manager_approval: false, area_manager: true, override_approval: true, supervisor_qc: true, cs_quote: true, supervisor_assign: true,
 };
 
 export async function loadWorkflow(supabase: SupabaseClient): Promise<Workflow> {
