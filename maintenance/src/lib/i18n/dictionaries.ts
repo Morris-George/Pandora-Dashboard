@@ -372,7 +372,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
   },
   receipt: {
     whatsapp: "WhatsApp",
-    title: "Maintenance receipt", print: "Print", customer: "Customer", mobile: "Mobile", item: "Item", code: "Code",
+    title: "Maintenance receipt", saveCopy: "Save as PDF / print", print: "Print", customer: "Customer", mobile: "Mobile", item: "Item", code: "Code",
     fault: "Fault", accessories: "With", agreed: "Agreed cost", egp: "EGP", afterDiagnosis: "After diagnosis",
     scan: "Scan to track your repair", sign: "Customer signature",
     terms: "Keep this receipt to collect your item. A cost above the agreed amount needs your approval first.",
@@ -1204,7 +1204,7 @@ const ar: Dict = {
   },
   receipt: {
     whatsapp: "واتساب",
-    title: "إيصال صيانة", print: "طباعة", customer: "العميل", mobile: "الموبايل", item: "القطعة", code: "الكود",
+    title: "إيصال صيانة", saveCopy: "حفظ الإيصال PDF / طباعة", print: "طباعة", customer: "العميل", mobile: "الموبايل", item: "القطعة", code: "الكود",
     fault: "العطل", accessories: "مع", agreed: "التكلفة المتفق عليها", egp: "جنيه", afterDiagnosis: "بعد الفحص",
     scan: "امسح الكود لمتابعة الصيانة", sign: "توقيع العميل",
     terms: "احتفظ بالإيصال لاستلام القطعة. أي تكلفة أعلى من المتفق عليها محتاجة موافقتك الأول.",

@@ -17,7 +17,7 @@ export function WhatsappPanel({ locale, initial }: { locale: Locale; initial: Wa
       <div>
         <h2 className="text-lg font-semibold">{t.title}</h2>
         <p className="text-sm text-stone-600 mt-1">{t.note}</p>
-        <p className="text-xs text-stone-500 mt-1" dir="ltr">{"{name} {ticket} {item} {store} {link} {quote}"}</p>
+        <p className="text-xs text-stone-500 mt-1" dir="ltr">{"{name} {ticket} {item} {store} {link} {quote} {memo}"}</p>
       </div>
       {WA_KINDS.map((k) => (
         <label key={k} className="flex flex-col gap-1.5 text-sm font-medium">

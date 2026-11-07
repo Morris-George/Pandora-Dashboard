@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
   const user = data?.claims?.sub;
   const path = request.nextUrl.pathname;
   // Cron calls carry their own secret (checked in the route)
-  const isPublic = path.startsWith("/login") || path === "/sso" || path.startsWith("/api/sso/") || path === "/track" || path.startsWith("/track/") || path.startsWith("/t/") || path === "/api/cron/erp-sync";
+  const isPublic = path.startsWith("/login") || path === "/sso" || path.startsWith("/api/sso/") || path === "/track" || path.startsWith("/track/") || path.startsWith("/t/") || path.startsWith("/memo/") || path === "/api/cron/erp-sync";
   if (!user && !isPublic) {
     // signed out: the main login page (absolute URL: middleware cannot send a relative Location)
     return NextResponse.redirect(siteOrigin(request.headers) + "/login.html");

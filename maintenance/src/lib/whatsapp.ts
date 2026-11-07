@@ -13,7 +13,7 @@ export function waKind(status: string): WaKind {
   return "update";
 }
 
-// Placeholders: {name} {ticket} {item} {store} {link} {quote}
+// Placeholders: {name} {ticket} {item} {store} {link} {quote} {memo}
 const frame = (body: string) => `عزيزنا العميل {name}،
 
 ${body}
@@ -26,7 +26,7 @@ ${body}
 فريق خدمة العملاء – باندورا {store}`;
 
 export const WA_DEFAULTS: Record<WaKind, string> = {
-  received: frame("نشكركم على ثقتكم في باندورا. نود إفادتكم بأنه تم استلام منتجكم في فرع {store}، وسيتم إرساله إلى مركز الصيانة لإجراء الفحص اللازم."),
+  received: frame("نشكركم على ثقتكم في باندورا. نود إفادتكم بأنه تم استلام منتجكم في فرع {store}، وسيتم إرساله إلى مركز الصيانة لإجراء الفحص اللازم.\nإيصال الاستلام (PDF): {memo}"),
   update: frame("نود إطلاعكم على آخر مستجدات طلب الصيانة الخاص بكم، ويمكنكم متابعة حالته في أي وقت من خلال الرابط أدناه."),
   quote: frame("تم الانتهاء من فحص منتجكم، وتبلغ تكلفة الإصلاح {quote} جنيهاً مصرياً شاملة ضريبة القيمة المضافة. نرجو التكرم بالموافقة على عرض السعر أو رفضه من خلال الرابط أدناه حتى نتمكن من استكمال الإجراءات."),
   ready: frame("يسعدنا إبلاغكم بأن منتجكم أصبح جاهزاً للاستلام من فرع {store}. يرجى إحضار إيصال الاستلام عند الحضور."),
@@ -34,12 +34,14 @@ export const WA_DEFAULTS: Record<WaKind, string> = {
   collected: frame("نشكركم على استلام منتجكم، ونتطلع دائماً إلى خدمتكم."),
 };
 
-export function waMessage(kind: WaKind, v: { name: string; ticketNo: string; item: string; store: string; link: string; quote?: string }, templates: WaTemplates = {}) {
-  const tpl = templates[kind]?.trim() || WA_DEFAULTS[kind];
+export function waMessage(kind: WaKind, v: { name: string; ticketNo: string; item: string; store: string; link: string; quote?: string; memo?: string }, templates: WaTemplates = {}) {
+  let tpl = templates[kind]?.trim() || WA_DEFAULTS[kind];
+  // A saved "received" text without the memo placeholder still gets the memo link at the end
+  if (kind === "received" && v.memo && !tpl.includes("{memo}")) tpl += "\n\nإيصال الاستلام (PDF): {memo}";
   const vals: Record<string, string> = {
-    name: v.name.split(/\s+/)[0] || "", ticket: v.ticketNo, item: v.item, store: v.store, link: v.link, quote: v.quote ?? "—",
+    name: v.name.split(/\s+/)[0] || "", ticket: v.ticketNo, item: v.item, store: v.store, link: v.link, quote: v.quote ?? "—", memo: v.memo ?? v.link,
   };
-  return tpl.replace(/\{(name|ticket|item|store|link|quote)\}/g, (_, k: string) => vals[k]);
+  return tpl.replace(/\{(name|ticket|item|store|link|quote|memo)\}/g, (_, k: string) => vals[k]);
 }
 
 // Egyptian 01xxxxxxxxx → 201xxxxxxxxx for wa.me
