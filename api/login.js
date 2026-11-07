@@ -3,6 +3,7 @@ const users = require('./_users');
 const store = require('./_store');
 const { stafferCookie } = require('./_auth');
 const activity = require('./_activity');
+const maint = require('./_maintenance');
 
 // every sign-in, wrong password and blocked account goes into the Activity log (api/_activity.js); the log can never stop a sign-in
 const note = (req, id, ev) => activity.recordFor(req, id, ev).catch(() => {});
@@ -55,6 +56,18 @@ module.exports = async function handler(req, res) {
     if (matched.role === 'admin') { cookies.push(cookie('dashboards', matched.user)); facts.dash = true; }
     await note(req, activity.identFromAccount(matched), { ty: 'login', a: 'Signed in', d: activity.device(req) });
     return finish(cookies, facts);
+  }
+
+  // a Maintenance user signs in here with their work email; the Maintenance session is handed over to /maintenance/sso
+  const mailUser = String(body.username || '').trim().toLowerCase();
+  if (mailUser.includes('@') && maint.configured()) {
+    const m = await maint.login(mailUser, typedPass);
+    if (m.status === 200 && m.json && m.json.ok) {
+      res.setHeader('Set-Cookie', maint.ticketCookie(m.json));
+      return res.status(200).json({ ok: true, next: '/maintenance/sso' });
+    }
+    if (m.status === 403) return res.status(403).json({ ok: false, error: 'This account is not active. Please contact your manager.' });
+    return res.status(401).json({ ok: false });
   }
 
   // not an admin, a manager or the dashboards user: maybe a sales person with their own account

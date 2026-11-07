@@ -59,6 +59,8 @@ select{width:100%;max-width:340px;height:38px;border:1px solid var(--line);borde
   <section class="card" id="special"><h2>Special accounts</h2><div class="meta">For one person who needs a different report, for example the Visual Merchandiser. They sign in with their own username and password and open only what you give them.</div>
     <div id="splist"></div>
 </section>
+  <section class="card" id="mntcard"><h2>Maintenance users</h2><div class="meta">People who use the Maintenance app. They sign in on the main login page with their work email and their Maintenance password, and go straight to Maintenance. Roles and stores are set inside Maintenance (Admin).</div>
+    <div class="pwline" style="margin:8px 0"><input id="mntq" placeholder="Search name or email" autocomplete="off"></div><div id="mntlist" class="meta">Loading…</div></section>
   <section class="card" id="rfcard"><h2>Refill Order, Slow Moving and Distribution access</h2><div class="meta"><b>Refill Order</b> (also opens Slow Moving). View: sees the order. Input: also types Team Feedback and submits. Manage: also uploads the files, syncs ERP, changes the settings and approves.<br><b>Orders Distribution</b>. Warehouse: scans the shipment and downloads the store lists. Manage: also uploads invoices, sets store priority and changes the split. You always have Manage on both.</div><div class="row" style="margin:8px 0"><input id="rfq" placeholder="Search a name" style="max-width:240px"><label class="note"><input type="checkbox" id="rfonly"> Only people with access</label></div><div id="rflist"></div><div class="row" style="margin-top:10px;gap:10px;align-items:center"><button class="btn go" id="rfsave" disabled>Save changes</button><button class="btn" id="rfundo" disabled>Cancel</button><span class="note" id="rfmsg"></span></div></section>
   <section class="card" id="offcard"><h2>Switched off</h2><div class="meta">They cannot sign in. You can switch them on again.</div><div id="off"></div></section>
 </div>
@@ -240,6 +242,20 @@ async function savePw(b){b.disabled=true;
     $('pwbox').innerHTML=`<h2>Password changed for ${esc(b.dataset.user)}</h2><div class="note">Copy it now and send it to the person. It will not be shown again.</div><div class="pwline"><span class="big">${esc(j.password)}</span><button class="btn go" data-act="pwcopy" data-pw="${esc(j.password)}">Copy</button><button class="btn" data-act="pwclose">Done</button></div>`;
   }catch(_){showErr('No connection.');b.disabled=false}}
 load();
+let MNT=[];
+async function mntPost(o){const r=await fetch('/api/accounts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)});const j=await r.json().catch(()=>({}));return {ok:r.ok&&j.ok,j}}
+function renderMnt(){const q=($('mntq').value||'').trim().toLowerCase();
+  const l=MNT.filter(u=>!q||(u.full_name+' '+u.email).toLowerCase().includes(q));
+  $('mntlist').innerHTML=l.length?l.map(u=>`<div class="row"><div class="who">${esc(u.full_name)}<small>${esc(u.role)}${u.is_training?' · training':''}${u.active?'':' · switched off'}</small></div><div>${esc(u.email)}</div><div></div><div class="btns"><button class="btn" data-act="mntpw" data-id="${esc(u.id)}" data-name="${esc(u.full_name)}">Change password</button><button class="btn" data-act="mntactive" data-id="${esc(u.id)}" data-on="${u.active?0:1}">${u.active?'Switch off':'Switch on'}</button></div></div>`).join(''):'<div class="meta">No Maintenance users found.</div>'}
+async function loadMnt(){try{const {ok,j}=await mntPost({action:'mntlist'});if(!ok){$('mntlist').textContent=j.error||'Could not load the Maintenance users.';return}MNT=j.users||[];renderMnt()}catch(_){$('mntlist').textContent='No connection.'}}
+$('mntq').addEventListener('input',renderMnt);
+document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('button[data-act^="mnt"]');if(!b)return;const a=b.dataset.act;showErr('');
+  if(a==='mntpw'){const box=$('pwbox');box.hidden=false;box.innerHTML=`<h2>New Maintenance password for ${esc(b.dataset.name)}</h2><div class="note">Type a new password (at least 8 characters), or leave it empty and one will be made for you. They will be asked to choose their own at first sign-in.</div><div class="pwline"><input id="mntpwin" maxlength="100" placeholder="Leave empty to make one" autocomplete="off"><button class="btn go" data-act="mntpwsave" data-id="${esc(b.dataset.id)}" data-name="${esc(b.dataset.name)}">Save new password</button><button class="btn" data-act="pwclose">Cancel</button></div>`;box.scrollIntoView({block:'center'});$('mntpwin').focus();return}
+  if(a==='mntpwsave'){b.disabled=true;try{const {ok,j}=await mntPost({action:'mntsetpassword',id:b.dataset.id,password:$('mntpwin').value});if(!ok){showErr(j.error||'That did not work.');b.disabled=false;return}
+    $('pwbox').innerHTML=`<h2>Password changed for ${esc(b.dataset.name)}</h2><div class="note">Copy it now and send it to the person. It will not be shown again.</div><div class="pwline"><span class="big">${esc(j.password)}</span><button class="btn go" data-act="pwcopy" data-pw="${esc(j.password)}">Copy</button><button class="btn" data-act="pwclose">Done</button></div>`}catch(_){showErr('No connection.');b.disabled=false}return}
+  if(a==='mntactive'){b.disabled=true;try{const {ok,j}=await mntPost({action:'mntactive',id:b.dataset.id,active:b.dataset.on==='1'});if(!ok){showErr(j.error||'That did not work.');b.disabled=false;return}loadMnt()}catch(_){showErr('No connection.');b.disabled=false}}
+});
+loadMnt();
 </script>
 </body>
 </html>

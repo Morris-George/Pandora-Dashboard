@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
   const user = data?.claims?.sub;
   const path = request.nextUrl.pathname;
   // Cron calls carry their own secret (checked in the route)
-  const isPublic = path.startsWith("/login") || path === "/track" || path.startsWith("/track/") || path.startsWith("/t/") || path === "/api/cron/erp-sync";
+  const isPublic = path.startsWith("/login") || path === "/sso" || path.startsWith("/api/sso/") || path === "/track" || path.startsWith("/track/") || path.startsWith("/t/") || path === "/api/cron/erp-sync";
   if (!user && !isPublic) {
     // relative Location: keeps the visitor on whichever host they came in on (pandora-eg.online/maintenance)
     return new NextResponse(null, { status: 307, headers: { Location: BASE_PATH + "/login" } });

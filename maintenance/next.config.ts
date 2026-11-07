@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
     // Links already sent to customers (…/track/…, …/t/…, QR labels) and bookmarks used the root of the old address:
     // anything that is not already under /maintenance moves there.
     return [
+      // the Maintenance sign-in page is gone: everyone signs in on the main login page
+      { source: "/maintenance/login", destination: "/login.html", basePath: false as const, permanent: false },
       { source: "/", destination: "/maintenance", basePath: false as const, permanent: false },
       { source: "/:path((?!maintenance(?:/|$)).+)", destination: "/maintenance/:path", basePath: false as const, permanent: false },
     ];

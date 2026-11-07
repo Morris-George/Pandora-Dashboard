@@ -159,6 +159,26 @@ module.exports = activity.wrap('accounts', async function handler(req, res) {
       await users.setEnvPw(mgr.user, pw);
       return send(res, 200, { ok: true, password: pw });
     }
+    if (b.action === 'mntlist' || b.action === 'mntsetpassword' || b.action === 'mntactive') {
+      // Maintenance users (kept in the Maintenance app, they sign in on the main login page with their work email)
+      const maint = require('./_maintenance');
+      if (!maint.configured()) return send(res, 503, { ok: false, error: 'Maintenance sign-in is not set up yet.' });
+      if (b.action === 'mntlist') {
+        const r = await maint.list();
+        if (r.status !== 200 || !r.json.ok) return send(res, 502, { ok: false, error: 'Could not reach the Maintenance app.' });
+        return send(res, 200, { ok: true, users: r.json.users });
+      }
+      const id = String(b.id || '');
+      if (b.action === 'mntactive') {
+        const r = await maint.setActive(id, b.active === true);
+        return r.status === 200 && r.json.ok ? send(res, 200, { ok: true }) : send(res, 502, { ok: false, error: 'That did not work.' });
+      }
+      let pw = String(b.password || '').trim();
+      if (!pw) { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'; pw = Array.from({ length: 10 }, () => A[crypto.randomInt(A.length)]).join(''); }
+      if (pw.length < 8 || pw.length > 100) return send(res, 400, { ok: false, error: 'Password must be at least 8 characters.' });
+      const r = await maint.setPassword(id, pw);
+      return r.status === 200 && r.json.ok ? send(res, 200, { ok: true, password: pw }) : send(res, 502, { ok: false, error: (r.json && r.json.error) || 'That did not work.' });
+    }
     const username = users.normUsername(b.username);
     const rec = username ? await users.getUser(username) : null;
     if (!rec) return send(res, 404, { ok: false, error: 'Account not found.' });
