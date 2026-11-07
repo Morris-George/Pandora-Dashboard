@@ -122,6 +122,17 @@ module.exports = activity.wrap('accounts', async function handler(req, res) {
       await users.signOutAll(key);
       return send(res, 200, { ok: true, self: !!(who.account && env && normName(who.account.user) === normName(env.user)) });
     }
+    if (b.action === 'viewas') {
+      // Open the site as this person, without their password. Read only; the super admin's own sign-in stays underneath and "Back to my account" returns to it.
+      const env = staffAccounts().find(a => a.role !== 'admin' && normName(a.user) === normName(b.username));
+      let key = '', name = '';
+      if (env) { if (await users.envOff(env.user)) return send(res, 400, { ok: false, error: 'That account is switched off. Switch it on first.' }); key = 'env:' + normName(env.user); name = env.user; }
+      else { const r = await users.getUser(users.normUsername(b.username)); if (r) { if (r.status !== 'active') return send(res, 400, { ok: false, error: 'That account is not active.' }); key = 'u:' + r.username; name = r.name || r.username; } }
+      if (!key) return send(res, 404, { ok: false, error: 'Account not found.' });
+      try { await activity.recordFor(req, activity.identFromAccount(who.account), { ty: 'login', a: 'Opened the site as ' + name, d: 'View as' }); } catch (_) {}
+      res.setHeader('Set-Cookie', require('./_auth').viewCookie(who.account.user, key, process.env.PANDORA_AUTH_SECRET));
+      return send(res, 200, { ok: true, next: '/' });
+    }
     if (b.action === 'envdisable' || b.action === 'envenable') {
       // area managers (accounts kept in Vercel settings): switch off / on, same as anyone else. The super admin cannot be switched off.
       const mgr = staffAccounts().find(a => a.role !== 'admin' && normName(a.user) === normName(b.username));

@@ -87,7 +87,9 @@ async function sessionFacts(req) {
   const tok = readCookie(req, PROJECTS.dashboards.cookie);
   const adminUser = (staffAccounts().find(a => a.role === 'admin') || {}).user;
   const who = await whoami(req);
-  return factsFromWho(who, validSession('dashboards', tok, adminUser, secret), true);
+  const f = await factsFromWho(who, validSession('dashboards', tok, adminUser, secret) && !(who && who.viewAs), true); // viewing as someone: their access only, not the super admin's
+  if (who && who.viewAs) f.viewAs = who.viewAs;
+  return f;
 }
 
 // Area managers are greeted by first name ("Hello Joseph"). Everyone else keeps their usual label.

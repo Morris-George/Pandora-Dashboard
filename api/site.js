@@ -63,7 +63,16 @@ function chromeScript(kind, multi) {
 }
 
 // side: the report list for the super admin (api/_sidebar.js), shown on report pages only (never on Home, sign-in or the launch film)
-function withChrome(kind, multi, side) {
+function viewBanner(v) {
+  const name = JSON.stringify(String(v.name || '')).replace(/</g, '\\u003c');
+  return '<script>(function(){var n=' + name + ',d=document.createElement("div");d.id="pandora-viewas";' +
+    'd.style.cssText="position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:2147483000;display:flex;gap:12px;align-items:center;max-width:calc(100vw - 24px);padding:9px 10px 9px 16px;border-radius:999px;background:#2A1018;color:#fff;font:600 13px system-ui,sans-serif;box-shadow:0 8px 28px rgba(0,0,0,.35)";' +
+    'var s=document.createElement("span");s.textContent="Viewing as "+n+" \u00b7 view only";var b=document.createElement("button");b.type="button";b.textContent="Back to my account";' +
+    'b.style.cssText="border:0;border-radius:999px;padding:8px 14px;background:#FF93A0;color:#2A1018;font:700 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap";' +
+    'b.onclick=function(){b.disabled=true;fetch("/api/logout?viewas=1",{method:"POST",credentials:"same-origin"}).then(function(){location.replace("/staff/accounts")}).catch(function(){b.disabled=false})};' +
+    'd.appendChild(s);d.appendChild(b);document.body.appendChild(d)})();</script>';
+}
+function withChrome(kind, multi, side, banner) {
   return function (buf) {
     let html = buf.toString('utf8');
     const h = html.search(/<\/head>/i);
@@ -72,7 +81,7 @@ function withChrome(kind, multi, side) {
     if (showSide) html = html.replace(/<body[^>]*>/i, m => m + SIDEBAR.parts.body(side, side.path));
     const i = html.lastIndexOf('</body>');
     const at = i === -1 ? html.length : i;
-    html = html.slice(0, at) + chromeScript(kind, multi) + (kind === 'login' ? '' : BEACON) + HEADER + (showSide ? SIDEBAR.parts.tail() : '') + html.slice(at);
+    html = html.slice(0, at) + chromeScript(kind, multi) + (kind === 'login' ? '' : BEACON) + HEADER + (showSide ? SIDEBAR.parts.tail() : '') + (banner || '') + html.slice(at);
     return Buffer.from(html, 'utf8');
   };
 }
@@ -205,7 +214,7 @@ module.exports = async function handler(req, res) {
   const signedIn = facts.dash || facts.staff || facts.hr;
   const multi = appsFor(facts).length > 1;
   const sideData = await SIDEBAR.dataFor(facts); // null when this person can open only one report
-  const chromeFor = (kind, m) => withChrome(kind, m, sideData && Object.assign({}, sideData, { path: requestedPath }));
+  const chromeFor = (kind, m) => withChrome(kind, m, sideData && Object.assign({}, sideData, { path: requestedPath }), facts.viewAs ? viewBanner(facts.viewAs) : '');
   const toLogin = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/login.html'); return res.status(302).end(); };
   const toHome = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/'); return res.status(302).end(); };
   if (!signedIn && !facts.vm && !facts.sc) return toLogin();

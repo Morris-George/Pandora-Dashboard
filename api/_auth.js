@@ -7,6 +7,8 @@ const users = require('./_users');
 const store = require('./_store');
 
 const STAFFER_COOKIE = 'staffer_auth';
+const VIEW_COOKIE = 'viewas_auth'; // "View as": only ever honoured together with the super admin's own valid sign-in
+const VIEW_AGE = 2 * 60 * 60;
 const MAX_AGE = 8 * 60 * 60;
 const key = secret => secret + '|staffer';
 const hmac = (payload, secret) => crypto.createHmac('sha256', key(secret)).update(payload).digest();
@@ -92,11 +94,45 @@ async function lift(req, who, key, user) {
 const cookieStart = token => { try { return Number(Buffer.from(String(token).split('.')[0], 'base64url').toString('utf8').split('\n')[1]) - MAX_AGE; } catch (_) { return 0; } };
 const signedOut = async (key, token) => { try { const at = await users.signedOutAt(key); return !!at && at >= cookieStart(token); } catch (_) { return false; } };
 
+const viewKey = secret => secret + '|viewas';
+function viewCookie(adminUser, targetKey, secret) {
+  const exp = Math.floor(Date.now() / 1000) + VIEW_AGE;
+  const payload = Buffer.from(`${targetKey}\n${exp}\n${normName(adminUser)}`).toString('base64url');
+  const sig = crypto.createHmac('sha256', viewKey(secret)).update(payload).digest('base64url');
+  return `${VIEW_COOKIE}=${payload}.${sig}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${VIEW_AGE}`;
+}
+// The person the super admin is looking at the site as, or undefined when not viewing (no cookie, a bad or expired one, or the person is no longer active).
+async function viewWho(req, admin, secret) {
+  try {
+    const tok = readCookie(req, VIEW_COOKIE); if (!tok || !secret) return undefined;
+    const [payload, sig] = tok.split('.');
+    if (!payload || !sig) return undefined;
+    const expected = crypto.createHmac('sha256', viewKey(secret)).update(payload).digest(), actual = Buffer.from(sig, 'base64url');
+    if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) return undefined;
+    const [key, exp, adm] = Buffer.from(payload, 'base64url').toString('utf8').split('\n');
+    if (!(Number(exp) > Math.floor(Date.now() / 1000)) || adm !== normName(admin.user)) return undefined;
+    let who = null, name = '';
+    if (key.startsWith('env:')) {
+      const acc = require('./_projects').staffAccounts().find(a => a.role !== 'admin' && normName(a.user) === key.slice(4));
+      if (acc && !(await users.envOff(acc.user))) { who = await lift(req, { kind: 'env', account: acc, info: roleInfo(acc) }, 'env:' + String(acc.user).toLowerCase(), acc.user); name = acc.user; }
+    } else if (key.startsWith('u:')) {
+      const rec = await users.getUser(key.slice(2));
+      if (rec && rec.status === 'active') { who = rec.role === 'overseer' ? whoFromRec(rec) : await lift(req, whoFromRec(rec), 'u:' + rec.username, rec.username); name = rec.name || rec.username; }
+    }
+    return who ? Object.assign({}, who, { viewAs: { name, admin: admin.user } }) : undefined;
+  } catch (_) { return undefined; }
+}
+
 async function whoamiNow(req) {
   const secret = process.env.PANDORA_AUTH_SECRET;
   const account = staffSession(readCookie(req, PROJECTS.staff.cookie), secret);
   if (account) {
     if (store.configured() && await signedOut('env:' + normName(account.user), readCookie(req, PROJECTS.staff.cookie))) return null;
+    if (account.role === 'admin' && store.configured()) {
+      // the super admin is looking at the site as someone else: they see that person's site, and nothing can be changed while doing so
+      const v = await viewWho(req, account, secret);
+      if (v) return ['GET', 'HEAD', 'OPTIONS'].includes(String(req.method || 'GET').toUpperCase()) ? v : null;
+    }
     // a switched-off area manager is signed out at once (the super admin can never be switched off)
     if (account.role !== 'admin' && store.configured() && await users.envOff(account.user)) return null;
     const who = { kind: 'env', account, info: roleInfo(account) };
@@ -111,4 +147,4 @@ async function whoamiNow(req) {
   return null;
 }
 
-module.exports = { STAFFER_COOKIE, stafferCookie, whoami, whoFromRec };
+module.exports = { VIEW_COOKIE, viewCookie, STAFFER_COOKIE, stafferCookie, whoami, whoFromRec };
