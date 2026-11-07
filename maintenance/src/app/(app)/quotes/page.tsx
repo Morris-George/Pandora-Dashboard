@@ -1,3 +1,5 @@
+import { filterStores, pickedStore } from "@/lib/store-filter";
+import { StoreFilter } from "@/components/store-filter";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { loadWorkflow } from "@/lib/workflow";
@@ -7,16 +9,20 @@ import { QuotesPanel, type QuoteJob } from "./quotes-panel";
 
 export const metadata = { title: "Pandora Maintenance" };
 
-export default async function QuotesPage() {
+export default async function QuotesPage({ searchParams }: { searchParams: Promise<{ store?: string }> }) {
   const me = await requireRole("cs", "associate", "manager");
-  const { locale } = await getI18n();
+  const { locale, t: d } = await getI18n();
   const supabase = await createClient();
   // Stores use this screen only when the Customer Service step is off (Admin → Workflow)
   if (me.role !== "cs" && !me.fullAccess && (await loadWorkflow(supabase)).cs_quote) redirect("/?denied=1");
 
-  const { data: tickets } = await supabase.from("tickets")
+  const stores = await filterStores(me, supabase);
+  const store = pickedStore(stores, (await searchParams).store);
+  let tq = supabase.from("tickets")
     .select("id, ticket_no, item_name, item_code, status, customer_id, updated_at, branches(name)")
     .in("status", ["awaiting_customer_approval", "quote_rejected"]).order("updated_at");
+  if (store) tq = tq.eq("branch_id", store);
+  const { data: tickets } = await tq;
   const ids = (tickets ?? []).map((t) => t.id);
   const custIds = [...new Set((tickets ?? []).map((t) => t.customer_id))];
 
@@ -46,5 +52,10 @@ export default async function QuotesPage() {
     };
   });
 
-  return <QuotesPanel locale={locale} jobs={jobs} />;
+  return (
+    <>
+      {stores && <div className="mb-4 flex justify-end"><StoreFilter stores={stores} value={store} label={d.dispatch.storeFilter} all={d.dispatch.allStores} /></div>}
+      <QuotesPanel locale={locale} jobs={jobs} />
+    </>
+  );
 }

@@ -1,3 +1,4 @@
+import { filterStores } from "@/lib/store-filter";
 import { requireRole } from "@/lib/auth";
 import { RoleTabs, screenRole } from "@/components/role-tabs";
 import { getI18n } from "@/lib/i18n";
@@ -55,7 +56,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
     <DispatchPanel
       locale={locale}
       role={me.role}
-      myBranches={me.branches.map((b) => ({ id: b.id, name: b.name }))}
+      myBranches={(await filterStores(me, supabase)) ?? me.branches.map((b) => ({ id: b.id, name: b.name }))}
       packable={(packable ?? []).map(toItem)}
       returnable={(returnable ?? []).map(toItem)}
       batches={rows}

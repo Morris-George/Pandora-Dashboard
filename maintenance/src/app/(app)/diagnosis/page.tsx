@@ -1,3 +1,5 @@
+import { filterStores, pickedStore } from "@/lib/store-filter";
+import { StoreFilter } from "@/components/store-filter";
 import { requireRole } from "@/lib/auth";
 import { loadWorkflow } from "@/lib/workflow";
 import { RoleTabs, screenRole } from "@/components/role-tabs";
@@ -11,11 +13,12 @@ export const metadata = { title: "Pandora Maintenance" };
 
 const STAGES = ["received_at_hq", "under_diagnosis", "in_repair", "awaiting_parts", "quality_check"];
 
-export default async function DiagnosisPage({ searchParams }: { searchParams: Promise<{ as?: string }> }) {
+export default async function DiagnosisPage({ searchParams }: { searchParams: Promise<{ as?: string; store?: string }> }) {
   const user = await requireRole("technician", "supervisor", "hq");
   const { locale, t: d } = await getI18n();
   // Super Admin chooses which role's version of this screen to use
-  const me = { ...user, role: screenRole(user, (await searchParams).as, ["supervisor", "technician", "hq"]) };
+  const sp = await searchParams;
+  const me = { ...user, role: screenRole(user, sp.as, ["supervisor", "technician", "hq"]) };
   const tabs = <RoleTabs me={user} path="/diagnosis" current={me.role} roles={["supervisor", "technician", "hq"]} labels={d.roles} title={d.shell.useAs} />;
   const supabase = await createClient();
 
@@ -23,6 +26,9 @@ export default async function DiagnosisPage({ searchParams }: { searchParams: Pr
     .select("id, ticket_no, item_name, item_code, fault_category, fault_notes, warranty_provisional, no_invoice, purchase_date, status, assigned_technician, branches(name)")
     .in("status", me.role === "hq" ? ["received_at_hq"] : STAGES)
     .order("created_at");
+  const stores = await filterStores(me, supabase);
+  const store = pickedStore(stores, sp.store);
+  if (store) q = q.eq("branch_id", store);
   // Technicians work only on tickets assigned to them; with supervisor assignment off they also see tickets waiting to be taken
   const selfAssign = me.role === "technician" && !(await loadWorkflow(supabase)).supervisor_assign;
   if (me.role === "technician" && !user.isAdmin) { // Super Admin sees every technician's tickets
@@ -83,6 +89,7 @@ export default async function DiagnosisPage({ searchParams }: { searchParams: Pr
   return (
     <>
       {tabs}
+      {stores && <div className="mb-4 flex justify-end"><StoreFilter stores={stores} value={store} label={d.dispatch.storeFilter} all={d.dispatch.allStores} /></div>}
     <DiagnosisPanel locale={locale} role={me.role} jobs={jobs}
       selfAssign={selfAssign}
       technicians={(techs ?? []).filter((t) => !selfAssign || t.id === me.userId).map((t) => ({ id: t.id, name: t.full_name }))} costs={costs} categoryCosts={categoryCosts} />
