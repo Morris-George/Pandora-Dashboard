@@ -171,7 +171,7 @@ module.exports = async function handler(req, res) {
   const admin = who.kind === 'env' && who.info.role === 'admin';
   if (!admin && who.kind !== 'vm') return send(res, 403, { ok: false, error: 'No access.' });
   const url = new URL(req.url, 'https://x.invalid');
-  const by = admin ? 'Super admin' : (who.user && who.user.name) || 'VM';
+  const by = admin ? (who.user && who.user.name) || require('./_projects').ADMIN_NAME : (who.user && who.user.name) || 'VM';
 
   if (req.method === 'GET') {
     const st = url.searchParams.get('store');

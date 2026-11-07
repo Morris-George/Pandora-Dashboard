@@ -116,7 +116,7 @@ async function build() {
     const off = a.role !== 'admin' && await users.envOff(a.user);
     const d = await describe(who, 'env:' + a.user.toLowerCase(), ovr);
     out.push({
-      key: 'env:' + a.user.toLowerCase(), username: a.user, name: a.role === 'admin' ? 'Super admin' : a.user,
+      key: 'env:' + a.user.toLowerCase(), username: a.user, name: a.role === 'admin' ? require('./_projects').ADMIN_NAME : a.user,
       group: a.role === 'admin' ? 'Super admin' : 'Area managers', label: a.label,
       status: off ? 'disabled' : 'active', ...d
     });
@@ -126,7 +126,8 @@ async function build() {
     const who = whoFromRec(rec);
     const d = await describe(who, 'u:' + rec.username, ovr);
     let group = 'Sales people';
-    if (rec.role === 'overseer') group = 'Brand manager and Overseer';
+    if (rec.role === 'superadmin') group = 'Super admin';
+    else if (rec.role === 'overseer') group = 'Brand manager and Overseer';
     else if (rec.role === 'vm') group = 'Visual Merchandiser';
     else if (rec.role === 'hr') group = 'HR';
     else if (rec.role === 'stockcount') group = rec.title === 'Finance' ? 'Finance' : 'Warehouse Users';

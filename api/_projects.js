@@ -61,6 +61,8 @@ const ZONES = {
   cairo:   { label: 'Cairo zone',                 stores: ['almaza', 'city\\s*stars', 'cfc', 'festival', 'point\\s*90'] },
   octalex: { label: 'October & Alexandria zone',  stores: ['mall\\s*of\\s*egypt', 'mall\\s*of\\s*arabia', 'arabia', 'alex'] }
 };
+// The name shown for the super admin account kept in Vercel settings (logs, lists, "by" names)
+const ADMIN_NAME = 'Morris George';
 const STAFF_ACCOUNTS = [
   { role: 'admin',   label: 'Super admin',                  userEnv: 'STAFF_USERNAME',          passEnv: 'STAFF_PASSWORD' },
   { role: 'cairo',   label: 'Cairo zone manager',           userEnv: 'MANAGER_CAIRO_USERNAME',  passEnv: 'MANAGER_CAIRO_PASSWORD' },
@@ -93,4 +95,4 @@ function roleInfo(account) {
   };
 }
 
-module.exports = { normName, PROJECTS, projectFrom, safeEqual, signingKey, sign, validSession, readCookie, ZONES, staffAccounts, staffSession, roleInfo };
+module.exports = { ADMIN_NAME, normName, PROJECTS, projectFrom, safeEqual, signingKey, sign, validSession, readCookie, ZONES, staffAccounts, staffSession, roleInfo };

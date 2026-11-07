@@ -48,7 +48,7 @@ async function access(req) {
   if (who) {
     if (who.kind === 'env') {
       if (who.info.overseer) return { code: 403 }; // the brand manager does not use Stock Checker
-      if (who.info.role === 'admin') return { role: 'admin', by: 'Super admin' };
+      if (who.info.role === 'admin') return { role: 'admin', by: (who.user && who.user.name) || require('./_projects').ADMIN_NAME };
       return { role: 'area', by: firstName(who.account.user) || who.account.label || 'Area manager', allow: (who.info.allow || []).map(a => new RegExp(a, 'i')) };
     }
     if (who.kind === 'staff' && who.info.self && who.info.self.store) {

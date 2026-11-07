@@ -57,7 +57,7 @@ async function levelFor(who) {
   const acc = (await store.getJSON(ACCESS)) || {};
   return LEVELS.includes(acc[keyOf(who)]) ? acc[keyOf(who)] : 'none';
 }
-const nameOf = who => who.kind === 'env' ? String((who.user && who.user.name) || who.account.user || 'Admin') : String((who.user && (who.user.name || who.user.username)) || '');
+const nameOf = who => who.kind === 'env' ? String((who.user && who.user.name) || (who.account.role === 'admin' ? require('./_projects').ADMIN_NAME : who.account.user) || 'Admin') : String((who.user && (who.user.name || who.user.username)) || '');
 async function settings() { const s = (await store.getJSON(SETTINGS)) || {}; return { ...DEFAULTS, ...s, stores: Array.isArray(s.stores) && s.stores.length ? s.stores : DEFAULT_STORES }; }
 // which store a warehouse or branch name belongs to (first match in the list)
 function storeOf(name, stores) {

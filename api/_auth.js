@@ -42,6 +42,11 @@ function whoFromRec(rec) {
     const account = { role: 'admin', label: 'Overseer', user: rec.username, overseer: true };
     return { kind: 'env', account, user: rec, info: { ...roleInfo(account), overseer: true } };
   }
+  if (rec.role === 'superadmin') {
+    // a second super admin (for example Maurice Fakhry): the same rights as the super admin kept in Vercel settings
+    const account = { role: 'admin', label: 'Super admin', user: rec.username, superRec: true };
+    return { kind: 'env', account, user: rec, info: { ...roleInfo(account), superRec: true } };
+  }
   if (rec.role === 'hr') {
     // an HR account (for example Sandra): can look at the Weekly Schedule of every store, view only, and nothing else
     return { kind: 'hr', user: rec, info: { role: 'hr', label: 'HR', zone: null, allow: null, zones: null } };
@@ -117,7 +122,7 @@ async function viewWho(req, admin, secret) {
       if (acc && !(await users.envOff(acc.user))) { who = await lift(req, { kind: 'env', account: acc, info: roleInfo(acc) }, 'env:' + String(acc.user).toLowerCase(), acc.user); name = acc.user; }
     } else if (key.startsWith('u:')) {
       const rec = await users.getUser(key.slice(2));
-      if (rec && rec.status === 'active') { who = rec.role === 'overseer' ? whoFromRec(rec) : await lift(req, whoFromRec(rec), 'u:' + rec.username, rec.username); name = rec.name || rec.username; }
+      if (rec && rec.status === 'active') { who = rec.role === 'overseer' || rec.role === 'superadmin' ? whoFromRec(rec) : await lift(req, whoFromRec(rec), 'u:' + rec.username, rec.username); name = rec.name || rec.username; }
     }
     return who ? Object.assign({}, who, { viewAs: { name, admin: admin.user } }) : undefined;
   } catch (_) { return undefined; }
@@ -142,7 +147,7 @@ async function whoamiNow(req) {
   if (u && store.configured()) {
     const rec = await users.getUser(u);
     if (rec && rec.status === 'active' && await signedOut('u:' + rec.username, readCookie(req, STAFFER_COOKIE))) return null;
-    if (rec && rec.status === 'active') return rec.role === 'overseer' ? whoFromRec(rec) : lift(req, whoFromRec(rec), 'u:' + rec.username, rec.username);
+    if (rec && rec.status === 'active') return rec.role === 'overseer' || rec.role === 'superadmin' ? whoFromRec(rec) : lift(req, whoFromRec(rec), 'u:' + rec.username, rec.username);
   }
   return null;
 }

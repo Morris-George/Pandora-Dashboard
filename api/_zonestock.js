@@ -28,7 +28,7 @@ const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 async function access(req) {
   const who = await whoami(req);
   if (!who) return { code: 401 };
-  if (who.kind === 'env' && who.info.role === 'admin') return { role: 'admin', by: 'Super admin' };
+  if (who.kind === 'env' && who.info.role === 'admin') return { role: 'admin', by: (who.user && who.user.name) || require('./_projects').ADMIN_NAME };
   if (who.kind === 'vm') return { role: 'vm', by: (who.user && who.user.name) || 'VM' };
   if (who.kind === 'staff' && who.info.role === 'store' && who.info.self && who.info.self.store) {
     return { role: 'store', by: who.user.name || 'Store manager', own: who.info.self.store };

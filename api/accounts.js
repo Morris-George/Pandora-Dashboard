@@ -39,6 +39,14 @@ module.exports = activity.wrap('accounts', async function handler(req, res) {
     await store.putJSON('users/seeded/overseer-1.json', { at: new Date().toISOString() });
   }
 
+  // One-time setup (Nov 2026): Maurice Fakhry as a second super admin. Random password until Morris sets one with "Change password".
+  if (req.method === 'GET' && !(await store.getJSON('users/seeded/superadmin-1.json'))) {
+    if (!(await users.getUser('maurice.fakhry')) && !staffAccounts().some(a => normName(a.user) === 'maurice.fakhry')) {
+      await users.createSpecial({ username: 'maurice.fakhry', password: crypto.randomBytes(32).toString('base64url'), name: 'Maurice Fakhry', role: 'superadmin' });
+    }
+    await store.putJSON('users/seeded/superadmin-1.json', { at: new Date().toISOString() });
+  }
+
   // One-time setup: job titles shown as filters on the Active people list (Samy = Finance, Ibrahim Nassif = Brand manager)
   if (req.method === 'GET' && !(await store.getJSON('users/seeded/titles-1.json'))) {
     for (const [uname, title] of [['samy', 'Finance'], ['ibrahim.nassif', 'Brand manager']]) {
@@ -80,7 +88,7 @@ module.exports = activity.wrap('accounts', async function handler(req, res) {
     resets.sort((a, b) => String(b.requestedAt).localeCompare(String(a.requestedAt)));
     list.sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || String(b.createdAt).localeCompare(String(a.createdAt)));
     const admins = [];
-    for (const a of staffAccounts()) admins.push({ username: a.user, role: a.role, label: a.label, off: a.role !== 'admin' && await users.envOff(a.user) });
+    for (const a of staffAccounts()) admins.push({ username: a.user, name: a.role === 'admin' ? require('./_projects').ADMIN_NAME : a.user, role: a.role, label: a.label, off: a.role !== 'admin' && await users.envOff(a.user) });
     return send(res, 200, {
       ok: true, accounts: list, admins, resets, hasData: !!data, refill: (await store.getJSON(require('./_refill').ACCESS)) || {}, dist: (await store.getJSON(require('./_dist').ACCESS)) || {}, recv: (await store.getJSON(require('./_recv').ACCESS)) || {}, teams: (await store.getJSON('access/depts.json')) || {},
       people: people.map(p => ({ ...p, takenBy: taken.get(p.store + '|' + p.name) || '' })).sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name))
@@ -123,6 +131,7 @@ module.exports = activity.wrap('accounts', async function handler(req, res) {
       return send(res, 200, { ok: true, self: !!(who.account && env && normName(who.account.user) === normName(env.user)) });
     }
     if (b.action === 'viewas') {
+      if (who.user) return send(res, 400, { ok: false, error: 'View as is only available from the main super admin account (Morris George).' });
       // Open the site as this person, without their password. Read only; the super admin's own sign-in stays underneath and "Back to my account" returns to it.
       const env = staffAccounts().find(a => a.role !== 'admin' && normName(a.user) === normName(b.username));
       let key = '', name = '';

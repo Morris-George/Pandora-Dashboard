@@ -85,6 +85,7 @@ module.exports = async function handler(req, res) {
   if (rec.fails) { rec.fails = 0; rec.lockUntil = 0; await users.putUser(rec); }
   await note(req, activity.identFromRec(rec), { ty: 'login', a: 'Signed in', d: activity.device(req) });
   if (rec.role === 'overseer') return finish([stafferCookie(rec.username, secret)], { dash: true, staff: { role: 'admin', overseer: true } });
+  if (rec.role === 'superadmin') return finish([stafferCookie(rec.username, secret)], { dash: true, staff: { role: 'admin' } });
   if (rec.role === 'stockcount') return finish([stafferCookie(rec.username, secret)], { dash: false, staff: null, vm: false, sc: true });
   if (rec.role === 'hr') return finish([stafferCookie(rec.username, secret)], { dash: false, staff: null, vm: false, sc: false, hr: true });
   if (rec.role === 'vm') return finish([stafferCookie(rec.username, secret)], { dash: false, staff: null, vm: true });

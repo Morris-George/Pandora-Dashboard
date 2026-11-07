@@ -49,7 +49,7 @@ async function levelFor(who) {
   const tag = [(d.of || {})[keyOf(who)], u.title, u.role, info.role, who.kind].join(' ');
   return /finance|account/i.test(tag) ? 'accounts' : /warehouse/i.test(tag) || who.kind === 'sc' ? 'warehouse' : 'view';
 }
-const nameOf = who => who.kind === 'env' ? String((who.user && who.user.name) || who.account.user || 'Admin') : String((who.user && (who.user.name || who.user.username)) || '');
+const nameOf = who => who.kind === 'env' ? String((who.user && who.user.name) || (who.account.role === 'admin' ? require('./_projects').ADMIN_NAME : who.account.user) || 'Admin') : String((who.user && (who.user.name || who.user.username)) || '');
 const personKey = who => crypto.createHash('sha1').update(keyOf(who)).digest('hex').slice(0, 12);
 const fileOf = (id, team, pk) => 'rc/x/' + id + '/' + team + '/' + pk + '.json';
 

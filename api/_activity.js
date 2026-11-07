@@ -49,11 +49,11 @@ function visitor(req) {
 }
 
 function identFromAccount(a, info) {
-  return { key: 'env-' + slug(normName(a.user)), username: a.user, name: a.role === 'admin' ? 'Super admin' : prettyName(a.user), role: a.role === 'admin' ? 'admin' : 'area', label: a.label, store: '', zone: (info && info.zone) || (a.role === 'cairo' ? 'Cairo zone' : a.role === 'octalex' ? 'October & Alexandria zone' : '') };
+  return { key: 'env-' + slug(normName(a.user)), username: a.user, name: a.role === 'admin' ? require('./_projects').ADMIN_NAME : prettyName(a.user), role: a.role === 'admin' ? 'admin' : 'area', label: a.label, store: '', zone: (info && info.zone) || (a.role === 'cairo' ? 'Cairo zone' : a.role === 'octalex' ? 'October & Alexandria zone' : '') };
 }
 function identFromRec(r) {
-  const role = r.role === 'vm' ? 'vm' : r.role === 'overseer' ? 'overseer' : r.role === 'stockcount' ? 'stockcount' : r.role === 'hr' ? 'hr' : r.storeManager && r.linked ? 'store' : 'staff';
-  const label = { vm: 'Visual Merchandiser', overseer: 'Overseer', stockcount: 'Stock Count', hr: 'HR', store: 'Store manager', staff: 'Sales person' }[role];
+  const role = r.role === 'superadmin' ? 'admin' : r.role === 'vm' ? 'vm' : r.role === 'overseer' ? 'overseer' : r.role === 'stockcount' ? 'stockcount' : r.role === 'hr' ? 'hr' : r.storeManager && r.linked ? 'store' : 'staff';
+  const label = { admin: 'Super admin', vm: 'Visual Merchandiser', overseer: 'Overseer', stockcount: 'Stock Count', hr: 'HR', store: 'Store manager', staff: 'Sales person' }[role];
   return { key: 'u-' + slug(r.username), username: r.username, name: r.name || prettyName(r.username), role, label: r.title ? label + ' · ' + r.title : label, store: r.store || '', zone: '' };
 }
 function ident(who) {
@@ -310,7 +310,7 @@ async function overview(rangeDays) {
 
   // everyone who has an account, so people who never signed in show up too
   const accts = [];
-  for (const a of staffAccounts()) accts.push({ key: identFromAccount(a).key, name: a.role === 'admin' ? 'Super admin' : prettyName(a.user), username: a.user, role: a.role === 'admin' ? 'admin' : 'area', label: a.label, store: '', status: a.role !== 'admin' && await users.envOff(a.user) ? 'off' : 'active', createdAt: '' });
+  for (const a of staffAccounts()) accts.push({ key: identFromAccount(a).key, name: a.role === 'admin' ? require('./_projects').ADMIN_NAME : prettyName(a.user), username: a.user, role: a.role === 'admin' ? 'admin' : 'area', label: a.label, store: '', status: a.role !== 'admin' && await users.envOff(a.user) ? 'off' : 'active', createdAt: '' });
   for (const r of await users.listUsers()) { const i = identFromRec(r); accts.push({ key: i.key, name: i.name, username: r.username, role: i.role, label: i.label, store: r.store || '', status: r.status === 'active' ? 'active' : r.status === 'pending' ? 'pending' : 'off', createdAt: r.createdAt || '' }); }
   const seen = new Set(), people = [];
   const add = (a, r) => {

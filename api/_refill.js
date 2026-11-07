@@ -56,7 +56,7 @@ async function levelFor(who) {
   return LEVELS.includes(acc[keyOf(who)]) ? acc[keyOf(who)] : 'none';
 }
 const atLeast = (lvl, need) => LEVELS.indexOf(lvl) >= LEVELS.indexOf(need);
-const nameOf = who => who.user ? (who.user.name || who.user.username) : (who.account && who.account.user) || 'Super admin';
+const nameOf = who => who.user ? (who.user.name || who.user.username) : (who.account && who.account.user) || require('./_projects').ADMIN_NAME;
 
 /* ---------- ERP ---------- */
 const company = () => process.env.ERP_COMPANY || 'All-Niche';

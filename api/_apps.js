@@ -66,7 +66,7 @@ async function hiddenFor(who) {
 // What one person (a "who" from api/_auth.js) can open. dashOk = they hold the separate Dashboards session (super admin).
 async function factsFromWho(who, dashOk, withOverrides) {
   // area managers open Dashboards with their staff login, limited to their zone by the server (api/uploads.js)
-  const dash = !!dashOk || (!!who && who.kind === 'env' && (!!who.info.allow || !!who.info.overseer));
+  const dash = !!dashOk || (!!who && who.kind === 'env' && (!!who.info.allow || !!who.info.overseer || !!who.info.superRec));
   const vm = !!who && who.kind === 'vm';
   const sc = !!who && who.kind === 'sc';
   const hr = !!who && who.kind === 'hr';
