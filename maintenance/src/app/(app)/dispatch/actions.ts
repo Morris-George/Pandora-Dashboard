@@ -8,7 +8,7 @@ import { z } from "zod";
 import { requireSession, requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
-type Result = { error?: string; batchNo?: string; awb?: string };
+type Result = { error?: string; batchNo?: string; awb?: string; batchId?: string };
 
 // Map database exceptions to dictionary error keys
 function errorKey(message: string): string {
@@ -24,10 +24,10 @@ function errorKey(message: string): string {
   return "failed";
 }
 
-const done = (batchNo?: string, awb?: string): Result => {
+const done = (batchNo?: string, awb?: string, batchId?: string): Result => {
   revalidatePath("/dispatch");
   revalidatePath("/tickets");
-  return { batchNo, awb };
+  return { batchNo, awb, batchId };
 };
 
 const NewBatch = z.object({
@@ -45,7 +45,7 @@ export async function createOutbound(input: z.infer<typeof NewBatch>): Promise<R
     p_branch: p.data.branchId, p_seal: p.data.seal, p_tickets: p.data.ticketIds,
   });
   if (error) return { error: errorKey(error.message) };
-  return done(data?.batch_no, data?.seal_no);
+  return done(data?.batch_no, data?.seal_no, data?.id);
 }
 
 export async function createReturn(input: z.infer<typeof NewBatch>): Promise<Result> {
@@ -57,7 +57,7 @@ export async function createReturn(input: z.infer<typeof NewBatch>): Promise<Res
     p_branch: p.data.branchId, p_seal: p.data.seal, p_tickets: p.data.ticketIds,
   });
   if (error) return { error: errorKey(error.message) };
-  return done(data?.batch_no, data?.seal_no);
+  return done(data?.batch_no, data?.seal_no, data?.id);
 }
 
 export async function approveBatch(batchId: string): Promise<Result> {

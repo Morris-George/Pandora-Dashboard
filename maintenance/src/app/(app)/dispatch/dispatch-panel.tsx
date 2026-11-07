@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { toast } from "@/components/toast";
 import { BarcodeScan } from "@/components/barcode-scan";
 import { useAsk } from "@/components/ask";
+import { withBase } from "@/lib/base";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
 import { adminApproveBatch, approveBatch, courierPickup, createOutbound, createReturn, markItemLost, receiveBatch, receiveLateItem } from "./actions";
@@ -15,7 +16,7 @@ export type BatchRow = {
   items: { ticketNo: string; itemName: string; scanned: boolean; pending?: boolean }[];
 };
 type T = (typeof dictionaries)["en"]["dispatch"];
-type Run = (fn: () => Promise<{ error?: string; batchNo?: string; awb?: string }>, after?: () => void) => void;
+type Run = (fn: () => Promise<{ error?: string; batchNo?: string; awb?: string; batchId?: string }>, after?: () => void) => void;
 
 const card = "bg-white rounded-2xl border border-stone-200 p-6 flex flex-col gap-4";
 const input = "rounded-lg border border-stone-300 px-3 py-2.5 text-sm focus:outline-2 focus:outline-stone-900";
@@ -36,6 +37,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
   const [ask, askDialog] = useAsk();
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [printId, setPrintId] = useState(""); // the bag just created: print its AWB label
   const [picked, setPicked] = useState<string[]>([]); // batches ticked for approval
   // Store filter: "all" or one store; every section below shows only that store
   const [store, setStore] = useState("all");
@@ -46,11 +48,12 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
 
   const run: Run = (fn, after) =>
     start(async () => {
-      setError(""); setNotice("");
+      setError(""); setNotice(""); setPrintId("");
       const r = await fn();
       if (r.error) { setError(t.errors[r.error] ?? t.errors.failed); return; }
       toast();
       if (r.batchNo) setNotice(t.created(r.batchNo, r.awb ?? ""));
+      if (r.batchId) { setPrintId(r.batchId); window.open(withBase(`/awb/${r.batchId}`), "_blank", "noopener"); }
       after?.();
     });
 
@@ -78,7 +81,12 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
         )}
       </div>
       {error && <p role="alert" className="rounded-lg bg-red-50 text-red-800 text-sm p-3">{error}</p>}
-      {notice && <p role="status" className="rounded-lg bg-emerald-50 text-emerald-900 text-sm p-3">{notice}</p>}
+      {notice && (
+        <p role="status" className="rounded-lg bg-emerald-50 text-emerald-900 text-sm p-3 flex flex-wrap items-center gap-3">
+          <span>{notice}</span>
+          {printId && <a href={withBase(`/awb/${printId}`)} target="_blank" rel="noopener" className="rounded-lg border border-emerald-800 px-3 py-1 text-xs font-semibold">{t.printAwb}</a>}
+        </p>
+      )}
 
       {isBranch && (
         <PackCard key={store} t={t} title={t.packTitle} note={t.packNote} empty={t.noneToPack} busy={busy} run={run}
@@ -193,7 +201,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
                     <td className="p-2 font-semibold" dir="ltr">{b.batchNo}</td>
                     <td className="p-2">{b.direction === "outbound" ? t.outbound : t.return}</td>
                     <td className="p-2">{b.branchName}</td>
-                    <td className="p-2" dir="ltr">{b.seal}</td>
+                    <td className="p-2" dir="ltr"><a href={withBase(`/awb/${b.id}`)} target="_blank" rel="noopener" className="underline" title={t.printAwb}>{b.seal}</a></td>
                     <td className="p-2">{b.items.filter((i) => i.scanned).length}/{b.items.length}</td>
                     <td className="p-2">{fmt(b.createdAt)}</td>
                     <td className="p-2"><span className={`rounded-full px-2.5 py-1 text-xs whitespace-nowrap ${BADGE[b.status]}`}>{t.batchStatus[b.status]}</span>{waitingOn(t, b) && <div className="text-[11px] text-stone-500 mt-1 whitespace-nowrap">{t.waitingOn}: {waitingOn(t, b)}</div>}</td>
@@ -211,7 +219,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
 function PackCard({ t, title, note, empty, nested, busy, run, branches, items, onCreate }: {
   t: T; title: string; note?: string; empty?: string; nested?: boolean; busy: boolean; run: Run;
   branches: { id: string; name: string }[]; items: ItemRow[];
-  onCreate: (branchId: string, seal: string, ids: string[]) => Promise<{ error?: string; batchNo?: string; awb?: string }>;
+  onCreate: (branchId: string, seal: string, ids: string[]) => Promise<{ error?: string; batchNo?: string; awb?: string; batchId?: string }>;
 }) {
   const [picked, setPicked] = useState<string[]>([]);
   // "All stores": every store's items are listed; one bag holds one store, taken from the ticked items
@@ -348,8 +356,9 @@ function CollectCard({ t, b, busy, run }: { t: T; b: BatchRow; busy: boolean; ru
       {ui}
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-sm font-medium">{t.sealOnBag}
-          <input value={seal} onChange={(e) => setSeal(e.target.value)} dir="ltr" className={`${input} w-40`} />
+          <input value={seal} onChange={(e) => setSeal(e.target.value)} dir="ltr" placeholder="AWB-…" className={`${input} w-52`} />
         </label>
+        <BarcodeScan label={t.camera} title={t.sealOnBag} cancel={t.cancel} denied={t.cameraDenied} onResult={(c) => setSeal(c.trim())} />
         <button disabled={busy || !seal.trim() || missing > 0} className={primary} onClick={() => run(() => courierPickup(b.id, seal, scanned))}>{t.collect}</button>
         <span className="text-sm text-stone-600">{missing > 0 ? t.scanAllFirst(missing) : t.allScanned}</span>
       </div>
