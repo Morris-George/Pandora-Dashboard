@@ -99,6 +99,43 @@ module.exports = async function handler(req, res) {
   const op = url.searchParams.get('op'), b = await readJSON(req);
   if (!b) return send(res, 400, { ok: false, error: 'Bad request.' });
 
+  if (op === 'scanbatch') {
+    // the phone keeps every scan on the device and sends them here in groups; each scan has its own id (k), so a group sent
+    // twice (the answer got lost on a weak connection) is never counted twice
+    const t = mg && TEAMS[b.team] ? b.team : team;
+    if (!t) return send(res, 403, { ok: false, error: 'Your access does not allow scanning.' });
+    const id = str(b.id, 12); if (!/^[a-f0-9]{12}$/.test(id)) return send(res, 404, { ok: false, error: 'Not found.' });
+    const o = await store.getJSON('rc/s/' + id + '.json');
+    if (!o) return send(res, 404, { ok: false, error: 'Not found.' });
+    if (o.status !== 'Open') return send(res, 409, { ok: false, error: 'This shipment is closed. Ask the admin to open it again.' });
+    const ops = (Array.isArray(b.ops) ? b.ops : []).slice(0, 200);
+    const file = fileOf(id, t, personKey(who));
+    const me = (await store.getJSON(file)) || { by, boxes: {} };
+    me.boxes = me.boxes || {};
+    const seen = new Set(Array.isArray(me.ids) ? me.ids : []), results = [];
+    for (const p of ops) {
+      const k = str(p && p.k, 24);
+      if (k && seen.has(k)) { results.push({ k, ok: true, dup: true }); continue; }
+      const box = Math.round(num(p && p.box));
+      const base = box >= 100 ? Math.floor(box / 100) : box, bag = box >= 100 ? box % 100 : 0;
+      if (!(base >= 1 && base <= (o.boxes || MAX_BOXES) && bag <= MAX_BAGS && (box < 100 || bag >= 1))) { results.push({ k, ok: false, error: 'Pick a box first.' }); continue; }
+      const raw = str(p && p.code, 40), e = eanOf(raw), s = skuOf(raw);
+      if (!raw) { results.push({ k, ok: false, error: 'Scan a code.' }); continue; }
+      const l = o.lines.find(x => (e && x[1] === e) || x[0] === s);
+      const code = l ? l[0] : '?' + (e || s), n = p.n === -1 ? -1 : 1;
+      const m = me.boxes[box] || (me.boxes[box] = {});
+      if (n < 0 && !(m[code] > 0)) { if (k) seen.add(k); results.push({ k, ok: false, error: 'Nothing of ' + (l ? l[0] : raw) + ' to take back in box ' + box + ' (only your own scans can be taken back).' }); continue; }
+      m[code] = (m[code] || 0) + n; if (!m[code]) delete m[code];
+      if (!Object.keys(m).length) delete me.boxes[box];
+      if (k) seen.add(k);
+      results.push({ k, ok: true, code, known: !!l, box });
+    }
+    me.ids = [...seen].slice(-600);
+    me.by = by; me.at = new Date().toISOString();
+    await store.putJSON(file, me);
+    return send(res, 200, { ok: true, results });
+  }
+
   if (op === 'scan' || op === 'clearbox') {
     // a manager may scan for either team; everyone else scans for their own team only
     const t = mg && TEAMS[b.team] ? b.team : team;

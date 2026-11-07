@@ -142,8 +142,12 @@ const fmt=n=>Math.round(n||0).toLocaleString('en-US');
 const usd=n=>(n<0?'-':'')+'$'+Math.abs(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const U=s=>String(s==null?'':s).trim().toUpperCase().replace(/\.0$/,'');
 function showErr(t){$('err').hidden=!t;$('err').textContent=t||''}
-async function api(u,body){const r=await fetch(u,body?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{credentials:'same-origin',cache:'no-store'});
-  if(r.status===401){location.replace('/login.html');throw new Error('Sign in again.')}const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('Error '+r.status));return j}
+/* a request that gets no answer in 20 s fails (so it can be retried) instead of hanging forever */
+async function api(u,body){const ac=typeof AbortController==='function'?new AbortController():null,tm=ac?setTimeout(()=>ac.abort(),20000):0;let r;
+  try{r=await fetch(u,Object.assign(body?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{credentials:'same-origin',cache:'no-store'},ac?{signal:ac.signal}:{}))}
+  catch(_){const er=new Error('No internet right now.');er.net=true;throw er}finally{clearTimeout(tm)}
+  if(r.status===401){location.replace('/login.html');throw new Error('Sign in again.')}const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok){const er=new Error(j.error||('Error '+r.status));er.permanent=r.status>=400&&r.status<500&&r.status!==408&&r.status!==429;throw er}return j}
 let L=null,LVL='none',TEAM='',TEAMS={};const mg=()=>LVL==='manage',sees=()=>LVL==='manage'||LVL==='view';
 
 /* ---------- pictures ---------- */
@@ -205,14 +209,14 @@ $('upFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f
 
 /* ---------- scan ---------- */
 const bxBase=b=>b>=100?Math.floor(b/100):b,bxBag=b=>b>=100?b%100:0,bxName=b=>'Box '+bxBase(b)+(bxBag(b)?' · Bag '+bxBag(b):'');
-let S=null,BOX=0,UNDO=[],QUEUE=Promise.resolve();
+let S=null,BOX=0,UNDO=[];
 const teamOf=()=>TEAM||$('teamSel')?.value||'warehouse';
 async function openScan(){const id=$('scSel').value;
   $('teamBox').innerHTML=mg()?`<select id="teamSel" aria-label="Team">${Object.entries(TEAMS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>`:TEAM?`<span class="team">${esc(TEAMS[TEAM])}</span>`:'';
   if(mg()){try{$('teamSel').value=localStorage.getItem('rc.team')||'warehouse'}catch(_){}$('teamSel').onchange=()=>{try{localStorage.setItem('rc.team',$('teamSel').value)}catch(_){}UNDO=[];loadScan()}}
   if(!id){S=null;drawScan();return}await loadScan()}
 async function loadScan(){const id=$('scSel').value;if(!id)return;
-  try{const j=await api('/api/recv?id='+id);S={...j.shipment,counts:j.counts};
+  try{const j=await api('/api/recv?id='+id);S={...j.shipment,counts:j.counts};reapply();
     if(!(bxBase(BOX)>=1&&bxBase(BOX)<=S.boxes))BOX=+(localStorage.getItem('rc.box.'+id)||0)||0;drawScan()}catch(e){showErr(e.message)}}
 const tb=()=>(S&&S.counts[teamOf()]||{boxes:{}}).boxes;
 const tw=()=>(S&&S.counts[teamOf()]||{}).who||{};
@@ -231,16 +235,40 @@ $('boxes').onclick=e=>{const b=e.target.closest('[data-box]');if(!b)return;BOX=+
 $('scSel').onchange=()=>{BOX=0;UNDO=[];loadScan()};
 $('scRef').onclick=()=>loadScan();
 function beep(ok){try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator();o.frequency.value=ok?880:220;o.connect(a.destination);o.start();o.stop(a.currentTime+(ok?.08:.3))}catch(_){}try{navigator.vibrate&&navigator.vibrate(ok?40:[80,60,80])}catch(_){}}
+/* Every scan is counted on the screen and saved on this phone at once, then sent to the server in the background in groups.
+   A slow or dropped connection never stops the scanning: the scans wait on the phone (even if the page is closed) and are
+   sent again until the server has them. Each scan has its own id, so a group that is sent twice is never counted twice. */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let OUT=[],OUTT=0,FLUSHING=false,FAILS=0,NEEDLOAD=false;
+try{OUT=JSON.parse(localStorage.getItem('rc.out')||'[]');if(!Array.isArray(OUT))OUT=[]}catch(_){OUT=[]}
+const outNow=()=>{clearTimeout(OUTT);OUTT=0;try{localStorage.setItem('rc.out',JSON.stringify(OUT))}catch(_){}};
+const outSave=()=>{if(!OUTT)OUTT=setTimeout(outNow,300)};
+function outBadge(msg){let e=$('outBadge');if(!e){e=document.createElement('div');e.id='outBadge';e.className='note';e.style.marginTop='4px';$('scanMsg').after(e)}
+  e.hidden=!OUT.length&&!msg;e.innerHTML=(OUT.length?`<b>${fmt(OUT.length)}</b> scan${OUT.length===1?'':'s'} saved on this phone, ${FAILS?'waiting for the internet — they will send by themselves':'sending…'}`:'')+(msg?` <b class="bad">${esc(msg)}</b>`:'')}
+function codeOf(raw){const r=String(raw||'').trim(),e=r.slice(0,20).replace(/\.0$/,'').replace(/\D/g,''),s=U(r.slice(0,40)),l=S&&S.lines.find(x=>(e&&x[1]===e)||x[0]===s);return[l?l[0]:'?'+(e||s),!!l,l]}
+async function flush(){if(FLUSHING||!OUT.length)return;FLUSHING=true;let lost='';
+  try{while(OUT.length){const h=OUT[0],take=[];for(const o of OUT){if(o[1]!==h[1]||o[5]!==h[5]||take.length>=100)break;take.push(o)}
+      try{const j=await api('/api/recv?op=scanbatch',{id:h[1],team:h[5],ops:take.map(o=>({k:o[0],box:o[2],code:o[3],n:o[4]}))});
+        OUT.splice(0,take.length);FAILS=0;outNow();const bad=(j.results||[]).filter(r=>!r.ok);if(bad.length){NEEDLOAD=true;lost=bad[0].error+(bad.length>1?' (+'+(bad.length-1)+' more)':'')}outBadge(lost)}
+      catch(er){if(er.permanent){OUT.splice(0,take.length);outNow();NEEDLOAD=true;lost=er.message+' ('+take.length+' scans could not be saved)';outBadge(lost);continue}
+        FAILS++;outBadge(lost);await sleep(Math.min(15000,1000*FAILS))}}
+  }finally{FLUSHING=false;outBadge(lost)}
+  if(NEEDLOAD&&!OUT.length){NEEDLOAD=false;await loadScan().catch(()=>{})}}
+function reapply(){if(!S)return;for(const o of OUT){if(o[1]!==S.id)continue;const c=S.counts[o[5]]||(S.counts[o[5]]={boxes:{},who:{},people:[]}),[cd]=codeOf(o[3]),B=(c.boxes[o[2]]=c.boxes[o[2]]||{});B[cd]=(B[cd]||0)+o[4];if(!B[cd])delete B[cd]}}
+addEventListener('pagehide',outNow);addEventListener('online',()=>flush());
+document.addEventListener('visibilitychange',()=>{if(document.hidden)outNow();else flush()});
+setInterval(()=>{if(OUT.length)flush()},5000);
 function scan(code,n=1,bx=BOX){code=String(code||'').trim();if(!code||!S)return;
   if(!bx){$('scanMsg').innerHTML='<b class="bad">Pick a box first.</b>';beep(false);return}
-  QUEUE=QUEUE.then(async()=>{try{const j=await api('/api/recv?op=scan',{id:S.id,box:bx,code,n,team:teamOf()});
-      const B=tb()[bx]||(tb()[bx]={});B[j.code]=(B[j.code]||0)+n;if(!B[j.code])delete B[j.code];
-      if(n>0)UNDO.push([bx,j.code]);beep(j.known||n<0);
-      const all=Object.values(tb()).reduce((a,m)=>a+(m[j.code]||0),0),l=S.lines.find(x=>x[0]===j.code);
-      $('scanMsg').innerHTML=j.known?`${n>0?'Scanned':'Taken back'} <b>${esc(j.code)}</b> · ${bxName(bx)}`:`<b class="bad">Not on the invoice: ${esc(code)}</b> · kept in ${bxName(bx)} so it shows on the report`;
-      $('hitCard').hidden=false;$('hitPic').innerHTML=j.known&&$('pics').checked?pic(j.code):'';{const sp=$('sidePic'),h=j.known&&$('pics').checked?pic(j.code):'';sp.innerHTML=h;sp.hidden=!h}$('hitSku').textContent=j.code.replace(/^\?/,'');$('hitEan').textContent=l?l[1]:'not on the invoice';
-      if(!all){$('hitCard').hidden=true;$('sidePic').hidden=true;$('sidePic').innerHTML=''}$('hitBox').textContent=fmt(B[j.code]||0);$('hitAll').textContent=fmt(all);$('hitCard').classList.remove('flash');void $('hitCard').offsetWidth;$('hitCard').classList.add('flash');drawScan()}
-    catch(er){$('scanMsg').innerHTML=`<b class="bad">${esc(er.message)}</b>`;beep(false)}})}
+  const [cd,known,l]=codeOf(code),B=tb()[bx]||(tb()[bx]={});
+  if(n<0&&!(B[cd]>0)){$('scanMsg').innerHTML=`<b class="bad">Nothing of ${esc(cd.replace(/^\?/,''))} to take back in ${bxName(bx)}.</b>`;beep(false);return}
+  B[cd]=(B[cd]||0)+n;if(!B[cd])delete B[cd];
+  if(n>0)UNDO.push([bx,cd]);beep(known||n<0);
+  OUT.push([Date.now().toString(36)+Math.random().toString(36).slice(2,8),S.id,bx,code.slice(0,40),n<0?-1:1,teamOf()]);outSave();outBadge();flush();
+  const all=Object.values(tb()).reduce((a,m)=>a+(m[cd]||0),0);
+  $('scanMsg').innerHTML=known?`${n>0?'Scanned':'Taken back'} <b>${esc(cd)}</b> · ${bxName(bx)}`:`<b class="bad">Not on the invoice: ${esc(code)}</b> · kept in ${bxName(bx)} so it shows on the report`;
+  $('hitCard').hidden=false;$('hitPic').innerHTML=known&&$('pics').checked?pic(cd):'';{const sp=$('sidePic'),h=known&&$('pics').checked?pic(cd):'';sp.innerHTML=h;sp.hidden=!h}$('hitSku').textContent=cd.replace(/^\?/,'');$('hitEan').textContent=l?l[1]:'not on the invoice';
+  if(!all){$('hitCard').hidden=true;$('sidePic').hidden=true;$('sidePic').innerHTML=''}$('hitBox').textContent=fmt(B[cd]||0);$('hitAll').textContent=fmt(all);$('hitCard').classList.remove('flash');void $('hitCard').offsetWidth;$('hitCard').classList.add('flash');drawScan()}
 // no Enter needed: a scanner types fast, so a pause ends the code; typing by hand goes in once the whole EAN or SKU is there
 let SCT=0,SCL=0,SCFAST=0;
 const scanNow=()=>{clearTimeout(SCT);const v=$('scanIn').value;$('scanIn').value='';SCFAST=0;if(v.trim())scan(v)};
@@ -258,12 +286,18 @@ $('clrBox').onclick=async()=>{if(!BOX)return;const p=boxPcs(BOX);
   try{const j=await api('/api/recv?op=clearbox',{id:S.id,box:BOX,team:teamOf()});UNDO=UNDO.filter(u=>u[0]!==BOX);$('hitCard').hidden=true;$('sidePic').hidden=true;$('sidePic').innerHTML='';$('scanMsg').innerHTML=`${bxName(BOX)} cleared (${fmt(j.cleared)} pcs). Scan it again.`;await loadScan()}catch(er){showErr(er.message)}};
 let STREAM=null;
 $('cam').onclick=async()=>{const v=$('vid');
-  if(STREAM){STREAM.getTracks().forEach(t=>t.stop());STREAM=null;v.hidden=true;$('cam').textContent='Use the camera';return}
+  if(STREAM){STREAM.getTracks().forEach(t=>t.stop());STREAM=null;try{WL&&WL.release()}catch(_){}v.hidden=true;$('cam').textContent='Use the camera';return}
   if(!('BarcodeDetector' in window)){showErr('This browser cannot read barcodes with the camera. Use Chrome on Android, a scanner, or type the code.');return}
   try{STREAM=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});v.srcObject=STREAM;v.hidden=false;await v.play();$('cam').textContent='Stop the camera';
     const det=new BarcodeDetector({formats:['ean_13','ean_8','code_128','upc_a','upc_e']});let last='',at=0;
-    const loop=async()=>{if(!STREAM)return;try{const r=await det.detect(v);if(r[0]){const c=r[0].rawValue;if(c!==last||Date.now()-at>2500){last=c;at=Date.now();scan(c)}}}catch(_){}setTimeout(loop,250)};loop()
+    /* a long session: keep the screen awake, and if the camera pauses (screen lock, another app) start it again by itself */
+    const wake=async()=>{try{if(navigator.wakeLock&&STREAM)WL=await navigator.wakeLock.request('screen')}catch(_){}};wake();
+    const loop=async()=>{if(!STREAM)return;try{
+        if(v.paused&&!v.ended)await v.play().catch(()=>{});
+        if(STREAM.getVideoTracks().every(t=>t.readyState==='ended')){STREAM=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});v.srcObject=STREAM;await v.play().catch(()=>{})}
+        const r=await det.detect(v);if(r[0]){const c=r[0].rawValue;if(c!==last||Date.now()-at>2500){last=c;at=Date.now();scan(c)}}}catch(_){}setTimeout(loop,250)};loop()
   }catch(e){showErr('Camera: '+e.message)}};
+let WL=null;document.addEventListener('visibilitychange',async()=>{if(!document.hidden&&STREAM&&navigator.wakeLock){try{WL=await navigator.wakeLock.request('screen')}catch(_){}}});
 
 /* ---------- report ---------- */
 let R=null,F='',RT=null;
