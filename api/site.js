@@ -409,7 +409,7 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'overview.html', 'text/html; charset=utf-8', chromeFor('staff', multi));
   }
   if (requestedPath === '/slow' || requestedPath === '/slow/' || requestedPath === '/slow.html') {
-    if (!facts.refill || facts.refill === 'none') return toHome();
+    if ((!facts.refill || facts.refill === 'none') && !(facts.staff && facts.staff.role === 'store')) return toHome(); // store managers see their own store only (api/_slow.js)
     return sendFile(res, 'slow.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   if (requestedPath === '/transfer' || requestedPath === '/transfer/' || requestedPath === '/transfer.html') {
