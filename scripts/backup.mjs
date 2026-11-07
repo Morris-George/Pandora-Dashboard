@@ -1,5 +1,5 @@
 // Local backup: every table as JSON, the sign-in accounts list, and all ticket photos, into a dated folder on this PC.
-// Usage: node --env-file=.env.local scripts/backup.mjs [target folder]   (default D:\Pandora Backups)
+// Usage: node --env-file=.env.local scripts/backup.mjs [target folder]   (default D:\Pandora Projects\Pandora Backups)
 // Keeps the newest 30 backups and deletes older ones from the target folder.
 import { createClient } from "@supabase/supabase-js";
 import { mkdir, writeFile, readFile, readdir, rm } from "node:fs/promises";
@@ -15,7 +15,7 @@ const KEEP = 30;
 const PAGE = 1000;
 
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-const root = process.argv[2] || "D:\\Pandora Backups";
+const root = process.argv[2] || "D:\\Pandora Projects\\Pandora Backups";
 const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
 const dir = join(root, stamp);
 await mkdir(join(dir, "tables"), { recursive: true });
