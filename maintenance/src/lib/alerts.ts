@@ -34,8 +34,8 @@ export async function alertShortBatch(batchId: string) {
     const items = (b.batch_items as unknown as { scanned_in: boolean; tickets: { ticket_no: string; item_name: string } | null }[]);
     const missing = items.filter((i) => !i.scanned_in).map((i) => `${i.tickets?.ticket_no} — ${i.tickets?.item_name}`);
     const store = (b.branches as unknown as { name: string } | null)?.name ?? "—";
-    await sendStaffEmail(to, `⚠ Bag ${b.batch_no} arrived short (${missing.length} missing) · شحنة ناقصة`,
-      body(`Bag arrived short · الشحنة وصلت ناقصة`, [["Bag", b.batch_no], ["Store", store], ["Seal", b.seal_no], ["Received", `${items.length - missing.length} / ${items.length}`]], missing));
+    await sendStaffEmail(to, `⚠ Bag ${b.seal_no} arrived short (${missing.length} missing) · شحنة ناقصة`,
+      body(`Bag arrived short · الشحنة وصلت ناقصة`, [["AWB", b.seal_no], ["Store", store], ["Received", `${items.length - missing.length} / ${items.length}`]], missing));
   } catch { /* alert only */ }
 }
 

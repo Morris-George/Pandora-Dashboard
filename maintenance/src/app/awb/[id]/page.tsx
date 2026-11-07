@@ -47,7 +47,7 @@ export default async function AwbLabelPage({ params }: { params: Promise<{ id: s
       `}</style>
       <div className="bc" dangerouslySetInnerHTML={{ __html: barcode }} />
       <div className="no" dir="ltr">{b.seal_no}</div>
-      <div className="meta"><span dir="ltr">{b.batch_no}</span><span>{b.direction === "outbound" ? t.outbound : t.return} · {store}</span></div>
+      <div className="meta"><span>{b.direction === "outbound" ? t.outbound : t.return} · {store}</span></div>
       <div className="meta"><span>{t.items}: {items}</span><span>{date}</span></div>
       </div>
     </>

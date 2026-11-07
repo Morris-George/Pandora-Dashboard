@@ -53,7 +53,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
       const r = await fn();
       if (r.error) { setError(t.errors[r.error] ?? t.errors.failed); return; }
       toast();
-      if (r.batchNo) setNotice(t.created(r.batchNo, r.awb ?? ""));
+      if (r.awb) setNotice(t.created(r.awb));
       if (r.batchId) { setPrintId(r.batchId); window.open(withBase(`/awb/${r.batchId}`), "_blank", "noopener"); }
       after?.();
     });
@@ -219,10 +219,9 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
               <tbody>
                 {batches.map((b) => (
                   <tr key={b.id} className="border-t border-stone-100">
-                    <td className="p-2 font-semibold" dir="ltr">{b.batchNo}</td>
                     <td className="p-2">{b.direction === "outbound" ? t.outbound : t.return}</td>
                     <td className="p-2">{b.branchName}</td>
-                    <td className="p-2" dir="ltr"><a href={withBase(`/awb/${b.id}`)} target="_blank" rel="noopener" className="underline" title={t.printAwb}>{b.seal}</a></td>
+                    <td className="p-2 font-semibold" dir="ltr"><a href={withBase(`/awb/${b.id}`)} target="_blank" rel="noopener" className="underline" title={t.printAwb}>{b.seal}</a></td>
                     <td className="p-2">{b.items.filter((i) => i.scanned).length}/{b.items.length}</td>
                     <td className="p-2">{fmt(b.createdAt)}</td>
                     <td className="p-2"><span className={`rounded-full px-2.5 py-1 text-xs whitespace-nowrap ${BADGE[b.status]}`}>{t.batchStatus[b.status]}</span>{waitingOn(t, b) && <div className="text-[11px] text-stone-500 mt-1 whitespace-nowrap">{t.waitingOn}: {waitingOn(t, b)}</div>}</td>
@@ -367,9 +366,9 @@ function ReceiveCard({ t, b, busy, run, areaManager, isAdmin }: { t: T; b: Batch
 function BatchHead({ t, b }: { t: T; b: BatchRow }) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-      <strong dir="ltr">{b.batchNo}</strong>
+      <strong dir="ltr">{b.seal}</strong>
       <span className="text-sm text-stone-600">{b.direction === "outbound" ? t.outbound : t.return} · {b.branchName}</span>
-      <span className="text-xs text-stone-500">{t.seal}: <span dir="ltr">{b.seal}</span> · {t.items}: {b.items.length}</span>
+      <span className="text-xs text-stone-500">{t.items}: {b.items.length}</span>
       {b.pickedAt && <span className="text-xs text-emerald-800">{t.collected(new Date(b.pickedAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" }))}</span>}
     </div>
   );
@@ -393,8 +392,8 @@ function CollectCard({ t, b, busy, run }: { t: T; b: BatchRow; busy: boolean; ru
   return (
     <div className="border-t border-stone-100 pt-3 flex flex-col gap-3">
       <div>
-        <strong dir="ltr">{b.batchNo}</strong>
-        <div className="text-sm text-stone-600">{b.direction === "outbound" ? t.outbound : t.return} · {b.branchName} · {t.items}: {b.items.length}</div>
+        <strong>{b.branchName}</strong>
+        <div className="text-sm text-stone-600">{b.direction === "outbound" ? t.outbound : t.return} · {t.items}: {b.items.length}</div>
       </div>
       {sealed ? <p className="text-sm text-stone-600">{t.sealedNote}</p> : ui}
       <div className="flex flex-wrap items-end gap-3">

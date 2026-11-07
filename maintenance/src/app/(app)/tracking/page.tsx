@@ -79,7 +79,7 @@ export default async function TrackingPage({ searchParams }: { searchParams: Pro
       ...(moves ?? []).map((m) => {
         const b = m.dispatch_batches as unknown as { batch_no: string; seal_no: string } | null;
         return { at: m.moved_at, kind: "move" as const, title: `${loc(m.from_location)} → ${loc(m.to_location)}`,
-          detail: b ? `${t.batch} ${b.batch_no} · ${t.seal} ${b.seal_no}` : undefined, by: by(m.moved_by) };
+          detail: b ? `${t.seal} ${b.seal_no}` : undefined, by: by(m.moved_by) };
       }),
       ...(diag?.submitted_at ? [{ at: diag.submitted_at, kind: "diag" as const, title: t.diagnosed,
         detail: [diag.fault_found, diag.warranty_decision && d.warranty[diag.warranty_decision as keyof typeof d.warranty], diag.override_requested && t.override].filter(Boolean).join(" · "),
