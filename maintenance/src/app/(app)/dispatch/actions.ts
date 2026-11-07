@@ -34,6 +34,7 @@ const NewBatch = z.object({
   branchId: z.string().uuid(),
   seal: z.string().trim().max(40), // empty: the database makes the AWB number (AWB-<store>-000001)
   ticketIds: z.array(z.string().uuid()).min(1).max(100),
+  pickup: z.enum(["courier", "area_manager"]).optional(), // who picks the bag up; empty = the store's default
 });
 
 export async function createOutbound(input: z.infer<typeof NewBatch>): Promise<Result> {
@@ -42,7 +43,7 @@ export async function createOutbound(input: z.infer<typeof NewBatch>): Promise<R
   if (!p.success) return { error: "invalid" };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_outbound_batch", {
-    p_branch: p.data.branchId, p_seal: p.data.seal, p_tickets: p.data.ticketIds,
+    p_branch: p.data.branchId, p_seal: p.data.seal, p_tickets: p.data.ticketIds, p_pickup: p.data.pickup ?? null,
   });
   if (error) return { error: errorKey(error.message) };
   return done(data?.batch_no, data?.seal_no, data?.id);
@@ -54,7 +55,7 @@ export async function createReturn(input: z.infer<typeof NewBatch>): Promise<Res
   if (!p.success) return { error: "invalid" };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_return_batch", {
-    p_branch: p.data.branchId, p_seal: p.data.seal, p_tickets: p.data.ticketIds,
+    p_branch: p.data.branchId, p_seal: p.data.seal, p_tickets: p.data.ticketIds, p_pickup: p.data.pickup ?? null,
   });
   if (error) return { error: errorKey(error.message) };
   return done(data?.batch_no, data?.seal_no, data?.id);

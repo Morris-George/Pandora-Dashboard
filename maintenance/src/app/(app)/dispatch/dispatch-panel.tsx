@@ -9,7 +9,7 @@ import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 import type { AppRole } from "@/lib/auth";
 import { adminApproveBatch, approveBatch, courierPickup, createOutbound, createReturn, markItemLost, receiveBatch, receiveLateItem } from "./actions";
 
-export type ItemRow = { id: string; ticketNo: string; itemName: string; branchId: string; branchName: string };
+export type ItemRow = { id: string; ticketNo: string; itemName: string; branchId: string; branchName: string; pickup?: "courier" | "area_manager" | null };
 export type BatchRow = {
   id: string; batchNo: string; direction: "outbound" | "return"; branchId: string; branchName: string; seal: string;
   status: string; picker: "courier" | "delivery"; mine: boolean; createdAt: string; pickedAt: string | null;
@@ -90,7 +90,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
 
       {isBranch && (
         <PackCard key={store} t={t} title={t.packTitle} note={t.packNote} empty={t.noneToPack} busy={busy} run={run}
-          branches={packBranches} items={packable} onCreate={(branchId, seal, ids) => createOutbound({ branchId, seal, ticketIds: ids })} />
+          branches={packBranches} items={packable} onCreate={(branchId, seal, ids, pickup) => createOutbound({ branchId, seal, ticketIds: ids, pickup })} />
       )}
 
       {role === "supervisor" && (
@@ -103,7 +103,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
           {returnGroups.map((g) => (
             <PackCard key={g[0].branchId} t={t} nested title={g[0].branchName} busy={busy} run={run}
               branches={[{ id: g[0].branchId, name: g[0].branchName }]} items={g}
-              onCreate={(branchId, seal, ids) => createReturn({ branchId, seal, ticketIds: ids })} />
+              onCreate={(branchId, seal, ids, pickup) => createReturn({ branchId, seal, ticketIds: ids, pickup })} />
           ))}
         </section>
       )}
@@ -222,9 +222,10 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
 function PackCard({ t, title, note, empty, nested, busy, run, branches, items, onCreate }: {
   t: T; title: string; note?: string; empty?: string; nested?: boolean; busy: boolean; run: Run;
   branches: { id: string; name: string }[]; items: ItemRow[];
-  onCreate: (branchId: string, seal: string, ids: string[]) => Promise<{ error?: string; batchNo?: string; awb?: string; batchId?: string }>;
+  onCreate: (branchId: string, seal: string, ids: string[], pickup?: "courier" | "area_manager") => Promise<{ error?: string; batchNo?: string; awb?: string; batchId?: string }>;
 }) {
   const [picked, setPicked] = useState<string[]>([]);
+  const [pickup, setPickup] = useState<"courier" | "area_manager" | "">(""); // "" = the store's default
   // "All stores": every store's items are listed; one bag holds one store, taken from the ticked items
   const many = branches.length > 1;
   const shown = items.filter((i) => branches.some((b) => b.id === i.branchId));
@@ -255,8 +256,25 @@ function PackCard({ t, title, note, empty, nested, busy, run, branches, items, o
           <div className="flex flex-wrap items-end gap-3">
             <p className="text-sm text-stone-600 basis-full">{t.awbAuto}</p>
             {mixed && <p className="text-sm text-amber-800 basis-full">{t.oneStore}</p>}
+            {(() => {
+              // Who picks this bag up: the Courier takes it sealed (AWB only), the Area Manager checks every item first
+              const def = shown.find((i) => i.branchId === branchId)?.pickup;
+              if (!def) return null;
+              const cur = pickup || def;
+              return (
+                <fieldset className="basis-full flex flex-col gap-2">
+                  <legend className="text-sm font-medium mb-1">{t.pickupTitle}</legend>
+                  {(["courier", "area_manager"] as const).map((k) => (
+                    <label key={k} className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 text-sm cursor-pointer ${cur === k ? "border-[var(--accent)] bg-[var(--accent)]/10" : "border-stone-200"}`}>
+                      <input type="radio" name={`pickup-${title}`} checked={cur === k} onChange={() => setPickup(k)} className="mt-0.5" />
+                      <span><b>{k === "courier" ? t.pickupCourier : t.pickupAreaManager}</b><span className="block text-xs text-stone-600">{k === "courier" ? t.pickupCourierNote : t.pickupAreaManagerNote}</span></span>
+                    </label>
+                  ))}
+                </fieldset>
+              );
+            })()}
             <button disabled={busy || !chosen.length || mixed} className={primary}
-              onClick={() => run(() => onCreate(branchId, "", chosen), () => setPicked([]))}>
+              onClick={() => run(() => onCreate(branchId, "", chosen, pickup || undefined), () => { setPicked([]); setPickup(""); })}>
               {t.create(chosen.length)}
             </button>
           </div>
@@ -349,21 +367,24 @@ function ItemList({ items }: { items: BatchRow["items"] }) {
 // Courier: type the seal number written on the bag to confirm collecting it
 function CollectCard({ t, b, busy, run }: { t: T; b: BatchRow; busy: boolean; run: Run }) {
   const [seal, setSeal] = useState("");
-  const { scanned, ui, missing } = useItemScan(t, b);
+  const scan = useItemScan(t, b);
+  const sealed = b.picker === "delivery"; // the Courier takes the sealed bag: AWB only, no item check
+  const { scanned, ui } = scan;
+  const missing = sealed ? 0 : scan.missing;
   return (
     <div className="border-t border-stone-100 pt-3 flex flex-col gap-3">
       <div>
         <strong dir="ltr">{b.batchNo}</strong>
         <div className="text-sm text-stone-600">{b.direction === "outbound" ? t.outbound : t.return} · {b.branchName} · {t.items}: {b.items.length}</div>
       </div>
-      {ui}
+      {sealed ? <p className="text-sm text-stone-600">{t.sealedNote}</p> : ui}
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-sm font-medium">{t.sealOnBag}
           <input value={seal} onChange={(e) => setSeal(e.target.value)} dir="ltr" placeholder="AWB-…" className={`${input} w-52`} />
         </label>
         <BarcodeScan label={t.camera} title={t.sealOnBag} cancel={t.cancel} denied={t.cameraDenied} onResult={(c) => setSeal(c.trim())} />
         <button disabled={busy || !seal.trim() || missing > 0} className={primary} onClick={() => run(() => courierPickup(b.id, seal, scanned))}>{t.collect}</button>
-        <span className="text-sm text-stone-600">{missing > 0 ? t.scanAllFirst(missing) : t.allScanned}</span>
+        {!sealed && <span className="text-sm text-stone-600">{missing > 0 ? t.scanAllFirst(missing) : t.allScanned}</span>}
       </div>
     </div>
   );
