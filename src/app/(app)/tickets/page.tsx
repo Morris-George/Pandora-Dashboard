@@ -1,3 +1,5 @@
+import { filterStores, pickedStore } from "@/lib/store-filter";
+import { StoreFilter } from "@/components/store-filter";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { getI18n } from "@/lib/i18n";
@@ -16,14 +18,16 @@ const STATUS_STYLE: Record<string, string> = {
   awaiting_customer_approval: "bg-rose-100 text-rose-900",
 };
 
-export default async function TicketsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; overdue?: string }> }) {
+export default async function TicketsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; overdue?: string; store?: string }> }) {
   // Admin has no ticket access (SoD-4); RLS also returns nothing for admin
   const me = await requireRole("associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin");
   const bulk = me.fullAccess; // Super Admin: tick tickets to change status or delete
   const { t: d, locale } = await getI18n();
   const t = d.list;
-  const { q = "", status = "", overdue = "" } = await searchParams;
+  const { q = "", status = "", overdue = "", store: storeParam } = await searchParams;
   const supabase = await createClient();
+  const stores = await filterStores(me, supabase);
+  const store = pickedStore(stores, storeParam);
 
   let query = supabase
     .from("tickets")
@@ -32,6 +36,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
     .order("created_at", { ascending: false })
     .limit(200);
   if (status) query = query.eq("status", status);
+  if (store) query = query.eq("branch_id", store);
   const term = q.trim().replace(/[%,()]/g, "");
   if (term) query = query.or(`ticket_no.ilike.%${term}%,item_name.ilike.%${term}%,item_code.ilike.%${term}%`);
   const [{ data: all }, sla] = await Promise.all([query, loadSla(supabase)]);
@@ -59,7 +64,10 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
     <section className="bg-white rounded-2xl border border-stone-200 p-6 flex flex-col gap-4">
       <div className="flex flex-wrap justify-between items-baseline gap-2">
         <h1 className="text-xl font-semibold">{t.title}</h1>
-        <span className="text-sm text-stone-600">{t.count(tickets?.length ?? 0)}</span>
+        <span className="flex items-center gap-4">
+          {stores && <StoreFilter stores={stores} value={store} label={d.dispatch.storeFilter} all={d.dispatch.allStores} />}
+          <span className="text-sm text-stone-600">{t.count(tickets?.length ?? 0)}</span>
+        </span>
       </div>
 
       <form className="flex flex-wrap gap-2">
