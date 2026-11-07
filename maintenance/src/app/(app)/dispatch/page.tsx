@@ -35,11 +35,17 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
   const flow = (wf?.value ?? {}) as { area_manager?: boolean; courier_out?: boolean; courier_return?: boolean };
   const areaManager = flow.area_manager !== false;
   // Per trip: the Courier picks the bag up when that switch is on, otherwise the Area Manager (who then only follows it)
-  const pickers = { outbound: flow.courier_out ? "delivery" : "courier", return: flow.courier_return ? "delivery" : "courier" } as const;
 
   // Branch names for the return grouping (supervisor sees all branches)
-  const { data: branchList } = await supabase.from("branches").select("id, name, is_hq").eq("active", true).order("name");
+  const { data: branchList } = await supabase.from("branches").select("id, name, is_hq, pickup_out, pickup_return").eq("active", true).order("name");
   const branchName = new Map((branchList ?? []).map((b) => [b.id, b.name]));
+  // Per bag: the Courier picks it up when the trip's switch is on and the store chose the Courier (Admin → Stores), otherwise the Area Manager
+  const storeOf = new Map((branchList ?? []).map((b) => [b.id, b]));
+  const pickerFor = (branchId: string, direction: "outbound" | "return"): "courier" | "delivery" => {
+    const s = storeOf.get(branchId);
+    const on = direction === "outbound" ? flow.courier_out !== false : flow.courier_return !== false;
+    return on && (direction === "outbound" ? s?.pickup_out : s?.pickup_return) !== "area_manager" ? "delivery" : "courier";
+  };
 
   const toItem = (t: { id: string; ticket_no: string; item_name: string; branch_id: string }): ItemRow => ({
     id: t.id, ticketNo: t.ticket_no, itemName: t.item_name, branchId: t.branch_id, branchName: branchName.get(t.branch_id) ?? "—",
@@ -47,7 +53,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
 
   const rows: BatchRow[] = (batches ?? []).map((b) => ({
     id: b.id, batchNo: b.batch_no, direction: b.direction, branchId: b.branch_id, branchName: (b.branches as unknown as Joined<{ name: string }>)?.name ?? "—",
-    seal: b.seal_no, status: b.status, mine: b.sent_by === me.userId, createdAt: b.created_at, pickedAt: b.picked_up_at,
+    seal: b.seal_no, status: b.status, picker: pickerFor(b.branch_id, b.direction), mine: b.sent_by === me.userId, createdAt: b.created_at, pickedAt: b.picked_up_at,
     items: ((b.batch_items ?? []) as unknown as { scanned_in: boolean; tickets: Joined<{ ticket_no: string; item_name: string; status: string }> }[])
       .map((i) => ({ ticketNo: i.tickets?.ticket_no ?? "—", itemName: i.tickets?.item_name ?? "", scanned: i.scanned_in,
         pending: !i.scanned_in && (i.tickets?.status ?? "").startsWith("in_transit") })),
@@ -64,7 +70,6 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
       returnable={(returnable ?? []).map(toItem)}
       batches={rows}
       areaManager={areaManager}
-      pickers={pickers}
       isAdmin={user.isAdmin}
     />
     </>

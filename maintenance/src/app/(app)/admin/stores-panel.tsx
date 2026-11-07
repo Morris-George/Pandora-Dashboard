@@ -3,14 +3,15 @@
 import { useState, useTransition } from "react";
 import { useAsk } from "@/components/ask";
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
-import { addBranch, removeBranch, setBranchWhatsapp, updateBranch } from "./actions";
+import { addBranch, removeBranch, setBranchPickup, setBranchWhatsapp, updateBranch } from "./actions";
 
 const input = "h-10 w-full rounded-lg border border-stone-300 px-3 text-sm focus:outline-2 focus:outline-stone-900";
 // Name | prefix | WhatsApp | save | remove — same columns on every row; stacks on phones
 const grid = "grid-cols-1 sm:grid-cols-[minmax(0,1fr)_8rem_12rem_6rem_5.5rem] gap-2 sm:gap-3 items-center";
 const saveBtn = "h-10 rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-4 text-sm font-semibold disabled:bg-stone-100 disabled:text-stone-400";
 const removeBtn = "h-10 rounded-lg border border-red-200 text-red-800 px-3 text-sm hover:bg-red-50 disabled:opacity-40";
-type Store = { id: string; name: string; whatsapp: string | null; prefix: string; hq: boolean };
+type Pickup = "courier" | "area_manager";
+type Store = { id: string; name: string; whatsapp: string | null; prefix: string; hq: boolean; pickupOut: Pickup; pickupReturn: Pickup };
 
 // Admin → Stores: add, rename, change ticket prefix, remove, and each store's WhatsApp number
 export function StoresPanel({ locale, stores }: { locale: Locale; stores: Store[] }) {
@@ -67,6 +68,20 @@ export function StoresPanel({ locale, stores }: { locale: Locale; stores: Store[
                   </button>
                 )}
               </div>
+              {!s.hq && (
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-stone-600">
+                  {([["out", t.pickupOut, s.pickupOut], ["return", t.pickupReturn, s.pickupReturn]] as const).map(([trip, label, cur]) => (
+                    <label key={trip} className="flex items-center gap-2">{label}
+                      <select value={cur} disabled={busy} aria-label={`${label} — ${s.name}`}
+                        onChange={(e) => start(async () => { const r = await setBranchPickup(s.id, trip, e.target.value as Pickup); setMsg({ id: s.id, ok: !r.error, text: r.error ? t.failed : t.saved }); })}
+                        className="h-8 rounded-lg border border-stone-300 bg-white px-2 text-xs text-stone-900">
+                        <option value="courier">{t.byCourier}</option>
+                        <option value="area_manager">{t.byAreaManager}</option>
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              )}
               {msg?.id === s.id && <p role="status" className={`mt-1.5 text-xs ${msg.ok ? "text-emerald-800" : "text-red-800"}`}>{msg.text}</p>}
             </div>
           );

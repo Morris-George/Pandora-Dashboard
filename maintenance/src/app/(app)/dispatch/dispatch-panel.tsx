@@ -12,7 +12,7 @@ import { adminApproveBatch, approveBatch, courierPickup, createOutbound, createR
 export type ItemRow = { id: string; ticketNo: string; itemName: string; branchId: string; branchName: string };
 export type BatchRow = {
   id: string; batchNo: string; direction: "outbound" | "return"; branchId: string; branchName: string; seal: string;
-  status: string; mine: boolean; createdAt: string; pickedAt: string | null;
+  status: string; picker: "courier" | "delivery"; mine: boolean; createdAt: string; pickedAt: string | null;
   items: { ticketNo: string; itemName: string; scanned: boolean; pending?: boolean }[];
 };
 type T = (typeof dictionaries)["en"]["dispatch"];
@@ -28,12 +28,11 @@ const BADGE: Record<string, string> = {
   incident: "bg-red-100 text-red-900",
 };
 
-export function DispatchPanel({ locale, role, myBranches, packable: allPackable, returnable: allReturnable, batches: allBatches, areaManager = true, isAdmin = false, pickers = { outbound: "courier", return: "courier" } }: {
+export function DispatchPanel({ locale, role, myBranches, packable: allPackable, returnable: allReturnable, batches: allBatches, areaManager = true, isAdmin = false }: {
   locale: Locale; role: AppRole; myBranches: { id: string; name: string }[];
-  packable: ItemRow[]; returnable: ItemRow[]; batches: BatchRow[]; areaManager?: boolean; isAdmin?: boolean; pickers?: Record<"outbound" | "return", "courier" | "delivery">;
+  packable: ItemRow[]; returnable: ItemRow[]; batches: BatchRow[]; areaManager?: boolean; isAdmin?: boolean;
 }) {
   const t = dictionaries[locale].dispatch;
-  pickersOf = (b) => pickers[b.direction];
   const [busy, start] = useTransition();
   const [ask, askDialog] = useAsk();
   const [error, setError] = useState("");
@@ -153,7 +152,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
           </div>
           {(() => {
             // Only the trips this role picks up; on the other trips the Area Manager just follows the bags below
-            const mine = batches.filter((b) => b.status === "in_transit" && !b.pickedAt && pickers[b.direction] === role);
+            const mine = batches.filter((b) => b.status === "in_transit" && !b.pickedAt && b.picker === role);
             return mine.length ? mine.map((b) => <CollectCard key={b.id} t={t} b={b} busy={busy} run={run} />) : <p className="text-sm text-stone-600">{t.noneToCollect}</p>;
           })()}
         </section>
@@ -371,10 +370,9 @@ function CollectCard({ t, b, busy, run }: { t: T; b: BatchRow; busy: boolean; ru
 }
 
 // Who the batch is waiting on, shown under its status
-let pickersOf: (b: BatchRow) => "courier" | "delivery" = () => "courier";
 function waitingOn(t: T, b: BatchRow): string {
   if (b.status === "awaiting_approval") return t.wait.manager;
-  if (b.status === "in_transit") return !b.pickedAt ? (pickersOf(b) === "delivery" ? t.wait.delivery : t.wait.courier) : b.direction === "outbound" ? t.wait.hq : t.wait.branch;
+  if (b.status === "in_transit") return !b.pickedAt ? (b.picker === "delivery" ? t.wait.delivery : t.wait.courier) : b.direction === "outbound" ? t.wait.hq : t.wait.branch;
   if (b.status === "incident") return t.wait.ops;
   return "";
 }

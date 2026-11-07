@@ -678,3 +678,17 @@ export async function saveAlerts(lostEmails: string): Promise<Result> {
   await audit(me.userId, "alerts_saved", "alerts", value);
   return {};
 }
+
+// Admin → Stores: who picks up this store's bags, per trip (the Courier or the Area Manager)
+export async function setBranchPickup(branchId: string, trip: "out" | "return", who: "courier" | "area_manager"): Promise<Result> {
+  const me = await requireRole("admin");
+  z.string().uuid().parse(branchId);
+  const p = z.object({ trip: z.enum(["out", "return"]), who: z.enum(["courier", "area_manager"]) }).safeParse({ trip, who });
+  if (!p.success) return { error: "invalid" };
+  const { error } = await createAdminClient().from("branches").update(p.data.trip === "out" ? { pickup_out: p.data.who } : { pickup_return: p.data.who }).eq("id", branchId);
+  if (error) return { error: "failed" };
+  await audit(me.userId, "store_pickup", branchId, p.data);
+  revalidatePath("/admin");
+  revalidatePath("/dispatch");
+  return {};
+}
