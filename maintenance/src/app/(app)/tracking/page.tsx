@@ -4,6 +4,8 @@ import { getI18n } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DeleteTicket } from "../tickets/[id]/delete-ticket";
+import { listTickets } from "@/lib/ticket-list";
+import { withBase } from "@/lib/base";
 
 export const metadata = { title: "Pandora Maintenance" };
 
@@ -47,6 +49,10 @@ export default async function TrackingPage({ searchParams }: { searchParams: Pro
     const { data } = await qb.order("created_at", { ascending: false }).limit(30);
     matches = (data ?? []) as unknown as Match[];
   }
+  // No search: every ticket this role can see (newest first), with an Excel download
+  const browsing = !id && !term && !nameTerm && !mobTerm;
+  const all = browsing ? await listTickets(supabase, {}, 300) : [];
+  const exportHref = withBase(`/api/tracking-export?${new URLSearchParams({ q: term, name: nameTerm, mobile }).toString()}`);
   const exact = matches.length === 1 ? matches[0] : term ? matches.find((m) => m.ticket_no.toUpperCase() === term.toUpperCase()) : undefined;
 
   let view: React.ReactNode = null;
@@ -159,6 +165,35 @@ export default async function TrackingPage({ searchParams }: { searchParams: Pro
           <button className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-4 py-2.5 text-sm font-medium">{t.find}</button>
         </form>
         {(term || nameTerm || mobTerm || id) && !matches.length && <p className="text-sm text-stone-600">{t.notFound}</p>}
+        {(browsing || (!exact && matches.length > 1)) && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 pt-3">
+            <span className="text-sm text-stone-600">{browsing ? t.allCount(all.length) : t.matchCount(matches.length)}</span>
+            <a href={exportHref} className="rounded-lg border border-stone-900 px-3 py-2 text-sm font-medium">⬇ {t.exportXlsx}</a>
+          </div>
+        )}
+        {browsing && all.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead>
+                <tr className="text-xs text-stone-500 bg-stone-50">
+                  {[t.colTicket, t.colDate, t.colStore, t.colItem, t.customerName, t.colStatus].map((c) => <th key={c} className="p-2 text-start font-medium">{c}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {all.map((r) => (
+                  <tr key={r.id} className="border-t border-stone-100 hover:bg-stone-50">
+                    <td className="p-2"><Link href={`/tracking?id=${r.id}`} className="font-semibold hover:underline" dir="ltr">{r.ticket_no}</Link></td>
+                    <td className="p-2 whitespace-nowrap">{new Date(r.created_at).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB")}</td>
+                    <td className="p-2">{r.store}</td>
+                    <td className="p-2">{r.item_name}</td>
+                    <td className="p-2">{r.customer}</td>
+                    <td className="p-2"><span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs whitespace-nowrap">{d.status[r.status] ?? r.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         {!exact && matches.length > 1 && (
           <ul className="flex flex-col">
             {matches.map((m) => (
