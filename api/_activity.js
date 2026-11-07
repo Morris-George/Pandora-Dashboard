@@ -302,10 +302,43 @@ async function inChunks(list, n, fn) {
 }
 function dayList(n) { const out = []; for (let i = n - 1; i >= 0; i--) out.push(cairoDay(Date.now() - i * 86400000)); return out; }
 
+// The super admin's username changed (now Morris George): the activity kept under the earlier super admin username is folded into
+// the current one, and the earlier file is removed. Safe to run any number of times; it only acts when an earlier file is found.
+function addCounts(a, b) { const out = { ...a }; for (const k of Object.keys(b || {})) out[k] = (out[k] || 0) + b[k]; return out; }
+async function mergeAdminActivity(recs) {
+  try {
+    const cur = staffAccounts().find(a => a.role === 'admin'); if (!cur) return recs;
+    const id = identFromAccount(cur);
+    const olds = recs.filter(r => r.role === 'admin' && String(r.key).startsWith('env-') && r.key !== id.key);
+    if (!olds.length) return recs;
+    const path = 'act/u/' + id.key + '.json';
+    let main = recs.find(r => r.key === id.key) || blank(id, Date.now());
+    for (const o of olds) {
+      main.logins = (main.logins || 0) + (o.logins || 0); main.fails = (main.fails || 0) + (o.fails || 0);
+      if (o.first && (!main.first || o.first < main.first)) main.first = o.first;
+      if (o.lastSeen && (!main.lastSeen || o.lastSeen > main.lastSeen)) { main.lastSeen = o.lastSeen; if (o.device) main.device = main.device || o.device; }
+      if (o.lastLogin && (!main.lastLogin || o.lastLogin > main.lastLogin)) main.lastLogin = o.lastLogin;
+      for (const [day, d] of Object.entries(o.days || {})) {
+        const m = main.days[day] || (main.days[day] = { l: 0, v: 0, a: 0, s: 0, f: 0, dn: 0, pg: {}, ps: {}, ac: {} });
+        for (const k of ['l', 'v', 'a', 's', 'f', 'dn']) m[k] = (m[k] || 0) + (d[k] || 0);
+        m.pg = addCounts(m.pg, d.pg); m.ps = addCounts(m.ps, d.ps); m.ac = addCounts(m.ac, d.ac);
+      }
+      main.events = (main.events || []).concat(o.events || []);
+    }
+    main.events.sort((x, y) => String(y.t).localeCompare(String(x.t)));
+    if (main.events.length > KEEP_EVENTS) main.events.length = KEEP_EVENTS;
+    const keep = Object.keys(main.days).sort(); while (keep.length > KEEP_DAYS) delete main.days[keep.shift()];
+    main.username = id.username; main.name = id.name; main.role = id.role; main.label = id.label; main.store = id.store; main.zone = id.zone;
+    await store.putJSON(path, main); // saved first; the earlier files are removed only after this succeeded
+    for (const o of olds) await store.del('act/u/' + o.key + '.json');
+    return recs.filter(r => !olds.includes(r) && r.key !== id.key).concat(main);
+  } catch (_) { return recs; }
+}
+
 async function overview(rangeDays) {
   const days = dayList(rangeDays), first = days[0];
   const files = await store.list('act/u/');
-  const recs = (await inChunks(files, 12, p => store.getJSON(p))).filter(Boolean);
+  const recs = await mergeAdminActivity((await inChunks(files, 12, p => store.getJSON(p))).filter(Boolean));
   const byKey = new Map(recs.map(r => [r.key, r]));
 
   // everyone who has an account, so people who never signed in show up too
