@@ -2,7 +2,8 @@
 // Next adds the base path to <Link>, router calls and redirect(); plain <a href>, <img src>, <form action>,
 // fetch and window.location do not, so they go through withBase().
 export const BASE_PATH = "/maintenance";
-export const withBase = (p: string) => (p.startsWith("/") && !p.startsWith(BASE_PATH + "/") && p !== BASE_PATH ? BASE_PATH + p : p);
+// "/" becomes "/maintenance" (no trailing slash): the dashboard site only forwards /maintenance and /maintenance/<page> here
+export const withBase = (p: string) => (p === "/" ? BASE_PATH : p.startsWith("/") && !p.startsWith(BASE_PATH + "/") && p !== BASE_PATH ? BASE_PATH + p : p);
 
 // Middleware needs an absolute Location. Behind the dashboard site the visitor's host arrives in x-forwarded-host;
 // the project's own vercel.app address is never shown to people, so it maps to the main domain.
