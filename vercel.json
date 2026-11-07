@@ -19,8 +19,12 @@
   ],
   "rewrites": [
     {
-      "source": "/maintenance/:path*",
-      "destination": "https://pandora-maintenance.vercel.app/maintenance/:path*"
+      "source": "/maintenance",
+      "destination": "https://pandora-maintenance.vercel.app/maintenance"
+    },
+    {
+      "source": "/maintenance/:path+",
+      "destination": "https://pandora-maintenance.vercel.app/maintenance/:path+"
     },
     {
       "source": "/api/stock",
