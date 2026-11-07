@@ -1,8 +1,12 @@
-// TEMPORARY diagnostics: does this site reach the Maintenance app with the shared secret? (no secrets returned)
+// TEMPORARY diagnostics: does this site's sign-in reach the Maintenance app? (no tokens or secrets returned)
 const maint = require('./_maintenance');
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  const configured = maint.configured();
-  const r = configured ? await maint.list() : null;
-  res.status(200).json({ configured, secretLen: (process.env.MAINTENANCE_SSO_SECRET || '').length, status: r && r.status, ok: r && r.json && r.json.ok, count: r && r.json && r.json.users && r.json.users.length });
+  const q = req.query || {};
+  const out = { configured: maint.configured() };
+  if (q.e && q.p) {
+    const r = await maint.login(String(q.e).trim().toLowerCase(), String(q.p));
+    out.login = { status: r.status, ok: !!(r.json && r.json.ok), keys: Object.keys(r.json || {}), cookieLen: r.json && r.json.ok ? maint.ticketCookie(r.json).length : 0 };
+  }
+  res.status(200).json(out);
 };
