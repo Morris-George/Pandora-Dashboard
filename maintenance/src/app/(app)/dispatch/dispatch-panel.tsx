@@ -258,7 +258,8 @@ function PackCard({ t, title, note, empty, nested, busy, run, branches, items, o
             {mixed && <p className="text-sm text-amber-800 basis-full">{t.oneStore}</p>}
             {(() => {
               // Who picks this bag up: the Courier takes it sealed (AWB only), the Area Manager checks every item first
-              const def = shown.find((i) => i.branchId === branchId)?.pickup;
+              // Default from the ticked store (or the first listed one until something is ticked); null = Courier switch off
+              const def = (shown.find((i) => i.branchId === branchId) ?? shown[0])?.pickup;
               if (!def) return null;
               const cur = pickup || def;
               return (
