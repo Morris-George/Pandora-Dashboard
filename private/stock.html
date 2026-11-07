@@ -227,7 +227,9 @@ const ISO=/^\d{4}-\d{2}-\d{2}$/;
 
 /* row: [code, name, group, warehouse, opening, in, out, balance, value, description] */
 const C=0,N=1,G=2,W=3,O=4,I=5,U=6,B=7,V=8,D=9;
-const S={rows:[],meta:null,loc:'ALL',group:'cat',q:'',sel:'',from:'',to:'',itemsN:100,brand:'Pandora',cat:'ALL'};
+const S={rows:[],meta:null,loc:'ALL',group:'cat',q:'',sel:'',from:'',to:'',itemsN:100,brand:'Pandora',cat:'ALL',prices:{}};
+const priceOf=c=>(S.prices||{})[c];
+const priceTxt=c=>priceOf(c)?egp(priceOf(c)):'–';
 {const u=new URLSearchParams(location.search),t=new Date();
  S.from=ISO.test(u.get('from')||'')?u.get('from'):lIso(new Date(t.getFullYear(),t.getMonth(),1));
  S.to=ISO.test(u.get('to')||'')?u.get('to'):lIso(t)}
@@ -253,7 +255,7 @@ let loadId=0;
 async function getStock(q,ms){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);
   try{const r=await fetch('/api/stock?'+q+'from='+encodeURIComponent(S.from)+'&to='+encodeURIComponent(S.to),{credentials:'same-origin',cache:'no-store',signal:c.signal});
     return {r,j:await r.json().catch(()=>({}))}}finally{clearTimeout(t)}}
-function apply(j){S.meta=j;S.rows=j.rows||[];if(j.source==='erp'){S.from=j.from;S.to=j.to}$('controls').hidden=false;syncDates();render()}
+function apply(j){S.meta=j;S.rows=j.rows||[];S.prices=j.prices||{};if(j.source==='erp'){S.from=j.from;S.to=j.to}$('controls').hidden=false;syncDates();render()}
 async function load(){
   const id=++loadId;showErr('');$('dMsg').textContent='Loading…';
   let shown=false;
@@ -384,7 +386,7 @@ function itemBlock(i){
       ${PPic.thumb({sku:picSku(i),name:i.name||i.code},pcs(i.b)+' pieces').replace('class="pthumb"','class="pthumb big"')}
       <div class="hbody">
         <div class="hname">${esc(i.desc||i.name||i.code)}</div>
-        <div class="hmeta"><span class="hchip">${esc(i.cat)}</span>${i.desc?`<span>${esc(i.name)}</span>`:''}<span>Code ${esc(i.code)}</span></div>
+        <div class="hmeta"><span class="hchip">${esc(i.cat)}</span>${i.desc?`<span>${esc(i.name)}</span>`:''}<span>Code ${esc(i.code)}</span>${priceOf(i.code)?`<span class="hchip">${egp(priceOf(i.code))} each</span>`:''}</div>
         <div class="htotal"><b>${pcs(i.b)}</b><span>pieces in stock${have.length?' · in '+have.length+' store'+(have.length===1?'':'s'):''}</span></div>
         <div class="hlocs">${have.map(x=>`<div class="hloc"><span class="hn" title="${esc(x[0])}">${esc(shortWh(x[0]).replace(/^Pandora\s+/i,""))}</span><span class="htrack"><i class="${x[1]<0?'neg':''}" style="width:${Math.max(3,Math.abs(x[1])/mx*100)}%"></i></span><b${x[1]<0?' class="neg"':''}>${pcs(x[1])}</b></div>`).join('')||'<div class="hnone">Not in stock anywhere.</div>'}</div>
         ${none.length&&have.length?`<div class="hzero">No stock: ${none.map(l=>esc(shortWh(l).replace(/^Pandora\s+/i,""))).join(', ')}</div>`:''}
@@ -414,9 +416,9 @@ function itemsTable(rows){
   const q=v=>`<td${v<0?' class="neg"':''}>${pcs(v)}</td>`;
   card.hidden=false;
   $('itemsMeta').textContent=(S.sel?S.sel+' · ':'')+(S.loc==='ALL'?'All locations':S.loc)+' · '+nf0.format(all.length)+' item'+(all.length===1?'':'s');
-  $('ithead').innerHTML='<tr><th></th><th class="l">Item</th><th class="l">Category</th>'+locs.map(l=>`<th title="${esc(l)}">${esc(shortWh(l))}</th>`).join('')+'<th>Balance Qty</th></tr>';
-  $('itbody').innerHTML=shown.map(i=>`<tr class="irow" data-code="${esc(i.code)}"><td>${PPic.thumb({sku:picSku(i),name:i.name||i.code},pcs(i.b)+' pieces')}</td><td class="l">${esc(i.desc||i.name||i.code)}<small>${i.desc?esc(i.name)+' · ':''}${esc(i.code)}</small></td><td class="l">${esc(i.cat)}</td>`+locs.map(l=>q(i.w.get(l)||0)).join('')+`<td${i.b<0?' class="neg"':''}><b>${pcs(i.b)}</b></td></tr>`).join('')
-    +`<tr class="total"><td></td><td class="l">Total</td><td class="l"></td>`+locs.map(l=>`<td>${pcs(all.reduce((t,i)=>t+(i.w.get(l)||0),0))}</td>`).join('')+`<td>${pcs(all.reduce((t,i)=>t+i.b,0))}</td></tr>`;
+  $('ithead').innerHTML='<tr><th></th><th class="l">Item</th><th class="l">Category</th>'+(S.meta&&S.meta.canSeeValue?'<th>Price</th>':'')+locs.map(l=>`<th title="${esc(l)}">${esc(shortWh(l))}</th>`).join('')+'<th>Balance Qty</th></tr>';
+  $('itbody').innerHTML=shown.map(i=>`<tr class="irow" data-code="${esc(i.code)}"><td>${PPic.thumb({sku:picSku(i),name:i.name||i.code},pcs(i.b)+' pieces')}</td><td class="l">${esc(i.desc||i.name||i.code)}<small>${i.desc?esc(i.name)+' · ':''}${esc(i.code)}</small></td><td class="l">${esc(i.cat)}</td>`+(S.meta&&S.meta.canSeeValue?`<td>${priceTxt(i.code)}</td>`:'')+locs.map(l=>q(i.w.get(l)||0)).join('')+`<td${i.b<0?' class="neg"':''}><b>${pcs(i.b)}</b></td></tr>`).join('')
+    +`<tr class="total"><td></td><td class="l">Total</td><td class="l"></td>`+(S.meta&&S.meta.canSeeValue?'<td></td>':'')+locs.map(l=>`<td>${pcs(all.reduce((t,i)=>t+(i.w.get(l)||0),0))}</td>`).join('')+`<td>${pcs(all.reduce((t,i)=>t+i.b,0))}</td></tr>`;
   PPic.fill($('itbody'));
   $('itMore').hidden=all.length<=S.itemsN;
   $('itMore').textContent='Show more items ('+nf0.format(all.length-S.itemsN)+' left)';
@@ -431,8 +433,8 @@ function detail(list,showVal){
   const byItem=new Map();
   x.rows.forEach(r=>{let o=byItem.get(r[C]);if(!o)byItem.set(r[C],o={code:r[C],name:r[N],desc:r[D]||'',b:0,v:0,l:new Set()});o.b+=r[B];o.v+=r[V];if(r[B]!==0)o.l.add(r[W])});
   const its=[...byItem.values()].sort((a,b)=>b.b-a.b),top=its.slice(0,10),neg=its.filter(i=>i.b<0).slice(-5).reverse();
-  const itemRow=i=>`<tr class="irow" data-code="${esc(i.code)}"><td>${PPic.thumb({sku:picSku(i),name:i.name||i.code},pcs(i.b)+' pieces')}</td><td class="l">${esc(i.desc||i.name||i.code)}<small>${i.desc?esc(i.name)+' · ':''}${esc(i.code)}</small></td><td>${pcs(i.b)}</td>${showVal?`<td>${egp(i.v)}</td>`:''}<td>${nf0.format(i.l.size)}</td></tr>`;
-  const head=`<tr><th></th><th class="l">Item</th><th>Pieces</th>${showVal?'<th>Value</th>':''}<th>Locations</th></tr>`;
+  const itemRow=i=>`<tr class="irow" data-code="${esc(i.code)}"><td>${PPic.thumb({sku:picSku(i),name:i.name||i.code},pcs(i.b)+' pieces')}</td><td class="l">${esc(i.desc||i.name||i.code)}<small>${i.desc?esc(i.name)+' · ':''}${esc(i.code)}</small></td><td>${pcs(i.b)}</td>${S.meta&&S.meta.canSeeValue?`<td>${priceTxt(i.code)}</td>`:''}${showVal?`<td>${egp(i.v)}</td>`:''}<td>${nf0.format(i.l.size)}</td></tr>`;
+  const head=`<tr><th></th><th class="l">Item</th><th>Pieces</th>${S.meta&&S.meta.canSeeValue?'<th>Price</th>':''}${showVal?'<th>Value</th>':''}<th>Locations</th></tr>`;
   el.innerHTML=`<div class="cardhead"><h2>${esc(x.name)}</h2><span class="meta">${pcs(x.b)} pieces in ${nf0.format(byLoc.size)} location${byLoc.size===1?'':'s'}${showVal?' · '+egp(x.v):''}</span></div>
    <div class="two"><div><h3>By location</h3>${locs.map(l=>`<div class="bar"><span class="n" title="${esc(l[0])}">${esc(l[0])}</span><span class="t"><i style="width:${Math.max(1,Math.abs(l[1])/lmax*100)}%"></i></span><span class="v${l[1]<0?' neg':''}">${pcs(l[1])}</span></div>`).join('')}</div>
    <div><h3>Most stock by item</h3><div class="tablewrap"><table style="min-width:0"><thead>${head}</thead><tbody>${top.map(itemRow).join('')}</tbody></table></div>
@@ -454,7 +456,7 @@ document.addEventListener('click',e=>{
 });
 $('refresh').addEventListener('click',async()=>{const b=$('refresh');b.disabled=true;$('dMsg').textContent='Syncing from ERP… this can take up to a minute.';
   try{const r=await fetch('/api/stock?fresh=1&from='+encodeURIComponent(S.from)+'&to='+encodeURIComponent(S.to),{credentials:'same-origin',cache:'no-store'});const j=await r.json().catch(()=>({}));
-    if(!r.ok||!j.ok)showErr(j.error||'Could not refresh.');else{S.meta=j;S.rows=j.rows||[];syncDates();render();$('dMsg').textContent='Synced at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'.'}}catch(_){showErr('No connection.')}
+    if(!r.ok||!j.ok)showErr(j.error||'Could not refresh.');else{S.meta=j;S.rows=j.rows||[];S.prices=j.prices||{};syncDates();render();$('dMsg').textContent='Synced at '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'.'}}catch(_){showErr('No connection.')}
   b.disabled=false});
 document.addEventListener('click',e=>{
   if(e.target.id==='sClose'||e.target.id==='sModal'){$('sModal').hidden=true;return}

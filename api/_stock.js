@@ -134,6 +134,44 @@ async function erpStock(from, to, fresh) {
   return rec;
 }
 
+// ---- Price of each item (shown on the Stock balance page) ----
+// Same rule as Slow Moving and Transfer: the latest real sale of the SKU in the last 12 months, price with VAT per piece.
+// Read from the saved sales lines (dash/f/erp-YYYY-MM.json rows: [date, invoice, qty, net, gross, sku, ...]) and kept for 6 hours.
+const PRICES = 'stock/prices.json';
+const skuOf = v => str(v, 40).toUpperCase().replace(/\.0$/, '');
+const baseOf = s => String(s || '').toUpperCase().split('-')[0].trim();
+async function shelfPrices(anyAge) {
+  const c = await store.getJSON(PRICES);
+  if (c && c.p && (anyAge || Date.now() - Date.parse(c.at) < 6 * 3600 * 1000)) return c.p;
+  if (anyAge) return {};
+  const now = new Date(Date.now() + 3 * 3600 * 1000), p = {}, pd = {};
+  const put = (k, d, v) => { if (k && d >= (pd[k] || '')) { pd[k] = d; p[k] = v; } };
+  for (let k = 0; k < 13; k++) {
+    const m = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1)).toISOString().slice(0, 7);
+    const f = await store.getJSON('dash/f/erp-' + m + '.json'); if (!f || !Array.isArray(f.rows)) continue;
+    for (const r of f.rows) {
+      const q = Number(r[2]) || 0, g = Number(r[4]) || 0, d = String(r[0] || '').slice(0, 10), s = skuOf(r[5]);
+      if (!s || !(q > 0 && g > 0)) continue;
+      const v = Math.round(g / q); put(s, d, v); put(baseOf(s), d, v);
+    }
+  }
+  await store.putJSON(PRICES, { at: new Date().toISOString(), p }).catch(() => {});
+  return p;
+}
+// { item code: price } for the lines being sent. Never for the VM (no values), and a failure here never blocks the stock itself.
+async function pricesFor(rows, who, anyAge) {
+  if (who.kind === 'vm') return undefined;
+  try {
+    const p = await shelfPrices(anyAge), out = {};
+    for (const r of rows) {
+      if (out[r[0]] != null) continue;
+      const v = p[skuOf(r[0])] || p[skuOf(r[1])] || p[baseOf(r[1])] || p[baseOf(r[0])];
+      if (v) out[r[0]] = v;
+    }
+    return out;
+  } catch (_) { return {}; }
+}
+
 async function readBody(req) {
   if (Buffer.isBuffer(req.body)) return req.body;
   if (typeof req.body === 'string') return Buffer.from(req.body);
@@ -251,14 +289,15 @@ module.exports = async function handler(req, res) {
   // cached=1: answer at once with whatever was saved for these dates (any age), so the page opens instantly while the live read happens in a second call
   if (url.searchParams.get('cached') === '1') {
     const c = await store.getJSON('stock/r/' + from + '_' + to + '.json');
-    if (c && c.rows && c.rows.length) return send(res, 200, { ...base, source: 'erp', from, to, fetchedAt: c.at, canChangeDates: true, hasExcel: !!snap, stale: true, rows: scope(c.rows, who) });
+    if (c && c.rows && c.rows.length) { const rs = scope(c.rows, who); return send(res, 200, { ...base, source: 'erp', from, to, fetchedAt: c.at, canChangeDates: true, hasExcel: !!snap, stale: true, rows: rs, prices: await pricesFor(rs, who, true) }); }
     return send(res, 200, { ok: true, miss: true });
   }
 
   if (erpOn) {
     try {
       const d = await erpStock(from, to, url.searchParams.get('fresh') === '1');
-      return send(res, 200, { ...base, source: 'erp', from, to, fetchedAt: d.at, diag: d.rows.length ? undefined : d.diag, namesNote: who.kind === 'env' && who.info.role === 'admin' && d.diag && d.diag.names ? d.diag.names : undefined, canChangeDates: true, hasExcel: !!snap, rows: scope(d.rows, who) });
+      const rs = scope(d.rows, who);
+      return send(res, 200, { ...base, source: 'erp', from, to, fetchedAt: d.at, prices: await pricesFor(rs, who), diag: d.rows.length ? undefined : d.diag, namesNote: who.kind === 'env' && who.info.role === 'admin' && d.diag && d.diag.names ? d.diag.names : undefined, canChangeDates: true, hasExcel: !!snap, rows: rs });
     } catch (e) {
       if (!snap) await store.putJSON(STATUS, { ok: false, at: new Date().toISOString(), error: String(e && e.message || e).slice(0, 200) }).catch(() => {});
       if (!snap) return send(res, 502, { ok: false, error: 'ERP could not give the stock balance: ' + String(e && e.message || e).slice(0, 240) });
@@ -267,5 +306,6 @@ module.exports = async function handler(req, res) {
     }
   }
   if (!snap) return send(res, 404, { ok: false, error: 'no-stock' });
-  return send(res, 200, { ...base, source: 'excel', file: snap.file, asOf: snap.asOf, uploadedAt: snap.uploadedAt, canChangeDates: false, note, rows: scope(snap.rows, who) });
+  const rs = scope(snap.rows, who);
+  return send(res, 200, { ...base, source: 'excel', file: snap.file, asOf: snap.asOf, uploadedAt: snap.uploadedAt, canChangeDates: false, note, rows: rs, prices: await pricesFor(rs, who) });
 };
