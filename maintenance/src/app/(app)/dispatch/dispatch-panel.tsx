@@ -366,8 +366,8 @@ function ReceiveCard({ t, b, busy, run, areaManager, isAdmin }: { t: T; b: Batch
 function BatchHead({ t, b }: { t: T; b: BatchRow }) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-      <strong dir="ltr">{b.seal}</strong>
-      <span className="text-sm text-stone-600">{b.direction === "outbound" ? t.outbound : t.return} · {b.branchName}</span>
+      <strong>{b.branchName} · <span dir="ltr">{b.seal}</span></strong>
+      <span className="text-sm text-stone-600">{b.direction === "outbound" ? t.outbound : t.return}</span>
       <span className="text-xs text-stone-500">{t.items}: {b.items.length}</span>
       {b.pickedAt && <span className="text-xs text-emerald-800">{t.collected(new Date(b.pickedAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" }))}</span>}
     </div>
