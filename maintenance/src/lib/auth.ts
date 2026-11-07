@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export type AppRole =
-  | "associate" | "manager" | "courier" | "hq" | "technician"
+  | "associate" | "manager" | "courier" | "delivery" | "hq" | "technician"
   | "supervisor" | "cs" | "finance" | "ops" | "admin";
 
 export type Session = {

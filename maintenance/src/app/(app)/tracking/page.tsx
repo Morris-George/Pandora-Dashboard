@@ -24,7 +24,7 @@ const STAGES = [
 type Event = { at: string; kind: "status" | "move" | "diag" | "quote" | "created"; title: string; detail?: string; by?: string };
 
 export default async function TrackingPage({ searchParams }: { searchParams: Promise<{ q?: string; id?: string; name?: string; mobile?: string }> }) {
-  const me = await requireRole("associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin");
+  const me = await requireRole("associate", "manager", "courier", "delivery", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin");
   const { t: d, locale } = await getI18n();
   const t = d.tracking;
   const { q = "", id, name = "", mobile = "" } = await searchParams;

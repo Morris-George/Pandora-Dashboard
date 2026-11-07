@@ -5,7 +5,7 @@ import { useTransition } from "react";
 import type { AppRole } from "@/lib/auth";
 import { viewAs } from "./view-as-actions";
 
-const ROLES: AppRole[] = ["admin", "associate", "manager", "courier", "hq", "supervisor", "technician", "cs", "finance", "ops"];
+const ROLES: AppRole[] = ["admin", "associate", "manager", "courier", "delivery", "hq", "supervisor", "technician", "cs", "finance", "ops"];
 
 // Header switch for the Super Admin: see every role's screens and access
 export function ViewAs({ current, label, roles }: { current: AppRole; label: string; roles: Record<string, string> }) {

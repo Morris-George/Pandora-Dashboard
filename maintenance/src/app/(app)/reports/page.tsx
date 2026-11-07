@@ -11,7 +11,7 @@ const KEYS = ["status", "transit", "pickup", "warranty", "productivity", "revenu
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ r?: string }> }) {
   // Admin manages access but sees no ticket data (SoD-4)
-  await requireRole("associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin");
+  await requireRole("associate", "manager", "courier", "delivery", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin");
   const { t: d, locale } = await getI18n();
   const t = d.reports;
   const supabase = await createClient();

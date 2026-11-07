@@ -58,7 +58,7 @@ const en = {
     } as Record<string, string>,
   },
   roles: {
-    associate: "Branch Associate", manager: "Branch Manager", courier: "Courier", hq: "HQ Receiving",
+    associate: "Branch Associate", manager: "Branch Manager", courier: "Area Manager", delivery: "Courier", hq: "HQ Receiving",
     technician: "Technician", supervisor: "Supervisor", cs: "Customer Service", finance: "Finance",
     ops: "Ops Manager", admin: "Super Admin",
   } as Record<AppRole, string>,
@@ -222,7 +222,9 @@ const en = {
       note: "Turn optional steps off when the process changes, for example when items go straight to an outside service center. Changes apply to new shipments right away.",
       on: "On", off: "Off (skipped)", turnOn: "Turn on", turnOff: "Turn off", failed: "Could not save. Try again.",
       steps: {
-        area_manager: { name: "Courier pickup", on: "The courier picks up the sealed bag, scans the AWB and every item, and holds custody until HQ (or the store) receives it.", off: "No courier step: the receiver scans the bag directly when it arrives." },
+        area_manager: { name: "Bag pickup step", on: "Someone collects the sealed bag (Area Manager or Courier, below) and holds custody until it is received.", off: "No pickup step: the receiver scans the bag directly when it arrives." },
+        courier_out: { name: "Courier: store → HQ", on: "The Courier picks up the store's bag and delivers it to HQ. The Area Manager only follows it.", off: "The Area Manager picks up the store's bag to HQ." },
+        courier_return: { name: "Courier: HQ → store", on: "The Courier picks up the return bag at HQ and delivers it to the store. The Area Manager only follows it.", off: "The Area Manager picks up the return bag to the store." },
         override_approval: { name: "Supervisor approval of warranty changes", on: "When the technician changes the store's warranty result, a supervisor approves it first.", off: "The technician's warranty decision applies at once. The reason is still recorded." },
         supervisor_qc: { name: "Supervisor quality check", on: "A finished repair goes to the supervisor for a quality check before it is returned.", off: "A finished repair goes straight to the return list. No quality check." },
         cs_quote: { name: "Customer Service records quote answers", on: "Customer Service contacts the customer and records the approval or rejection of the quote.", off: "The store records the customer's answer (Quote approval appears in the store's menu). The customer can still answer from the tracking link." },
@@ -480,7 +482,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     markLost: "Confirm lost",
     lostReason: "Why is this item confirmed lost? (required)",
     waitingOn: "Waiting on",
-    wait: { manager: "2nd Branch Manager approval", courier: "Courier pickup", hq: "HQ receiving", branch: "Branch receiving", ops: "Ops review" },
+    wait: { manager: "2nd Branch Manager approval", courier: "Area Manager pickup", delivery: "Courier pickup", hq: "HQ receiving", branch: "Branch receiving", ops: "Ops review" },
     batchStatus: { awaiting_approval: "Awaiting approval", in_transit: "In transit", received: "Received", incident: "Incident" } as Record<string, string>,
     cols: { batch: "Batch", direction: "Direction", branch: "Branch", seal: "AWB", items: "Items", created: "Created", status: "Status" },
     errors: {
@@ -881,7 +883,7 @@ const ar: Dict = {
     } as Record<string, string>,
   },
   roles: {
-    associate: "موظف الفرع", manager: "مدير الفرع", courier: "المندوب", hq: "استلام المركز الرئيسي",
+    associate: "موظف الفرع", manager: "مدير الفرع", courier: "مدير المنطقة", delivery: "المندوب", hq: "استلام المركز الرئيسي",
     technician: "الفني", supervisor: "المشرف", cs: "خدمة العملاء", finance: "الحسابات",
     ops: "مدير العمليات", admin: "المسؤول الأعلى",
   },
@@ -1045,7 +1047,9 @@ const ar: Dict = {
       note: "اقفل الخطوات الاختيارية لما طريقة الشغل تتغير، مثلاً لو القطع هتروح مركز صيانة خارجي على طول. التغيير بيطبق على الشحنات الجديدة فورًا.",
       on: "شغالة", off: "مقفولة (بتتخطى)", turnOn: "تشغيل", turnOff: "إيقاف", failed: "ماقدرناش نحفظ. حاول تاني.",
       steps: {
-        area_manager: { name: "استلام المندوب", on: "المندوب بيعمل سكان لكل قطعة وهو بيستلم، والعهدة معاه لحد ما تتسلم.", off: "المستلم بيعمل سكان للكيس على طول. من غير خطوة المندوب." },
+        area_manager: { name: "خطوة استلام الكيس", on: "حد بيستلم الكيس المقفول (مدير المنطقة أو المندوب، تحت) والعهدة معاه لحد ما يتسلم.", off: "مفيش خطوة استلام: المستلم بيعمل سكان للكيس أول ما يوصل." },
+        courier_out: { name: "المندوب: من الفرع للمركز", on: "المندوب بياخد كيس الفرع ويسلمه للمركز الرئيسي. مدير المنطقة بيتابع بس.", off: "مدير المنطقة بياخد كيس الفرع للمركز الرئيسي." },
+        courier_return: { name: "المندوب: من المركز للفرع", on: "المندوب بياخد كيس الإرجاع من المركز ويسلمه للفرع. مدير المنطقة بيتابع بس.", off: "مدير المنطقة بياخد كيس الإرجاع للفرع." },
         override_approval: { name: "موافقة المشرف على تغيير الضمان", on: "لما الفني يغير نتيجة الضمان اللي حددها الفرع، المشرف لازم يوافق الأول.", off: "قرار الفني في الضمان بيتطبق على طول، والسبب بيفضل متسجل." },
         supervisor_qc: { name: "فحص الجودة من المشرف", on: "الإصلاح بعد ما يخلص بيروح للمشرف يفحصه قبل الإرجاع.", off: "الإصلاح بعد ما يخلص بيروح لقائمة الإرجاع على طول، من غير فحص جودة." },
         cs_quote: { name: "خدمة العملاء بتسجل رد العميل على عرض السعر", on: "خدمة العملاء بتكلم العميل وبتسجل موافقته أو رفضه لعرض السعر.", off: "الفرع بيسجل رد العميل (موافقة عروض الأسعار بتظهر في قائمة الفرع). العميل لسه يقدر يرد من رابط التتبع." },
@@ -1304,7 +1308,7 @@ const ar: Dict = {
     markLost: "تأكيد الفقد",
     lostReason: "ليه القطعة دي اتأكد إنها ضاعت؟ (إجباري)",
     waitingOn: "مستني",
-    wait: { manager: "موافقة مدير فرع تاني", courier: "استلام المندوب", hq: "استلام المركز الرئيسي", branch: "استلام الفرع", ops: "مراجعة العمليات" },
+    wait: { manager: "موافقة مدير فرع تاني", courier: "استلام مدير المنطقة", delivery: "استلام المندوب", hq: "استلام المركز الرئيسي", branch: "استلام الفرع", ops: "مراجعة العمليات" },
     batchStatus: { awaiting_approval: "في انتظار الموافقة", in_transit: "في الطريق", received: "تم الاستلام", incident: "مشكلة" } as Record<string, string>,
     cols: { batch: "الشحنة", direction: "الاتجاه", branch: "الفرع", seal: "بوليصة الشحن", items: "القطع", created: "التاريخ", status: "الحالة" },
     errors: {

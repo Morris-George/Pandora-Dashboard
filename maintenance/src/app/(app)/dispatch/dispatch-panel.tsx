@@ -28,11 +28,12 @@ const BADGE: Record<string, string> = {
   incident: "bg-red-100 text-red-900",
 };
 
-export function DispatchPanel({ locale, role, myBranches, packable: allPackable, returnable: allReturnable, batches: allBatches, areaManager = true, isAdmin = false }: {
+export function DispatchPanel({ locale, role, myBranches, packable: allPackable, returnable: allReturnable, batches: allBatches, areaManager = true, isAdmin = false, pickers = { outbound: "courier", return: "courier" } }: {
   locale: Locale; role: AppRole; myBranches: { id: string; name: string }[];
-  packable: ItemRow[]; returnable: ItemRow[]; batches: BatchRow[]; areaManager?: boolean; isAdmin?: boolean;
+  packable: ItemRow[]; returnable: ItemRow[]; batches: BatchRow[]; areaManager?: boolean; isAdmin?: boolean; pickers?: Record<"outbound" | "return", "courier" | "delivery">;
 }) {
   const t = dictionaries[locale].dispatch;
+  pickersOf = (b) => pickers[b.direction];
   const [busy, start] = useTransition();
   const [ask, askDialog] = useAsk();
   const [error, setError] = useState("");
@@ -144,14 +145,17 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
         </section>
       )}
 
-      {role === "courier" && (
+      {(role === "courier" || role === "delivery") && (
         <section className={card}>
           <div>
             <h2 className="text-lg font-semibold">{t.collectTitle}</h2>
             <p className="text-sm text-stone-600 mt-1">{t.collectNote}</p>
           </div>
-          {!batches.some((b) => b.status === "in_transit" && !b.pickedAt) && <p className="text-sm text-stone-600">{t.noneToCollect}</p>}
-          {batches.filter((b) => b.status === "in_transit" && !b.pickedAt).map((b) => <CollectCard key={b.id} t={t} b={b} busy={busy} run={run} />)}
+          {(() => {
+            // Only the trips this role picks up; on the other trips the Area Manager just follows the bags below
+            const mine = batches.filter((b) => b.status === "in_transit" && !b.pickedAt && pickers[b.direction] === role);
+            return mine.length ? mine.map((b) => <CollectCard key={b.id} t={t} b={b} busy={busy} run={run} />) : <p className="text-sm text-stone-600">{t.noneToCollect}</p>;
+          })()}
         </section>
       )}
 
@@ -367,9 +371,10 @@ function CollectCard({ t, b, busy, run }: { t: T; b: BatchRow; busy: boolean; ru
 }
 
 // Who the batch is waiting on, shown under its status
+let pickersOf: (b: BatchRow) => "courier" | "delivery" = () => "courier";
 function waitingOn(t: T, b: BatchRow): string {
   if (b.status === "awaiting_approval") return t.wait.manager;
-  if (b.status === "in_transit") return !b.pickedAt ? t.wait.courier : b.direction === "outbound" ? t.wait.hq : t.wait.branch;
+  if (b.status === "in_transit") return !b.pickedAt ? (pickersOf(b) === "delivery" ? t.wait.delivery : t.wait.courier) : b.direction === "outbound" ? t.wait.hq : t.wait.branch;
   if (b.status === "incident") return t.wait.ops;
   return "";
 }

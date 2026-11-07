@@ -82,7 +82,7 @@ export async function adminApproveBatch(batchId: string, reason: string): Promis
 
 // Courier confirms collecting a sealed batch (seal number must match)
 export async function courierPickup(batchId: string, seal: string, scanned: string[]): Promise<Result> {
-  await requireRole("courier");
+  await requireRole("courier", "delivery");
   const list = z.array(z.string().trim().min(1).max(40)).max(100).safeParse(scanned);
   if (!list.success) return { error: "invalid" };
   const supabase = await createClient();

@@ -20,7 +20,7 @@ const STATUS_STYLE: Record<string, string> = {
 
 export default async function TicketsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; overdue?: string; store?: string }> }) {
   // Admin has no ticket access (SoD-4); RLS also returns nothing for admin
-  const me = await requireRole("associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin");
+  const me = await requireRole("associate", "manager", "courier", "delivery", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin");
   const bulk = me.fullAccess; // Super Admin: tick tickets to change status or delete
   const { t: d, locale } = await getI18n();
   const t = d.list;

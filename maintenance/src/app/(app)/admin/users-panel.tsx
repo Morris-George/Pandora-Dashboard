@@ -14,7 +14,7 @@ export type UserRow = {
 export type PendingRow = { id: string; userName: string; newRole: AppRole; mine: boolean };
 type Branch = { id: string; name: string };
 
-const ROLES: AppRole[] = ["associate", "manager", "courier", "hq", "supervisor", "technician", "cs", "finance", "ops", "admin"];
+const ROLES: AppRole[] = ["associate", "manager", "courier", "delivery", "hq", "supervisor", "technician", "cs", "finance", "ops", "admin"];
 const BRANCH_ROLES: AppRole[] = ["associate", "manager", "courier"];
 const input = "rounded-lg border border-stone-300 px-3 py-2.5 text-sm font-normal focus:outline-2 focus:outline-stone-900";
 const small = "rounded-lg border px-2.5 py-1.5 text-xs disabled:opacity-40";

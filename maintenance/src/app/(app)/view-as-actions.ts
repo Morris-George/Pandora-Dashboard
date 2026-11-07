@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireSession, type AppRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
-const ROLES = ["associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin"] as const;
+const ROLES = ["associate", "manager", "courier", "delivery", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin"] as const;
 
 // Super Admin: see the system as another role ("admin" = back to full access)
 export async function viewAs(role: AppRole): Promise<{ error?: string }> {

@@ -10,7 +10,7 @@ const QUEUES: Queue[] = [
   { key: "toSend", statuses: ["received_at_branch"], href: "/dispatch", roles: ["associate", "manager"] },
   { key: "toApprove", statuses: ["awaiting_dispatch"], href: "/dispatch", roles: ["manager"] },
   { key: "toPickup", statuses: ["ready_for_pickup", "uncollected"], href: "/pickup", roles: ["associate", "manager"] },
-  { key: "inTransit", statuses: ["in_transit_to_hq", "in_transit_to_branch"], href: "/dispatch", roles: ["courier", "hq", "associate", "manager", "ops"] },
+  { key: "inTransit", statuses: ["in_transit_to_hq", "in_transit_to_branch"], href: "/dispatch", roles: ["courier", "delivery", "hq", "associate", "manager", "ops"] },
   { key: "toDiagnose", statuses: ["received_at_hq", "under_diagnosis"], href: "/diagnosis", roles: ["hq", "technician", "supervisor"] },
   { key: "inRepair", statuses: ["in_repair", "awaiting_parts", "quality_check"], href: "/diagnosis", roles: ["technician", "supervisor"] },
   { key: "toReturn", statuses: ["ready_to_return", "quote_rejected", "unrepairable"], href: "/dispatch", roles: ["supervisor"] },

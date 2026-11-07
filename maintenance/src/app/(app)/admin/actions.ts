@@ -10,7 +10,7 @@ import { syncFaultCosts } from "@/lib/erp-sync";
 import { runErpSync } from "@/lib/erp-sync";
 import { erpConfigured, findItem, getItemPrice } from "@/lib/erpnext";
 
-const ROLES = ["associate", "manager", "courier", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin"] as const;
+const ROLES = ["associate", "manager", "courier", "delivery", "hq", "technician", "supervisor", "cs", "finance", "ops", "admin"] as const;
 // Roles tied to stores; area managers (courier) cover several stores
 const BRANCH_ROLES: AppRole[] = ["associate", "manager", "courier"];
 type Result = { error?: string; password?: string };
@@ -207,7 +207,7 @@ export async function saveMenuLabels(input: Record<string, { ar?: string; en?: s
 }
 
 // Optional dispatch steps (manager approval, area manager handover) on / off
-const STEPS = ["manager_approval", "area_manager", "override_approval", "supervisor_qc", "cs_quote", "supervisor_assign"] as const;
+const STEPS = ["manager_approval", "area_manager", "courier_out", "courier_return", "override_approval", "supervisor_qc", "cs_quote", "supervisor_assign"] as const;
 export async function setWorkflowStep(step: (typeof STEPS)[number], on: boolean): Promise<Result> {
   const me = await requireRole("admin");
   if (!STEPS.includes(step)) return { error: "invalid" };

@@ -10,11 +10,11 @@ export const metadata = { title: "Pandora Maintenance" };
 type Joined<T> = T | null;
 
 export default async function DispatchPage({ searchParams }: { searchParams: Promise<{ as?: string }> }) {
-  const user = await requireRole("associate", "manager", "courier", "hq", "technician", "supervisor", "ops");
+  const user = await requireRole("associate", "manager", "courier", "delivery", "hq", "technician", "supervisor", "ops");
   const { locale, t: d } = await getI18n();
   // Super Admin chooses which role's version of this screen to use
-  const me = { ...user, role: screenRole(user, (await searchParams).as, ["manager", "courier", "hq", "technician", "supervisor", "ops"]) };
-  const tabs = <RoleTabs me={user} path="/dispatch" current={me.role} roles={["manager", "courier", "hq", "technician", "supervisor", "ops"]} labels={d.roles} title={d.shell.useAs} />;
+  const me = { ...user, role: screenRole(user, (await searchParams).as, ["manager", "courier", "delivery", "hq", "technician", "supervisor", "ops"]) };
+  const tabs = <RoleTabs me={user} path="/dispatch" current={me.role} roles={["manager", "courier", "delivery", "hq", "technician", "supervisor", "ops"]} labels={d.roles} title={d.shell.useAs} />;
   const supabase = await createClient();
   const isBranch = me.role === "associate" || me.role === "manager";
 
@@ -32,7 +32,10 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
     supabase.from("app_settings").select("value").eq("key", "workflow").maybeSingle(),
   ]);
   // Admin → Workflow: with the area manager step off, the receiver scans the bag directly
-  const areaManager = (wf?.value as { area_manager?: boolean } | null)?.area_manager !== false;
+  const flow = (wf?.value ?? {}) as { area_manager?: boolean; courier_out?: boolean; courier_return?: boolean };
+  const areaManager = flow.area_manager !== false;
+  // Per trip: the Courier picks the bag up when that switch is on, otherwise the Area Manager (who then only follows it)
+  const pickers = { outbound: flow.courier_out ? "delivery" : "courier", return: flow.courier_return ? "delivery" : "courier" } as const;
 
   // Branch names for the return grouping (supervisor sees all branches)
   const { data: branchList } = await supabase.from("branches").select("id, name, is_hq").eq("active", true).order("name");
@@ -61,6 +64,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
       returnable={(returnable ?? []).map(toItem)}
       batches={rows}
       areaManager={areaManager}
+      pickers={pickers}
       isAdmin={user.isAdmin}
     />
     </>
