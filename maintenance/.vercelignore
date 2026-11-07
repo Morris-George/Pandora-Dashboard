@@ -1,0 +1,7 @@
+.env*
+!.env.example
+supabase/test-users.local.json
+*.local.json
+scripts/
+.next/
+node_modules/
