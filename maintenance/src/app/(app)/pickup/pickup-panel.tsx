@@ -25,6 +25,7 @@ export function PickupPanel({ locale, role, jobs }: { locale: Locale; role: AppR
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [doneId, setDoneId] = useState(""); // last handed-over ticket, for the delivery receipt
+  const [popup, setPopup] = useState(false);
   const [doneWa, setDoneWa] = useState<string | null>(null); // the confirm-link message, kept after the job leaves the list
   const [q, setQ] = useState("");
   const money = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -49,7 +50,19 @@ export function PickupPanel({ locale, role, jobs }: { locale: Locale; role: AppR
         <div role="status" className="rounded-lg bg-emerald-50 text-emerald-900 text-sm p-3 flex flex-wrap items-center justify-between gap-2">
           <span>{notice}</span>
           {doneId && <a href={withBase(`/receipt/${doneId}?kind=delivery`)} target="_blank" rel="noopener" className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-3 py-1.5 font-bold">{t.printDelivery}</a>}
-          {doneId && doneWa && (() => { const w = doneWa; return <a href={w} target="_blank" rel="noopener" className="rounded-lg bg-emerald-700 text-white px-3 py-1.5 font-bold">{t.sendConfirm}</a>; })()}
+          {doneId && doneWa && <a href={doneWa} target="_blank" rel="noopener" className="rounded-lg bg-emerald-700 text-white px-3 py-1.5 font-bold">{t.sendConfirm}</a>}
+        </div>
+      )}
+
+      {/* After the handover: the delivery receipt opens by itself, then this pop-up sends the confirm link on WhatsApp */}
+      {popup && doneWa && (
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setPopup(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 flex flex-col gap-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold">{t.popupTitle}</h2>
+            <p className="text-sm text-stone-600">{t.popupNote}</p>
+            <a href={doneWa} target="_blank" rel="noopener" onClick={() => setPopup(false)} className="rounded-lg bg-emerald-700 py-3 text-center text-base font-bold text-white">{t.sendConfirm}</a>
+            <button className="text-sm underline" onClick={() => setPopup(false)}>{t.popupLater}</button>
+          </div>
         </div>
       )}
 
@@ -62,7 +75,9 @@ export function PickupPanel({ locale, role, jobs }: { locale: Locale; role: AppR
         {!shown.length && <p className="text-sm text-stone-600">{t.none}</p>}
         {shown.map((j) => (
           <PickupCard key={j.id} d={d} j={j} role={role} busy={busy} run={run} money={money}
-            onDone={(o) => { setNotice(o === "closed" ? t.closedMsg(j.ticketNo) : t.collectedMsg(j.ticketNo)); setDoneId(j.id); setDoneWa(j.waDoneHref); }} />
+            onDone={(o) => { setNotice(o === "closed" ? t.closedMsg(j.ticketNo) : t.collectedMsg(j.ticketNo)); setDoneId(j.id); setDoneWa(j.waDoneHref);
+              window.open(withBase(`/receipt/${j.id}?kind=delivery`), "_blank", "noopener"); // delivery receipt, printed straight away
+              if (j.waDoneHref) setPopup(true); }} />
         ))}
       </section>
     </div>

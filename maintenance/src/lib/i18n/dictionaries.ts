@@ -191,7 +191,7 @@ const en = {
     emailDesign: {
       title: "Email design",
       note: "How customer emails look and what they say. The preview updates as you type. Placeholders: {name} {ticket} {item}.",
-      kinds: { received: "Item received", quote: "Quote ready", ready: "Ready for pickup", reminder: "Pickup reminder (3, 7, 14 days)", collected: "Collected – thank you" } as Record<string, string>,
+      kinds: { received: "Item received", quote: "Quote ready", ready: "Ready for pickup", reminder: "Pickup reminder (3, 7, 14 days)", collected: "Collected – confirm link" } as Record<string, string>,
       f: { brand: "Header text", headerColor: "Header colour", headerText: "Header text colour", buttonColor: "Button colour", buttonText: "Button text colour", background: "Page background", button: "Button label", greeting: "Greeting", footerAr: "Footer (Arabic)", footerEn: "Footer (English)", subject: "Subject", ar: "Message (Arabic)", en: "Message (English, optional)" } as Record<string, string>,
       look: "Look", email: "Email", reset: "Restore built-in", save: "Save email design", saved: "Saved.", failed: "Couldn't save. Try again.",
     },
@@ -743,7 +743,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     cancel: "Cancel",
     uncollectedReason: "Why uncollected? (calls made, etc.)",
     markUncollected: "Mark uncollected",
-    printDelivery: "Print delivery receipt", sendConfirm: "Send the customer the confirm link (WhatsApp)", closedMsg: (no: string) => `${no} handed over and closed.`,
+    printDelivery: "Print delivery receipt", sendConfirm: "Send the customer the confirm link (WhatsApp)", popupTitle: "Item handed over", popupNote: "Send the customer the WhatsApp message with the button to confirm they received the item.", popupLater: "Later", closedMsg: (no: string) => `${no} handed over and closed.`,
     collectedMsg: (no: string) => `${no} handed over. Closed.`,
     errors: {
       invoice: "Link the ERPNext repair invoice first.",
@@ -1025,7 +1025,7 @@ const ar: Dict = {
     emailDesign: {
       title: "تصميم الإيميل",
       note: "شكل إيميلات العملاء والكلام المكتوب فيها. المعاينة بتتحدث وإنت بتكتب. الكلمات دي بتتملي لكل عميل: {name} {ticket} {item}.",
-      kinds: { received: "استلام القطعة", quote: "عرض السعر جاهز", ready: "جاهز للاستلام", reminder: "تذكير بالاستلام (3 و7 و14 يوم)", collected: "تم الاستلام – شكراً" } as Record<string, string>,
+      kinds: { received: "استلام القطعة", quote: "عرض السعر جاهز", ready: "جاهز للاستلام", reminder: "تذكير بالاستلام (3 و7 و14 يوم)", collected: "تم التسليم – لينك تأكيد الاستلام" } as Record<string, string>,
       f: { brand: "نص الهيدر", headerColor: "لون الهيدر", headerText: "لون نص الهيدر", buttonColor: "لون الزرار", buttonText: "لون نص الزرار", background: "لون الخلفية", button: "كلام الزرار", greeting: "التحية", footerAr: "الفوتر (عربي)", footerEn: "الفوتر (إنجليزي)", subject: "العنوان", ar: "الرسالة (عربي)", en: "الرسالة (إنجليزي، اختياري)" } as Record<string, string>,
       look: "الشكل", email: "الإيميل", reset: "رجّع الأصلي", save: "حفظ تصميم الإيميل", saved: "اتحفظ.", failed: "محصلش حفظ، حاول تاني.",
     },
@@ -1578,7 +1578,7 @@ const ar: Dict = {
     cancel: "إلغاء",
     uncollectedReason: "ليه ماتستلمتش؟ (المكالمات اللي اتعملت...)",
     markUncollected: "تسجيل كغير مستلمة",
-    printDelivery: "طباعة إيصال التسليم", sendConfirm: "ابعت للعميل لينك تأكيد الاستلام (واتساب)", closedMsg: (no: string) => `تم تسليم ${no} وإغلاقه.`,
+    printDelivery: "طباعة إيصال التسليم", sendConfirm: "ابعت للعميل لينك تأكيد الاستلام (واتساب)", popupTitle: "تم التسليم", popupNote: "ابعت للعميل رسالة الواتساب اللي فيها زرار تأكيد استلام المنتج.", popupLater: "بعدين", closedMsg: (no: string) => `تم تسليم ${no} وإغلاقه.`,
     collectedMsg: (no: string) => `تم تسليم ${no}. واتقفل.`,
     errors: {
       invoice: "اربط فاتورة الصيانة من ERPNext الأول.",
