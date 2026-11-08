@@ -102,6 +102,11 @@ export async function moveTicket(ticketId: string, step: keyof typeof STEPS, rea
     p_ticket: id.parse(ticketId), p_to: TARGET[step], p_reason: reason.trim().slice(0, 1000) || null,
   });
   if (error) return { error: errorKey(error.message) };
+  // not repairable: straight onto the return-to-store list
+  if (step === "unrepairable") {
+    const r = await supabase.rpc("transition_ticket", { p_ticket: id.parse(ticketId), p_to: "ready_to_return", p_reason: "Not repairable — back to the store" });
+    if (r.error) return { error: errorKey(r.error.message) };
+  }
   return done();
 }
 
