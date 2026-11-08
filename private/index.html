@@ -1213,7 +1213,7 @@ function renderPay(L){
 /* ---------- products ---------- */
 const pkey=r=>(r.sku||'—')+'|'+r.name;
 function prodMap(rows){const m=new Map();for(const r of rows){const k=pkey(r);let o=m.get(k);if(!o)m.set(k,o={k,sku:r.sku||'—',name:r.name,category:r.category,units:0,revenue:0});o.units+=r.qty;o.revenue+=rev(r)}return m}
-function prodRow(p,i,extra){return `<div class="prow pbr" data-sku="${esc(p.sku)}" data-name="${esc(p.name)}" role="button" tabindex="0"><span class="rk">${i+1}</span>${PPic.thumb(p,num(p.units)+' units · '+money(p.revenue))}<span><span class="t" title="${esc(p.name)}">${esc(p.name)}</span><span class="m"><i class="xsku">${esc(p.sku)}</i> · ${esc(p.category)}</span></span><span class="u">${num(p.units)} pcs<small>${p.units>0?'avg '+money(p.revenue/p.units)+' / pc':''}</small></span><span class="v">${money(p.revenue)}${extra||''}</span></div>`}
+function prodRow(p,i,extra,prev){return `<div class="prow pbr" data-sku="${esc(p.sku)}" data-name="${esc(p.name)}" role="button" tabindex="0"><span class="rk">${i+1}</span>${PPic.thumb(p,num(p.units)+' units · '+money(p.revenue))}<span><span class="t" title="${esc(p.name)}">${esc(p.name)}</span><span class="m"><i class="xsku">${esc(p.sku)}</i> · ${esc(p.category)}</span></span><span class="u">${num(p.units)} pcs<small>${p.units>0?'avg '+money(p.revenue/p.units)+' / pc':''}</small>${prev==null?'':'<small>Expected '+num(prev)+' pcs</small>'}</span><span class="v">${money(p.revenue)}${extra||''}</span></div>`}
 function renderProducts(L){
   const {F,Fp,C}=L;
   document.querySelectorAll('#prodTab button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===S.pTab));
@@ -1237,7 +1237,7 @@ function renderProducts(L){
   let shown=list.map((p,i)=>({p,i}));
   if(S.pAll&&words.length)shown=shown.filter(({p})=>{const h=(p.sku+' '+p.name+' '+p.category).toLowerCase();return words.every(w=>h.includes(w))});
   const lim=S.pAll?S.pShow:10;
-  const rows=shown.slice(0,lim).map(({p,i})=>{const pr=pm&&pm.get(p.k);return prodRow(p,i,pm?`<small>${pr?deltaChip(p.revenue,pr.revenue,{title:'Was '+money(pr.revenue)}):'<span class="dl">new</span>'}</small>`:'')}).join('');
+  const rows=shown.slice(0,lim).map(({p,i})=>{const pr=pm&&pm.get(p.k);return prodRow(p,i,pm?`<small>${pr?deltaChip(p.revenue,pr.revenue,{title:'Was '+money(pr.revenue)}):'<span class="dl">new</span>'}</small>`:'',pm?(pr?pr.units:0):null)}).join('');
   $('prodBody').innerHTML=(S.pAll?`<div class="pfoot" style="margin:0 0 10px"><label class="psearch">${ic('search')}<input id="pq" type="search" placeholder="Search these ${num(total)} products" value="${esc(S.pQ)}" aria-label="Search products"></label><span class="minor">${num(shown.length)} of ${num(total)} products</span></div>`:'')+
    `<div class="plist">${rows||'<div class="empty">No product matches that search.</div>'}</div>`+
    `<div class="pfoot">${S.pAll?(shown.length>lim?`<button type="button" class="small-btn" id="pMore">Show ${Math.min(50,shown.length-lim)} more</button>`:'<span></span>')+'<button type="button" class="linkbtn" id="pLess">Back to the top 10</button>':total>10?`<button type="button" class="small-btn" id="pAllBtn">See all ${num(total)} products</button>`:''}</div>`;
