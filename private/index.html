@@ -791,7 +791,7 @@ const PAY_ORDER=['Cash','Visa','Valu'],PAY_COLOR={Cash:'var(--pay-cash)',Visa:'v
 const payOf=v=>{const t=String(v||'').toLowerCase();return /valu/.test(t)?'Valu':/visa|card|master|credit|debit|pos/.test(t)?'Visa':'Cash'};
 
 /* ---------- state ---------- */
-const S={from:'',to:'',cat:'All',basis:'net',cmp:'auto',metric:'rev',grain:'auto',table:false,brSort:{k:'rev',d:-1},pTab:'top',pBy:'rev',pAll:false,pQ:'',pShow:50};
+const S={from:'',to:'',cat:'All',basis:'net',cmp:'auto',metric:'rev',grain:'auto',table:false,brSort:{k:'rev',d:-1},pTab:'top',pBy:'rev',pAll:false,pQ:'',pShow:50,rfAll:false,rfShow:50};
 let data=[],FILES=[],LAST={};
 const META={min:'',max:'',anchor:'',ng:0.877};
 const HOOKS=[]; // extra sections (explorer, collections) re-draw after every render
@@ -844,7 +844,7 @@ function presetRange(p){
   if(t<META.min)return null;f=clampF(f);if(t>META.max)t=META.max;return [f,t];
 }
 function presetOf(){for(const p of Object.keys(PRESET_NAME)){const r=presetRange(p);if(r&&r[0]===S.from&&r[1]===S.to)return p}return ''}
-function setRange(f,t){if(f>t)[f,t]=[t,f];S.from=f;S.to=t;S.pAll=false}
+function setRange(f,t){if(f>t)[f,t]=[t,f];S.from=f;S.to=t;S.pAll=false;S.rfAll=false}
 
 /* What the period is compared with. "Best match": one day -> the same weekday a week before; a month (or month so far) -> the same dates
    last month; this year so far -> the same dates last year; anything else -> the days just before, of the same length. */
@@ -1235,9 +1235,9 @@ function renderProducts(L){
     $('prodSub').textContent='Products whose sales changed the most against '+(C&&C.has?C.text:'the comparison')+'. Click one for branches and stock.';
     if(!pm){$('prodBody').innerHTML=`<div class="empty">${C?'There are no saved sales for '+esc(C.text)+' to compare with.':'Choose something to compare with in the filters above.'}</div>`;return}
     const keys=new Set([...cm.keys(),...pm.keys()]),ch=[...keys].map(k=>{const c=cm.get(k),p=pm.get(k),o=c||{...p,units:0,revenue:0};return {...o,prev:p?p.revenue:0,pu:p?p.units:0,d:(c?c.revenue:0)-(p?p.revenue:0)}});
-    const up=ch.filter(x=>x.d>0).sort((a,b)=>b.d-a.d).slice(0,8),dn=ch.filter(x=>x.d<0).sort((a,b)=>a.d-b.d).slice(0,8);
+    const upA=ch.filter(x=>x.d>0).sort((a,b)=>b.d-a.d),dnA=ch.filter(x=>x.d<0).sort((a,b)=>a.d-b.d),lm=S.rfAll?S.rfShow:8,up=upA.slice(0,lm),dn=dnA.slice(0,lm),more=Math.max(upA.length,dnA.length)>lm;
     const mv=x=>`<small class="dl ${x.d>0?'good':'bad'}">${ic(x.d>0?'aup':'adown')}${signed(x.d,shortMoney)}</small>`;
-    $('prodBody').innerHTML=`<div class="twocol"><div><h4>${ic('up')}Rising</h4><div class="plist">${up.map((x,i)=>prodRow(x,i,mv(x))).join('')||'<div class="empty">Nothing rose.</div>'}</div></div><div><h4>${ic('down')}Falling</h4><div class="plist">${dn.map((x,i)=>prodRow(x,i,mv(x))).join('')||'<div class="empty">Nothing fell.</div>'}</div></div></div>`;
+    $('prodBody').innerHTML=`<div class="twocol"><div><h4>${ic('up')}Rising</h4><div class="plist">${up.map((x,i)=>prodRow(x,i,mv(x))).join('')||'<div class="empty">Nothing rose.</div>'}</div></div><div><h4>${ic('down')}Falling</h4><div class="plist">${dn.map((x,i)=>prodRow(x,i,mv(x))).join('')||'<div class="empty">Nothing fell.</div>'}</div></div></div>`+`<div class="pfoot">${S.rfAll?(more?`<button type="button" class="small-btn" id="rfMore">Show 50 more</button>`:'<span></span>')+'<button type="button" class="linkbtn" id="rfLess">Back to the top 8</button>':(more?`<button type="button" class="small-btn" id="rfAllBtn">See all ${num(upA.length)} rising and ${num(dnA.length)} falling</button>`:'')}</div>`;
     PPic.fill($('prodBody'));return;
   }
   $('prodSub').textContent=`Best sellers by ${S.pBy==='rev'?'sales':'units'} for the selected dates, branches and category. Click a product for branches and stock.`;
@@ -1255,7 +1255,7 @@ function renderProducts(L){
 }
 $('prodTab').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(b){S.pTab=b.dataset.t;renderProducts(LAST)}});
 $('prodBy').addEventListener('click',e=>{const b=e.target.closest('[data-by]');if(b){S.pBy=b.dataset.by;renderProducts(LAST)}});
-$('prodBody').addEventListener('click',e=>{if(e.target.id==='pAllBtn'){S.pAll=true;S.pShow=50;renderProducts(LAST);$('pq')?.focus()}else if(e.target.id==='pMore'){S.pShow+=50;renderProducts(LAST)}else if(e.target.id==='pLess'){S.pAll=false;S.pQ='';renderProducts(LAST);$('sec-products').scrollIntoView({block:'start'})}});
+$('prodBody').addEventListener('click',e=>{if(e.target.id==='rfAllBtn'){S.rfAll=true;S.rfShow=50;renderProducts(LAST)}else if(e.target.id==='rfMore'){S.rfShow+=50;renderProducts(LAST)}else if(e.target.id==='rfLess'){S.rfAll=false;renderProducts(LAST);$('sec-products').scrollIntoView({block:'start'})}else if(e.target.id==='pAllBtn'){S.pAll=true;S.pShow=50;renderProducts(LAST);$('pq')?.focus()}else if(e.target.id==='pMore'){S.pShow+=50;renderProducts(LAST)}else if(e.target.id==='pLess'){S.pAll=false;S.pQ='';renderProducts(LAST);$('sec-products').scrollIntoView({block:'start'})}});
 $('prodBody').addEventListener('input',e=>{if(e.target.id!=='pq')return;S.pQ=e.target.value;S.pShow=50;const pos=e.target.selectionStart;renderProducts(LAST);const q=$('pq');if(q){q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}});
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('prow')){e.preventDefault();e.target.click()}});
 
