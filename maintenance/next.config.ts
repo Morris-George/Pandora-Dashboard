@@ -12,6 +12,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // headless Chrome for the receipt PDF (/memo/<token>/pdf)
+  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   // Served at pandora-eg.online/maintenance (the dashboard site routes that path here; see ../vercel.json)
   basePath: "/maintenance",
   async redirects() {
