@@ -60,7 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </form>
           <div className="relative flex items-center gap-2.5">
             <span aria-hidden className="hidden md:grid w-10 h-10 rounded-full bg-white/70 text-[#2A1018] place-items-center text-xs font-extrabold">{initials}</span>
-            {/* back to the Pandora Dashboards home page (plain link: it lives outside this app's /maintenance path) */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- the dashboards home lives outside this app's /maintenance path */}
             {session.isAdmin && <a href="/" className="hdr-btn">{t.shell.home}</a>}
             {session.isAdmin && <ViewAs current={session.viewingAs ?? "admin"} label={t.shell.viewAs} roles={t.roles} />}
             <LangToggle label={t.switchTo} className="hdr-btn" />
