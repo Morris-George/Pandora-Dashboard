@@ -28,8 +28,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const navLabels: Record<string, string> = { ...t.nav };
   for (const [href, v] of Object.entries(custom)) { const name = v?.[locale === "ar" ? "ar" : "en"]; if (name) navLabels[href] = name; }
   // Store roles see Quote approval only when the Customer Service step is off
+  // …and then only while one of their tickets is waiting on the customer's answer (or was rejected)
+  const storeQuotes = !session.fullAccess && session.role !== "cs";
+  const { count: quoteCount } = storeQuotes && !wf.cs_quote
+    ? await supabase.from("tickets").select("id", { count: "exact", head: true }).in("status", ["awaiting_customer_approval", "quote_rejected"])
+    : { count: 0 };
   const nav = navFor(session.role, session.fullAccess)
-    .filter((n) => !(n.href === "/quotes" && !session.fullAccess && session.role !== "cs" && wf.cs_quote));
+    .filter((n) => !(n.href === "/quotes" && storeQuotes && (wf.cs_quote || !quoteCount)));
   const scope = session.branches.length ? session.branches.map((b) => b.name).join(", ") : t.shell.allBranches;
   const initials = session.fullName.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
