@@ -12,7 +12,7 @@
 /* ---------- tokens (plain hex/rgba only: the Excel export's picture tool cannot read newer colour functions) ---------- */
 :root{color-scheme:light;
 --font:"Plus Jakarta Sans",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
---bg:#F6F2F0;--surface:#FFFFFF;--surface2:#FBF8F7;--sunk:#F2ECE9;
+--bg:#F6F2F0;--surface:#FFFAF1;--surface2:#FBF8F7;--sunk:#F2ECE9;
 --text:#2A2024;--ink:#2A1018;--muted:#7A6E73;--faint:#A69BA0;
 --line:#EEE6E2;--line2:#E3D9D5;
 --pink:#FF93A0;--pink-soft:#FFE4E8;--pink-wash:#FFF4F6;--pink-deep:#C0506A;
@@ -24,13 +24,13 @@
 --sh1:0 1px 2px rgba(42,16,24,.04),0 6px 20px rgba(42,16,24,.045);--sh2:0 18px 50px rgba(42,16,24,.18);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
---bg:#141213;--surface:#1F1B1C;--surface2:#252122;--sunk:#191617;--text:#F3EDEB;--ink:#FFE9EC;--muted:#B3A8AB;--faint:#8A8083;--line:#322C2E;--line2:#3D3638;
+--bg:#141213;--surface:#1F1B1C;--surface2:#252122;--sunk:#191617;--text:#F3EADB;--ink:#FFE9EC;--muted:#B3A8AB;--faint:#8A8083;--line:#322C2E;--line2:#3D3638;
 --pink-soft:#3A2329;--pink-wash:#261B1E;--pink-deep:#FF93A0;--mark:#FF93A0;--mark-soft:#7A4450;--mark-wash:rgba(255,147,160,.14);--cmp:#7F7679;--gold:#D9AE5F;
 --up:#5CC596;--up-bg:#1C3328;--down:#FF93A0;--down-bg:#3A2329;--warn:#F2C46B;--warn-bg:#3A2F1A;
 --c1:#D46D83;--c2:#407BC5;--c3:#BD871C;--c4:#009E90;--c5:#9256A0;--c6:#CC7044;--c7:#7D756F;--pay-cash:#BD871C;--pay-visa:#009E90;--pay-valu:#9256A0;
 --seg-on:#FF93A0;--seg-on-text:#2A1018;--sh1:0 1px 2px rgba(0,0,0,.25);--sh2:0 18px 50px rgba(0,0,0,.5)}}
 :root[data-theme="dark"]{color-scheme:dark;
---bg:#141213;--surface:#1F1B1C;--surface2:#252122;--sunk:#191617;--text:#F3EDEB;--ink:#FFE9EC;--muted:#B3A8AB;--faint:#8A8083;--line:#322C2E;--line2:#3D3638;
+--bg:#141213;--surface:#1F1B1C;--surface2:#252122;--sunk:#191617;--text:#F3EADB;--ink:#FFE9EC;--muted:#B3A8AB;--faint:#8A8083;--line:#322C2E;--line2:#3D3638;
 --pink-soft:#3A2329;--pink-wash:#261B1E;--pink-deep:#FF93A0;--mark:#FF93A0;--mark-soft:#7A4450;--mark-wash:rgba(255,147,160,.14);--cmp:#7F7679;--gold:#D9AE5F;
 --up:#5CC596;--up-bg:#1C3328;--down:#FF93A0;--down-bg:#3A2329;--warn:#F2C46B;--warn-bg:#3A2F1A;
 --c1:#D46D83;--c2:#407BC5;--c3:#BD871C;--c4:#009E90;--c5:#9256A0;--c6:#CC7044;--c7:#7D756F;--pay-cash:#BD871C;--pay-visa:#009E90;--pay-valu:#9256A0;
@@ -53,7 +53,7 @@ svg{display:block}
 background:radial-gradient(90% 160% at 0% 0%,#FFC6CD 0%,rgba(255,198,205,0) 60%),linear-gradient(112deg,#FF93A0 0%,#FFA6AF 48%,#FFBFB6 100%)}
 .topbar::after{content:"";position:absolute;z-index:-1;right:7%;top:-46px;width:150px;height:210px;background:url(/pandora-logo.png) center/contain no-repeat;filter:brightness(0) invert(1);opacity:.22;transform:rotate(-8deg)}
 .brand{display:flex;align-items:center;gap:14px;min-width:0}
-.badge{width:46px;height:46px;border-radius:50%;background:#fff;display:grid;place-items:center;flex:none;box-shadow:0 6px 18px rgba(176,58,79,.22)}
+.badge{width:46px;height:46px;border-radius:50%;background:#FFFAF1;display:grid;place-items:center;flex:none;box-shadow:0 6px 18px rgba(176,58,79,.22)}
 .badge img{width:26px;height:34px;object-fit:contain;filter:brightness(0)}
 .brand h1{margin:0;font-size:19px;line-height:1.2;font-weight:800;letter-spacing:-.02em;color:#2A1018}
 .brand p{margin:1px 0 0;font-size:12.5px;color:rgba(42,16,24,.72);font-weight:600}
@@ -67,7 +67,7 @@ background:radial-gradient(90% 160% at 0% 0%,#FFC6CD 0%,rgba(255,198,205,0) 60%)
 .upload-btn:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(42,16,24,.24)}
 .upload-btn:disabled{opacity:.6;transform:none}
 .topbar .secondary{height:36px;padding:0 15px;border-radius:999px;border:1px solid rgba(255,255,255,.85);background:rgba(255,255,255,.45);color:#2A1018;font-weight:700;font-size:13px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
-.topbar .secondary:hover{background:#fff}
+.topbar .secondary:hover{background:#FFFAF1}
 .topbar .pandora-sw{border-color:rgba(255,255,255,.85)}
 
 /* ---------- sticky controls ---------- */

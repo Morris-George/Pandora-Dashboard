@@ -44,11 +44,11 @@ html.pzs-on.pzs-ready body{transition:margin-left .2s ease}
 ::view-transition-group(pzs),::view-transition-old(pzs),::view-transition-new(pzs){animation:none}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:.18s}
 html.pzs-on.pzs-min body{margin-left:92px!important}
-.pzs{--s-bg:#fff;--s-ink:#282522;--s-mut:#817a74;--s-line:#e9e2dc;--s-soft:#FFE4E8;--s-acc:#FF93A0;--s-on:#2A1018;--s-acct:#2A1F24;
+.pzs{--s-bg:#FFFAF1;--s-ink:#282522;--s-mut:#817a74;--s-line:#e9e2dc;--s-soft:#FFE4E8;--s-acc:#FF93A0;--s-on:#2A1018;--s-acct:#2A1F24;
 direction:ltr;position:fixed;z-index:40;top:12px;left:12px;bottom:12px;width:220px;display:flex;flex-direction:column;background:var(--s-bg);color:var(--s-ink);border:1px solid var(--s-line);border-radius:20px;font:600 13px/1.3 "Plus Jakarta Sans",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;word-spacing:.09em;overflow:hidden}
 html.pzs-ready .pzs{transition:width .2s ease,transform .2s ease}
-:root[data-theme="dark"] .pzs{--s-bg:#211f1d;--s-ink:#f7f2ed;--s-mut:#b7aea6;--s-line:#3a3530;--s-soft:#33202a;--s-acct:#FF93A0}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pzs{--s-bg:#211f1d;--s-ink:#f7f2ed;--s-mut:#b7aea6;--s-line:#3a3530;--s-soft:#33202a;--s-acct:#FF93A0}}
+:root[data-theme="dark"] .pzs{--s-bg:#211f1d;--s-ink:#f3eadb;--s-mut:#b7aea6;--s-line:#3a3530;--s-soft:#33202a;--s-acct:#FF93A0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pzs{--s-bg:#211f1d;--s-ink:#f3eadb;--s-mut:#b7aea6;--s-line:#3a3530;--s-soft:#33202a;--s-acct:#FF93A0}}
 .pzs *{box-sizing:border-box}
 .pzs-top{display:flex;align-items:center;gap:10px;padding:14px 12px 10px 14px;text-decoration:none;color:inherit;flex:0 0 auto}
 .pzs-top img{width:30px;height:32px;object-fit:contain;flex:0 0 auto}
