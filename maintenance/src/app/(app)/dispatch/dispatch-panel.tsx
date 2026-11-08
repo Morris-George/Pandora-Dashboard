@@ -179,7 +179,7 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
             </div>
           )}
           {/* Scanning the AWB opens that bag: its items are listed and ticked as they are scanned; anything not scanned is reported short */}
-          {opened ? <ReceiveCard key={opened.id} t={t} b={opened} busy={busy} run={run} areaManager={areaManager} isAdmin={isAdmin} />
+          {opened ? <ReceiveCard key={opened.id} t={t} b={opened} busy={busy} run={run} onDone={() => setAwb("")} areaManager={areaManager} isAdmin={isAdmin} />
             : incoming.map((b) => (
               <div key={b.id} className="border-t border-stone-100 pt-3 flex flex-col gap-1">
                 <BatchHead t={t} b={b} />
@@ -356,7 +356,7 @@ function useItemScan(t: T, b: BatchRow) {
   return { scanned, ui, missing: b.items.length - scanned.length };
 }
 
-function ReceiveCard({ t, b, busy, run, areaManager, isAdmin }: { t: T; b: BatchRow; busy: boolean; run: Run; areaManager: boolean; isAdmin: boolean }) {
+function ReceiveCard({ t, b, busy, run, onDone, areaManager, isAdmin }: { t: T; b: BatchRow; busy: boolean; run: Run; onDone: () => void; areaManager: boolean; isAdmin: boolean }) {
   const { scanned, ui, missing } = useItemScan(t, b);
   return (
     <div className="border-t border-stone-100 pt-3 flex flex-col gap-3">
@@ -366,7 +366,7 @@ function ReceiveCard({ t, b, busy, run, areaManager, isAdmin }: { t: T; b: Batch
           {ui}
           {missing > 0 && scanned.length > 0 && <p className="text-sm text-amber-800">{t.missingWarn(missing)}</p>}
           {b.mine && !isAdmin ? <p className="text-xs text-stone-500">{t.errors.sod}</p> : (
-            <button disabled={busy || !scanned.length} className={primary} onClick={() => run(() => receiveBatch(b.id, scanned))}>
+            <button disabled={busy || !scanned.length} className={primary} onClick={() => run(() => receiveBatch(b.id, scanned), onDone)}>
               {t.receive(scanned.length, b.items.length)}
             </button>
           )}
