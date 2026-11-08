@@ -172,6 +172,14 @@ nav[aria-label="Main"]::-webkit-scrollbar { display: none; }
   :root[data-theme="dark"] .bg-emerald-800 { background-color: #047857; }
   :root[data-theme="dark"] .text-black { color: #f7f2ed; }
   :root[data-theme="dark"] [class*="bg-[radial-gradient"] { background: none; }
+  /* the pink banner is light in both modes: its logo disc, search box and buttons keep the light colours */
+  :root[data-theme="dark"] .hdr {
+    color-scheme: light;
+    --color-white: #fff;
+    --color-stone-50: #FFF1F3; --color-stone-100: #FBF6F7; --color-stone-200: #EADCDF; --color-stone-300: #E2D6DA;
+    --color-stone-400: #B9A5AC; --color-stone-500: #8C7A81; --color-stone-600: #6B5A61; --color-stone-700: #52434A;
+    --color-stone-800: #3B2E34; --color-stone-900: #2A1F24;
+  }
   /* the logo is dark artwork: shown light on dark pages, left as is on the pink banner */
   :root[data-theme="dark"] img[src*="pandora-logo"] { filter: brightness(0) invert(1); }
   :root[data-theme="dark"] .hdr img[src*="pandora-logo"] { filter: none; }
