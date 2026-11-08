@@ -5,6 +5,7 @@ import { getI18n } from "@/lib/i18n";
 import { navFor } from "@/lib/nav";
 import { signOut } from "@/app/login/actions";
 import { LangToggle } from "@/app/lang-toggle";
+import { ThemeSwitch } from "@/app/theme-switch";
 import { Brand } from "@/components/brand";
 import { NavLinks } from "@/components/nav-links";
 import { PageTitle } from "@/components/page-title";
@@ -63,6 +64,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- the dashboards home lives outside this app's /maintenance path */}
             {session.isAdmin && <a href="/" className="hdr-btn">{t.shell.home}</a>}
             {session.isAdmin && <ViewAs current={session.viewingAs ?? "admin"} label={t.shell.viewAs} roles={t.roles} />}
+            <ThemeSwitch />
             <LangToggle label={t.switchTo} className="hdr-btn" />
             <form action={signOut}>
               <button className="hdr-btn">{t.shell.signOut}</button>

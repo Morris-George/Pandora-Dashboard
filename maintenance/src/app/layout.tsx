@@ -14,7 +14,11 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const { locale, dir } = await getI18n();
   return (
-    <html lang={locale} dir={dir}>
+    <html lang={locale} dir={dir} suppressHydrationWarning>
+      <head>
+        {/* light / dark before the first paint: the saved choice (shared with the dashboards), else the device setting */}
+        <script dangerouslySetInnerHTML={{ __html: '(function(){try{var t=localStorage.getItem("pandora-theme");if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})();' }} />
+      </head>
       <body className={`${inter.variable} ${arabic.variable} antialiased`}>{children}</body>
     </html>
   );
