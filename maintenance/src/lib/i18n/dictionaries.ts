@@ -1377,7 +1377,7 @@ const ar: Dict = {
     cause: "السبب",
     warrantyResult: "نتيجة الضمان",
     exclusion: "سبب الاستثناء",
-    exclusions: { misuse: "سوء استخدام / صدمة", wear: "استهلاك طبيعي", third_party: "صيانة خارجية سابقة", expired: "الضمان منتهي", no_proof: "لا يوجد إثبات شراء" } as Record<string, string>,
+    exclusions: { misuse: "سوء استخدام", wear: "استهلاك طبيعي", third_party: "صيانة خارجية سابقة", expired: "الضمان منتهي", no_proof: "لا يوجد إثبات شراء" } as Record<string, string>,
     overrideWarn: "النتيجة دي مختلفة عن نتيجة الفرع. لازم موافقة المشرف قبل ما التيكيت يكمل.",
     reason: "السبب",
     quote: "عرض السعر للعميل",
