@@ -135,6 +135,7 @@ background:radial-gradient(90% 160% at 0% 0%,#FFC6CD 0%,rgba(255,198,205,0) 60%)
 .notice button{margin-left:auto;border:1px solid var(--line2);background:var(--surface);border-radius:10px;padding:6px 12px;font-weight:700}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--sh1);min-width:0}
 .ph{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.ph h3 .per{display:inline-block;margin-left:10px;padding:2px 9px;border-radius:999px;background:var(--surface2);color:var(--muted);font-size:11.5px;font-weight:650;letter-spacing:0;vertical-align:2px;white-space:nowrap}
 .ph h3{margin:0;font-size:16px;line-height:1.3;font-weight:750;letter-spacing:-.01em;color:var(--text)}
 .ph p,.sub{margin:3px 0 0;font-size:12.5px;color:var(--muted);max-width:68ch}
 .ph .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -959,11 +960,20 @@ function render(){
   syncControls();writeHash();
   $('main').classList.remove('loading');
   renderHero(LAST);renderKpis(LAST);renderTrend(LAST);renderMix(LAST);renderBranches(LAST);renderWeek(LAST);renderPay(LAST);renderProducts(LAST);
+  stampPeriod();
   HOOKS.forEach(f=>{try{f()}catch(e){console.error(e)}});
   requestAnimationFrame(fitAll);
   $('lastUpdated').textContent=`${num(F.length)} sales lines in view · data from ${fDM(META.min,true)} to ${fDM(META.max,true)}`;
 }
 
+function stampPeriod(){
+  const t=fRange(S.from,S.to);
+  document.querySelectorAll('#main .ph h3').forEach(h=>{
+    if(h.parentElement.querySelector('#wkSub'))return;
+    let b=h.querySelector('.per');if(!b){b=document.createElement('span');b.className='per';h.appendChild(b)}
+    b.textContent=t;b.title='These figures cover '+t;
+  });
+}
 function syncControls(){
   const p=presetOf();
   document.querySelectorAll('#presets button').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.p===p);b.disabled=!presetRange(b.dataset.p)});
