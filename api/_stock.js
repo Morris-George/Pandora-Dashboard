@@ -234,8 +234,16 @@ async function itemStock(req, res, who) {
     if (sc.store && !sameStore(w, sc.store)) continue;
     by.set(w, (by.get(w) || 0) + (Number(r[7]) || 0));
   }
+  // every store in this person's scope that holds anything at all: the page uses it to flag stores with none of this item
+  const known = new Set();
+  for (const r of rows) {
+    const w = r[3];
+    if (sc.rx && !sc.rx.some(x => x.test(w))) continue;
+    if (sc.store && !sameStore(w, sc.store)) continue;
+    known.add(w);
+  }
   const stores = [...by.entries()].map(([s, q]) => ({ store: s, qty: Math.round(q * 1000) / 1000 })).sort((a, b) => b.qty - a.qty || a.store.localeCompare(b.store));
-  return send(res, 200, { ok: true, code, stores, total: stores.reduce((t, x) => t + x.qty, 0), scope: sc.all ? 'all' : sc.rx ? 'zone' : 'store', zone: sc.zone || undefined, asOf: at, source: at && snap && rows === snap.rows ? 'excel' : 'erp', cachedOnly: url.searchParams.get('cached') === '1' || undefined });
+  return send(res, 200, { ok: true, code, stores, all: [...known].sort(), total: stores.reduce((t, x) => t + x.qty, 0), scope: sc.all ? 'all' : sc.rx ? 'zone' : 'store', zone: sc.zone || undefined, asOf: at, source: at && snap && rows === snap.rows ? 'excel' : 'erp', cachedOnly: url.searchParams.get('cached') === '1' || undefined });
 }
 
 module.exports = async function handler(req, res) {
