@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { getI18n } from "@/lib/i18n";
 import { navFor } from "@/lib/nav";
-import { signOut } from "@/app/login/actions";
+import { SignOutButton } from "@/app/sign-out-button";
 import { LangToggle } from "@/app/lang-toggle";
 import { ThemeSwitch } from "@/app/theme-switch";
 import { Brand } from "@/components/brand";
@@ -66,9 +66,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             {session.isAdmin && <ViewAs current={session.viewingAs ?? "admin"} label={t.shell.viewAs} roles={t.roles} />}
             <ThemeSwitch />
             <LangToggle label={t.switchTo} className="hdr-btn" />
-            <form action={signOut}>
-              <button className="hdr-btn">{t.shell.signOut}</button>
-            </form>
+            <SignOutButton label={t.shell.signOut} />
           </div>
         </header>
       </div>
