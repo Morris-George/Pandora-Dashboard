@@ -26,7 +26,8 @@ async function render(req: Request, { params }: { params: Promise<{ token: strin
   try {
     const page = await browser.newPage();
     const origin = new URL(req.url).origin;
-    await page.goto(`${origin}/maintenance/memo/${token}`, { waitUntil: "networkidle0", timeout: 20000 });
+    const kind = new URL(req.url).searchParams.get("kind") === "delivery" ? "?kind=delivery" : "";
+    await page.goto(`${origin}/maintenance/memo/${token}${kind}`, { waitUntil: "networkidle0", timeout: 20000 });
     // The serverless Chrome ships without Arabic fonts: use a web font
     await page.addStyleTag({ url: "https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;700;800&display=block" }).catch(() => {});
     await page.addStyleTag({ content: ".receipt, .receipt * { font-family: 'Noto Sans Arabic', system-ui, sans-serif !important; }" });
@@ -38,7 +39,7 @@ async function render(req: Request, { params }: { params: Promise<{ token: strin
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename="Pandora-${tk.ticket_no}.pdf"`,
-        "Cache-Control": "private, max-age=300",
+        "Cache-Control": "no-store",
       },
     });
   } finally {

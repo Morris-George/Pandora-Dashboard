@@ -177,7 +177,6 @@ function DiagnoseForm({ d, t, busy, run, j, supervisor, costs }: RowProps & { su
   const [exclusion, setExclusion] = useState("");
   const [reason, setReason] = useState("");
   const [lines, setLines] = useState<Line[]>([{ desc: "", qty: "1", price: "" }]);
-  const [unrep, setUnrep] = useState("");
 
   const isOverride = j.provisional !== "pending_assessment" && warranty !== "" && warranty !== j.provisional;
   const out = warranty === "out_of_warranty";
@@ -275,14 +274,20 @@ function DiagnoseForm({ d, t, busy, run, j, supervisor, costs }: RowProps & { su
         </button>
         <button className={ghost} onClick={() => setOpen(false)}>{t.cancel}</button>
       </div>
-      {supervisor && (
-        <div className="flex flex-wrap gap-2 items-end border-t border-stone-100 pt-3">
-          <label className="flex flex-col gap-1.5 text-sm font-medium flex-[1_1_260px]">{t.unrepReason}
-            <input value={unrep} onChange={(e) => setUnrep(e.target.value)} className={input} />
-          </label>
-          <button disabled={busy || !unrep.trim()} className={danger} onClick={() => run(() => moveTicket(j.id, "unrepairable", unrep))}>{t.unrepairable}</button>
-        </div>
-      )}
+      <Unrepairable t={t} busy={busy} run={run} id={j.id} />
+    </div>
+  );
+}
+
+// Not repairable: the piece goes back to the store without repair (technician or supervisor, reason required)
+function Unrepairable({ t, busy, run, id }: { t: RowProps["t"]; busy: boolean; run: RowProps["run"]; id: string }) {
+  const [unrep, setUnrep] = useState("");
+  return (
+    <div className="flex flex-wrap gap-2 items-end border-t border-stone-100 pt-3">
+      <label className="flex flex-col gap-1.5 text-sm font-medium flex-[1_1_260px]">{t.unrepReason}
+        <input value={unrep} onChange={(e) => setUnrep(e.target.value)} className={input} />
+      </label>
+      <button disabled={busy || !unrep.trim()} className={danger} onClick={() => run(() => moveTicket(id, "unrepairable", unrep))}>{t.unrepairable}</button>
     </div>
   );
 }
@@ -319,6 +324,7 @@ function RepairRow({ d, t, busy, run, j, technician }: RowProps & { technician: 
             <input value={waitReason} onChange={(e) => setWaitReason(e.target.value)} placeholder={t.partsReason} aria-label={t.partsReason} className={`${input} flex-[1_1_220px]`} />
             <button disabled={busy || !waitReason.trim()} className={ghost} onClick={() => run(() => moveTicket(j.id, "awaiting_parts", waitReason))}>{t.waitParts}</button>
           </div>
+          <Unrepairable t={t} busy={busy} run={run} id={j.id} />
         </>
       )}
     </div>

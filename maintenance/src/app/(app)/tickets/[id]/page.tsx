@@ -71,7 +71,7 @@ export default async function TicketPage({ params, searchParams }: {
   const waHref = customer?.mobile ? `https://wa.me/${waNumber(customer.mobile)}?text=${encodeURIComponent(waMessage(kind, {
     name: customer.full_name ?? "", ticketNo: tk.ticket_no, item: tk.item_name, store: branch,
     link: `${process.env.APP_BASE_URL ?? ""}/t/${tk.tracking_token.slice(0, 10)}`, // short link for WhatsApp
-    memo: `${process.env.APP_BASE_URL ?? ""}/memo/${tk.tracking_token}/pdf`, // the customer's copy of the receipt
+    memo: `${process.env.APP_BASE_URL ?? ""}/memo/${tk.tracking_token}`, // the customer's copy of the receipt
     quote: lastQuote?.total != null ? money(Number(lastQuote.total)) : undefined,
   }, (waTpl?.value ?? {}) as WaTemplates))}` : null;
 

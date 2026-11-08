@@ -26,20 +26,23 @@ ${body}
 فريق خدمة العملاء – باندورا {store}`;
 
 export const WA_DEFAULTS: Record<WaKind, string> = {
-  received: frame("نشكركم على ثقتكم في باندورا. نود إفادتكم بأنه تم استلام منتجكم في فرع {store}، وسيتم إرساله إلى مركز الصيانة لإجراء الفحص اللازم.\nإيصال الاستلام (PDF): {memo}"),
+  received: frame("نشكركم على ثقتكم في باندورا. نود إفادتكم بأنه تم استلام منتجكم في فرع {store}، وسيتم إرساله إلى مركز الصيانة لإجراء الفحص اللازم.\nإيصال الاستلام — برجاء مراجعته والضغط على تأكيد: {memo}"),
   update: frame("نود إطلاعكم على آخر مستجدات طلب الصيانة الخاص بكم، ويمكنكم متابعة حالته في أي وقت من خلال الرابط أدناه."),
   quote: frame("تم الانتهاء من فحص منتجكم، وتبلغ تكلفة الإصلاح {quote} جنيهاً مصرياً شاملة ضريبة القيمة المضافة. نرجو التكرم بالموافقة على عرض السعر أو رفضه من خلال الرابط أدناه حتى نتمكن من استكمال الإجراءات."),
   ready: frame("يسعدنا إبلاغكم بأن منتجكم أصبح جاهزاً للاستلام من فرع {store}. يرجى إحضار إيصال الاستلام عند الحضور."),
   reminder: frame("نود تذكيركم بأن منتجكم لا يزال بانتظاركم في فرع {store}. يرجى إحضار إيصال الاستلام عند الحضور."),
-  collected: frame("نشكركم على استلام منتجكم، ونتطلع دائماً إلى خدمتكم."),
+  collected: frame("نشكركم على استلام منتجكم، ونتطلع دائماً إلى خدمتكم.\nإيصال التسليم — برجاء الضغط على تأكيد الاستلام: {memo}"),
 };
 
 export function waMessage(kind: WaKind, v: { name: string; ticketNo: string; item: string; store: string; link: string; quote?: string; memo?: string }, templates: WaTemplates = {}) {
   let tpl = templates[kind]?.trim() || WA_DEFAULTS[kind];
   // A saved "received" text without the memo placeholder still gets the memo link at the end
-  if (kind === "received" && v.memo && !tpl.includes("{memo}")) tpl += "\n\nإيصال الاستلام (PDF): {memo}";
+  if (kind === "received" && v.memo && !tpl.includes("{memo}")) tpl += "\n\nإيصال الاستلام — برجاء مراجعته والضغط على تأكيد: {memo}";
+  if (kind === "collected" && v.memo && !tpl.includes("{memo}")) tpl += "\n\nإيصال التسليم — برجاء الضغط على تأكيد الاستلام: {memo}";
+  // the collection message links the delivery receipt (with its own confirm button)
+  const memo = v.memo ? (kind === "collected" ? `${v.memo}?kind=delivery` : v.memo) : v.link;
   const vals: Record<string, string> = {
-    name: v.name.split(/\s+/)[0] || "", ticket: v.ticketNo, item: v.item, store: v.store, link: v.link, quote: v.quote ?? "—", memo: v.memo ?? v.link,
+    name: v.name.split(/\s+/)[0] || "", ticket: v.ticketNo, item: v.item, store: v.store, link: v.link, quote: v.quote ?? "—", memo,
   };
   return tpl.replace(/\{(name|ticket|item|store|link|quote|memo)\}/g, (_, k: string) => vals[k]);
 }

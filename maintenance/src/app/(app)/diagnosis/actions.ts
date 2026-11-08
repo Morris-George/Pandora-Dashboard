@@ -88,7 +88,7 @@ const STEPS = {
   resume: ["supervisor"],
   qc_pass: ["supervisor"],
   qc_fail: ["supervisor"],
-  unrepairable: ["supervisor"],
+  unrepairable: ["technician", "supervisor"],
 } as const;
 const TARGET: Record<keyof typeof STEPS, string> = {
   awaiting_parts: "awaiting_parts", resume: "in_repair", qc_pass: "ready_to_return", qc_fail: "in_repair", unrepairable: "unrepairable",

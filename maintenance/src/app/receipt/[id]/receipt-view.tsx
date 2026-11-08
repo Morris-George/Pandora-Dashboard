@@ -15,12 +15,12 @@ export async function ReceiptView({ id, delivery, supabase, print }: { id: strin
   const lang = locale === "ar" ? "ar" : "en";
   const sample = id === "sample"; // Admin preview with made-up data
   const { data: real } = sample ? { data: null } : await supabase.from("tickets")
-    .select("id, ticket_no, tracking_token, status, item_name, item_code, fault_category, accessories, agreed_amount, created_at, customer_id, warranty_final, erp_repair_invoice, branches(name, whatsapp)")
+    .select("id, ticket_no, tracking_token, status, item_name, item_code, fault_category, accessories, agreed_amount, created_at, customer_id, warranty_final, erp_repair_invoice, customer_confirmed_intake_at, customer_confirmed_pickup_at, branches(name, whatsapp)")
     .eq("id", id).maybeSingle();
   const tk = sample ? {
     id: "", ticket_no: "MT-10001", tracking_token: "sample", status: "closed", item_name: "Moments Silver Bracelet", item_code: "590702HV",
     fault_category: "Broken clasp", accessories: "Box", agreed_amount: 500, created_at: new Date().toISOString(), customer_id: "",
-    warranty_final: "out_of_warranty", erp_repair_invoice: "ACC-SINV-2026-00001", branches: { name: "Mall of Egypt", whatsapp: "+201000000000" },
+    warranty_final: "out_of_warranty", erp_repair_invoice: "ACC-SINV-2026-00001", customer_confirmed_intake_at: null as string | null, customer_confirmed_pickup_at: null as string | null, branches: { name: "Mall of Egypt", whatsapp: "+201000000000" },
   } : real;
   if (!tk) notFound();
   const { data: c } = sample ? { data: { full_name: "Sara Ahmed", mobile: "01001234567" } }
@@ -105,6 +105,10 @@ export async function ReceiptView({ id, delivery, supabase, print }: { id: strin
           <div className="text-[11px]">{delivery ? t.signReceived : t.sign}</div>
         </>
       )}
+      {(() => {
+        const at = delivery ? tk.customer_confirmed_pickup_at : tk.customer_confirmed_intake_at;
+        return at ? <p className="text-center text-[11px] mt-2 font-semibold">✓ {delivery ? t.confirmedPickup : t.confirmedIntake} · {new Date(at).toLocaleString(locale === "ar" ? "ar-EG" : "en-GB", { dateStyle: "short", timeStyle: "short" })}</p> : null;
+      })()}
       {cfg.showFooter && <p className="text-center text-[11px] mt-3 whitespace-pre-line">{footer}</p>}
       {(cfg.phone || cfg.website) && <p className="text-center text-[11px]" dir="ltr">{[cfg.phone, cfg.website].filter(Boolean).join(" · ")}</p>}
     </main>
