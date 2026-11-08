@@ -330,6 +330,7 @@ table.dt{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
 .xrow .xmeta{display:block;color:var(--muted);font-size:11.5px;font-weight:550;margin-top:1px}
 .xdetail{background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:18px;min-width:0}
 .xdetail h4{margin:0;font-size:16px;font-weight:750;letter-spacing:-.01em}
+.xby{margin-left:auto}.xby button{height:26px;padding:0 10px;font-size:11.5px}.xhrow{gap:8px}
 .xk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 14px}
 .xk>div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
 .xk b{display:block;font-size:17px;font-weight:780;letter-spacing:-.02em;white-space:nowrap;overflow:hidden}
@@ -1336,7 +1337,7 @@ const TYPE_RULES={
  Accessories:[['Jewellery boxes',/box|case|pouch/],['Care & cleaning',/polish|clean|care|cloth|kit/],['Other accessories',/./]]
 };
 const METAL_RULES=[['Rose gold-plated',/rose gold/],['Silver & gold two-tone',/(silver|sterling).*(14k|gold-plated)|(14k|gold-plated).*(silver|sterling)/],['14K gold-plated',/14k|gold-plated/],['Rhodium-plated',/rhodium/],['Sterling silver',/sterling|silver/],['Not stated',/./]];
-const ex={cat:'All',grp:'type',sel:null,q:'',all:false};
+const ex={cat:'All',grp:'type',sel:null,q:'',all:false,by:'sales'};
 const pick=(rules,name)=>{const n=String(name||'').toLowerCase();for(const [label,re] of rules)if(re.test(n))return label;return 'Other'};
 const typeOf=r=>TYPE_RULES[r.category]?pick(TYPE_RULES[r.category],r.name):(r.name||'Unspecified');
 const keyOf=r=>ex.grp==='metal'?pick(METAL_RULES,r.name):typeOf(r);
@@ -1366,21 +1367,23 @@ function renderExplorer(){
   let title=ex.sel?(ex.cat==='All'?ex.sel:ex.cat+': '+ex.sel):(ex.cat==='All'?'All categories':'All '+ex.cat.toLowerCase());
   if(words.length)title+=` matching “${ex.q.trim()}”`;
   const rv=sum(selRows,rev),un=sum(selRows,r=>r.qty);
-  const pm={};selRows.forEach(r=>{const k=(r.sku||'—')+'|'+r.name;const o=pm[k]||(pm[k]={sku:r.sku||'—',name:r.name,value:0,units:0});o.value+=rev(r);o.units+=r.qty});const allProds=Object.values(pm).sort((a,b)=>b.value-a.value),prods=allProds.slice(0,5);
-  const br=group(selRows,r=>r.branch).slice(0,6);
+  const pm={};selRows.forEach(r=>{const k=(r.sku||'—')+'|'+r.name;const o=pm[k]||(pm[k]={sku:r.sku||'—',name:r.name,value:0,units:0});o.value+=rev(r);o.units+=r.qty});const U=ex.by==='units',allProds=Object.values(pm).sort((a,b)=>U?b.units-a.units||b.value-a.value:b.value-a.value),prods=allProds.slice(0,5);
+  const br=group(selRows,r=>r.branch).sort((a,b)=>U?b.units-a.units:b.value-a.value).slice(0,6).map(x=>U?{...x,value:x.units,label:num(x.units)+' pcs'}:x);
+  const byTog=`<div class="seg xby" role="group" aria-label="Rank by"><button type="button" data-by="sales" aria-pressed="${!U}">By sales</button><button type="button" data-by="units" aria-pressed="${U}">By units</button></div>`;
   if(ex.all&&!selRows.length)ex.all=false;
-  const prodRow=(p,i)=>`<div class="xp pbr" data-sku="${esc(p.sku)}" data-name="${esc(p.name)}">${PPic.thumb(p,num(p.units)+' units · '+money(p.value))}<span title="${esc(p.sku)} · ${esc(p.name)}"><b class="xrank">${i+1}</b>${esc(p.name)}<em><i class="xsku">${esc(p.sku)}</i> · ${num(p.units)} units</em></span><b>${money(p.value)}</b></div>`;
-  if(ex.all){$('xDetail').innerHTML=`<h4>${esc(title)}</h4><div class="xh xhrow"><span>All products (${num(allProds.length)})</span><button type="button" class="xallbtn" data-all="0">Back</button></div><div class="xtop5">${allProds.map(prodRow).join('')}</div>`;PPic.fill($('xDetail'));return}
+  const prodRow=(p,i)=>`<div class="xp pbr" data-sku="${esc(p.sku)}" data-name="${esc(p.name)}">${PPic.thumb(p,num(p.units)+' units · '+money(p.value))}<span title="${esc(p.sku)} · ${esc(p.name)}"><b class="xrank">${i+1}</b>${esc(p.name)}<em><i class="xsku">${esc(p.sku)}</i> · ${U?money(p.value):num(p.units)+' units'}</em></span><b>${U?num(p.units)+' pcs':money(p.value)}</b></div>`;
+  if(ex.all){$('xDetail').innerHTML=`<h4>${esc(title)}</h4><div class="xh xhrow"><span>All products (${num(allProds.length)})</span>${byTog}<button type="button" class="xallbtn" data-all="0">Back</button></div><div class="xtop5">${allProds.map(prodRow).join('')}</div>`;PPic.fill($('xDetail'));return}
   $('xDetail').innerHTML=selRows.length?`<h4>${esc(title)}</h4>
    <div class="xk"><div><span>Sales</span><b>${money(rv)}</b></div><div><span>Units</span><b>${num(un)}</b></div><div><span>Share</span><b>${pct(rv,totalAll)}</b><small>of all sales${ex.cat!=='All'?' · '+pct(rv,totalCat)+' of '+esc(ex.cat.toLowerCase()):''}</small></div></div>
-   <div class="xh xhrow"><span>Top products</span>${allProds.length>prods.length?`<button type="button" class="xallbtn" data-all="1">View all (${num(allProds.length)})</button>`:''}</div><div class="xtop5">${prods.map(prodRow).join('')}</div>
-   <div class="xh">By branch</div><div class="bars" id="xBranch"></div>`:'<div class="xempty">No sales to show.</div>';
+   <div class="xh xhrow"><span>Top products</span>${byTog}${allProds.length>prods.length?`<button type="button" class="xallbtn" data-all="1">View all (${num(allProds.length)})</button>`:''}</div><div class="xtop5">${prods.map(prodRow).join('')}</div>
+   <div class="xh">By branch<span class="minor"> · ${U?'pieces sold':'sales'}</span></div><div class="bars" id="xBranch"></div>`:'<div class="xempty">No sales to show.</div>';
   if($('xBranch'))bars('xBranch',br);
   PPic.fill($('xDetail'));
 }
 document.addEventListener('click',e=>{
-  const c=e.target.closest('#xChips [data-cat]'),g=e.target.closest('#xGroup [data-g]'),s=e.target.closest('#xList [data-sel]'),a=e.target.closest('#xDetail [data-all]');
-  if(c){ex.cat=c.dataset.cat;ex.sel=null;ex.all=false;renderExplorer()}
+  const c=e.target.closest('#xChips [data-cat]'),g=e.target.closest('#xGroup [data-g]'),s=e.target.closest('#xList [data-sel]'),a=e.target.closest('#xDetail [data-all]'),by=e.target.closest('#xDetail [data-by]');
+  if(by){ex.by=by.dataset.by;renderExplorer()}
+  else if(c){ex.cat=c.dataset.cat;ex.sel=null;ex.all=false;renderExplorer()}
   else if(g){ex.grp=g.dataset.g;ex.sel=null;ex.all=false;renderExplorer()}
   else if(s){ex.sel=ex.sel===s.dataset.sel?null:s.dataset.sel;ex.all=false;renderExplorer()}
   else if(a){ex.all=a.dataset.all==='1';renderExplorer();$('xDetail').scrollIntoView({block:'nearest'})}
@@ -1394,7 +1397,7 @@ function bars(id,items){
   const el=$(id);if(!el)return;
   if(!items||!items.length){el.innerHTML='<div class="empty">No data for this selection.</div>';return}
   const max=Math.max(1,...items.map(x=>Math.abs(Number(x.value)||0)));
-  el.innerHTML=items.map(x=>{const v=Number(x.value)||0;return `<div class="barrow" title="${esc(x.name)}: ${money(v)}"><div class="barlabel">${esc(x.name)}</div><div class="track"><div class="fill" style="width:${Math.max(0,Math.min(100,Math.abs(v)/max*100))}%${x.color?';background:'+x.color:''}"></div></div><div class="barval">${money(v)}</div></div>`}).join('');
+  el.innerHTML=items.map(x=>{const v=Number(x.value)||0;return `<div class="barrow" title="${esc(x.name)}: ${x.label||money(v)}"><div class="barlabel">${esc(x.name)}</div><div class="track"><div class="fill" style="width:${Math.max(0,Math.min(100,Math.abs(v)/max*100))}%${x.color?';background:'+x.color:''}"></div></div><div class="barval">${x.label||money(v)}</div></div>`}).join('');
 }
 
 /* ---- Sales by collection: every sales line belongs to a Pandora family (Moments, Timeless, Essence ...). ERP lines carry it;
