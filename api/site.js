@@ -398,10 +398,9 @@ module.exports = async function handler(req, res) {
     if (!facts.recv || facts.recv === 'none') return toHome();
     return sendFile(res, 'receiving.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
-  // Sales Intelligence: super admin, brand manager and area managers (the server keeps area managers to their zone)
+  // Sales Intelligence: removed (api/_insights.js and private/insights.html are kept but no longer reachable)
   if (requestedPath === '/insights' || requestedPath === '/insights/' || requestedPath === '/insights.html') {
-    if (!facts.dash) return toHome();
-    return sendFile(res, 'insights.html', 'text/html; charset=utf-8', chromeFor('staff', multi));
+    return toHome(); // Sales Intelligence was removed from the site
   }
   // Store Overview: super admin and brand manager (overseer) only
   if (requestedPath === '/overview' || requestedPath === '/overview/' || requestedPath === '/overview.html') {

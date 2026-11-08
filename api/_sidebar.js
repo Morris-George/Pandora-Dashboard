@@ -3,7 +3,7 @@
 // Injected by api/site.js into every report page, so the report can be changed in one click instead of going Home first.
 // Same sections and order as the home screen (including the order the super admin saved there), same pink look.
 const BASE = [
-  ['Sales', ['overview', 'insights', 'dashboards', 'staff', 'mysales', 'mysales2', 'storeteam', 'daily', 'film']],
+  ['Sales', ['overview', 'dashboards', 'staff', 'mysales', 'mysales2', 'storeteam', 'daily', 'film']],
   ['Stock', ['stock', 'stockcount', 'stockchecker', 'slow', 'transfer']],
   ['Ordering', ['refill', 'dist', 'recv']],
   ['Visual Merchandising', ['vmzones', 'zonestock', 'vm']],

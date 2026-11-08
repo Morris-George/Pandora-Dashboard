@@ -6,7 +6,6 @@ const { whoami } = require('./_auth');
 // f = { dash: true/false, staff: { role, label, name } | null, vm: true/false, sc: true/false (Stock Count only account), hr: true/false (HR: Weekly Schedule, view only) }
 const APPS = [
   { id: 'dashboards', title: 'Pandora Dashboards', desc: 'Sales dashboards for the whole business.', href: '/dashboards', allow: f => f.dash },
-  { id: 'insights', title: 'Sales Intelligence', desc: 'AI insights: the moves that sell more – stock, items, baskets and coaching for every sales person.', href: '/insights', allow: f => f.dash },
   { id: 'overview', title: 'Store Overview', desc: 'Simple cards: average store sales, average ticket and the key numbers, month to date and year to date.', href: '/overview', allow: f => !!f.staff && f.staff.role === 'admin' },
   { id: 'staff', title: 'Staff Performance', desc: 'How each store and each sales person is doing.', href: '/staff', allow: f => !!f.staff && f.staff.role !== 'staff' && f.staff.role !== 'store' },
   { id: 'uploads', title: 'All Uploads', desc: 'Add, see and remove every document, grouped by where it is used.', href: '/uploads', allow: f => !!f.staff && f.staff.role === 'admin' },
