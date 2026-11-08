@@ -240,7 +240,7 @@ async function itemStock(req, res, who) {
     const w = r[3];
     if (sc.rx && !sc.rx.some(x => x.test(w))) continue;
     if (sc.store && !sameStore(w, sc.store)) continue;
-    known.add(w);
+    if (!/warehouse|samples?\b|\bmain\b|\btest/i.test(w)) known.add(w); // the main warehouse and the samples warehouse are not selling stores
   }
   const stores = [...by.entries()].map(([s, q]) => ({ store: s, qty: Math.round(q * 1000) / 1000 })).sort((a, b) => b.qty - a.qty || a.store.localeCompare(b.store));
   return send(res, 200, { ok: true, code, stores, all: [...known].sort(), total: stores.reduce((t, x) => t + x.qty, 0), scope: sc.all ? 'all' : sc.rx ? 'zone' : 'store', zone: sc.zone || undefined, asOf: at, source: at && snap && rows === snap.rows ? 'excel' : 'erp', cachedOnly: url.searchParams.get('cached') === '1' || undefined });

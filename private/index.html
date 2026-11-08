@@ -735,7 +735,7 @@ function stockRows(j){
   const nr=t=>String(t||'').toLowerCase().replace(/^pandora\s+/,'').replace(/[^a-z0-9]+/g,'');
   const have=(j.stores||[]).filter(x=>x.qty>0).map(x=>({store:x.store,qty:x.qty}));
   const sells=[...new Set(data.map(r=>r.branch))].map(nr).filter(x=>x.length>=3);
-  const zero=(j.all||[]).filter(w=>{const n=nr(w);return n&&sells.some(b=>b===n||b.includes(n)||n.includes(b))&&!have.some(h=>nr(h.store)===n)}).map(w=>({store:w,qty:0}));
+  const zero=(j.all||[]).filter(w=>{if(/warehouse|samples?\b|\bmain\b|\btest/i.test(w))return false;const n=nr(w);return n&&sells.some(b=>b===n||b.includes(n)||n.includes(b))&&!have.some(h=>nr(h.store)===n)}).map(w=>({store:w,qty:0}));
   return have.sort((a,b)=>b.qty-a.qty).concat(zero.sort((a,b)=>a.store.localeCompare(b.store)));
 }
 const WARN='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block;vertical-align:-2px;margin-right:5px"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
