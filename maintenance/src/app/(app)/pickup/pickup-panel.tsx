@@ -10,7 +10,7 @@ import { collect, findRepairInvoice, markUncollected, type RepairInvoice } from 
 export type PickupJob = {
   id: string; ticketNo: string; itemName: string; itemCode: string | null; status: string; branchName: string;
   customer: string; mobileHint: string; readyAt: string | null; outcome: "repaired" | "rejected" | "unrepairable";
-  warranty: string; due: number; waHref: string | null;
+  warranty: string; due: number; waHref: string | null; waDoneHref: string | null;
 };
 type D = (typeof dictionaries)["en"];
 type Run = (fn: () => Promise<{ error?: string; outcome?: string }>, after?: (outcome?: string) => void) => void;
@@ -25,6 +25,7 @@ export function PickupPanel({ locale, role, jobs }: { locale: Locale; role: AppR
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [doneId, setDoneId] = useState(""); // last handed-over ticket, for the delivery receipt
+  const [doneWa, setDoneWa] = useState<string | null>(null); // the confirm-link message, kept after the job leaves the list
   const [q, setQ] = useState("");
   const money = (n: number) => n.toLocaleString(locale === "ar" ? "ar-EG" : "en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -48,6 +49,7 @@ export function PickupPanel({ locale, role, jobs }: { locale: Locale; role: AppR
         <div role="status" className="rounded-lg bg-emerald-50 text-emerald-900 text-sm p-3 flex flex-wrap items-center justify-between gap-2">
           <span>{notice}</span>
           {doneId && <a href={withBase(`/receipt/${doneId}?kind=delivery`)} target="_blank" rel="noopener" className="rounded-lg bg-[var(--accent)] text-[var(--on-accent)] px-3 py-1.5 font-bold">{t.printDelivery}</a>}
+          {doneId && doneWa && (() => { const w = doneWa; return <a href={w} target="_blank" rel="noopener" className="rounded-lg bg-emerald-700 text-white px-3 py-1.5 font-bold">{t.sendConfirm}</a>; })()}
         </div>
       )}
 
@@ -60,7 +62,7 @@ export function PickupPanel({ locale, role, jobs }: { locale: Locale; role: AppR
         {!shown.length && <p className="text-sm text-stone-600">{t.none}</p>}
         {shown.map((j) => (
           <PickupCard key={j.id} d={d} j={j} role={role} busy={busy} run={run} money={money}
-            onDone={(o) => { setNotice(o === "closed" ? t.closedMsg(j.ticketNo) : t.collectedMsg(j.ticketNo)); setDoneId(j.id); }} />
+            onDone={(o) => { setNotice(o === "closed" ? t.closedMsg(j.ticketNo) : t.collectedMsg(j.ticketNo)); setDoneId(j.id); setDoneWa(j.waDoneHref); }} />
         ))}
       </section>
     </div>

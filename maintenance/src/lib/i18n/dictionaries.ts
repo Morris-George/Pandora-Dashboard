@@ -743,7 +743,7 @@ This account comes from ERPNext. After the change it is managed here (the sync s
     cancel: "Cancel",
     uncollectedReason: "Why uncollected? (calls made, etc.)",
     markUncollected: "Mark uncollected",
-    printDelivery: "Print delivery receipt", closedMsg: (no: string) => `${no} handed over and closed.`,
+    printDelivery: "Print delivery receipt", sendConfirm: "Send the customer the confirm link (WhatsApp)", closedMsg: (no: string) => `${no} handed over and closed.`,
     collectedMsg: (no: string) => `${no} handed over. Closed.`,
     errors: {
       invoice: "Link the ERPNext repair invoice first.",
@@ -1578,7 +1578,7 @@ const ar: Dict = {
     cancel: "إلغاء",
     uncollectedReason: "ليه ماتستلمتش؟ (المكالمات اللي اتعملت...)",
     markUncollected: "تسجيل كغير مستلمة",
-    printDelivery: "طباعة إيصال التسليم", closedMsg: (no: string) => `تم تسليم ${no} وإغلاقه.`,
+    printDelivery: "طباعة إيصال التسليم", sendConfirm: "ابعت للعميل لينك تأكيد الاستلام (واتساب)", closedMsg: (no: string) => `تم تسليم ${no} وإغلاقه.`,
     collectedMsg: (no: string) => `تم تسليم ${no}. واتقفل.`,
     errors: {
       invoice: "اربط فاتورة الصيانة من ERPNext الأول.",
