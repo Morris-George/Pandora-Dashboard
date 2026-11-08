@@ -294,6 +294,12 @@ table.dt{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
 .psearch{display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border:1px solid var(--line2);border-radius:10px;background:var(--surface2);min-width:240px}
 .psearch input{border:0;background:transparent;outline:none;flex:1;font-size:12.5px}
 .twocol{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px}
+.twocol.three{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.twocol.three .prow{grid-template-columns:22px 40px minmax(0,1fr) auto;gap:10px}
+.twocol.three .prow .u{display:none}
+.twocol.three .prow .t{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3}
+.twocol.three .prow .v{min-width:0}
+.twocol h4 .minor{margin-left:6px}
 .twocol h4{margin:0 0 6px;font-size:13px;font-weight:750;display:flex;align-items:center;gap:8px}
 
 /* product thumbnails */
@@ -405,7 +411,7 @@ table.dt{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
 
 /* ---------- responsive ---------- */
 @media (max-width:1180px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi:nth-child(4n){border-right:1px solid var(--line)}.kpi:nth-child(2n){border-right:0}.kpi:nth-last-child(-n+4){border-bottom:1px solid var(--line)}.kpi:nth-last-child(-n+2){border-bottom:0}.scope{display:none}}
-@media (max-width:1000px){.grid,.grid.equal,.hero,.twocol{grid-template-columns:minmax(0,1fr)}.hero-side{border-left:0;border-top:1px solid var(--line)}.exp-grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:1000px){.grid,.grid.equal,.hero,.twocol,.twocol.three{grid-template-columns:minmax(0,1fr)}.hero-side{border-left:0;border-top:1px solid var(--line)}.exp-grid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:760px){
  html{scroll-padding-top:150px}
  .topbar{padding:14px 16px}.topbar::after{right:-20px;opacity:.16}
@@ -1223,6 +1229,9 @@ function renderPay(L){
 /* ---------- products ---------- */
 const pkey=r=>(r.sku||'—')+'|'+r.name;
 function prodMap(rows){const m=new Map();for(const r of rows){const k=pkey(r);let o=m.get(k);if(!o)m.set(k,o={k,sku:r.sku||'—',name:r.name,category:r.category,units:0,revenue:0});o.units+=r.qty;o.revenue+=rev(r)}return m}
+let _ls=null;
+function lastSale(){if(_ls&&_ls.d===data)return _ls.m;const m=new Map();for(const r of data){if(r.sku&&r.date>(m.get(r.sku)||''))m.set(r.sku,r.date)}_ls={d:data,m};return m}
+function stopRow(p,i){const lastS=lastSale().get(p.sku);return `<div class="prow pbr" data-sku="${esc(p.sku)}" data-name="${esc(p.name)}" role="button" tabindex="0"><span class="rk">${i+1}</span>${PPic.thumb(p,'Sold '+num(p.units)+' pcs before')}<span><span class="t" title="${esc(p.name)}">${esc(p.name)}</span><span class="m"><i class="xsku">${esc(p.sku)}</i> · ${lastS?'last sold '+esc(fDM(lastS,true)):esc(p.category)}</span></span><span class="u">Was ${num(p.units)} pcs</span><span class="v">Was ${money(p.revenue)}<small class="dl bad">0 now</small></span></div>`}
 function prodRow(p,i,extra,prev){return `<div class="prow pbr" data-sku="${esc(p.sku)}" data-name="${esc(p.name)}" role="button" tabindex="0"><span class="rk">${i+1}</span>${PPic.thumb(p,num(p.units)+' units · '+money(p.revenue))}<span><span class="t" title="${esc(p.name)}">${esc(p.name)}</span><span class="m"><i class="xsku">${esc(p.sku)}</i> · ${esc(p.category)}</span></span><span class="u">${num(p.units)} pcs<small>${p.units>0?'avg '+money(p.revenue/p.units)+' / pc':''}</small>${prev==null?'':'<small>Expected '+num(prev)+' pcs</small>'}</span><span class="v">${money(p.revenue)}${extra||''}</span></div>`}
 function renderProducts(L){
   const {F,Fp,C}=L;
@@ -1235,9 +1244,9 @@ function renderProducts(L){
     $('prodSub').textContent='Products whose sales changed the most against '+(C&&C.has?C.text:'the comparison')+'. Click one for branches and stock.';
     if(!pm){$('prodBody').innerHTML=`<div class="empty">${C?'There are no saved sales for '+esc(C.text)+' to compare with.':'Choose something to compare with in the filters above.'}</div>`;return}
     const keys=new Set([...cm.keys(),...pm.keys()]),ch=[...keys].map(k=>{const c=cm.get(k),p=pm.get(k),o=c||{...p,units:0,revenue:0};return {...o,prev:p?p.revenue:0,pu:p?p.units:0,d:(c?c.revenue:0)-(p?p.revenue:0)}});
-    const upA=ch.filter(x=>x.d>0).sort((a,b)=>b.d-a.d),dnA=ch.filter(x=>x.d<0).sort((a,b)=>a.d-b.d),lm=S.rfAll?S.rfShow:8,up=upA.slice(0,lm),dn=dnA.slice(0,lm),more=Math.max(upA.length,dnA.length)>lm;
+    const upA=ch.filter(x=>x.d>0).sort((a,b)=>b.d-a.d),dnA=ch.filter(x=>x.d<0&&cm.has(x.k)).sort((a,b)=>a.d-b.d),stA=[...pm.values()].filter(x=>!cm.has(x.k)&&x.revenue>0).sort((a,b)=>b.revenue-a.revenue),lm=S.rfAll?S.rfShow:8,up=upA.slice(0,lm),dn=dnA.slice(0,lm),st=stA.slice(0,lm),more=Math.max(upA.length,dnA.length,stA.length)>lm;
     const mv=x=>`<small class="dl ${x.d>0?'good':'bad'}">${ic(x.d>0?'aup':'adown')}${signed(x.d,shortMoney)}</small>`;
-    $('prodBody').innerHTML=`<div class="twocol"><div><h4>${ic('up')}Rising</h4><div class="plist">${up.map((x,i)=>prodRow(x,i,mv(x))).join('')||'<div class="empty">Nothing rose.</div>'}</div></div><div><h4>${ic('down')}Falling</h4><div class="plist">${dn.map((x,i)=>prodRow(x,i,mv(x))).join('')||'<div class="empty">Nothing fell.</div>'}</div></div></div>`+`<div class="pfoot">${S.rfAll?(more?`<button type="button" class="small-btn" id="rfMore">Show 50 more</button>`:'<span></span>')+'<button type="button" class="linkbtn" id="rfLess">Back to the top 8</button>':(more?`<button type="button" class="small-btn" id="rfAllBtn">See all ${num(upA.length)} rising and ${num(dnA.length)} falling</button>`:'')}</div>`;
+    $('prodBody').innerHTML=`<div class="twocol three"><div><h4>${ic('up')}Rising</h4><div class="plist">${up.map((x,i)=>prodRow(x,i,mv(x))).join('')||'<div class="empty">Nothing rose.</div>'}</div></div><div><h4>${ic('down')}Falling</h4><div class="plist">${dn.map((x,i)=>prodRow(x,i,mv(x))).join('')||'<div class="empty">Nothing fell.</div>'}</div></div><div><h4>${ic('down')}Cooling down<span class="minor" style="font-weight:500">sold before, none now</span></h4><div class="plist">${st.map((x,i)=>stopRow(x,i)).join('')||'<div class="empty">Everything that sold before is still selling.</div>'}</div></div></div>`+`<div class="pfoot">${S.rfAll?(more?`<button type="button" class="small-btn" id="rfMore">Show 50 more</button>`:'<span></span>')+'<button type="button" class="linkbtn" id="rfLess">Back to the top 8</button>':(more?`<button type="button" class="small-btn" id="rfAllBtn">See all ${num(upA.length)} rising, ${num(dnA.length)} falling and ${num(stA.length)} cooling down</button>`:'')}</div>`;
     PPic.fill($('prodBody'));return;
   }
   $('prodSub').textContent=`Best sellers by ${S.pBy==='rev'?'sales':'units'} for the selected dates, branches and category. Click a product for branches and stock.`;
