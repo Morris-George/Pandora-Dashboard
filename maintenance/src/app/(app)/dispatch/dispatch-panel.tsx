@@ -12,7 +12,8 @@ import { adminApproveBatch, approveBatch, courierPickup, createOutbound, createR
 export type ItemRow = { id: string; ticketNo: string; itemName: string; branchId: string; branchName: string; pickup?: "courier" | "area_manager" | null };
 export type BatchRow = {
   id: string; batchNo: string; direction: "outbound" | "return"; branchId: string; branchName: string; seal: string;
-  status: string; picker: "courier" | "delivery"; mine: boolean; createdAt: string; pickedAt: string | null;
+  status: string; picker: "courier" | "delivery"; mine: boolean;
+  packedBy: string | null; carriedBy: string | null; receivedBy: string | null; createdAt: string; pickedAt: string | null;
   items: { ticketNo: string; itemName: string; scanned: boolean; pending?: boolean }[];
 };
 type T = (typeof dictionaries)["en"]["dispatch"];
@@ -224,7 +225,12 @@ export function DispatchPanel({ locale, role, myBranches, packable: allPackable,
                     <td className="p-2 font-semibold" dir="ltr"><a href={withBase(`/awb/${b.id}`)} target="_blank" rel="noopener" className="underline" title={t.printAwb}>{b.seal}</a></td>
                     <td className="p-2">{b.items.filter((i) => i.scanned).length}/{b.items.length}</td>
                     <td className="p-2">{fmt(b.createdAt)}</td>
-                    <td className="p-2"><span className={`rounded-full px-2.5 py-1 text-xs whitespace-nowrap ${BADGE[b.status]}`}>{t.batchStatus[b.status]}</span>{waitingOn(t, b) && <div className="text-[11px] text-stone-500 mt-1 whitespace-nowrap">{t.waitingOn}: {waitingOn(t, b)}</div>}</td>
+                    <td className="p-2"><span className={`rounded-full px-2.5 py-1 text-xs whitespace-nowrap ${BADGE[b.status]}`}>{t.batchStatus[b.status]}</span>{waitingOn(t, b) && <div className="text-[11px] text-stone-500 mt-1 whitespace-nowrap">{t.waitingOn}: {waitingOn(t, b)}</div>}
+                      <div className="text-[11px] text-stone-600 mt-1 flex flex-col">
+                        {b.packedBy && <span>{t.who.packed}: {b.packedBy}</span>}
+                        {b.carriedBy && <span>{t.who.carried}: {b.carriedBy}</span>}
+                        {b.receivedBy && <span className="font-medium text-emerald-800">{t.who.received}: {b.receivedBy}</span>}
+                      </div></td>
                   </tr>
                 ))}
               </tbody>

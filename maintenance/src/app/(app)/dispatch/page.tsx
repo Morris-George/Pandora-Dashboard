@@ -1,3 +1,5 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+import { dictionaries } from "@/lib/i18n/dictionaries";
 import { filterStores } from "@/lib/store-filter";
 import { requireRole } from "@/lib/auth";
 import { RoleTabs, screenRole } from "@/components/role-tabs";
@@ -27,7 +29,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
       ? supabase.from("tickets").select("id, ticket_no, item_name, branch_id").eq("status", "ready_to_return").order("created_at")
       : Promise.resolve({ data: [] }),
     supabase.from("dispatch_batches")
-      .select("id, batch_no, direction, branch_id, seal_no, status, sent_by, created_at, courier_id, picked_up_at, pickup_by, branches(name), batch_items(scanned_in, tickets(ticket_no, item_name, status))")
+      .select("id, batch_no, direction, branch_id, seal_no, status, sent_by, received_by, created_at, courier_id, picked_up_at, pickup_by, branches(name), batch_items(scanned_in, tickets(ticket_no, item_name, status))")
       .order("created_at", { ascending: false }).limit(50),
     supabase.from("app_settings").select("value").eq("key", "workflow").maybeSingle(),
   ]);
@@ -55,9 +57,15 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
       pickup: on ? ((dir === "outbound" ? s?.pickup_out : s?.pickup_return) === "area_manager" ? "area_manager" : "courier") : null };
   };
 
+  // Who handled each bag (name + role), for the status column
+  const ids = [...new Set((batches ?? []).flatMap((b) => [b.sent_by, b.courier_id, b.received_by]).filter(Boolean))] as string[];
+  const { data: people } = ids.length ? await createAdminClient().from("profiles").select("id, full_name, role").in("id", ids) : { data: [] };
+  const roleName = dictionaries[locale].roles as Record<string, string>;
+  const who = new Map((people ?? []).map((p) => [p.id, `${p.full_name} (${roleName[p.role] ?? p.role})`]));
   const rows: BatchRow[] = (batches ?? []).map((b) => ({
     id: b.id, batchNo: b.batch_no, direction: b.direction, branchId: b.branch_id, branchName: (b.branches as unknown as Joined<{ name: string }>)?.name ?? "—",
     seal: b.seal_no, status: b.status, picker: b.pickup_by ? (b.pickup_by === "courier" ? "delivery" : "courier") : pickerFor(b.branch_id, b.direction), mine: b.sent_by === me.userId, createdAt: b.created_at, pickedAt: b.picked_up_at,
+    packedBy: who.get(b.sent_by) ?? null, carriedBy: b.courier_id ? who.get(b.courier_id) ?? null : null, receivedBy: b.received_by ? who.get(b.received_by) ?? null : null,
     items: ((b.batch_items ?? []) as unknown as { scanned_in: boolean; tickets: Joined<{ ticket_no: string; item_name: string; status: string }> }[])
       .map((i) => ({ ticketNo: i.tickets?.ticket_no ?? "—", itemName: i.tickets?.item_name ?? "", scanned: i.scanned_in,
         pending: !i.scanned_in && (i.tickets?.status ?? "").startsWith("in_transit") })),
