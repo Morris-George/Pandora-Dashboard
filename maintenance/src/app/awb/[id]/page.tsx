@@ -47,7 +47,12 @@ export default async function AwbLabelPage({ params }: { params: Promise<{ id: s
       `}</style>
       <div className="bc" dangerouslySetInnerHTML={{ __html: barcode }} />
       <div className="no" dir="ltr">{b.seal_no}</div>
-      <div className="meta"><span>{b.direction === "outbound" ? t.outbound : t.return} · {store}</span></div>
+      <div className="meta"><span>{(() => {
+        // Sender → receiver: store bags go to HQ, return bags come from HQ
+        const hq = locale === "ar" ? "المركز الرئيسي" : "HQ";
+        const [from, to] = b.direction === "outbound" ? [store, hq] : [hq, store];
+        return locale === "ar" ? `من ${from} إلى ${to}` : `From ${from} to ${to}`;
+      })()}</span></div>
       <div className="meta"><span>{t.items}: {items}</span><span>{date}</span></div>
       </div>
     </>
