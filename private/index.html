@@ -286,6 +286,7 @@ table.dt{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
 .prow .t{display:block;font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .prow .m{display:block;color:var(--muted);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .prow .u{text-align:right;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.prow .u small{display:block;margin-top:2px;font-size:11px}
 .prow .v{text-align:right;font-weight:750;font-size:13px;white-space:nowrap;min-width:110px}
 .prow .v small{display:block;margin-top:2px}
 .pfoot{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;margin-top:12px}
@@ -1212,7 +1213,7 @@ function renderPay(L){
 /* ---------- products ---------- */
 const pkey=r=>(r.sku||'—')+'|'+r.name;
 function prodMap(rows){const m=new Map();for(const r of rows){const k=pkey(r);let o=m.get(k);if(!o)m.set(k,o={k,sku:r.sku||'—',name:r.name,category:r.category,units:0,revenue:0});o.units+=r.qty;o.revenue+=rev(r)}return m}
-function prodRow(p,i,extra){return `<div class="prow pbr" data-sku="${esc(p.sku)}" data-name="${esc(p.name)}" role="button" tabindex="0"><span class="rk">${i+1}</span>${PPic.thumb(p,num(p.units)+' units · '+money(p.revenue))}<span><span class="t" title="${esc(p.name)}">${esc(p.name)}</span><span class="m"><i class="xsku">${esc(p.sku)}</i> · ${esc(p.category)}</span></span><span class="u">${num(p.units)} pcs</span><span class="v">${money(p.revenue)}${extra||''}</span></div>`}
+function prodRow(p,i,extra){return `<div class="prow pbr" data-sku="${esc(p.sku)}" data-name="${esc(p.name)}" role="button" tabindex="0"><span class="rk">${i+1}</span>${PPic.thumb(p,num(p.units)+' units · '+money(p.revenue))}<span><span class="t" title="${esc(p.name)}">${esc(p.name)}</span><span class="m"><i class="xsku">${esc(p.sku)}</i> · ${esc(p.category)}</span></span><span class="u">${num(p.units)} pcs<small>${p.units>0?'avg '+money(p.revenue/p.units)+' / pc':''}</small></span><span class="v">${money(p.revenue)}${extra||''}</span></div>`}
 function renderProducts(L){
   const {F,Fp,C}=L;
   document.querySelectorAll('#prodTab button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===S.pTab));
