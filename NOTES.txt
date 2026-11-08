@@ -162,3 +162,20 @@ STORE OVERVIEW (/overview, private/overview.html, API /api/overview -> api/erp.j
 - Sales by month has a Net / Gross button (gross = VAT included, line field 4); the API returns monthly.net and monthly.gross (cache overview/c7.json). Online shop row and 'All incl. Online' row show in both.
 - Sales by month Filter button (Nov 4): a small button opens a small popup with a tick box per category (Services is one of them); unticked categories are left out of every cell, total and the Online row, and the note under the title lists what is left out. All/None buttons; the choice is remembered in the browser. API returns monthly.cells [store, month, category, net, gross, isOnline] (cache overview/c8.json) and the page adds them up.
 - Sales by month (Nov 4): no separate 'All stores' row; the bottom row is just 'Total' (stores + Online shop).
+
+PANDORA DASHBOARDS REBUILD (Nov 8, private/index.html; no server changes)
+- Layout: pink header (Export, Home, theme, Log out) -> sticky filter bar (period presets Yesterday / 7 days / 30 days / This month / Last month / This year / All,
+  dates, branches, category, Net/Gross, Compare, Find a SKU, Reset) with section tabs -> Summary (big sales figure, change, "What stands out" findings) ->
+  8 KPI tiles with 14-day or period sparklines -> Sales trend + Category mix -> Branch performance table -> Weekdays + Payment -> Collections -> Category explorer -> Products.
+- Filters live in the address (#from=&to=&br=&cat=&basis=&cmp=), so a refresh or a shared link opens the same view. No address = yesterday (Cairo) as before.
+- Comparison "best match": one day -> same weekday last week; a month or month so far -> same dates last month; this year -> same dates last year; else the days before.
+- KPI rules match Store Overview: order = invoice (per branch) with sales and pieces above zero; avg order = sales of those orders / orders; UPT = their pieces / orders.
+- Categories are the same everywhere: Necklaces -> "Necklace and Pendant"; "Other" is re-sorted by product name (safety chain -> Charms ...) and what is left goes to Accessories.
+- Targets: store targets and visitors come from the Daily Store Report (GET /api/daily, /api/daily?month=, cached 10 min in the browser) when the person can open it.
+  Target = the store's month target spread by its day shares, compared on gross sales (shown in the chosen basis using the data's own net/gross ratio).
+  No store targets for the dates -> the chain daily target set with "Set target" (saved on the device, key pandoraDailyTarget, also read by the Launch Film).
+  Conversion = buyers / visitors typed in the Daily Store Report.
+- Weekdays show the average day (Saturday first); periods under 14 days use the last 8 weeks.
+- Find a SKU moved into the filter bar ("/" focuses it); picking one opens the item side panel (stock, sales, trend, branches, payment). Product popup has "Open full item details".
+- Products: Best sellers (by sales or units, "See all" with search) and Rising & falling against the comparison.
+- Excel export adds Collections and a fuller Summary/Branches sheet. The logo is /pandora-logo.png (no longer embedded), parsers.js is no longer loaded here.
