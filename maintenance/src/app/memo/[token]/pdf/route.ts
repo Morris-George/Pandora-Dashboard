@@ -15,8 +15,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   const puppeteer = (await import("puppeteer-core")).default;
   const local = process.env.CHROME_PATH; // local dev: path to an installed Chrome
   const chromium = local ? null : (await import("@sparticuz/chromium")).default;
-  // The serverless Chrome ships without Arabic fonts: load one before rendering
-  if (chromium) await chromium.font("https://raw.githubusercontent.com/google/fonts/main/ofl/notosansarabic/NotoSansArabic%5Bwdth,wght%5D.ttf").catch(() => {});
   const browser = await puppeteer.launch(chromium
     ? { args: chromium.args, executablePath: await chromium.executablePath(), headless: true }
     : { executablePath: local!, headless: true });
@@ -24,6 +22,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
     const page = await browser.newPage();
     const origin = new URL(req.url).origin;
     await page.goto(`${origin}/maintenance/memo/${token}`, { waitUntil: "networkidle0", timeout: 20000 });
+    // The serverless Chrome ships without Arabic fonts: use a web font
+    await page.addStyleTag({ url: "https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;700;800&display=block" }).catch(() => {});
+    await page.addStyleTag({ content: ".receipt, .receipt * { font-family: 'Noto Sans Arabic', system-ui, sans-serif !important; }" });
+    await page.evaluate(() => document.fonts.ready);
     await page.emulateMediaType("print");
     const h = await page.evaluate(() => document.documentElement.scrollHeight); // one receipt-length page, no blank tail
     const pdf = await page.pdf({ width: "80mm", height: `${Math.ceil(h * 0.2646) + 8}mm`, printBackground: true, preferCSSPageSize: false, margin: { top: "3mm", bottom: "3mm", left: "3mm", right: "3mm" } });
