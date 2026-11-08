@@ -55,13 +55,14 @@ export function PickupPanel({ locale, role, jobs }: { locale: Locale; role: AppR
       )}
 
       {/* After the handover: the delivery receipt opens by itself, then this pop-up sends the confirm link on WhatsApp */}
+      {/* The delivery receipt prints by itself (hidden frame: browsers block new tabs opened after the save) */}
+      {doneId && <iframe key={doneId} src={withBase(`/receipt/${doneId}?kind=delivery`)} title={t.printDelivery} className="fixed -left-[9999px] top-0 h-[1px] w-[1px]" />}
       {popup && doneWa && (
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setPopup(false)}>
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 flex flex-col gap-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-semibold">{t.popupTitle}</h2>
             <p className="text-sm text-stone-600">{t.popupNote}</p>
             <a href={doneWa} target="_blank" rel="noopener" onClick={() => setPopup(false)} className="rounded-lg bg-emerald-700 py-3 text-center text-base font-bold text-white">{t.sendConfirm}</a>
-            <button className="text-sm underline" onClick={() => setPopup(false)}>{t.popupLater}</button>
           </div>
         </div>
       )}
@@ -76,8 +77,7 @@ export function PickupPanel({ locale, role, jobs }: { locale: Locale; role: AppR
         {shown.map((j) => (
           <PickupCard key={j.id} d={d} j={j} role={role} busy={busy} run={run} money={money}
             onDone={(o) => { setNotice(o === "closed" ? t.closedMsg(j.ticketNo) : t.collectedMsg(j.ticketNo)); setDoneId(j.id); setDoneWa(j.waDoneHref);
-              window.open(withBase(`/receipt/${j.id}?kind=delivery`), "_blank", "noopener"); // delivery receipt, printed straight away
-              if (j.waDoneHref) setPopup(true); }} />
+              setPopup(true); }} />
         ))}
       </section>
     </div>
