@@ -951,12 +951,15 @@ function bucketOf(d,g){if(g==='day')return d;if(g==='month')return d.slice(0,7)+
 function bucketKeys(f,t,g){const out=[];let k=bucketOf(f,g);for(let i=0;i<800&&k<=t;i++){out.push(k);k=g==='day'?addD(k,1):g==='week'?addD(k,7):addM(k,1)}return out}
 function bucketLabel(k,g,short){if(g==='day')return short?`${+k.slice(8)}/${+k.slice(5,7)}`:fD(k,true);if(g==='month')return short?MON[+k.slice(5,7)-1]+(short==='y'?" '"+k.slice(2,4):''):MONL[+k.slice(5,7)-1]+' '+k.slice(0,4);return (short?'':'Week of ')+fDM(k,!short)}
 function seriesBy(rows,keys,g){const by=split(rows,r=>bucketOf(r.date,g));return keys.map(k=>{const rr=by.get(k);return rr?agg(rr):null})}
-function spark(vals,hi){
+let SPKN=0;
+function spark(vals,tone,hi){
   const W=200,H=34,n=vals.length;if(n<2)return '';const mx=Math.max(...vals),mn=Math.min(...vals),rg=mx-mn||1;
   const x=i=>n===1?W/2:i*(W/(n-1)),y=v=>H-2-(v-mn)/rg*(H-6);
   const pts=vals.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ');
   const hiI=hi==null?n-1:hi;
-  return `<div class="spk"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,${H} ${pts} ${W},${H}" fill="var(--mark-wash)"/><polyline points="${pts}" fill="none" stroke="var(--mark)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg><i style="left:${(x(hiI)/W*100).toFixed(2)}%;top:${y(vals[hiI]).toFixed(1)}px"></i></div>`;
+  /* growth = green, fall = red/pink (same rule as the % chip); the line fades in toward the latest point */
+  const col=tone==='good'?'var(--up)':tone==='bad'?'var(--down)':'var(--mark)',id='spk'+(++SPKN);
+  return `<div class="spk"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${id}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".34"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient><linearGradient id="${id}l" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="0"><stop offset="0" stop-color="${col}" stop-opacity=".35"/><stop offset=".7" stop-color="${col}"/></linearGradient></defs><polygon points="0,${H} ${pts} ${W},${H}" fill="url(#${id}a)"/><polyline points="${pts}" fill="none" stroke="url(#${id}l)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg><i style="left:${(x(hiI)/W*100).toFixed(2)}%;top:${y(vals[hiI]).toFixed(1)}px;background:${col}"></i></div>`;
 }
 
 /* ---------- notices ---------- */
@@ -1054,7 +1057,8 @@ function renderKpis(L){
   /* sparkline window: the period itself, or the last 14 days for short periods so a single day has context */
   const ctx=n<7,sf=ctx?addD(S.to,-13):S.from,sn=diffD(sf,S.to)+1,g=sn<=92?'day':sn<=400?'week':'month';
   const keys=bucketKeys(sf,S.to,g),ser=seriesBy(slice(sf,S.to).filter(r=>BR.test(r)&&inCat(r)),keys,g);
-  const sp=k=>keys.length>2?spark(ser.map(x=>x?x[k]:0)):'';
+  const toneOf=(t,v)=>{let up;if(C&&C.has&&t.c!=null&&isFinite(t.c)&&t.c!==t.x)up=t.x>t.c;else if(v&&v.length>1&&v[v.length-1]!==v[0])up=v[v.length-1]>v[0];else return '';return (t.inv?!up:up)?'good':'bad'};
+  const sp=t=>{if(keys.length<=2)return '';const k=t.sk||t.k,v=ser.map(x=>x?x[k]:0);return spark(v,toneOf(t,v))};
   const vis=visitorsFor(BR.sel.size?[...BR.sel]:BR.all,S.from,S.to),visP=C&&C.has?visitorsFor(BR.sel.size?[...BR.sel]:BR.all,C.f,C.t):null;
   const T=[
    {k:'orders',l:'Orders',i:'receipt',v:num(a.orders),c:ap&&ap.orders,x:a.orders,was:ap&&num(ap.orders),h:'Invoices with a sale. Returns are not counted as orders.'},
@@ -1064,11 +1068,11 @@ function renderKpis(L){
    {k:'asp',l:'Avg price per piece',i:'coin',v:moneyHTML(a.asp),c:ap&&ap.asp,x:a.asp,was:ap&&money(ap.asp),h:'Sales ÷ units'},
    {k:'ret',l:'Returns',i:'undo',v:moneyHTML(a.ret),c:ap&&ap.ret,x:a.ret,was:ap&&money(ap.ret),inv:true,extra:`${num(a.retInv)} credit ${a.retInv===1?'note':'notes'}`,h:'Value of returned lines in this selection'},
    vis?{k:'conv',l:'Conversion',i:'people',v:(vis.conv*100).toFixed(1)+'%',c:visP&&visP.conv,x:vis.conv,was:visP&&(visP.conv*100).toFixed(1)+'%',abs:visP?(Math.abs(vis.conv-visP.conv)*100).toFixed(1)+' pts':null,extra:`${num(vis.t)} buyers of ${num(vis.v)} visitors`,h:'Buyers ÷ visitors, as typed in the Daily Store Report',
-      spark:(()=>{if(g!=='day'||keys.length<3)return '';const bs=BR.sel.size?[...BR.sel]:BR.all;const v=keys.map(k=>{const x=visitorsFor(bs,k,k);return x?x.conv*100:null});return v.filter(x=>x!=null).length>2?spark(v.map(x=>x==null?0:x)):''})()}
+      spark:t=>{if(g!=='day'||keys.length<3)return '';const bs=BR.sel.size?[...BR.sel]:BR.all;const v=keys.map(k=>{const x=visitorsFor(bs,k,k);return x?x.conv*100:null});const vv=v.map(x=>x==null?0:x);return v.filter(x=>x!=null).length>2?spark(vv,toneOf(t,vv)):''}}
       :{k:'perday',l:'Avg sales per day',i:'cal',v:moneyHTML(a.days?a.rev/a.days:0),c:ap&&ap.days?ap.rev/ap.days:null,x:a.days?a.rev/a.days:0,was:ap&&ap.days?money(ap.rev/ap.days):'',h:'Sales ÷ days with sales',sk:'rev'}
   ];
   let html=T.map(t=>{const dl=C&&C.has&&t.c!=null?deltaChip(t.x,t.c,{inverse:t.inv,abs:t.abs,title:'Was '+t.was}):'';
-    return `<article class="kpi" data-k="${t.k}"><div class="kh">${ic(t.i)}<span>${t.l}</span><span class="hint" title="${esc(t.h)}">${ic('info')}</span></div><div class="kv">${t.v}</div><div class="kd">${dl}${dl&&t.was?`<span>was ${t.was}</span>`:''}${t.extra?`<span>${t.extra}</span>`:''}${!C?'':!C.has?'<span>nothing to compare</span>':''}</div><div class="kspark">${t.spark!=null?t.spark:sp(t.sk||t.k)}</div></article>`}).join('');
+    return `<article class="kpi" data-k="${t.k}"><div class="kh">${ic(t.i)}<span>${t.l}</span><span class="hint" title="${esc(t.h)}">${ic('info')}</span></div><div class="kv">${t.v}</div><div class="kd">${dl}${dl&&t.was?`<span>was ${t.was}</span>`:''}${t.extra?`<span>${t.extra}</span>`:''}${!C?'':!C.has?'<span>nothing to compare</span>':''}</div><div class="kspark">${t.spark?t.spark(t):sp(t)}</div></article>`}).join('');
   /* target tile */
   let tv='—',tb='',tn='';
   if(!tgt||tgt.kind==='loading'){tv='<span class="minor">Loading targets…</span>'}
