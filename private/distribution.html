@@ -54,7 +54,7 @@ video{width:100%;max-width:420px;border-radius:12px;background:#000}
 
 <div id="pShip">
 <div class="card"><div class="row">
-  <select id="sel" aria-label="Shipment" style="min-width:260px"></select><span class="note" id="status"></span>
+  <select id="sel" aria-label="Shipment" style="min-width:260px"></select><button class="btn" id="ren" hidden title="Edit the name">✎ Edit name</button><span class="note" id="status"></span>
   <label class="btn go" id="upBtn" hidden>Upload invoice<input type="file" id="upFile" accept=".xlsx,.xls,.csv" hidden></label>
   <button class="btn" id="alloc" hidden>Refresh stock &amp; sell out</button>
   <button class="btn" id="final" hidden></button>
@@ -62,6 +62,7 @@ video{width:100%;max-width:420px;border-radius:12px;background:#000}
   <button class="btn del" id="del" hidden>Delete</button>
   <span class="note" id="msg"></span>
 </div><div class="note" id="diag" style="margin-top:6px"></div></div>
+<div class="card" id="histCard" hidden><h2>History</h2><div class="note">Shipments made final. Open one to look at it, reopen it to change it again, or delete it.</div><div class="tw"><table id="histT"></table></div></div>
 <div class="kpis" id="kpis"></div>
 <div class="card"><h2>Pieces per store</h2><div class="bars" id="bars"></div></div>
 <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Split by SKU</h2><span class="row"><input type="search" id="q" placeholder="Search SKU, EAN or name" style="width:220px"><span class="note" id="cnt"></span></span></div>
@@ -94,6 +95,9 @@ video{width:100%;max-width:420px;border-radius:12px;background:#000}
     <label class="note">Target cover <input type="number" id="target" min="0.5" max="12" step="0.5" style="width:60px"> months</label>
     <label class="note">At most <input type="number" id="maxPer" min="0" max="999" style="width:60px"> pieces per store per SKU (0 = no limit)</label>
   </div>
+  <h2 style="margin-top:16px">Subcollections</h2>
+  <div class="note">Items whose SKU, description or category contain the text go only to the stores ticked (for example engraving to CFC and MOE, where the machines are). Separate several words with a comma.</div>
+  <div id="ruleList"></div>
   <div class="row" style="margin-top:10px"><button class="btn go" id="stSave">Save</button><span class="note" id="stMsg"></span></div>
 </div>
 </div>
@@ -159,11 +163,16 @@ $('pics').onchange=()=>{try{localStorage.setItem('ds.pics',$('pics').checked?'1'
 /* ---------- load ---------- */
 async function boot(keep){
   try{H=await api('/api/dist');LVL=H.level;ST=H.settings.stores;
-    ['upBtn','alloc','del','tStores','tShip'].forEach(id=>$(id).hidden=!mg());document.querySelector('.tabs').hidden=!mg();
+    ['upBtn','alloc','del','ren','tStores','tShip'].forEach(id=>$(id).hidden=!mg());document.querySelector('.tabs').hidden=!mg();
     if(!mg())tab('scan');
-    $('sel').innerHTML=H.shipments.length?H.shipments.map(s=>`<option value="${s.id}">${esc(s.name)}${s.invoice?' · '+esc(s.invoice):''} · ${s.status} · ${fmt(s.pcs)} pcs</option>`).join(''):'<option value="">No shipments yet</option>';
-    const id=keep&&H.shipments.some(s=>s.id===keep)?keep:(H.shipments[0]||{}).id;
-    $('sel2').innerHTML=$('sel').innerHTML;
+    const opt=l=>l.map(s=>`<option value="${s.id}">${esc(s.name)}${s.invoice?' · '+esc(s.invoice):''} · ${s.status} · ${fmt(s.pcs)} pcs</option>`).join('');
+    const drafts=H.shipments.filter(s=>s.status!=='Final'),done=H.shipments.filter(s=>s.status==='Final');
+    const id=keep&&H.shipments.some(s=>s.id===keep)?keep:(drafts[0]||{}).id;
+    const shown=drafts.concat(done.filter(s=>s.id===id));
+    $('sel').innerHTML=shown.length?opt(shown):'<option value="">No open shipment</option>';
+    $('sel2').innerHTML=H.shipments.length?opt(H.shipments):'<option value="">No shipments yet</option>';
+    $('histCard').hidden=!mg()||!done.length;
+    $('histT').innerHTML=`<tr><th class="l">Shipment</th><th class="l">Invoice</th><th>Pieces</th><th class="l">Uploaded</th><th></th></tr>`+done.map(s=>`<tr><td class="l"><b>${esc(s.name)}</b></td><td class="l">${esc(s.invoice||'')}</td><td>${fmt(s.pcs)}</td><td class="l">${new Date(s.at).toLocaleDateString()}</td><td class="l"><button class="btn sm" data-hopen="${s.id}">Open</button> <button class="btn sm" data-hre="${s.id}">Reopen</button> <button class="btn sm del" data-hdel="${s.id}">Delete</button></td></tr>`).join('');
     if(id){$('sel').value=id;$('sel2').value=id;await open(id)}else{O=null;draw()}
     drawStores();
   }catch(e){showErr(e.message)}}
@@ -231,6 +240,13 @@ $('alloc').onclick=async()=>{if(!O)return;const b=$('alloc');b.disabled=true;$('
   try{await api('/api/dist?op=allocate',{id:O.id});$('msg').textContent='Updated.';await open(O.id)}catch(e){$('msg').textContent='';showErr(e.message)}b.disabled=false};
 $('final').onclick=async()=>{if(!O)return;const to=O.status==='Final'?'Draft':'Final';if(to==='Final'&&!confirm('Make this split final? Nobody can change it until it is reopened.'))return;
   try{await api('/api/dist?op=status',{id:O.id,status:to});await boot(O.id)}catch(e){showErr(e.message)}};
+$('ren').onclick=async()=>{if(!O)return;const n=prompt('New name of this shipment:',O.name);if(n==null||!n.trim()||n.trim()===O.name)return;
+  try{await api('/api/dist?op=rename',{id:O.id,name:n.trim()});await boot(O.id)}catch(e){showErr(e.message)}};
+$('histT').onclick=async e=>{const b=e.target.closest('button');if(!b)return;const id=b.dataset.hopen||b.dataset.hre||b.dataset.hdel,s=H.shipments.find(x=>x.id===id);if(!s)return;
+  try{if(b.dataset.hopen)await boot(id);
+    else if(b.dataset.hre){await api('/api/dist?op=status',{id,status:'Draft'});await boot(id)}
+    else{const t=prompt(`Delete the shipment "${s.name}" for good? Type its name to confirm:`);if(t==null)return;if(t.trim()!==s.name){alert('The name does not match. Nothing was deleted.');return}
+      await api('/api/dist?op=delete',{id});await boot(O&&O.id!==id?O.id:undefined)}}catch(er){showErr(er.message)}};
 $('del').onclick=async()=>{if(!O)return;const t=prompt(`Delete the shipment "${O.name}" for good? Type its name to confirm:`);if(t==null)return;if(t.trim()!==O.name){alert('The name does not match. Nothing was deleted.');return}
   try{await api('/api/dist?op=delete',{id:O.id});await boot()}catch(e){showErr(e.message)}};
 
@@ -281,8 +297,16 @@ function drawStores(){const s=H.settings;$('months').value=s.months;$('target').
   $('stList').innerHTML=ST.map((x,i)=>`<div class="st"><span class="row" style="gap:2px;flex-direction:column"><button class="btn sm" data-up="${i}" ${i?'':'disabled'}>▲</button><button class="btn sm" data-dn="${i}" ${i<ST.length-1?'':'disabled'}>▼</button></span><input data-f="code" data-i="${i}" value="${esc(x.code)}"><input data-f="name" data-i="${i}" value="${esc(x.name)}"><input data-f="match" data-i="${i}" value="${esc(x.match)}"><input type="checkbox" data-f="on" data-i="${i}" ${x.on!==false?'checked':''}></div>`).join('')+`<div class="row" style="margin-top:8px"><button class="btn sm" id="stAdd">Add a store</button></div>`;
   $('stList').querySelectorAll('[data-f]').forEach(inp=>inp.oninput=()=>{const x=ST[+inp.dataset.i];x[inp.dataset.f]=inp.type==='checkbox'?inp.checked:inp.value;$('stMsg').textContent='Not saved yet.'});
   $('stList').querySelectorAll('[data-up],[data-dn]').forEach(b=>b.onclick=()=>{const i=+(b.dataset.up??b.dataset.dn),j=b.dataset.up!=null?i-1:i+1;[ST[i],ST[j]]=[ST[j],ST[i]];drawStores();$('stMsg').textContent='Not saved yet.'});
-  $('stAdd').onclick=()=>{ST.push({code:'New',name:'',match:'',on:true});drawStores()}}
-$('stSave').onclick=async()=>{try{await api('/api/dist?op=settings',{stores:ST,months:+$('months').value,target:+$('target').value,maxPer:+$('maxPer').value});$('stMsg').textContent='Saved. Press "Refresh stock & sell out" on a shipment to split it again.';await boot(O&&O.id)}catch(e){showErr(e.message)}};
+  $('stAdd').onclick=()=>{ST.push({code:'New',name:'',match:'',on:true});drawStores()};
+  drawRules()}
+let RULES=null;
+function drawRules(){if(!RULES)RULES=JSON.parse(JSON.stringify(H.settings.rules||[]));
+  $('ruleList').innerHTML=RULES.map((r,i)=>`<div class="row" style="margin-top:8px"><input data-rm="${i}" value="${esc(r.match)}" placeholder="for example engraving" style="width:200px">${ST.map(x=>`<label class="note"><input type="checkbox" data-rs="${i}" value="${esc(x.code)}" ${r.stores.includes(x.code)?'checked':''}> ${esc(x.code)}</label>`).join(' ')}<button class="btn sm del" data-rx="${i}">Remove</button></div>`).join('')+`<div class="row" style="margin-top:8px"><button class="btn sm" id="ruleAdd">Add a subcollection</button></div>`;
+  $('ruleList').querySelectorAll('[data-rm]').forEach(x=>x.oninput=()=>{RULES[+x.dataset.rm].match=x.value;$('stMsg').textContent='Not saved yet.'});
+  $('ruleList').querySelectorAll('[data-rs]').forEach(x=>x.onchange=()=>{const r=RULES[+x.dataset.rs];r.stores=r.stores.filter(c=>c!==x.value);if(x.checked)r.stores.push(x.value);$('stMsg').textContent='Not saved yet.'});
+  $('ruleList').querySelectorAll('[data-rx]').forEach(x=>x.onclick=()=>{RULES.splice(+x.dataset.rx,1);drawRules();$('stMsg').textContent='Not saved yet.'});
+  $('ruleAdd').onclick=()=>{RULES.push({match:'',stores:[]});drawRules()}}
+$('stSave').onclick=async()=>{try{await api('/api/dist?op=settings',{stores:ST,months:+$('months').value,target:+$('target').value,maxPer:+$('maxPer').value,rules:(RULES||[]).filter(r=>r.match.trim()&&r.stores.length)});RULES=null;$('stMsg').textContent='Saved. Press "Refresh stock & sell out" on a shipment to split it again.';await boot(O&&O.id)}catch(e){showErr(e.message)}};
 
 function tab(t){if(!mg()&&t!=='scan')t='scan';document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));$('pShip').hidden=t!=='ship';$('pScan').hidden=t!=='scan';$('pStores').hidden=t!=='stores';if(t==='scan')setTimeout(()=>$('scanIn').focus(),50)}
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>tab(b.dataset.tab));

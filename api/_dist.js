@@ -9,6 +9,7 @@
 //   POST /api/dist?op=status    manage   {id, status: Draft|Final}
 //   POST /api/dist?op=scan      warehouse {id, code (EAN or SKU), n: 1|-1}
 //   POST /api/dist?op=delete    manage   {id}
+//   POST /api/dist?op=rename    manage   {id, name}
 // /api/dist is rewritten to /api/erp?dist=1 (vercel.json): the Hobby plan allows 12 functions.
 const crypto = require('crypto');
 const store = require('./_store');
@@ -29,7 +30,9 @@ const DEFAULT_STORES = [
   { code: 'Almaza', name: 'City Centre Almaza', match: 'almaza', on: true },
   { code: 'City', name: 'City Stars', match: 'city stars|citystars', on: true }
 ];
-const DEFAULTS = { stores: DEFAULT_STORES, months: 3, target: 2, maxPer: 0 };
+const DEFAULTS = { stores: DEFAULT_STORES, months: 3, target: 2, maxPer: 0, rules: [] };
+// subcollection rules: items whose SKU, description or category contain the text go only to those stores (engraving -> CFC, MOE)
+const ruleFor = (l, rules) => (rules || []).find(r => { const t = (l[1] + ' ' + l[3] + ' ' + l[6]).toLowerCase(); return r.match && String(r.match).toLowerCase().split(/\s*[,|]\s*/).filter(Boolean).some(w => t.includes(w)); });
 
 function send(res, code, obj) {
   res.setHeader('Cache-Control', 'no-store');
@@ -99,7 +102,8 @@ function allocAll(o, st) {
   const alloc = {};
   for (const l of o.lines) {
     const sku = l[1], snap = (o.snap && o.snap[sku]) || { soh: {}, sold: {} };
-    alloc[sku] = split(l[2], st.stores, snap.soh, snap.sold, st.months, st.target, st.maxPer, l[7]);
+    const r = ruleFor(l, st.rules), only = r && st.stores.filter(x => r.stores.includes(x.code));
+    alloc[sku] = split(l[2], only && only.some(x => x.on !== false) ? only : st.stores, snap.soh, snap.sold, st.months, st.target, st.maxPer, l[7]);
   }
   return alloc;
 }
@@ -170,7 +174,8 @@ module.exports = async function handler(req, res) {
     const stores = (Array.isArray(b.stores) ? b.stores : []).slice(0, 30).map(s => ({ code: str(s.code, 20), name: str(s.name, 60), match: str(s.match, 120), on: s.on !== false })).filter(s => s.code);
     if (!stores.length) return send(res, 400, { ok: false, error: 'Keep at least one store.' });
     for (const s of stores) { try { new RegExp(s.match || s.code, 'i'); } catch (_) { return send(res, 400, { ok: false, error: 'The match text of ' + s.code + ' is not valid.' }); } }
-    await store.putJSON(SETTINGS, { stores, months: Math.round(cl(b.months, 1, 12, 3)), target: cl(b.target, 0.5, 12, 2), maxPer: Math.round(cl(b.maxPer, 0, 999, 0)) });
+    await store.putJSON(SETTINGS, { stores, months: Math.round(cl(b.months, 1, 12, 3)), target: cl(b.target, 0.5, 12, 2), maxPer: Math.round(cl(b.maxPer, 0, 999, 0)),
+      rules: (Array.isArray(b.rules) ? b.rules : []).slice(0, 30).map(r => ({ match: str(r.match, 80), stores: (Array.isArray(r.stores) ? r.stores : []).map(c => str(c, 20)).filter(c => stores.some(x => x.code === c)) })).filter(r => r.match && r.stores.length) });
     return send(res, 200, { ok: true });
   }
   const idx = (await store.getJSON(INDEX)) || [];
@@ -194,6 +199,11 @@ module.exports = async function handler(req, res) {
   const saveIdx = async () => { const i = idx.find(x => x.id === o.id); if (i) { i.status = o.status; i.name = o.name; } await store.putJSON(INDEX, idx); };
 
   if (op === 'delete') { await store.del(key); await store.putJSON(INDEX, idx.filter(x => x.id !== b.id)); return send(res, 200, { ok: true }); }
+  if (op === 'rename') {
+    const n = str(b.name, 80); if (!n) return send(res, 400, { ok: false, error: 'Type a name.' });
+    o.name = n; log('Renamed to ' + n); await store.putJSON(key, o); await saveIdx();
+    return send(res, 200, { ok: true });
+  }
   if (op === 'scan') {
     // the warehouse scans a piece: count it against the invoice (EAN or SKU)
     const c = str(b.code, 40), e = eanOf(c), s = skuOf(c);
