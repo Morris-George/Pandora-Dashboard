@@ -31,8 +31,8 @@ const DEFAULT_STORES = [
   { code: 'City', name: 'City Stars', match: 'city stars|citystars', on: true }
 ];
 const DEFAULTS = { stores: DEFAULT_STORES, months: 3, target: 2, maxPer: 0, rules: [] };
-// subcollection rules: items whose SKU, description or category contain the text go only to those stores (engraving -> CFC, MOE)
-const ruleFor = (l, rules) => (rules || []).find(r => { const t = (l[1] + ' ' + l[3] + ' ' + l[6]).toLowerCase(); return r.match && String(r.match).toLowerCase().split(/\s*[,|]\s*/).filter(Boolean).some(w => t.includes(w)); });
+// subcollection rules: items whose SKU, description, category or ERP item group / name contain the text go only to those stores (engraving -> CFC, MOE)
+const ruleFor = (l, rules, grp) => (rules || []).find(r => { const t = (l[1] + ' ' + l[3] + ' ' + l[6] + ' ' + ((grp && grp[l[1]]) || '')).toLowerCase(); return r.match && String(r.match).toLowerCase().split(/\s*[,|]\s*/).filter(Boolean).some(w => t.includes(w)); });
 
 function send(res, code, obj) {
   res.setHeader('Cache-Control', 'no-store');
@@ -102,7 +102,7 @@ function allocAll(o, st) {
   const alloc = {};
   for (const l of o.lines) {
     const sku = l[1], snap = (o.snap && o.snap[sku]) || { soh: {}, sold: {} };
-    const r = ruleFor(l, st.rules), only = r && st.stores.filter(x => r.stores.includes(x.code));
+    const r = ruleFor(l, st.rules, o.grp), only = r && st.stores.filter(x => r.stores.includes(x.code));
     alloc[sku] = split(l[2], only && only.some(x => x.on !== false) ? only : st.stores, snap.soh, snap.sold, st.months, st.target, st.maxPer, l[7]);
   }
   return alloc;
@@ -111,7 +111,7 @@ function allocAll(o, st) {
 /* ---------- stock and sell out per store ---------- */
 async function snapshot(skus, st) {
   const { runReport } = require('./erp');
-  const want = new Set(skus), snap = {};
+  const want = new Set(skus), snap = {}, grp = {};
   skus.forEach(s => { snap[s] = { soh: {}, sold: {} }; });
   const d = cairoToday();
   let list;
@@ -121,6 +121,7 @@ async function snapshot(skus, st) {
   for (const x of list) {
     const s = skuOf(x.sku || x['sku-item'] || x.item_code); if (!want.has(s)) continue;
     const c = storeOf(x.warehouse, st.stores), q = num(x.bal_qty != null ? x.bal_qty : x.balance_qty);
+    if (!grp[s]) grp[s] = str([x.item_group, x.full_group, x.item_name, x.description].filter(Boolean).join(' '), 300);
     if (!c) { const w = str(x.warehouse, 60); if (q) unknownWh[w] = (unknownWh[w] || 0) + q; continue; }
     snap[s].soh[c] = (snap[s].soh[c] || 0) + q;
   }
@@ -135,12 +136,13 @@ async function snapshot(skus, st) {
     for (const r of f.rows) {
       if (r[0] < from) continue;
       const s = skuOf(r[5]); if (!want.has(s)) continue;
+      if (!grp[s]) grp[s] = str([r[8], r[10], r[6]].filter(Boolean).join(' '), 300);
       const c = storeOf(r[7], st.stores);
       if (!c) { unknownBr[r[7]] = (unknownBr[r[7]] || 0) + num(r[2]); continue; }
       snap[s].sold[c] = (snap[s].sold[c] || 0) + num(r[2]);
     }
   }
-  return { snap, at: new Date().toISOString(), from, unknownWh, unknownBr };
+  return { snap, grp, at: new Date().toISOString(), from, unknownWh, unknownBr };
 }
 
 module.exports = async function handler(req, res) {
@@ -161,7 +163,7 @@ module.exports = async function handler(req, res) {
     const alloc = allocAll(o, st);
     for (const [k, v] of Object.entries(o.manual || {})) alloc[k] = v;
     const out = { ...o, alloc };
-    if (!mg) { out.lines = o.lines.map(l => [l[0], l[1], l[2], l[3], 0, l[5], l[6], l[7]]); delete out.snap; delete out.diag; }
+    if (!mg) { out.lines = o.lines.map(l => [l[0], l[1], l[2], l[3], 0, l[5], l[6], l[7]]); delete out.snap; delete out.diag; delete out.grp; }
     return send(res, 200, { ok: true, level: lvl, settings: st, shipment: out });
   }
   if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
@@ -219,7 +221,7 @@ module.exports = async function handler(req, res) {
   if (o.status === 'Final' && !(op === 'status' && b.status === 'Draft')) return send(res, 400, { ok: false, error: 'This shipment is final. Reopen it first.' });
   if (op === 'allocate') {
     const st = await settings();
-    try { const r = await snapshot(o.lines.map(l => l[1]), st); o.snap = r.snap; o.diag = { at: r.at, from: r.from, months: st.months, unknownWh: r.unknownWh, unknownBr: r.unknownBr }; }
+    try { const r = await snapshot(o.lines.map(l => l[1]), st); o.snap = r.snap; o.grp = r.grp; o.diag = { at: r.at, from: r.from, months: st.months, unknownWh: r.unknownWh, unknownBr: r.unknownBr }; }
     catch (e) { return send(res, 502, { ok: false, error: String(e && e.message || e).slice(0, 300) }); }
     log('Stock and sell out refreshed from ERP');
     await store.putJSON(key, o);
