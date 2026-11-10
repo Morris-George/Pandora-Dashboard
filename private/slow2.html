@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head><link rel="icon" type="image/png" href="/favicon.png?v=2">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Slowmoving 2.0</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--bg:#FBF6F7;--surface:#FFFAF1;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--accent:#FF93A0;--soft:#FFE4E8;--good:#1F7A4D;--warn:#B7791F;--bad:#C2414F;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171013;--surface:#241A1E;--ink:#F3EADB;--ink2:#B9A5AC;--line:#3A2A30;--soft:#3A2229;--good:#5CC48E;--warn:#E0A84A;--bad:#FF8A96;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171013;--surface:#241A1E;--ink:#F3EADB;--ink2:#B9A5AC;--line:#3A2A30;--soft:#3A2229;--good:#5CC48E;--warn:#E0A84A;--bad:#FF8A96;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding:20px 16px 48px}
+.wrap{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}h2{margin:0 0 8px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}h2::before{content:"";width:4px;height:16px;border-radius:2px;background:var(--accent)}
+.sub,.note{color:var(--ink2);font-size:12.5px}.crumb{color:var(--ink2);font-size:12.5px;font-weight:600;text-decoration:none}
+header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0;box-shadow:0 1px 2px rgba(42,31,36,.04),0 4px 14px rgba(42,31,36,.04)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn,select,input{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.btn{cursor:pointer;font-weight:600}.btn.go{background:var(--accent);border-color:var(--accent);color:#2A1018}.btn:disabled{opacity:.5}
+.err{background:var(--accent);color:#2A1018;border-radius:10px;padding:10px 14px;font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.kpi{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 10px 10px 14px;cursor:default}.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}.kpi small{display:block;color:var(--ink2);font-size:11.5px;font-weight:600}.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.tw{overflow:auto;max-height:70vh}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:5px 7px;border-top:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}th{position:sticky;top:0;background:var(--surface);color:var(--ink2);font-size:11.5px;z-index:1;cursor:pointer}
+th.l,td.l{text-align:left}td.name{max-width:260px;overflow:hidden;text-overflow:ellipsis;text-align:left}
+tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr[data-f]{cursor:pointer}
+.img{width:36px;height:36px;border-radius:6px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;vertical-align:middle;font-size:9px;color:var(--ink2)}.img img{width:100%;height:100%;object-fit:cover}.nopic .img{display:none}
+.hb{display:flex;height:12px;border-radius:99px;overflow:hidden;background:var(--soft);min-width:80px}.hb i{display:block;height:100%}
+.tag{font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;margin-right:3px}.t-ord{background:var(--bad);color:#fff}.t-sell{background:var(--good);color:#fff}.t-dead{background:var(--soft);color:var(--bad)}.t-move{background:#8FB8DE;color:#10202A}
+.inclhead{font-size:13px;color:var(--ink2);margin:10px 0 6px;font-weight:700}.inclbox{display:flex;flex-wrap:wrap;gap:8px}.incl{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:600;font-size:13px;cursor:pointer;opacity:.55}.incl.on{opacity:1;border-color:var(--accent)}.incl input{width:16px;height:16px;margin:0}.incl b{font-weight:500;font-size:12px;color:var(--ink2)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer}.chip.on{background:var(--accent);border-color:var(--accent);color:#2A1018}
+.qk{padding:6px 0;border-top:1px solid var(--line)}.qk:first-child{border-top:0}
+.bad{color:var(--bad)}.good{color:var(--good)}
+.trk{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.tk{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px 10px 16px;cursor:pointer;transition:transform .15s,box-shadow .15s;overflow:hidden}.tk::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}.tk:hover,.sc:hover,.star:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(42,31,36,.12)}.tk span{font-size:20px}.tk b{display:block;font-size:17px;font-weight:800}.tk small{color:var(--ink2);font-size:11.5px;font-weight:600}.tk:first-child,.tk:nth-child(2){cursor:default}
+.star{display:flex;gap:12px;align-items:center;margin-top:10px;padding:10px 12px;border-radius:14px;background:var(--soft);cursor:pointer;transition:transform .15s,box-shadow .15s}.star .img{width:56px;height:56px;flex:none}
+.scards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}.sc{border:1px solid var(--line);border-radius:16px;padding:12px;cursor:pointer;background:var(--surface);transition:transform .15s,box-shadow .15s;display:flex;flex-direction:column;gap:8px}
+.stack{display:inline-flex}.stack .img{width:40px;height:40px;margin-left:-10px;border:2px solid var(--surface);border-radius:50%}.stack .img:first-child{margin-left:0}
+.flowrow{display:grid;grid-template-columns:62px 1fr 44px;gap:8px;align-items:center}.flowrow .lbl{font-size:12px;color:var(--ink2);font-weight:600}.flowrow b{text-align:right}
+.rlist,.rl{font-variant-numeric:tabular-nums}.rlist{display:flex;flex-direction:column;gap:6px}.rl{display:grid;grid-template-columns:minmax(70px,auto) 1fr 52px 64px;gap:10px;align-items:center;padding:7px 10px;border:1px solid var(--line);border-radius:12px;cursor:pointer;transition:background .15s}.rlist .rl{grid-template-columns:minmax(70px,auto) 20px minmax(70px,auto) 1fr 52px 64px auto}.rl:hover{background:var(--soft)}.rl .arr{color:var(--accent);font-weight:800}.rl .stack .img{width:30px;height:30px}
+table.hm{width:auto}table.hm th,table.hm td{text-align:center;padding:9px 12px;border:1px solid var(--line);font-size:13px}table.hm th{cursor:pointer}.cell{cursor:pointer;font-weight:700;transition:transform .1s}.cell:hover{outline:2px solid var(--accent);outline-offset:-2px}.cell0{color:var(--ink2);opacity:.4}
+#trM{position:fixed;inset:0;z-index:50;background:rgba(23,16,19,.55);display:flex;align-items:center;justify-content:center;padding:14px}#trMB{background:var(--surface);color:var(--ink);border-radius:20px;width:min(720px,100%);max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.mh{display:flex;gap:10px;align-items:center;padding:14px 16px;position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);z-index:2}.mc{padding:12px 16px 18px}.mc h3{margin:16px 0 8px;font-size:14px}
+.tip{background:var(--soft);border-radius:12px;padding:9px 12px;font-size:13px;margin-bottom:6px}.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:640px){.g2{grid-template-columns:1fr}.rl,.rlist .rl{grid-template-columns:1fr auto}.rl .hb,.rlist .rl .arr{display:none}}
+.ir{display:flex;gap:12px;align-items:center;padding:8px 6px;border-top:1px solid var(--line);cursor:pointer;border-radius:10px}.ir:hover{background:var(--soft)}.ir .pc{font-size:16px}.ir small{color:var(--ink2);font-weight:600}
+.img.lg{width:56px;height:56px;border-radius:12px;flex:none}.img.xl{width:min(280px,70vw);height:min(280px,70vw);border-radius:18px;font-size:12px}.bigpic{display:flex;justify-content:center;margin:6px 0}
+.sm{padding:3px 9px;font-size:12px}
+.ic{width:1.1em;height:1.1em;vertical-align:-.2em;flex:none}.tk .ico{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:10px;background:color-mix(in srgb,var(--c) 20%,transparent);color:var(--c);margin-bottom:4px}.tk .ico .ic{width:19px;height:19px}.star .ic,.tip .ic{color:var(--warn)}.flowrow .lbl .ic{color:var(--accent)}.chip .ic{width:1em;height:1em}.mc h3 .ic{color:var(--accent);width:1.15em;height:1.15em}.rl .arr .ic{vertical-align:-.25em}.btn .ic{width:1em;height:1em}
+
+#stM{position:fixed;inset:0;z-index:60;background:rgba(23,16,19,.55);display:flex;align-items:center;justify-content:center;padding:14px}
+#stB{background:var(--surface);color:var(--ink);border-radius:20px;width:min(980px,100%);height:min(92vh,900px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden}
+#stB .pkctl{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+#pkList{flex:1;overflow:auto;padding:8px 12px}
+.pk{display:flex;flex-direction:column;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:14px;margin-bottom:6px;cursor:pointer;transition:background .12s,border-color .12s;user-select:none}
+.pk:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.pk.sel{background:var(--soft);border-color:var(--accent);box-shadow:inset 5px 0 0 var(--accent)}
+.pk .pkt{display:flex;gap:12px;align-items:center}.pkp{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-left:36px;cursor:default;line-height:1.7}.dst{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--accent);border-radius:999px;padding:2px 4px 2px 12px;background:var(--surface)}.dst input{width:60px;padding:3px 6px;font-weight:700;text-align:center}.dst .x{border:0;background:none;color:var(--ink2);cursor:pointer;padding:2px;display:inline-flex}.pkp select{padding:3px 8px;border-radius:999px}.ln{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0}.ln select{max-width:46vw}.ln input{width:70px;text-align:center;font-weight:700}.ln .arr{color:var(--accent)}.ln .x{border:0;background:none;color:var(--ink2);cursor:pointer;padding:2px;display:inline-flex}.pk .ck{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;color:transparent}
+.pk.sel .ck{background:var(--accent);border-color:var(--accent);color:#2A1018}
+.pk .ck .ic{width:15px;height:15px}
+.pk .mid{min-width:0;flex:1}.pk .mid b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk .qt{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pkfoot{padding:12px 16px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--surface)}
+/* ---------- Slowmoving 2.0 ---------- */
+.fs{display:flex;flex-wrap:wrap;gap:6px}.fs .chip{padding:5px 12px;font-weight:700;background:var(--surface)}.fs .chip b{font-weight:500;color:var(--ink2);margin-left:4px}.fs .chip.on b{color:inherit}
+.hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.hk{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}.hk small{display:block;color:var(--ink2);font-size:11.5px;font-weight:700}.hk b{display:block;font-size:21px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hk span{font-size:11.5px;color:var(--ink2)}
+.plan{display:flex;height:22px;border-radius:99px;overflow:hidden;background:var(--soft);gap:2px}.plan i{display:block;height:100%;min-width:5px;background:var(--c)}.plan.sm{height:10px;gap:1px;min-width:70px}.plan[data-go] i{cursor:pointer}
+.acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px;margin-top:12px}
+.ac{position:relative;border:1px solid var(--line);border-radius:14px;padding:12px 12px 12px 18px;cursor:pointer;overflow:hidden;background:var(--surface);transition:transform .15s,box-shadow .15s;display:flex;flex-direction:column;gap:4px}.ac::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--c)}.ac:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(42,31,36,.12)}.ac.on{border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c)}
+.ac .hd{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px}.ac .hd .ico{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:10px;background:color-mix(in srgb,var(--c) 22%,transparent);flex:none}.ac .big{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}.ac .big small{font-size:12px;font-weight:600;color:var(--ink2)}.ac .go{font-size:12px;font-weight:700;color:var(--ink2);margin-top:2px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;border-radius:99px;padding:2px 9px;background:color-mix(in srgb,var(--c) 20%,transparent);border:1px solid var(--c);white-space:nowrap}
+.it{display:grid;grid-template-columns:48px minmax(0,1.25fr) minmax(0,1.25fr) minmax(86px,auto);gap:12px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:14px;cursor:pointer;margin-bottom:6px;transition:background .12s}.it:hover{background:var(--soft)}.it .img{width:48px;height:48px;border-radius:10px}.it .mid b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.it .how{font-size:12.5px;margin-top:4px;font-weight:600}.it .nums{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.it .nums b{font-size:15px}
+.nopic .it{grid-template-columns:minmax(0,1.25fr) minmax(0,1.25fr) minmax(86px,auto)}
+.fix{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px}.fix .it{margin:0;grid-template-columns:56px minmax(0,1fr);align-items:start}.fix .it .img{width:56px;height:56px}.nopic .fix .it{grid-template-columns:minmax(0,1fr)}.rank{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#2A1018;font-size:11px;font-weight:800;margin-right:6px;flex:none}
+.sr{display:grid;grid-template-columns:minmax(90px,1.1fr) minmax(70px,1.6fr) 62px minmax(96px,auto) 72px;gap:10px;align-items:center;padding:8px 10px;border-top:1px solid var(--line);cursor:pointer;border-radius:10px;font-variant-numeric:tabular-nums}.sr:hover{background:var(--soft)}.sr.on{background:var(--soft);box-shadow:inset 4px 0 0 var(--accent)}.sr>span,.sr>b{text-align:right;white-space:nowrap}.sr>b:first-child{text-align:left;overflow:hidden;text-overflow:ellipsis}.sr.h{cursor:default;color:var(--ink2);font-size:11.5px;font-weight:700;border-top:0}.sr.h:hover{background:none}
+.br{display:grid;grid-template-columns:minmax(96px,150px) 1fr 108px;gap:10px;align-items:center;padding:5px 6px;cursor:pointer;border-radius:8px}.br:hover{background:var(--soft)}.br.on{font-weight:800;background:var(--soft)}.br>span:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--ink2);margin-top:8px}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c);margin-right:5px;vertical-align:-1px}
+.todo{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:6px}.todo .row{justify-content:space-between}.mcols{display:flex;gap:4px;align-items:flex-end;height:74px}.mcols div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;font-size:10.5px;color:var(--ink2);min-width:0}.mcols i{display:block;width:100%;max-width:26px;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px}
+details.card>summary{cursor:pointer;font-weight:700;list-style:none}details.card>summary::-webkit-details-marker{display:none}
+.lf{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.lf select,.lf input{padding:5px 9px}
+@media(max-width:760px){body{padding:14px 10px 40px}.it{grid-template-columns:48px minmax(0,1fr) auto}.it .do{grid-column:1/-1;order:3}.nopic .it{grid-template-columns:minmax(0,1fr) auto}.sr{grid-template-columns:minmax(80px,1fr) 56px minmax(90px,auto)}.sr .plan,.sr .idl{display:none}.br{grid-template-columns:104px 1fr 92px}.hk b{font-size:18px}}
+#main{display:flex;flex-direction:column;gap:14px}
+</style>
+</head>
+<body><div class="wrap">
+<header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Slowmoving 2.0</h1><div class="sub">Which items are stuck, why, and what to do with each one so it sells.</div></div><div class="actions row"><button class="btn" id="xPlan">Download action plan</button><button class="btn go" id="stBtn">Start transfer</button></div></header>
+<div class="err" id="err" hidden></div>
+<div class="card" id="setup"><div class="row" style="justify-content:space-between"><div class="note" id="meta" style="flex:1;min-width:200px"></div><label class="note"><input type="checkbox" id="pics" checked> Show pictures</label></div>
+  <details id="setD" hidden style="margin-top:8px"><summary class="note" style="cursor:pointer;font-weight:700">Report settings: months, stores and item groups</summary>
+  <div id="run" hidden style="margin-top:8px">
+    <div class="row"><label class="note"><b>No Sales For (Months)</b> <input type="number" id="months" min="1" max="36" value="6" style="width:64px"></label><span class="note">Every store: today's stock in ERP and the last sale of each SKU in that store. Samples, main warehouse and transit are left out.</span><button class="btn sm" id="allSt" hidden>All stores</button><button class="btn sm" id="noSt" hidden>None</button></div>
+    <div class="chips" id="whs" style="margin:8px 0" hidden></div>
+    <div id="incl"></div>
+    <div class="row" style="margin-top:10px"><button class="btn go" id="sync">Run the report</button><button class="btn" id="clear">Clear</button><span class="note" id="msg"></span></div>
+  </div></details>
+</div>
+<div id="main" hidden>
+<div class="fs" id="fs"></div>
+<div class="hero" id="kpis"></div>
+<div class="card"><h2>In Short</h2><div id="quick"></div></div>
+<div class="card"><h2>The Plan: What To Do With Every Slow Piece</h2><div class="note" style="margin-bottom:10px">Every slow piece gets one clear action. Tap an action to see its items.</div><div class="plan" id="planBar" data-go="1"></div><div class="acts" id="acts"></div><div id="ordWarn"></div></div>
+<div class="card"><h2>Fix These First</h2><div class="note" style="margin-bottom:10px" id="fixNote"></div><div class="fix" id="fix"></div></div>
+<div class="card" id="stCard"><h2>Store By Store</h2><div class="note">Tap a store to see only that store, everywhere on the page.</div><div id="byStore" style="margin-top:6px"></div><div class="legend" id="lgd"></div></div>
+<div class="grid2">
+  <div class="card"><h2>Which Categories Are Stuck</h2><div class="note">Tap a row to see its items.</div><div id="byCat" style="margin-top:6px"></div></div>
+  <div class="card" id="ageCard"><h2>How Long It Has Been Sitting</h2><div class="note">Time since the last sale in that store. Tap a row to see its items.</div><div id="byAge" style="margin-top:6px"></div></div>
+</div>
+<div class="card" id="trCard"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Transfers Between Stores</h2><span class="row"><span class="chips" id="trV"></span><button class="btn" id="trX">Download transfers (Excel)</button></span></div>
+  <div class="note" style="margin:4px 0 10px" id="trNote"></div><div id="trIn"></div><div id="tr" style="margin-top:12px"></div></div>
+<div id="trM" hidden><div id="trMB"></div></div>
+<div id="stM" hidden><div id="stB"></div></div>
+<div class="card" id="listCard"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Every Slow Item And Its Action</h2><span class="note" id="cnt"></span></div>
+  <div class="chips" id="flt" style="margin:10px 0 8px"></div>
+  <div class="lf"><input type="search" id="q" placeholder="Search SKU or name" style="flex:1;min-width:160px"><select id="fCat" aria-label="Category"></select><select id="fAge" aria-label="Idle time"></select><select id="fSort" aria-label="Sort"><option value="amt">Most money stuck first</option><option value="qty">Most pieces first</option><option value="age">Longest idle first</option></select></div>
+  <div class="note" style="margin:8px 0" id="itNote"></div>
+  <div id="tbl"></div></div>
+<details class="card"><summary class="note" style="cursor:pointer">The report as it comes from ERP (all columns)</summary><div class="row" style="margin-top:8px"><button class="btn sm" id="rawX">Download all columns (Excel)</button><span class="note">Every store, ticked stores and groups only.</span></div><div class="tw" id="raw" style="margin-top:8px"></div></details>
+</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="/stockcount-pics-1.js" async></script><script src="/stockcount-pics-2.js" async></script><script src="/stockcount-pics-3.js" async></script><script src="/stockcount-pics-4.js" async></script>
+<script>
+/* Sharp pictures: the small built-in picture shows first, the full-size one (from pandoraeg.com, found by our server at /api/pic) replaces it whenever a picture is shown big. */
+window.HD=(function(){const KEY='pandora-hd-v1',M=new Map(),L=new Map(),R=new Map(),F=new Map();let c={};try{c=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+const base=s=>String(s||'').trim().toUpperCase().split('-')[0];
+const big=u=>{try{const x=new URL(String(u).replace(/^http:/,'https:'),location.href);x.searchParams.set('width','900');return x.href}catch(e){return u}};
+function url(sku){const b=base(sku);if(!b||b[0]==='?')return Promise.resolve('');if(c[b])return Promise.resolve(c[b]);
+  if(!M.has(b)){const pr=fetch('/api/pic?sku='+encodeURIComponent(b),{credentials:'same-origin'}).then(r=>r.json()).then(j=>{const u=j&&j.url||'';if(u){c[b]=u;try{localStorage.setItem(KEY,JSON.stringify(c))}catch(e){}}return u}).catch(()=>'');M.set(b,pr);pr.then(u=>{if(!u)M.delete(b)})}return M.get(b)}
+/* load(): finds the full-size picture AND downloads + decodes it ahead of time, so showing it later is instant (no small blurry picture first) */
+function load(sku){const b=base(sku);if(!b||b[0]==='?')return Promise.resolve('');if(R.has(b))return Promise.resolve(R.get(b));if(L.has(b))return L.get(b);
+  if(F.has(b)&&Date.now()-F.get(b)<60000)return Promise.resolve('');
+  const p=url(sku).then(u=>u?new Promise(res=>{const im=new Image();im.referrerPolicy='no-referrer';im.onload=()=>{const d=()=>{R.set(b,im.src);res(im.src)};im.decode?im.decode().then(d,d):d()};im.onerror=()=>res('');im.src=big(u)}):'');
+  L.set(b,p);p.then(s=>{L.delete(b);if(!s)F.set(b,Date.now())});return p}
+/* up(): swaps the small picture for the sharp one. hold=true keeps the small one hidden until the sharp one is ready (max 1.5 s), so the blurry picture is never seen */
+function up(img,sku,hold){if(!img||!sku)return;const t=(img._hd=(img._hd||0)+1),b=base(sku),r=R.get(b);
+  if(r){img.src=r;img.style.opacity='';return}
+  if(hold&&b&&b[0]!=='?'){img.style.transition='opacity .12s';img.style.opacity='0';setTimeout(()=>{if(img._hd===t)img.style.opacity=''},1500)}
+  load(sku).then(s=>{if(img._hd!==t)return;if(s)img.src=s;img.style.opacity=''})}
+const dvOf=img=>{const e=img.closest&&img.closest('[data-hd]');return e?e.dataset.hd:''};
+/* warm-up: pictures that are on screen (or about to be) are fetched in the background, 3 at a time; touching one fetches it straight away */
+const WQ=[];let wbusy=0,wio=null;
+function wpump(){while(wbusy<3&&WQ.length){const s=WQ.shift();wbusy++;load(s).finally(()=>{wbusy--;wpump()})}}
+const SEL='.img img,.ovp img,#hitPic img,#sidePic img';
+let q=0;function scan(){q=0;
+  document.querySelectorAll('.ovp img,#hitPic img').forEach(i=>{if(i._hdSeen)return;i._hdSeen=1;up(i,dvOf(i),true)});
+  if('IntersectionObserver' in window){if(!wio)wio=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;wio.unobserve(e.target);const d=dvOf(e.target);if(d){WQ.push(d);wpump()}}),{rootMargin:'200px'});
+    document.querySelectorAll('.img img,#sidePic img').forEach(i=>{if(i._hdW)return;i._hdW=1;wio.observe(i)})}}
+try{new MutationObserver(()=>{if(!q)q=requestAnimationFrame(scan)}).observe(document.documentElement,{childList:true,subtree:true})}catch(e){}
+['pointerover','pointerdown','touchstart'].forEach(ev=>document.addEventListener(ev,e=>{const i=e.target&&e.target.closest&&e.target.closest(SEL);if(i){const d=dvOf(i);if(d)load(d)}},{capture:true,passive:true}));
+return {up,url,big,dvOf,load}})();
+</script>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Math.round(n||0).toLocaleString('en-US'),money=n=>'EGP '+fmt(n);
+const U=s=>String(s==null?'':s).trim().toUpperCase().replace(/\.0$/,'');
+function showErr(t){$('err').hidden=!t;$('err').textContent=t||''}
+async function api(u,body){const r=await fetch(u,body?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{credentials:'same-origin',cache:'no-store'});
+  if(r.status===401){location.replace('/login.html');throw new Error('Sign in again.')}const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('Error '+r.status));return j}
+/* pictures: built-in pack, then ERP, then pandoraeg.com */
+const PICS=(window.__PICS=window.__PICS||{}),WEBQ=new Map(),dvOf=s=>String(s).split('-')[0];
+const pic=sku=>{const dv=dvOf(sku),v=PICS[dv];return `<span class="img" data-hd="${esc(dv)}">${v?`<img src="data:image/jpeg;base64,${v}" alt="">`:`<img src="/api/refill?img=${encodeURIComponent(dv)}" alt="" loading="lazy" data-dv="${esc(dv)}" onerror="webPic(this)">`}</span>`};
+async function webPic(im){const dv=im.dataset.dv;im.onerror=null;try{if(!WEBQ.has(dv))WEBQ.set(dv,fetch('/api/refill?pics='+encodeURIComponent(dv),{credentials:'same-origin'}).then(r=>r.json()).catch(()=>({})));const j=await WEBQ.get(dv),u=j.map&&j.map[dv];if(u){im.src=(u.startsWith('//')?'https:'+u:u)+(u.includes('?')?'&':'?')+'width=200';return}}catch(_){}im.remove()}
+try{$('pics').checked=localStorage.getItem('sl.pics')!=='0'}catch(_){}
+const applyPics=()=>document.body.classList.toggle('nopic',!$('pics').checked);applyPics();
+$('pics').onchange=()=>{try{localStorage.setItem('sl.pics',$('pics').checked?'1':'0')}catch(_){}applyPics()};
+
+let R=false,J=null,WH=[],ITEMS=[],TR=[],HASV=false,F={cat:'',store:'',ab:'',act:'',tag:''},SORT='amt',LIM=40;
+const n=v=>{const x=Number(String(v??'').replace(/,/g,''));return isFinite(x)?x:0};
+// the same five categories as the Category explorer in Pandora Dashboards: item group first, then the item name. No "Other" for jewellery (safety chains go in Charms)
+const catOf=(g,nm)=>{const pick=t=>{t=String(t||'').toLowerCase();if(!t)return '';if(/safety/.test(t))return 'Charms';if(/earring|\bstud|hoop|huggie/.test(t))return 'Earrings';if(/bracelet|bangle/.test(t))return 'Bracelets';if(/pendant|necklace|collier/.test(t))return 'Necklace and Pendant';if(/charm|clip|dangle|spacer|medallion|murano/.test(t))return 'Charms';if(/\bring/.test(t))return 'Rings';return ''};return pick(g)||pick(nm)||(g?String(g).split(' - ').pop():'Other')};
+const AGES=['Under 6 months','6 to 12 months','1 to 2 years','Over 2 years','No sale on record'];
+const ageBucket=d=>d==null?AGES[4]:d<183?AGES[0]:d<365?AGES[1]:d<730?AGES[2]:AGES[3];
+const idle=d=>d==null?'no sale on record':d<60?d+' days':d<730?Math.round(d/30.4)+' months':(d/365).toFixed(1).replace(/\.0$/,'')+' years';
+// which report column is which, by its name
+function findCols(cols){const f=(re)=>cols.findIndex(c=>re.test(c.fieldname+' '+c.label));
+  return {sku:J.skuCol>=0?J.skuCol:f(/\b(sku|item[_ ]?code)\b/i),name:f(/item[_ ]?name|description/i),grp:f(/item[_ ]?group|category/i),
+    qty:f(/(bal(ance)?[_ ]?qty|stock[_ ]?qty|actual[_ ]?qty|\bqty\b|quantity|balance)/i),val:f(/(value|amount|valuation|cost)/i),age:f(/(age|days|aging|ageing)/i),last:f(/(last|latest).*(sale|sold|out|transaction|move|date)/i),idle:f(/idle[_ ]?since/i)}}
+
+async function load(){showErr('');
+  try{J=await api('/api/slow');const mg=J.level==='manage';$('run').hidden=!mg;$('setD').hidden=!mg;
+    R=!!J.restricted; /* a store manager: their own store only, nothing about other stores, no transfers */
+    if(R){['stBtn','trCard','stM','trM','stCard','fs'].forEach(k=>$(k).hidden=true);document.querySelector('header.top .sub').textContent='Which items are stuck in your store, why, and what to do with each one so it sells.'}
+    if(mg&&J.months)$('months').value=J.months;
+    if(!J.snaps.length){$('main').hidden=true;if(mg)$('setD').open=true;$('meta').innerHTML=mg?'Open <b>Report settings</b>, set the months and press <b>Run the report</b>.':'No report yet. Ask a Refill Order manager to run it.';return}
+    J.all=J.all&&J.all.at===J.snaps.map(x=>x.at).join()?J.all:{at:J.snaps.map(x=>x.at).join(),snaps:J.snaps};drawIncl();applyIncl();
+    build();
+    $('meta').innerHTML=`<b>Slow</b> = in stock today, with no sale in that store for <b>${J.months} months</b> · updated ${new Date(Math.max(...J.all.snaps.map(s=>Date.parse(s.at)))).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}${R?'':` · ${J.snaps.length} store${J.snaps.length>1?'s':''}`}${J.order?` · refill order <b>${esc(J.order.name)}</b>`:''}`+(J.C.sku<0&&ITEMS.length?' · <b class="bad">No SKU column found in the report.</b>':'');
+    if(!ITEMS.length){$('main').hidden=true;if(mg)$('setD').open=true;$('meta').innerHTML+='<br><b class="bad">No slow items</b> for these stores, groups and months.';return}
+    $('main').hidden=false;draw()}catch(e){showErr(e.message)}}
+function drawWh(){const pre=new Set(Object.keys(J&&J.snaps?Object.fromEntries(J.snaps.map(s=>[s.warehouse,1])):{}));
+  $('whs').innerHTML=WH.map(w=>`<label class="chip ${(pre.size?pre.has(w.name):!!w.store)?'on':''}" title="${esc(w.name)}"><input type="checkbox" value="${esc(w.name)}" ${(pre.size?pre.has(w.name):!!w.store)?'checked':''} hidden>${esc(w.store||w.name)}${w.store?` <span class="note">${esc(w.name)}</span>`:''}</label>`).join('')||'<span class="note">No warehouses from ERP.</span>';
+  $('whs').querySelectorAll('input').forEach(i=>i.onchange=()=>i.parentNode.classList.toggle('on',i.checked));
+  if(J&&J.months)$('months').value=J.months}
+$('allSt').onclick=()=>{$('whs').querySelectorAll('input').forEach(i=>{i.checked=true;i.parentNode.classList.add('on')})};
+$('noSt').onclick=()=>{$('whs').querySelectorAll('input').forEach(i=>{i.checked=false;i.parentNode.classList.remove('on')})};
+$('sync').onclick=async()=>{const ws=[],m=+$('months').value||6;
+  const b=$('sync');b.disabled=true;showErr('');const bad=[];
+  // one report for every store (it has a Warehouse column); ERP builds it in the background, so ask again until it is ready
+  $('msg').textContent='Running the report for all stores…';
+  try{let j=await api('/api/slow?op=syncall',{months:m,warehouses:ws}),t=0;
+    while(j.pending&&t++<30){$('msg').textContent=`ERP is building the report… (${t*40} s)`;j=await api('/api/slow?op=syncall',{months:m,warehouses:ws,pr:j.pending})}
+    if(j.pending)bad.push('ERP is still building the report, run again in a few minutes')}catch(e){bad.push(e.message)}
+  $('msg').textContent=bad.length?'Done with problems.':'Done.';b.disabled=false;await load();if(bad.length)showErr(bad.join(' · '))};
+$('clear').onclick=async()=>{if(!confirm('Forget the report results?'))return;await api('/api/slow?op=clear',{});await load()};
+
+// include: stores and item groups, ticked like the Stock Count card (packaging and maintenance off by default)
+// the ERP item groups, folded into six: the five jewellery groups and everything else
+const GROUPS=['Rings','Bracelets','Earrings','Charms','Necklace and Pendant','Packaging & Services'];
+const grpOf=g=>{g=String(g||'');return /ring/i.test(g)&&!/ear/i.test(g)?'Rings':/bracelet|bangle/i.test(g)?'Bracelets':/earring/i.test(g)?'Earrings':/charm|clip|spacer|dangle|safety ?chain/i.test(g)?'Charms':/necklace|pendant|chain|collier/i.test(g)?'Necklace and Pendant':'Packaging & Services'};
+let EX={st:[],gr:null};try{EX=Object.assign(EX,JSON.parse(localStorage.getItem('slow.ex')||'{}'))}catch(_){}
+function colIx(cols,re){return cols.findIndex(c=>re.test(c.label||c.fieldname))}
+function drawIncl(){const all=J.all.snaps,cols=(all.find(x=>x.cols.length)||{}).cols||[],qi=colIx(cols,/qty on hand/i),gi=colIx(cols,/item group/i);
+  const st=new Map(),gr=new Map();
+  if(!EX.gr||EX.gr.some(g=>!GROUPS.includes(g)))EX.gr=['Packaging & Services'];
+all.forEach(x=>{st.set(x.store,(st.get(x.store)||0)+x.rows.reduce((t,r)=>t+(gi<0||!EX.gr.includes(grpOf(r[gi]))?(+r[qi]||0):0),0));if(gi>=0&&!EX.st.includes(x.store))x.rows.forEach(r=>{const g=grpOf(r[gi]);gr.set(g,(gr.get(g)||0)+(+r[qi]||0))})});
+  if(!EX.gr||EX.gr.some(g=>!GROUPS.includes(g)))EX.gr=['Packaging & Services'];
+  const chip=(k,v,n,off)=>`<label class="incl${off?'':' on'}"><input type="checkbox" data-k="${k}" data-v="${esc(v)}"${off?'':' checked'}><span>${esc(v)}</span><b>${fmt(Math.round(n))}</b></label>`;
+  $('incl').innerHTML='<div class="inclhead">Stores to include:</div><div class="inclbox">'+[...st].sort((a,b)=>b[1]-a[1]).map(([v,n])=>chip('st',v,n,EX.st.includes(v))).join('')+'</div>'+
+    (gr.size?'<div class="inclhead">Item groups to include:</div><div class="inclbox">'+GROUPS.filter(g=>gr.has(g)).map(g=>[g,gr.get(g)]).map(([v,n])=>chip('gr',v,n,EX.gr.includes(v))).join('')+'</div>':'');
+  $('incl').querySelectorAll('input').forEach(i=>i.onchange=()=>{const a=EX[i.dataset.k],v=i.dataset.v;if(i.checked)EX[i.dataset.k]=a.filter(x=>x!==v);else a.push(v);
+    try{localStorage.setItem('slow.ex',JSON.stringify(EX))}catch(_){}i.parentNode.classList.toggle('on',i.checked);drawIncl();applyIncl();build();if(ITEMS.length){$('main').hidden=false;draw()}else $('main').hidden=true})}
+function applyIncl(){const all=J.all.snaps,cols=(all.find(x=>x.cols.length)||{}).cols||[],gi=colIx(cols,/item group/i);
+  J.snaps=all.filter(x=>!EX.st.includes(x.store)).map(x=>gi<0?x:{...x,rows:x.rows.filter(r=>!EX.gr.includes(grpOf(r[gi])))})}
+/* ---------- the plan: every slow line gets one action, a reason in plain words and what to do ---------- */
+const ACT={move:{t:'Transfer',c:'#8FB8DE',ic:'truck',d:'It sells in another store. Send it there: no discount needed.'},
+  show:{t:'Display better',c:'var(--accent)',ic:'eye',d:'Other stores sell it, so the item is fine. Give it a better place here and have the team offer it.'},
+  promo:{t:'Promote',c:'var(--warn)',ic:'tag',d:'No store sold it lately, but it sold before. Put it in an offer or bundle it with a best seller.'},
+  clear:{t:'Clear out',c:'var(--ink2)',ic:'out',d:'No store sells it, and it has been idle over a year or never sold. Stop ordering it, mark it down or return it.'},
+  ask:{t:'Ask to move it',c:'#8FB8DE',ic:'truck',d:'No sale in your store for over a year, or never. Tell your area manager: it may sell better in another store.'}};
+const ORDER=['move','show','promo','clear','ask'];
+const actD=k=>R&&k==='show'?'It sold in your store before. Give it a better place and offer it with every sale.':ACT[k].d;
+function plan(i){const m=J.months,els=i.elsewhere.reduce((a,x)=>a+x[1],0),soldAll=Math.max(i.sold||0,els),old=i.age==null||i.age>=365;
+  if(R){i.act=old?'ask':'show';i.parts={[i.act]:i.qty};
+    i.why=i.age==null?'No sale on record in your store.':`Last sale in your store ${idle(i.age)} ago.`;
+    i.how=old?'Tell your area manager: it may sell better in another store.':'Move it to a front tray and offer it with every sale.';return}
+  if(i.move>0){const d=i.dests;i.act='move';i.parts={move:i.move};if(i.qty>i.move)i.parts.show=i.qty-i.move;
+    i.why=`Sells at ${d[0].to} (${pcs(d[0].soldTo)} in ${m} months), 0 here.`;
+    i.how='Send '+d.map(x=>`${fmt(x.qty)} to ${x.to}`).join(', ')+(i.qty>i.move?`. Keep ${fmt(i.qty-i.move)} and display ${i.qty-i.move>1?'them':'it'} better.`:'.')}
+  else if(soldAll>0){i.act='show';i.parts={show:i.qty};
+    i.why=`Sells in other stores (${pcs(soldAll)} in ${m} months), 0 here.`;
+    i.how='Move it to a front tray and have the team offer it.'}
+  else if(!old){i.act='promo';i.parts={promo:i.qty};
+    i.why=`No store sold it in ${m} months. Last sale here ${idle(i.age)} ago.`;
+    i.how='Put it in an offer or bundle it with a best seller.'}
+  else{i.act='clear';i.parts={clear:i.qty};
+    i.why=i.age==null?`No sale on record here, and no store sold it in ${m} months.`:`Idle ${idle(i.age)} here, and no store sold it in ${m} months.`;
+    i.how='Stop ordering it. Mark it down or return it.'}
+  if(i.order>0)i.how+=` Take it out of the refill order (${pcs(i.order)}).`}
+function build(){
+  const today=Date.now(),cols=J.snaps.find(s=>s.cols.length)?.cols||[];J.C=findCols(cols);const C=J.C;C.sku=0;HASV=C.val>=0;
+  ITEMS=J.snaps.flatMap(s=>s.rows.map(r=>{const sku=C.sku>=0?U(r[C.sku]):'',inf=(J.info||{})[sku]||{};
+    let age=C.age>=0&&r[C.age]!==''?n(r[C.age]):null;const dt=(C.last>=0&&r[C.last])||(C.idle>=0&&r[C.idle])||'';if(age==null&&dt){const t=Date.parse(dt);if(t)age=Math.max(0,Math.round((today-t)/864e5))}
+    const grp=C.grp>=0?r[C.grp]:inf.grp,sold=inf.stores||{},elsewhere=Object.entries(sold).filter(([k,v])=>k!==s.store&&v>0).sort((a,b)=>b[1]-a[1]);
+    const tags=[];if(!R){if(inf.order>0)tags.push('ord');if(elsewhere.length)tags.push('move');if(!(inf.sold>0))tags.push('dead')}
+    return {sku,ean:r[1]||'',name:C.name>=0?String(r[C.name]).replace(/^\s*[0-9A-Z]+(-[0-9A-Z]{1,4})?-\d{8,14}\s*-?\s*/i,'')||r[C.name]:'',grp,cat:catOf(grp,C.name>=0?r[C.name]:''),store:s.store,wh:s.warehouse,qty:C.qty>=0?n(r[C.qty]):1,val:C.val>=0?n(r[C.val]):0,age,ab:ageBucket(age),price:inf.price||0,sold:inf.sold||0,byMonth:inf.byMonth||[],soh:inf.soh||0,order:inf.order||0,elsewhere,soldHere:sold[s.store]||0,tags,dests:[]}})).filter(i=>i.sku&&i.qty>0);
+  // transfers: the slow pieces of store Y go to the stores where the SKU sold, best seller first, at most what that store sold in the period
+  TR=[];const given={};
+  for(const i of ITEMS){let left=i.qty;for(const [to,q] of i.elsewhere){if(left<=0)break;const k=i.sku+'|'+to,room=Math.max(0,Math.ceil(q)-(given[k]||0));const m=Math.min(left,room);if(m<=0)continue;given[k]=(given[k]||0)+m;left-=m;TR.push({i,from:i.store,to,qty:m,soldTo:q});i.dests.push({to,qty:m,soldTo:q})}i.move=i.qty-left}
+  // money stuck: the report's own value when it has one, otherwise pieces x the latest selling price (VAT included)
+  for(const i of ITEMS){i.amt=HASV?i.val:i.qty*i.price;plan(i)}
+}
+const pcs=n=>fmt(n)+(Math.round(n)===1?' pc':' pcs');
+const sum=(l,k)=>l.reduce((a,i)=>a+(i[k]||0),0);
+const base=()=>ITEMS.filter(i=>!F.store||i.store===F.store);
+function partsOf(l){const P={};for(const i of l)for(const k in i.parts){const o=P[k]||(P[k]={q:0,amt:0,skus:new Set()});o.q+=i.parts[k];o.amt+=i.qty?i.amt*i.parts[k]/i.qty:0;o.skus.add(i.sku)}return P}
+const pq=(P,k)=>P[k]?P[k].q:0;
+const planBar=(P,click)=>{const t=ORDER.reduce((a,k)=>a+pq(P,k),0)||1;return ORDER.filter(k=>pq(P,k)>0).map(k=>`<i ${click?`data-act="${k}"`:''} style="--c:${ACT[k].c};width:${pq(P,k)/t*100}%" title="${ACT[k].t}: ${fmt(pq(P,k))} pcs"></i>`).join('')};
+function group(l,k){const m=new Map();l.forEach(i=>{const g=i[k]||'Other',o=m.get(g)||{g,l:[]};o.l.push(i);m.set(g,o)});return [...m.values()].map(o=>({...o,qty:sum(o.l,'qty'),amt:sum(o.l,'amt'),skus:new Set(o.l.map(i=>i.sku)).size})).sort((a,b)=>(b.qty-a.qty)||(b.amt-a.amt))}
+const avgIdle=l=>{const a=l.filter(i=>i.age!=null),q=sum(a,'qty');return q?Math.round(a.reduce((t,i)=>t+i.age*i.qty,0)/q):null};
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+const pill=k=>`<span class="pill" style="--c:${ACT[k].c}">${ic(ACT[k].ic)} ${ACT[k].t}</span>`;
+const nums=i=>`<b>${fmt(i.qty)}</b> pcs${i.amt?` · ${money(i.amt)}`:''} · ${i.age==null?'never sold here':'idle '+idle(i.age)}`;
+const itRow=i=>`<div class="it" data-item="${esc(i.sku)}">${pic(i.sku)}<div class="mid"><b title="${esc(i.name)}">${esc(i.name||i.sku)}</b><div class="note">${esc(i.sku)} · <b style="display:inline">${esc(i.store)}</b> · ${esc(i.cat)}</div><div class="note">${esc(i.why)}</div></div><div class="do">${pill(i.act)}${i.order>0?` <span class="pill" style="--c:var(--bad)">In the refill order</span>`:''}<div class="how">${esc(i.how)}</div></div><div class="nums"><b>${fmt(i.qty)}</b> pcs${i.amt?`<div class="note">${money(i.amt)}</div>`:''}<div class="note">${i.age==null?'never sold here':'idle '+idle(i.age)}</div></div></div>`;
+function draw(){
+  const B=base(),tq=sum(B,'qty'),ta=sum(B,'amt'),skus=new Set(B.map(i=>i.sku)).size,P=partsOf(B),m=J.months,avg=avgIdle(B),never=sum(B.filter(i=>i.age==null),'qty');
+  const sts=group(ITEMS,'store'),cats=group(B,'cat'),where=F.store?`at <b>${esc(F.store)}</b>`:`in <b>${sts.length}</b> store${sts.length>1?'s':''}`;
+  if(!R)$('fs').innerHTML=`<span class="chip ${F.store?'':'on'}" data-fs="">All stores<b>${fmt(sum(ITEMS,'qty'))}</b></span>`+sts.map(o=>`<span class="chip ${F.store===o.g?'on':''}" data-fs="${esc(o.g)}">${esc(o.g)}<b>${fmt(o.qty)}</b></span>`).join('');
+  const cold=pq(P,'promo')+pq(P,'clear'),easy=pq(P,'move')+pq(P,'show');
+  const H=[['Slow pieces',fmt(tq),fmt(skus)+' SKUs'],ta?['Money stuck',money(ta),'at selling price']:null,['Average time idle',avg==null?'-':idle(avg),never?fmt(never)+' pcs never sold in their store':'since the last sale'],
+    R?['Sold here before',fmt(pq(P,'show'))+' pcs','display them better']:['Sell in another store',fmt(pq(P,'move'))+' pcs',pct(pq(P,'move'),tq)+'% of the slow pieces: transfer'],
+    R?['Idle over a year or never sold',fmt(pq(P,'ask'))+' pcs','ask to move them']:['Sell in no store',fmt(cold)+' pcs',pct(cold,tq)+'% of the slow pieces: promote or clear']].filter(Boolean);
+  $('kpis').innerHTML=H.map(k=>`<div class="hk"><small>${k[0]}</small><b>${k[1]}</b><span>${k[2]}</span></div>`).join('');
+  const Q=[];
+  if(R){Q.push(`<b>${fmt(tq)}</b> pieces (<b>${fmt(skus)}</b> SKUs) are on your shelves with no sale in your store for ${m} months${ta?`. At selling price that is <b>${money(ta)}</b>`:''}.`);
+    if(pq(P,'show'))Q.push(`<b>${fmt(pq(P,'show'))}</b> pieces sold in your store before: give them a better place and offer them with every sale.`);
+    if(pq(P,'ask'))Q.push(`<b>${fmt(pq(P,'ask'))}</b> pieces have not sold here for over a year, or never: tell your area manager, they may sell better in another store.`)}
+  else{Q.push(`<b>${fmt(tq)}</b> slow pieces (<b>${fmt(skus)}</b> SKUs) ${where}: in stock, with no sale in their store for ${m} months${ta?`. At selling price that is <b>${money(ta)}</b> sitting on the shelves`:''}.`);
+    if(easy)Q.push(`<b>${pct(easy,tq)}%</b> can be fixed <b>without any discount</b>: <b>${fmt(pq(P,'move'))}</b> pcs sell in another store (transfer them) and <b>${fmt(pq(P,'show'))}</b> pcs are items other stores sell (display them better).`);
+    if(cold)Q.push(`<b>${fmt(cold)}</b> pcs did not sell in any store: promote <b>${fmt(pq(P,'promo'))}</b> pcs that sold before, and clear out <b>${fmt(pq(P,'clear'))}</b> pcs that are idle over a year or never sold.`);
+    if(cats.length)Q.push(`Most of it is <b>${esc(cats[0].g)}</b> (${pct(cats[0].qty,tq)}% of the pieces)${F.store||!sts.length?'':`, and the store holding the most is <b>${esc(sts[0].g)}</b> (${fmt(sts[0].qty)} pcs)`}.`)}
+  $('quick').innerHTML=Q.map(t=>`<div class="qk">${t}</div>`).join('');
+  $('planBar').innerHTML=planBar(P,true);
+  $('acts').innerHTML=ORDER.filter(k=>pq(P,k)>0).map(k=>`<div class="ac ${F.act===k?'on':''}" data-act="${k}" style="--c:${ACT[k].c}"><div class="hd"><span class="ico">${ic(ACT[k].ic)}</span>${ACT[k].t}</div><div class="big">${fmt(pq(P,k))} <small>pcs · ${pct(pq(P,k),tq)}%</small></div><div class="note">${fmt(P[k].skus.size)} SKUs${P[k].amt?' · '+money(P[k].amt):''}</div><div class="note">${actD(k)}</div><div class="go">See the items ›</div></div>`).join('');
+  const ord=B.filter(i=>i.order>0),on=new Set(ord.map(i=>i.sku)).size;
+  $('ordWarn').innerHTML=on?`<div class="tip" data-tag="ord" style="cursor:pointer;margin:12px 0 0">${ic('bulb')} <b>${fmt(on)} slow SKU${on>1?'s are':' is'} still in the refill order${J.order?' '+esc(J.order.name):''}.</b> Lower the order first, or more of the same stock will arrive. <b>See them ›</b></div>`:'';
+  const top=[...B].sort((a,b)=>ta?(b.amt-a.amt)||(b.qty-a.qty):(b.qty-a.qty)).slice(0,6),ts=sum(top,ta?'amt':'qty');
+  $('fixNote').innerHTML=ta?`The ${top.length} lines with the most money stuck: <b>${money(ts)}</b>, ${pct(ts,ta)}% of the total. Tap one for the full story.`:`The ${top.length} lines with the most pieces stuck. Tap one for the full story.`;
+  $('fix').innerHTML=top.map((i,x)=>`<div class="it" data-item="${esc(i.sku)}">${pic(i.sku)}<div style="min-width:0"><div style="display:flex;align-items:center"><span class="rank">${x+1}</span><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(i.name)}">${esc(i.name||i.sku)}</b></div><div class="note">${esc(i.sku)} · <b>${esc(i.store)}</b></div><div style="margin:4px 0;font-variant-numeric:tabular-nums">${nums(i)}</div>${pill(i.act)}<div class="how">${esc(i.how)}</div></div></div>`).join('');
+  if(!R){$('byStore').innerHTML=`<div class="sr h"><b>Store</b><span class="plan sm" style="background:none;height:auto;display:block;text-align:left">What to do with it</span><span>Pieces</span><span>Money stuck</span><span class="idl">Avg. idle</span></div>`+sts.map(o=>{const a=avgIdle(o.l);return `<div class="sr ${F.store===o.g?'on':''}" data-fs="${esc(o.g)}"><b>${esc(o.g)}</b><div class="plan sm">${planBar(partsOf(o.l))}</div><span>${fmt(o.qty)}</span><span>${o.amt?money(o.amt):'-'}</span><span class="idl">${a==null?'-':idle(a)}</span></div>`}).join('');
+    $('lgd').innerHTML=ORDER.filter(k=>pq(partsOf(ITEMS),k)>0).map(k=>`<span><i style="--c:${ACT[k].c}"></i>${ACT[k].t}</span>`).join('')}
+  const cmx=Math.max(1,...cats.map(o=>o.qty));
+  $('byCat').innerHTML=cats.map(o=>`<div class="br ${F.cat===o.g?'on':''}" data-f="cat" data-v="${esc(o.g)}" title="${o.amt?money(o.amt):''}"><span>${esc(o.g)}</span>${bar(o.qty,cmx)}<span>${fmt(o.qty)} pcs · ${pct(o.qty,tq)}%</span></div>`).join('');
+  const ag=AGES.map(a=>({a,q:sum(B.filter(i=>i.ab===a),'qty')})).filter(x=>x.q>0),amx=Math.max(1,...ag.map(x=>x.q));
+  $('byAge').innerHTML=ag.map(x=>`<div class="br ${F.ab===x.a?'on':''}" data-f="ab" data-v="${x.a}"><span>${x.a}</span>${bar(x.q,amx,x.a===AGES[0]?'var(--accent)':x.a===AGES[1]?'var(--warn)':'var(--ink2)')}<span>${fmt(x.q)} pcs · ${pct(x.q,tq)}%</span></div>`).join('');
+  if(!R)drawTransfers(routesOf());
+  $('fCat').innerHTML='<option value="">All categories</option>'+cats.map(o=>`<option ${F.cat===o.g?'selected':''}>${esc(o.g)}</option>`).join('');
+  $('fAge').innerHTML='<option value="">Any idle time</option>'+ag.map(x=>`<option ${F.ab===x.a?'selected':''}>${x.a}</option>`).join('');
+  drawList();drawRaw();
+}
+function routesOf(){const R=new Map();for(const t of TR){if(F.store&&t.from!==F.store&&t.to!==F.store)continue;const k=t.from+'→'+t.to,o=R.get(k)||{from:t.from,to:t.to,qty:0,l:[]};o.qty+=t.qty;o.l.push(t);R.set(k,o)}return [...R.values()].sort((a,b)=>a.from.localeCompare(b.from)||b.qty-a.qty)}
+/* ---------- Transfers: store cards, heat map, route list. Tap anything for the story behind it ---------- */
+const IC={store:'<path d="M3 9l1.5-5h15L21 9"/><path d="M3 9a3 3 0 006 0 3 3 0 006 0 3 3 0 006 0"/><path d="M5 12v8h14v-8"/><path d="M10 20v-4h4v4"/>',
+grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
+box:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+route:'<circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H15a3.5 3.5 0 000-7H9a3.5 3.5 0 010-7h6.5"/>',
+up:'<path d="M7 17L17 7M8 7h9v9"/>',
+down:'<path d="M17 7L7 17M16 17H7V8"/>',
+truck:'<path d="M2 6h11v10H2zM13 9h4l4 4v3h-8"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+star:'<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+bulb:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/>',
+pin:'<path d="M12 21s7-6.2 7-11.5A7 7 0 005 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+dl:'<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
+arrow:'<path d="M4 12h16M14 6l6 6-6 6"/>',
+back:'<path d="M20 12H4M10 6l-6 6 6 6"/>',
+x:'<path d="M6 6l12 12M18 6L6 18"/>'};
+const ic=n=>`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
+let TRV='cards',TRR=[],MSTK=[];
+try{TRV=localStorage.getItem('sl.trv')||'cards'}catch(_){}
+function trStats(routes){const S=new Map(),g=k=>{if(!S.has(k))S.set(k,{name:k,out:0,inn:0,to:new Map(),from:new Map(),items:new Map()});return S.get(k)};
+  for(const r of routes){const a=g(r.from),b=g(r.to);a.out+=r.qty;b.inn+=r.qty;a.to.set(r.to,r);b.from.set(r.from,r);
+    for(const t of r.l){const o=a.items.get(t.i.sku)||{i:t.i,qty:0,dests:[]};o.qty+=t.qty;o.dests.push({to:r.to,qty:t.qty,soldTo:t.soldTo});a.items.set(t.i.sku,o)}}
+  return [...S.values()]}
+const skuN=r=>new Set(r.l.map(t=>t.i.sku)).size;
+const topItems=(s,n)=>[...s.items.values()].sort((a,b)=>b.qty-a.qty).slice(0,n);
+const bar=(v,mx,c)=>`<div class="hb"><i style="width:${Math.max(3,v/(mx||1)*100)}%;background:${c||'var(--accent)'}"></i></div>`;
+function drawTransfers(routes){
+  TRR=routes;const S=trStats(routes),tot=routes.reduce((a,r)=>a+r.qty,0);
+  $('trNote').innerHTML=TR.length?`Pieces that did not sell in their store, and the stores where the same SKU <b>did</b> sell in the last ${J.months} months. <b>Tap any card, number or square</b> to see where the pieces go and which items.${F.store?` Showing routes from or to <b>${esc(F.store)}</b>.`:''}`:'No slow piece sells in another store.';
+  $('trV').innerHTML=[['cards',ic('store')+' Stores'],['map',ic('grid')+' Heat map'],['list',ic('route')+' List']].map(([k,t])=>`<span class="chip ${TRV===k?'on':''}" data-trv="${k}">${t}</span>`).join('');
+  if(!routes.length){$('trIn').innerHTML='';$('tr').innerHTML='';return}
+  // the story in plain words
+  const giv=[...S].sort((a,b)=>b.out-a.out)[0],rec=[...S].sort((a,b)=>b.inn-a.inn)[0],top=[...routes].sort((a,b)=>b.qty-a.qty)[0];
+  const star=[...new Map([...S].flatMap(s=>[...s.items.values()]).map(o=>[o.i.sku,0])).keys()].map(sku=>{const l=TR.filter(t=>t.i.sku===sku&&(!F.store||t.from===F.store||t.to===F.store));return {i:l[0].i,qty:l.reduce((a,t)=>a+t.qty,0),n:new Set(l.map(t=>t.to)).size}}).sort((a,b)=>b.qty-a.qty)[0];
+  $('trIn').innerHTML=`<div class="trk"><div class="tk" style="--c:var(--accent)"><span class="ico">${ic('box')}</span><b>${fmt(tot)}</b><small>pieces can move</small></div><div class="tk" style="--c:#8FB8DE"><span class="ico">${ic('route')}</span><b>${fmt(routes.length)}</b><small>routes</small></div><div class="tk" data-store="${esc(giv.name)}" style="--c:var(--warn)"><span class="ico">${ic('up')}</span><b>${esc(giv.name)}</b><small>gives the most · ${fmt(giv.out)} pcs</small></div><div class="tk" data-store="${esc(rec.name)}" style="--c:var(--good)"><span class="ico">${ic('down')}</span><b>${esc(rec.name)}</b><small>can take the most · ${fmt(rec.inn)} pcs</small></div><div class="tk" data-route="${routes.indexOf(top)}" style="--c:var(--bad)"><span class="ico">${ic('truck')}</span><b>${esc(top.from)} → ${esc(top.to)}</b><small>biggest route · ${fmt(top.qty)} pcs</small></div></div>`+
+   (star?`<div class="star" data-item="${esc(star.i.sku)}">${pic(star.i.sku)}<div><b>${ic('star')} Star item to move: ${esc(star.i.name||star.i.sku)}</b><div class="note">${esc(star.i.sku)} · ${fmt(star.qty)} pcs can go to ${star.n} store${star.n>1?'s':''}. Tap to see where.</div></div></div>`:'');
+  if(TRV==='cards'){
+    const mx=Math.max(...S.map(s=>Math.max(s.out,s.inn)));
+    $('tr').innerHTML='<div class="scards">'+[...S].sort((a,b)=>b.out-a.out).map(s=>{const best=[...s.to.values()].sort((a,b)=>b.qty-a.qty)[0],ti=topItems(s,3);
+      return `<div class="sc" data-store="${esc(s.name)}"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><b style="font-size:16px">${esc(s.name)}</b><span class="stack">${ti.map(o=>pic(o.i.sku)).join('')}</span></div>
+      <div class="flowrow"><span class="lbl">${ic('up')} Gives</span>${bar(s.out,mx,'var(--accent)')}<b>${fmt(s.out)}</b></div>
+      <div class="flowrow"><span class="lbl">${ic('down')} Takes</span>${bar(s.inn,mx,'#8FB8DE')}<b>${fmt(s.inn)}</b></div>
+      <div class="note">${best?`Best home: <b>${esc(best.to)}</b> (${fmt(best.qty)} pcs)`:'Only receives'}</div></div>`}).join('')+'</div>';
+  }else if(TRV==='map'){
+    const rows=[...S].filter(s=>s.out).sort((a,b)=>b.out-a.out),cols=[...S].filter(s=>s.inn).sort((a,b)=>b.inn-a.inn),mx=Math.max(...routes.map(r=>r.qty));
+    $('tr').innerHTML=`<div class="note" style="margin-bottom:6px">Rows give, columns take. The darker the square, the more pieces. Tap a square for the items.</div><div class="tw" style="max-height:none"><table class="hm"><tr><th class="l">From ↓ &nbsp; To →</th>${cols.map(c=>`<th data-store="${esc(c.name)}">${esc(c.name)}</th>`).join('')}<th>Total</th></tr>${rows.map(r=>`<tr><td class="l" data-store="${esc(r.name)}" style="cursor:pointer"><b>${esc(r.name)}</b></td>${cols.map(c=>{const x=r.to.get(c.name);return x?`<td class="cell" data-route="${routes.indexOf(x)}" style="background:color-mix(in srgb,var(--accent) ${Math.round(15+x.qty/mx*75)}%,transparent)">${fmt(x.qty)}</td>`:`<td class="cell0">·</td>`}).join('')}<td><b>${fmt(r.out)}</b></td></tr>`).join('')}<tr><td class="l"><b>Total</b></td>${cols.map(c=>`<td><b>${fmt(c.inn)}</b></td>`).join('')}<td><b>${fmt(tot)}</b></td></tr></table></div>`;
+  }else{
+    const mx=Math.max(...routes.map(r=>r.qty));
+    $('tr').innerHTML='<div class="rlist">'+routes.map((r,ix)=>`<div class="rl" data-route="${ix}"><b class="a">${esc(r.from)}</b><span class="arr">${ic('arrow')}</span><b class="a">${esc(r.to)}</b>${bar(r.qty,mx)}<b>${fmt(r.qty)}</b><span class="note">${skuN(r)} SKUs</span><span class="stack">${r.l.slice(0,3).map(t=>pic(t.i.sku)).join('')}</span></div>`).join('')+'</div>';
+  }
+}
+/* the pop-up: a tiny back-able stack of screens */
+function openM(fn){MSTK.push(fn);renderM()}
+function backM(){MSTK.pop();MSTK.length?renderM():closeM()}
+function closeM(){MSTK=[];$('trM').hidden=true;document.body.style.overflow=''}
+function renderM(){const o=MSTK[MSTK.length-1]();$('trM').hidden=false;document.body.style.overflow='hidden';
+  $('trMB').innerHTML=`<div class="mh">${MSTK.length>1?'<button class="btn sm" data-mback>'+ic('back')+' Back</button>':''}<div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:800">${o.title}</div><div class="note">${o.sub||''}</div></div>${o.dl?'<button class="btn sm" data-mdl>'+ic('dl')+' Excel</button>':''}<button class="btn sm" data-mclose aria-label="Close">${ic('x')}</button></div><div class="mc">${o.body}</div>`;
+  $('trMB')._dl=o.dl;$('trMB').scrollTop=0}
+const itemRow=(i,qty,extra)=>`<div class="ir" data-item="${esc(i.sku)}">${pic(i.sku).replace('class="img"','class="img lg"')}<div style="min-width:0;flex:1"><b>${esc(i.name||i.sku)}</b><div class="note">${esc(i.sku)}${extra?' · '+extra:''}</div></div><b class="pc">${fmt(qty)} <small>pcs</small></b></div>`;
+function storeScreen(name){const s=trStats(TRR).find(x=>x.name===name);if(!s)return {title:esc(name),body:'<div class="note">No transfers for this store.</div>'};
+  const to=[...s.to.values()].sort((a,b)=>b.qty-a.qty),fr=[...s.from.values()].sort((a,b)=>b.qty-a.qty),mx=Math.max(1,...to.map(r=>r.qty),...fr.map(r=>r.qty));
+  const lst=(a,k,c)=>a.map(r=>`<div class="rl" data-route="${TRR.indexOf(r)}"><b class="a">${esc(r[k])}</b>${bar(r.qty,mx,c)}<b>${fmt(r.qty)}</b><span class="note">${skuN(r)} SKUs</span></div>`).join('')||'<div class="note">—</div>';
+  const best=to[0];
+  return {title:ic('store')+' '+esc(name),sub:`Gives <b>${fmt(s.out)}</b> pcs · can take <b>${fmt(s.inn)}</b> pcs`,
+   body:(best?`<div class="tip">${ic('bulb')} Send most of ${esc(name)}'s slow pieces to <b>${esc(best.to)}</b>: it sold these same SKUs, ${fmt(best.qty)} pcs fit there.</div>`:'')+
+   `<div class="g2"><div><h3>${ic('up')} Sends to</h3>${lst(to,'to','var(--accent)')}</div><div><h3>${ic('down')} Receives from</h3>${lst(fr,'from','#8FB8DE')}</div></div>`+
+   (s.items.size?catItems(s):'')}}
+/* "Best items to move out", by category: one chip per category (pieces to move), the list shows the chosen one */
+let SC={store:'',cat:'All',all:false};
+function catItems(s){if(SC.store!==s.name)SC={store:s.name,cat:'All',all:false};
+  const all=[...s.items.values()].sort((a,b)=>b.qty-a.qty),cm=new Map();all.forEach(o=>{const c=o.i.cat||'Other',x=cm.get(c)||{c,qty:0,n:0};x.qty+=o.qty;x.n++;cm.set(c,x)});
+  const cats=[...cm.values()].sort((a,b)=>b.qty-a.qty);if(SC.cat!=='All'&&!cm.has(SC.cat))SC.cat='All';
+  const l=SC.cat==='All'?all:all.filter(o=>(o.i.cat||'Other')===SC.cat),shown=SC.all?l:l.slice(0,12);
+  return `<h3>${ic('star')} Best items to move out (${l.length})</h3><div class="chips" style="margin-bottom:8px"><span class="chip ${SC.cat==='All'?'on':''}" data-scat="All">All <b>${fmt(all.reduce((a,o)=>a+o.qty,0))}</b></span>${cats.map(x=>`<span class="chip ${SC.cat===x.c?'on':''}" data-scat="${esc(x.c)}">${esc(x.c)} <b>${fmt(x.qty)}</b> <span class="note">${x.n} SKUs</span></span>`).join('')}</div>`+
+   shown.map(o=>itemRow(o.i,o.qty,'to '+o.dests.map(d=>esc(d.to)).join(', '))).join('')+(l.length>shown.length?`<button class="btn sm" style="margin-top:8px" data-sall>Show all ${fmt(l.length)}</button>`:'')}
+function routeScreen(r){const l=[...r.l].sort((a,b)=>b.qty-a.qty);
+  return {title:`${esc(r.from)} ${ic('arrow')} ${esc(r.to)}`,sub:`<b>${fmt(r.qty)}</b> pieces · ${skuN(r)} SKUs. Best sellers at ${esc(r.to)} first.`,
+   dl:()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(l.map(t=>({'SKU':t.i.sku,'Item':t.i.name,'Pcs':t.qty,['Sold at '+r.to+' ('+J.months+' months)']:t.soldTo}))),'Route');XLSX.writeFile(wb,`Transfer ${r.from} to ${r.to}.xlsx`)},
+   body:`<div class="tip">${ic('bulb')} ${esc(r.from)} sold <b>0</b> of these in ${J.months} months, ${esc(r.to)} sold them.</div>`+l.map(t=>itemRow(t.i,t.qty,`${esc(r.to)} sold ${fmt(t.soldTo)}`)).join('')}}
+/* the full story of one item: every store where it is slow with its action, who sells it, and the sales by month */
+function itemScreen(sku){const L=ITEMS.filter(x=>x.sku===sku).sort((a,b)=>b.qty-a.qty),i=L[0];if(!i)return {title:esc(sku),body:''};
+  const m=J.months,q=sum(L,'qty'),amt=sum(L,'amt'),inf=(J.info||{})[sku]||{},st=Object.entries(inf.stores||{}).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]),smx=Math.max(1,...st.map(x=>x[1]));
+  const bm=i.byMonth||[],perM=bm.length?sum(bm.map(v=>({v})),'v')/bm.length:0,cover=perM>0&&i.soh>0?i.soh/perM:0,ms=J.salesMonths||[],bmx=Math.max(1,...bm);
+  const facts=[['Slow pieces',fmt(q),L.length>1?'in '+L.length+' stores':esc(i.store)],i.price?['Selling price',money(i.price),'per piece, with VAT']:null,amt?['Money stuck',money(amt),'at selling price']:null,
+    R||!i.soh?null:['Stock in all stores',fmt(i.soh)+' pcs',cover?(cover>=24?'over 2 years':Math.round(cover)+' months')+' of stock at this pace':'no sales to compare'],
+    R?null:['Sold in all stores',fmt(Math.max(i.sold,sum(st.map(x=>({v:x[1]})),'v')))+' pcs','last '+m+' months']].filter(Boolean);
+  return {title:esc(i.name||sku),sub:esc(sku)+' · '+esc(i.cat),body:`<div class="bigpic ovp" data-hd="${esc(dvOf(sku))}">${pic(sku).replace('class="img"','class="img xl"')}</div>
+   <div class="hero" style="margin-top:10px">${facts.map(k=>`<div class="hk"><small>${k[0]}</small><b style="font-size:17px">${k[1]}</b><span>${k[2]}</span></div>`).join('')}</div>
+   <h3>${ic('bulb')} What to do${L.length>1?', store by store':''}</h3>${L.map(x=>`<div class="todo"><div class="row"><b>${esc(x.store)} · ${fmt(x.qty)} pcs</b><span>${pill(x.act)}</span></div><div class="note" style="margin-top:4px">${esc(x.why)}</div><div style="font-weight:700;margin-top:4px">${esc(x.how)}</div></div>`).join('')}`+
+   (!R&&st.length?`<h3>${ic('store')} Who sells it (last ${m} months)</h3>${st.map(([k,v])=>`<div class="br" style="cursor:default"><span>${esc(k)}</span>${bar(v,smx,'var(--good)')}<span>${fmt(v)} pcs</span></div>`).join('')}`:'')+
+   (!R&&!st.length?`<h3>${ic('store')} Who sells it</h3><div class="note">No store sold it in the last ${m} months.</div>`:'')+
+   (!R&&bm.some(v=>v>0)?`<h3>${ic('grid')} Sales by month, all stores</h3><div class="mcols">${bm.map((v,k)=>`<div><span>${fmt(v)}</span><i style="height:${Math.round(v/bmx*46)}px"></i><span>${ms[k]?new Date(ms[k]+'-01T00:00:00Z').toLocaleString('en',{month:'short',timeZone:'UTC'}):''}</span></div>`).join('')}</div>`:'')}}
+document.addEventListener('click',e=>{const t=e.target,M=$('trM');
+  if(t.closest('[data-mclose]')||t===M){closeM();return}
+  if(t.closest('[data-mback]')){backM();return}
+  if(t.closest('[data-mdl]')){const f=$('trMB')._dl;f&&f();return}
+  const sc0=t.closest('[data-scat]');if(sc0){SC.cat=sc0.dataset.scat;SC.all=false;renderM();return}
+  if(t.closest('[data-sall]')){SC.all=true;renderM();return}
+  const v=t.closest('[data-trv]');if(v){TRV=v.dataset.trv;try{localStorage.setItem('sl.trv',TRV)}catch(_){}drawTransfers(TRR);return}
+  const inM=t.closest('#trM'),sc=t.closest('#main');if(!sc)return;
+  const it=t.closest('[data-item]');if(it){const k=it.dataset.item;openM(()=>itemScreen(k));return}
+  const ro=t.closest('[data-route]');if(ro&&TRR[+ro.dataset.route]){const r=TRR[+ro.dataset.route];openM(()=>routeScreen(r));return}
+  const st=t.closest('[data-store]');if(st){const k=st.dataset.store;openM(()=>storeScreen(k))}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('trM').hidden)closeM()});
+IC.eye='<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>';
+IC.tag='<path d="M3 12V4h8l10 10-8 8L3 12z"/><circle cx="7.5" cy="8.5" r="1.5"/>';
+IC.out='<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>';
+function rowsF(){const q=$('q').value.trim().toUpperCase();return base().filter(i=>(!q||i.sku.includes(q)||String(i.name).toUpperCase().includes(q))&&(!F.cat||i.cat===F.cat)&&(!F.ab||i.ab===F.ab)&&(!F.act||i.parts[F.act]>0)&&(!F.tag||i.tags.includes(F.tag)))}
+function drawList(){const B=base(),P=partsOf(B),ordN=new Set(B.filter(i=>i.order>0).map(i=>i.sku)).size;
+  const l=rowsF().sort((a,b)=>(SORT==='age'?(b.age==null?1e9:b.age)-(a.age==null?1e9:a.age):(b[SORT]||0)-(a[SORT]||0))||(b.qty-a.qty)||a.sku.localeCompare(b.sku));
+  const any=F.cat||F.ab||F.act||F.tag||$('q').value.trim();
+  $('flt').innerHTML=`<span class="chip ${F.act||F.tag?'':'on'}" data-act="">All <b>${fmt(sum(B,'qty'))}</b></span>`+ORDER.filter(k=>pq(P,k)>0).map(k=>`<span class="chip ${F.act===k?'on':''}" data-act="${k}">${ic(ACT[k].ic)} ${ACT[k].t} <b>${fmt(pq(P,k))}</b></span>`).join('')+(ordN?`<span class="chip ${F.tag==='ord'?'on':''}" data-tag="ord">In the refill order <b>${fmt(ordN)}</b></span>`:'')+(any?` <span class="chip" data-clear="1">${ic('x')} Clear filters</span>`:'');
+  $('cnt').innerHTML=`<b>${fmt(l.length)}</b> lines · <b>${fmt(sum(l,'qty'))}</b> pcs${sum(l,'amt')?' · <b>'+money(sum(l,'amt'))+'</b>':''}`;
+  const noP=HASV?0:new Set(B.filter(i=>!i.price).map(i=>i.sku)).size;
+  $('itNote').innerHTML=(F.act?`<b>${ACT[F.act].t}:</b> ${actD(F.act)} `:'')+[F.store,F.cat,F.ab].filter(Boolean).map(esc).join(' · ')+(F.act||F.store||F.cat||F.ab?'':`One line per item and store. Tap a line for the full story of the item.${HASV?'':' Money stuck = pieces x the latest selling price, VAT included.'}${noP?` ${fmt(noP)} SKUs have no price on file (no sale in the last 12 months) and count as EGP 0.`:''}`);
+  $('tbl').innerHTML=l.slice(0,LIM).map(itRow).join('')+(l.length>LIM?`<button class="btn" data-more style="margin-top:6px">Show ${fmt(Math.min(40,l.length-LIM))} more</button>`:'')||'<div class="note" style="padding:16px">No item matches these filters.</div>';
+}
+function drawRaw(){const s=J.snaps.find(x=>x.rows.length)||J.snaps[0];$('raw').innerHTML=s?`<div class="note">${esc(s.warehouse)}</div><table><tr>${s.cols.map(c=>`<th class="l">${esc(c.label)}</th>`).join('')}</tr>${s.rows.slice(0,200).map(r=>`<tr>${r.map(v=>`<td class="l">${esc(v)}</td>`).join('')}</tr>`).join('')}</table>`:''}
+const toList=()=>$('listCard').scrollIntoView({behavior:'smooth',block:'start'});
+document.addEventListener('click',e=>{const t=e.target;if(!t.closest||t.closest('#trM,#stM,#zoom')||!t.closest('#main'))return;
+  const fs=t.closest('[data-fs]');if(fs){F.store=F.store===fs.dataset.fs?'':fs.dataset.fs;LIM=40;draw();return}
+  const a=t.closest('[data-act]');if(a){const k=a.dataset.act,on=k&&F.act!==k;F.act=on?k:'';F.tag='';LIM=40;draw();if(on&&!a.closest('#flt'))toList();return}
+  const tg=t.closest('[data-tag]');if(tg){const on=F.tag!==tg.dataset.tag;F.tag=on?tg.dataset.tag:'';F.act='';LIM=40;draw();if(on&&!tg.closest('#flt'))toList();return}
+  const f=t.closest('[data-f]');if(f){const k=f.dataset.f,on=F[k]!==f.dataset.v;F[k]=on?f.dataset.v:'';LIM=40;draw();if(on)toList();return}
+  if(t.closest('[data-clear]')){F.cat=F.ab=F.act=F.tag='';$('q').value='';LIM=40;draw();return}
+  if(t.closest('[data-more]')){LIM+=40;drawList()}});
+$('q').oninput=()=>{LIM=40;drawList()};
+$('fCat').onchange=()=>{F.cat=$('fCat').value;LIM=40;draw()};
+$('fAge').onchange=()=>{F.ab=$('fAge').value;LIM=40;draw()};
+$('fSort').onchange=()=>{SORT=$('fSort').value;LIM=40;drawList()};
+$('trX').onclick=()=>{if(!TR.length)return;const wb=XLSX.utils.book_new(),routes=routesOf();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(TR.map(t=>({'From store':t.from,'To store':t.to,'SKU':t.i.sku,'Item':t.i.name,'Pcs':t.qty,['Sold at the receiving store ('+J.months+' months)']:t.soldTo}))),'Transfers');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(routes.map(r=>({'From store':r.from,'To store':r.to,'Pcs':r.qty,'SKUs':new Set(r.l.map(t=>t.i.sku)).size}))),'By route');
+  for(const st of [...new Set(TR.map(t=>t.from))])XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(TR.filter(t=>t.from===st).map(t=>({'SKU':t.i.sku,'Item':t.i.name,'Send to':t.to,'Pcs':t.qty}))),('Send from '+st).slice(0,31));
+  XLSX.writeFile(wb,'Slowmoving 2.0 transfers '+new Date().toISOString().slice(0,10)+'.xlsx')};
+// one workbook: summary, every slow item, by store, by group, transfers, and one sheet per store
+// the full report rows, every column, one sheet for all stores plus one per store
+$('rawX').onclick=()=>{const S=J.snaps.filter(x=>x.rows.length);if(!S.length){showErr('Run the report first.');return}
+  const cols=S[0].cols.map(c=>c.label||c.fieldname),wb=XLSX.utils.book_new(),aoa=l=>[cols,...l];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa(S.flatMap(x=>x.rows))),'All stores');
+  for(const x of S)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa(x.rows)),String(x.store||x.warehouse).replace(/[\/?*:[]]/g,' ').slice(0,31));
+  XLSX.writeFile(wb,'Slowmoving 2.0 report '+new Date().toISOString().slice(0,10)+'.xlsx')};
+/* the action plan in Excel: summary, one line per item and store with its action, by store, and one sheet per store */
+$('xPlan').onclick=()=>{if(!ITEMS.length){showErr('Run the report first.');return}
+  const L=[...base()].sort((a,b)=>a.store.localeCompare(b.store)||ORDER.indexOf(a.act)-ORDER.indexOf(b.act)||(b.amt-a.amt)||(b.qty-a.qty)),P=partsOf(L),wb=XLSX.utils.book_new(),mk=(ws,w)=>{ws['!cols']=w.map(x=>({wch:x}));return ws};
+  const one=i=>({Store:i.store,Action:ACT[i.act].t,'What to do':i.how,SKU:i.sku,EAN:i.ean,Item:i.name,Category:i.cat,Pieces:i.qty,'Price (EGP)':i.price||'','Money stuck (EGP)':Math.round(i.amt)||'','Days idle':i.age==null?'No sale on record':i.age,'Why it is slow':i.why,'Transfer to':i.dests.map(d=>d.to+' '+d.qty).join(', '),'In refill order':i.order||'',Done:''}),W=[16,15,48,16,15,40,20,7,11,16,16,48,26,13,7];
+  XLSX.utils.book_append_sheet(wb,mk(XLSX.utils.aoa_to_sheet([['Slowmoving 2.0: action plan',new Date().toISOString().slice(0,10)],['Slow = no sale in that store for (months)',J.months],['Stores',F.store||[...new Set(L.map(i=>i.store))].join(', ')],['Slow pieces',sum(L,'qty')],['Slow SKUs',new Set(L.map(i=>i.sku)).size],['Money stuck (EGP, selling price)',Math.round(sum(L,'amt'))],[],['Action','Pieces','SKUs','Money stuck (EGP)','What it means'],...ORDER.filter(k=>pq(P,k)>0).map(k=>[ACT[k].t,P[k].q,P[k].skus.size,Math.round(P[k].amt),actD(k)])]),[38,22,8,18,90]),'Summary');
+  XLSX.utils.book_append_sheet(wb,mk(XLSX.utils.json_to_sheet(L.map(one)),W),'Action plan');
+  if(!R)XLSX.utils.book_append_sheet(wb,mk(XLSX.utils.json_to_sheet(group(L,'store').map(o=>{const p=partsOf(o.l),a=avgIdle(o.l);return {Store:o.g,Pieces:o.qty,SKUs:o.skus,'Money stuck (EGP)':Math.round(o.amt),'Average days idle':a==null?'':a,...Object.fromEntries(ORDER.filter(k=>k!=='ask').map(k=>[ACT[k].t+' (pcs)',pq(p,k)]))}})),[18,8,8,18,18,14,20,14,14]),'By store');
+  if(!R&&TR.length)XLSX.utils.book_append_sheet(wb,mk(XLSX.utils.json_to_sheet(TR.filter(t=>!F.store||t.from===F.store).map(t=>({'From store':t.from,'To store':t.to,'SKU':t.i.sku,'Item':t.i.name,'Pcs':t.qty,['Sold at the receiving store ('+J.months+' months)']:t.soldTo}))),[16,16,16,40,6,34]),'Transfers');
+  const used=new Set(['Summary','Action plan','By store','Transfers']);
+  if(!F.store&&!R)for(const s of [...new Set(L.map(i=>i.store))]){let nm=String(s).replace(/[\\\/?*:\[\]]/g,' ').slice(0,31),k=2;while(used.has(nm))nm=nm.slice(0,28)+' '+k++;used.add(nm);XLSX.utils.book_append_sheet(wb,mk(XLSX.utils.json_to_sheet(L.filter(i=>i.store===s).map(one)),W),nm)}
+  XLSX.writeFile(wb,'Slowmoving 2.0 action plan '+(F.store?F.store+' ':'')+new Date().toISOString().slice(0,10)+'.xlsx')};
+/* ---------- Start transfer: one row per SKU (merged across stores), shows every store it is slow in, and the from -> to lines with the pieces you type ---------- */
+IC.check='<path d="M5 12.5l4.5 4.5L19 7.5"/>';
+const PK={scope:'',q:'',cat:'',mv:false,sel:new Map(),lim:300};
+let PKG=new Map(),PKD=new Map();
+const pkAll=()=>[...new Set([...ITEMS.map(i=>i.store),...ITEMS.flatMap(i=>i.elsewhere.map(x=>x[0]))])].sort();
+const pkQty=(g,st)=>g.items.filter(i=>i.store===st).reduce((a,i)=>a+i.qty,0);
+const pkUsed=(e,st,skip)=>e.lines.reduce((a,l,ix)=>a+(ix!==skip&&l.from===st?l.qty:0),0);
+const pkRoom=(e,st,skip)=>Math.max(0,pkQty(e.g,st)-pkUsed(e,st,skip));
+const pkPcs=e=>e.lines.reduce((a,l)=>a+(l.to?l.qty:0),0);
+function pkBuild(){PKG=new Map();for(const i of ITEMS){const g=PKG.get(i.sku)||PKG.set(i.sku,{sku:i.sku,name:i.name,cat:i.cat,ean:i.ean,items:[]}).get(i.sku);g.items.push(i)}
+  PKD=new Map();for(const t of TR){(PKD.get(t.i.sku)||PKD.set(t.i.sku,[]).get(t.i.sku)).push({from:t.from,to:t.to,qty:t.qty})}}
+const pkScoped=g=>PK.scope?g.items.filter(i=>i.store===PK.scope):g.items;
+function pkList(){const q=PK.q.trim().toUpperCase();
+  return [...PKG.values()].filter(g=>{const si=pkScoped(g);return si.length&&(!PK.cat||g.cat===PK.cat)&&(!PK.mv||si.some(i=>i.move>0))&&(!q||g.sku.includes(q)||String(g.name).toUpperCase().includes(q)||String(g.ean).includes(q))})
+   .sort((a,b)=>(pkScoped(b).reduce((x,i)=>x+i.move,0)-pkScoped(a).reduce((x,i)=>x+i.move,0))||(pkScoped(b).reduce((x,i)=>x+i.qty,0)-pkScoped(a).reduce((x,i)=>x+i.qty,0))||a.sku.localeCompare(b.sku))}
+function openPk(){if(!ITEMS.length){showErr('Run the report first, then press Start transfer.');return}
+  showErr('');pkBuild();
+  for(const [k,e] of [...PK.sel]){const g=PKG.get(k);if(!g){PK.sel.delete(k);continue}e.g=g;e.lines=e.lines.filter(l=>pkQty(g,l.from)>0);for(let ix=0;ix<e.lines.length;ix++)e.lines[ix].qty=Math.min(e.lines[ix].qty,pkRoom(e,e.lines[ix].from,ix))}
+  $('stB').innerHTML=`<div class="mh"><div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:800">${ic('truck')} Start transfer</div><div class="note">Each SKU appears once, with every store where it is slow. Tap it to pick it, then set from which store, to which store and how many pieces.</div></div><button class="btn sm" data-pkclose aria-label="Close">${ic('x')}</button></div>
+  <div class="pkctl"><div class="chips" id="pkScope"></div><div class="row"><input type="search" id="pkQ" placeholder="Search SKU, EAN or name" style="flex:1;min-width:160px"><select id="pkCat"></select><span class="chip" id="pkMv" data-pkmv>Can move to a store only</span><button class="btn sm" data-pkall>Select all shown</button><button class="btn sm" data-pknone>Clear selection</button></div><div class="note" id="pkCnt"></div></div>
+  <div id="pkList"></div>
+  <div class="pkfoot"><div id="pkSum"></div><button class="btn go" id="pkGo" data-pkgo>${ic('dl')} Download Excel</button></div>`;
+  $('pkQ').value=PK.q;$('pkQ').oninput=()=>{PK.q=$('pkQ').value;PK.lim=300;pkDraw()};$('pkCat').onchange=()=>{PK.cat=$('pkCat').value;PK.lim=300;pkDraw()};
+  $('stM').hidden=false;document.body.style.overflow='hidden';pkDraw()}
+function closePk(){$('stM').hidden=true;document.body.style.overflow=''}
+function pkLines(g){ // the suggestion, from the transfers table, for the chosen store (or every store)
+  return (PKD.get(g.sku)||[]).filter(x=>!PK.scope||x.from===PK.scope).map(x=>({from:x.from,to:x.to,qty:x.qty}))}
+function pkLn(e,l,ix){const froms=e.g.items.map(i=>i.store);
+  return `<div class="ln" data-ln="${ix}"><select data-lf aria-label="From store">${froms.map(st=>`<option${st===l.from?' selected':''}>${esc(st)}</option>`).join('')}</select><span class="arr">${ic('arrow')}</span><select data-lt aria-label="To store"><option value="">Choose a store</option>${pkAll().filter(st=>st!==l.from).map(st=>`<option${st===l.to?' selected':''}>${esc(st)}</option>`).join('')}</select><input type="number" inputmode="numeric" min="0" max="${pkQty(e.g,l.from)}" value="${l.qty}" data-lq aria-label="Pieces"><span class="note">pcs</span><button class="x" data-lx aria-label="Remove this line">${ic('x')}</button></div>`}
+function pkStay(e){return 'Staying: '+e.g.items.map(i=>`<b>${esc(i.store)}</b> ${fmt(pkRoom(e,i.store))}`).join(' · ')}
+function pkPlanHtml(g){const e=PK.sel.get(g.sku),slow=g.items.map(i=>`<b>${esc(i.store)}</b> ${fmt(i.qty)}${i.age!=null?` <span class="have">(${fmt(i.age)} d)</span>`:''}`).join(' · ');
+  const head=`<div class="note">Slow in: ${slow}</div>`;
+  if(!e){const L=pkLines(g),by=new Map();L.forEach(l=>(by.get(l.from)||by.set(l.from,[]).get(l.from)).push(l));
+    return `<div class="pkp" style="display:block">${head}<div class="note">${L.length?'Suggested: '+[...by].map(([f,a])=>`from <b>${esc(f)}</b> to ${a.map(l=>`<b>${esc(l.to)}</b> ${fmt(l.qty)}`).join(', ')}`).join(' · '):'No other store sold it, no suggestion.'}</div></div>`}
+  return `<div class="pkp" style="display:block">${head}<div class="lns">${e.lines.map((l,ix)=>pkLn(e,l,ix)).join('')}</div><div class="row" style="margin-top:6px"><button class="sug" data-ladd>+ Add a transfer line</button><span class="note" data-pkleft>${pkStay(e)}</span></div></div>`}
+function pkRow(g){const e=PK.sel.get(g.sku),si=pkScoped(g),tot=si.reduce((a,i)=>a+i.qty,0);
+  return `<div class="pk${e?' sel':''}" data-pk="${esc(g.sku)}"><div class="pkt"><span class="ck">${ic('check')}</span>${pic(g.sku).replace('class="img"','class="img lg"')}<div class="mid"><b title="${esc(g.name)}">${esc(g.name||g.sku)}</b><div class="note">${esc(g.sku)} · ${esc(g.cat)} · slow in <b style="display:inline">${g.items.length}</b> store${g.items.length>1?'s':''}</div></div><div class="qt">${g.items[0].price?`<div class="note" title="Latest selling price per piece, VAT included">EGP <b style="display:inline">${fmt(g.items[0].price)}</b> each</div>`:''}<b>${fmt(tot)}</b> <small class="note">pcs slow</small></div></div>${pkPlanHtml(g)}</div>`}
+function pkRedo(r){const g=PKG.get(r.dataset.pk);if(!g)return;const t=document.createElement('div');t.innerHTML=pkRow(g);r.replaceWith(t.firstChild);pkSum();pkDrawScope()}
+function pkDrawScope(){const stores=[...new Set(ITEMS.map(i=>i.store))].sort(),cn=st=>new Set(ITEMS.filter(i=>!st||i.store===st).map(i=>i.sku)).size,sn=st=>[...PK.sel.values()].filter(e=>e.lines.some(l=>l.to&&l.qty>0&&(!st||l.from===st))).length;
+  $('pkScope').innerHTML=[''].concat(stores).map(st=>`<span class="chip ${PK.scope===st?'on':''}" data-pkscope="${esc(st)}">${st?esc(st):'All stores together'} <b>${fmt(cn(st))}</b>${sn(st)?` <span class="note">· ${sn(st)} to move</span>`:''}</span>`).join('')}
+function pkDraw(){
+  const stores=[...new Set(ITEMS.map(i=>i.store))];if(PK.scope&&!stores.includes(PK.scope))PK.scope='';pkDrawScope();
+  const cats=[...new Set(ITEMS.filter(i=>!PK.scope||i.store===PK.scope).map(i=>i.cat))].sort();if(PK.cat&&!cats.includes(PK.cat))PK.cat='';
+  $('pkCat').innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option ${c===PK.cat?'selected':''}>${esc(c)}</option>`).join('');
+  $('pkMv').classList.toggle('on',PK.mv);
+  const l=pkList(),shown=l.slice(0,PK.lim);
+  $('pkCnt').textContent=`${fmt(l.length)} SKUs shown${l.length>shown.length?` (first ${fmt(shown.length)})`:''}`;
+  $('pkList').innerHTML=shown.map(pkRow).join('')+(l.length>shown.length?`<button class="btn" data-pkmore style="margin:6px 0">Show ${fmt(Math.min(300,l.length-shown.length))} more</button>`:'')||'<div class="note" style="padding:20px">No items match.</div>';pkSum()}
+function pkSum(){const v=[...PK.sel.values()].filter(e=>pkPcs(e)>0),pcs=v.reduce((a,e)=>a+pkPcs(e),0),L=v.flatMap(e=>e.lines.filter(l=>l.to&&l.qty>0)),f=new Set(L.map(l=>l.from)).size,t=new Set(L.map(l=>l.to)).size;
+  $('pkSum').innerHTML=v.length?`<b>${fmt(v.length)}</b> SKUs · <b>${fmt(pcs)}</b> pieces · from <b>${f}</b> store${f>1?'s':''} to <b>${t}</b> store${t>1?'s':''}`:'<span class="note">Nothing to move yet. Tap an item, then set from, to and the pieces.</span>';$('pkGo').disabled=!v.length}
+function pkSelect(g,on){if(on)PK.sel.set(g.sku,{g,lines:pkLines(g).filter(l=>pkQty(g,l.from)>0)});else PK.sel.delete(g.sku);
+  const e=PK.sel.get(g.sku);if(e)for(let ix=0;ix<e.lines.length;ix++)e.lines[ix].qty=Math.min(e.lines[ix].qty,pkRoom(e,e.lines[ix].from,ix))}
+function pkExport(){const rows=[];
+  for(const e of [...PK.sel.values()])for(const l of e.lines)if(l.to&&l.qty>0)rows.push({price:(e.g.items[0]||{}).price||'',from:l.from,to:l.to,sku:e.g.sku,ean:e.g.ean,name:e.g.name,cat:e.g.cat,qty:l.qty});
+  rows.sort((a,b)=>a.from.localeCompare(b.from)||a.to.localeCompare(b.to)||a.cat.localeCompare(b.cat)||a.sku.localeCompare(b.sku));if(!rows.length)return;
+  const L=r=>({'From store':r.from,'To store':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Price (EGP)':r.price,'Pcs':r.qty,'Done':''});
+  const wb=XLSX.utils.book_new(),mk=(a,w)=>{const ws=XLSX.utils.json_to_sheet(a);ws['!cols']=w;return ws};
+  XLSX.utils.book_append_sheet(wb,mk(rows.map(L),[{wch:16},{wch:20},{wch:16},{wch:15},{wch:42},{wch:20},{wch:11},{wch:6},{wch:7}]),'Transfer list');
+  const used=new Set(['Transfer list']);
+  for(const st of [...new Set(rows.map(r=>r.from))]){let nm=('Send from '+String(st).replace(/[\\\/?*:\[\]]/g,' ')).slice(0,31),k=2;while(used.has(nm))nm=nm.slice(0,28)+' '+k++;used.add(nm);
+    XLSX.utils.book_append_sheet(wb,mk(rows.filter(r=>r.from===st).map(r=>({'Send to':r.to,'SKU':r.sku,'EAN':r.ean,'Item':r.name,'Category':r.cat,'Price (EGP)':r.price,'Pcs':r.qty,'Done':''})),[{wch:22},{wch:16},{wch:15},{wch:42},{wch:20},{wch:11},{wch:6},{wch:7}]),nm)}
+  const fs=[...new Set(rows.map(r=>r.from))];
+  XLSX.writeFile(wb,'Slowmoving 2.0 transfer '+(fs.length===1?fs[0]:'all stores')+' '+new Date().toISOString().slice(0,10)+'.xlsx')}
+$('stBtn').onclick=openPk;
+const pkCtx=el=>{const r=el.closest('.pk'),ln=el.closest('.ln');return r&&ln?{r,e:PK.sel.get(r.dataset.pk),ix:+ln.dataset.ln}:null};
+$('stM').addEventListener('input',e=>{const inp=e.target.closest('[data-lq]');if(!inp)return;const c=pkCtx(inp);if(!c||!c.e)return;const l=c.e.lines[c.ix];
+  let v=Math.max(0,Math.floor(Number(inp.value)||0));const mx=pkRoom(c.e,l.from,c.ix);if(v>mx){v=mx;inp.value=v}l.qty=v;c.r.querySelector('[data-pkleft]').innerHTML=pkStay(c.e);pkSum();pkDrawScope()});
+$('stM').addEventListener('change',e=>{const f=e.target.closest('[data-lf]'),t=e.target.closest('[data-lt]');const x=f||t;if(!x)return;const c=pkCtx(x);if(!c||!c.e)return;const l=c.e.lines[c.ix];
+  if(f){l.from=f.value;if(l.to===l.from)l.to='';l.qty=Math.min(l.qty||pkRoom(c.e,l.from,c.ix),pkRoom(c.e,l.from,c.ix))}else l.to=t.value;pkRedo(c.r)});
+$('stM').addEventListener('click',e=>{const t=e.target;
+  if(t===$('stM')||t.closest('[data-pkclose]')){closePk();return}
+  const sc=t.closest('[data-pkscope]');if(sc){PK.scope=sc.dataset.pkscope;PK.lim=300;pkDraw();return}
+  if(t.closest('[data-pkmv]')){PK.mv=!PK.mv;PK.lim=300;pkDraw();return}
+  if(t.closest('[data-pkall]')){pkList().forEach(g=>{if(!PK.sel.has(g.sku))pkSelect(g,true)});pkDraw();return}
+  if(t.closest('[data-pknone]')){PK.sel.clear();pkDraw();return}
+  if(t.closest('[data-pkmore]')){PK.lim+=300;pkDraw();return}
+  if(t.closest('[data-pkgo]')){pkExport();return}
+  const lx=t.closest('[data-lx]');if(lx){const c=pkCtx(lx);if(c&&c.e){c.e.lines.splice(c.ix,1);pkRedo(c.r)}return}
+  const la=t.closest('[data-ladd]');if(la){const r=la.closest('.pk'),en=PK.sel.get(r.dataset.pk);if(en){const fr=(en.g.items.find(i=>pkRoom(en,i.store)>0)||en.g.items[0]).store;en.lines.push({from:fr,to:'',qty:pkRoom(en,fr)});pkRedo(r)}return}
+  if(t.closest('.img img,.pkp'))return; // tapping the picture only enlarges it; the lines are for typing
+  const r=t.closest('[data-pk]');if(r){const g=PKG.get(r.dataset.pk);if(!g)return;pkSelect(g,!PK.sel.has(g.sku));pkRedo(r)}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('stM').hidden&&!document.getElementById('zoom'))closePk()});
+
+load();
+</script>
+<style>#zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out}#zoom img{width:min(380px,80vw);height:min(380px,80vw);object-fit:contain;padding:10px;border-radius:18px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.35)}.img img,#hitPic img{cursor:zoom-in}</style>
+<script>document.addEventListener("click",e=>{const z=document.getElementById("zoom");if(z){z.remove();return}const im=e.target.closest&&e.target.closest(".img img,#hitPic img");if(!im)return;e.stopPropagation();e.preventDefault();const d=document.createElement("div");d.id="zoom";d.innerHTML="<img alt=\"\">";d.firstChild.src=im.src;HD.up(d.firstChild,HD.dvOf(im),true);document.body.appendChild(d)},true);document.addEventListener("keydown",e=>{if(e.key==="Escape"){const z=document.getElementById("zoom");if(z)z.remove()}});</script>
+</body>
+</html>

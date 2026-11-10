@@ -240,6 +240,7 @@ module.exports = async function handler(req, res) {
     else if (P === '/stockchecker' || P === '/stockchecker.html') id = 'stockchecker';
     else if (P === '/refill' || P === '/refill.html') id = 'refill';
     else if (P === '/slow' || P === '/slow.html') id = 'slow';
+    else if (P === '/slow2' || P === '/slow2.html') id = 'slow2';
     else if (P === '/transfer' || P === '/transfer.html') id = 'transfer';
     else if (P === '/insights' || P === '/insights.html') id = 'insights';
     else if (P === '/overview' || P === '/overview.html') id = 'overview';
@@ -410,6 +411,11 @@ module.exports = async function handler(req, res) {
   if (requestedPath === '/slow' || requestedPath === '/slow/' || requestedPath === '/slow.html') {
     if ((!facts.refill || facts.refill === 'none') && !(facts.staff && facts.staff.role === 'store')) return toHome(); // store managers see their own store only (api/_slow.js)
     return sendFile(res, 'slow.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
+  }
+  // Slowmoving 2.0: the same data and the same people as Slow Moving (api/_slow.js decides what each person receives)
+  if (requestedPath === '/slow2' || requestedPath === '/slow2/' || requestedPath === '/slow2.html') {
+    if ((!facts.refill || facts.refill === 'none') && !(facts.staff && facts.staff.role === 'store')) return toHome();
+    return sendFile(res, 'slow2.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   if (requestedPath === '/transfer' || requestedPath === '/transfer/' || requestedPath === '/transfer.html') {
     if (!(facts.staff && facts.staff.role === 'admin')) return toHome();

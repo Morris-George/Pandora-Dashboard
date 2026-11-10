@@ -4,7 +4,7 @@
 // Same sections and order as the home screen (including the order the super admin saved there), same pink look.
 const BASE = [
   ['Sales', ['overview', 'dashboards', 'staff', 'mysales', 'mysales2', 'storeteam', 'daily', 'film']],
-  ['Stock', ['stock', 'stockcount', 'stockchecker', 'slow', 'transfer']],
+  ['Stock', ['stock', 'stockcount', 'stockchecker', 'slow', 'slow2', 'transfer']],
   ['Ordering', ['refill', 'dist', 'recv']],
   ['Visual Merchandising', ['vmzones', 'zonestock', 'vm']],
   ['Team & Access', ['schedule', 'approvals', 'access', 'activity', 'uploads']],
@@ -104,6 +104,7 @@ const ICONS = {
   stockcount: '<path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2M7 8v8M11 8v8M15 8v8M18 8v8"/>',
   stockchecker: '<path d="M4 6v10M7 6v10M10 6v10M13 6v5"/><circle cx="16.5" cy="15.5" r="3.5"/><path d="M19 18l2.2 2.2"/>',
   slow: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  slow2: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M17.5 3.5l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z"/>',
   transfer: '<path d="M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4"/>',
   refill: '<path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5"/>',
   dist: '<path d="M12 3v7M12 10l-7 6M12 10l7 6M5 16v4M19 16v4M12 10v10"/>',
