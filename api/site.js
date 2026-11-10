@@ -414,7 +414,7 @@ module.exports = async function handler(req, res) {
   }
   // Slowmoving 2.0: the same data and the same people as Slow Moving (api/_slow.js decides what each person receives)
   if (requestedPath === '/slow2' || requestedPath === '/slow2/' || requestedPath === '/slow2.html') {
-    if ((!facts.refill || facts.refill === 'none') && !(facts.staff && facts.staff.role === 'store')) return toHome();
+    if ((!facts.refill || facts.refill === 'none') && !(facts.staff && facts.staff.role === 'store') && !facts.vm && !(facts.staff && !['admin', 'staff', 'store'].includes(facts.staff.role))) return toHome(); // area managers and the VM: no numbers (api/_slow.js, ?v=2)
     return sendFile(res, 'slow2.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   if (requestedPath === '/transfer' || requestedPath === '/transfer/' || requestedPath === '/transfer.html') {

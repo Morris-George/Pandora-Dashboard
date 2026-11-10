@@ -209,10 +209,13 @@ module.exports = async function handler(req, res) {
   if (!who) return send(res, 401, { ok: false, error: 'sign-in-required' });
   // A store manager sees the slow stock of their own store only: no other store, no sales or stock of other stores, no transfers, nothing to run. Decided here, never in the page.
   const mine = who.kind === 'staff' && who.info && who.info.role === 'store' && who.info.self && who.info.self.store ? String(who.info.self.store) : '';
-  const lvl = mine ? 'view' : await require('./_refill').levelFor(who);
+  const url = new URL(req.url, 'https://x.invalid');
+  // Slowmoving 2.0 for area managers (their zone's stores only) and the VM (all stores): the actions and items, no numbers
+  const blind = url.searchParams.get('v') === '2' && (who.kind === 'vm' || (who.kind === 'env' && !!who.info && !!who.info.allow));
+  let lvl = mine ? 'view' : await require('./_refill').levelFor(who);
+  if (blind && lvl === 'none') lvl = 'view';
   if (lvl === 'none') return send(res, 403, { ok: false, error: 'No access to Slow Moving. Ask the super admin (Refill Order access).' });
   if (mine && req.method !== 'GET') return send(res, 403, { ok: false, error: 'View only.' });
-  const url = new URL(req.url, 'https://x.invalid');
   const erpOn = !!(process.env.ERP_URL && process.env.ERP_API_KEY && process.env.ERP_API_SECRET);
   if (req.method === 'GET') {
     if (url.searchParams.get('warehouses')) {
@@ -229,19 +232,31 @@ module.exports = async function handler(req, res) {
       const own = snaps.filter(s => same(s.warehouse, mine) || same(s.store, mine) || st.stores.some(e => e.code === s.store && same(e.name, mine)));
       snaps.length = 0; snaps.push(...own);
     }
-    if (!snaps.length) return send(res, 200, { ok: true, level: lvl, restricted: !!mine, snaps: [] });
+    // Slowmoving 2.0 shows "money stuck" (pieces x selling price): super admins and overseers only. Everyone else gets no prices from the server.
+    const money = url.searchParams.get('v') !== '2' || (who.kind === 'env' && !!who.info && who.info.role === 'admin');
+    if (blind && who.kind === 'env') { // area manager: only the stores of their zone
+      const rx = who.info.allow.map(s => new RegExp(s, 'i')), own = snaps.filter(s => rx.some(r => r.test(String(s.store)) || r.test(String(s.warehouse))));
+      snaps.length = 0; snaps.push(...own);
+    }
+    if (!snaps.length) return send(res, 200, { ok: true, level: blind ? 'view' : lvl, restricted: !!mine, snaps: [], money, blind });
     // the SKU column, by name
     const c0 = snaps.find(s => s.cols.length).cols, skuCol = c0 ? c0.findIndex(c => c.fieldname === '_sku') : -1;
     const skus = skuCol < 0 ? [] : [...new Set(snaps.flatMap(s => s.rows.map(r => skuOf(r[skuCol]))).filter(Boolean))];
     const months = Math.max(...snaps.map(s => Number(s.months) || 6));
     const full = await enrich(skus, months);
+    if (!money) {
+      for (const v of Object.values(full.info)) { v.price = 0; delete v.pd; }
+      if (blind) for (const v of Object.values(full.info)) { v.soh = 0; v.order = 0; v.byMonth = []; }
+      const vi = c0 ? c0.findIndex(c => /(value|amount|valuation|cost)/i.test(c.fieldname + ' ' + c.label)) : -1;
+      if (vi >= 0) for (const s of snaps) for (const r of s.rows) r[vi] = 0;
+    }
     if (mine) {
       // keep only what belongs to this store: its own sales, the shelf price and the item group. Never other stores' sales, all-store totals, stock elsewhere or the refill order.
       const codes = new Set(snaps.map(s => s.store)), info = {};
       for (const [k, v] of Object.entries(full.info)) info[k] = { price: v.price || 0, grp: v.grp || '', stores: Object.fromEntries(Object.entries(v.stores || {}).filter(([c]) => codes.has(c))), sold: 0, byMonth: [], soh: 0, order: 0 };
-      return send(res, 200, { ok: true, level: lvl, restricted: true, snaps, skuCol, months, info, from: full.from, salesMonths: full.salesMonths, order: null, stores: full.stores.filter(x => codes.has(x.code)) });
+      return send(res, 200, { ok: true, level: lvl, restricted: true, money, snaps, skuCol, months, info, from: full.from, salesMonths: full.salesMonths, order: null, stores: full.stores.filter(x => codes.has(x.code)) });
     }
-    return send(res, 200, { ok: true, level: lvl, snaps, skuCol, months, ...full });
+    return send(res, 200, { ok: true, level: blind ? 'view' : lvl, money, blind, snaps, skuCol, months, ...full });
   }
   if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
   if (lvl !== 'manage') return send(res, 403, { ok: false, error: 'Only Refill Order "Manage" can run the report.' });
