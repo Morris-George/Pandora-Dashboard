@@ -400,7 +400,7 @@ function backM(){MSTK.pop();MSTK.length?renderM():closeM()}
 function closeM(){MSTK=[];$('trM').hidden=true;document.body.style.overflow=''}
 function renderM(){const o=MSTK[MSTK.length-1]();$('trM').hidden=false;document.body.style.overflow='hidden';
   $('trMB').innerHTML=`<div class="mh">${MSTK.length>1?'<button class="btn sm" data-mback>'+ic('back')+' Back</button>':''}<div style="flex:1;min-width:0"><div style="font-size:18px;font-weight:800">${o.title}</div><div class="note">${o.sub||''}</div></div>${o.dl?'<button class="btn sm" data-mdl>'+ic('dl')+' Excel</button>':''}<button class="btn sm" data-mclose aria-label="Close">${ic('x')}</button></div><div class="mc">${o.body}</div>`;
-  $('trMB')._dl=o.dl;$('trMB').scrollTop=0}
+  $('trMB')._dl=o.dl;$('trMB').scrollTop=0;const sb=$('trMB').querySelector('[data-stk]');if(sb)loadStk(sb)}
 const itemRow=(i,qty,extra)=>`<div class="ir" data-item="${esc(i.sku)}">${pic(i.sku).replace('class="img"','class="img lg"')}<div style="min-width:0;flex:1"><b>${esc(i.name||i.sku)}</b><div class="note">${esc(i.sku)}${extra?' · '+extra:''}</div></div><b class="pc">${fmt(qty)} <small>pcs</small></b></div>`;
 function storeScreen(name){const s=trStats(TRR).find(x=>x.name===name);if(!s)return {title:esc(name),body:'<div class="note">No transfers for this store.</div>'};
   const to=[...s.to.values()].sort((a,b)=>b.qty-a.qty),fr=[...s.from.values()].sort((a,b)=>b.qty-a.qty),mx=Math.max(1,...to.map(r=>r.qty),...fr.map(r=>r.qty));
@@ -423,6 +423,16 @@ function routeScreen(r){const l=[...r.l].sort((a,b)=>b.qty-a.qty);
    dl:()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(l.map(t=>({'SKU':t.i.sku,'Item':t.i.name,'Pcs':t.qty,['Sold at '+r.to+' ('+J.months+' months)']:t.soldTo}))),'Route');XLSX.writeFile(wb,`Transfer ${r.from} to ${r.to}.xlsx`)},
    body:`<div class="tip">${ic('bulb')} ${esc(r.from)} sold <b>0</b> of these in ${J.months} months, ${esc(r.to)} sold them.</div>`+l.map(t=>itemRow(t.i,t.qty,`${esc(r.to)} sold ${fmt(t.soldTo)}`)).join('')}}
 /* the full story of one item: every store where it is slow with its action, who sells it, and the sales by month */
+/* stock of the item in every store (the same server answer as the dashboard's item pop-up: each person only gets the stores they may see) */
+async function loadStk(box){const sku=box.dataset.stk;let shown=false;
+  const W=new Map(ITEMS.map(i=>[i.wh,i.store])),slow={};ITEMS.filter(x=>x.sku===sku).forEach(x=>slow[x.store]=(slow[x.store]||0)+x.qty);
+  const sold=((J.info||{})[sku]||{}).stores||{},lab=w=>W.get(w)||String(w).replace(/^pandora\s*-?\s*/i,'').replace(/\s*-\s*[A-Z]{1,3}$/,'');
+  const draw=(j,live)=>{if(!box.isConnected)return;shown=true;
+    const rows=(j.stores||[]).filter(s=>s.qty>0).map(s=>({n:lab(s.store),q:s.qty})),have=new Set(rows.map(r=>r.n)),none=(j.all||[]).map(lab).filter(n=>!have.has(n)),mx=Math.max(1,...rows.map(r=>r.q)),tot=rows.reduce((a,r)=>a+r.q,0);
+    box.innerHTML=(rows.length?`<div class="note" style="margin-bottom:6px"><b>${fmt(tot)} pcs</b> in ${rows.length} store${rows.length>1?'s':''}${live?'':' · updating…'}</div>`+rows.map(r=>{const s=slow[r.n]||0,so=sold[r.n]||0;return `<div class="br" style="cursor:default;grid-template-columns:minmax(110px,1.1fr) 1.4fr auto"><span><b>${esc(r.n)}</b><div class="note">${s?'slow here: '+fmt(s)+' · ':''}sold ${fmt(so)} in ${J.months} months</div></span>${bar(r.q,mx,s?'var(--warn)':'var(--good)')}<span><b>${fmt(r.q)}</b> pcs</span></div>`}).join('')+(none.length?`<div class="note" style="margin-top:6px">No stock in: ${none.map(esc).join(', ')}</div>`:''):'<div class="note">No store has this item in stock today.</div>')};
+  const get=async c=>{const r=await fetch('/api/stock?op=item&code='+encodeURIComponent(sku)+(c?'&cached=1':''),{credentials:'same-origin',cache:'no-store'});return r.json().catch(()=>({}))};
+  try{const a=await get(true);if(a&&a.ok&&!a.miss)draw(a,false)}catch(_){}
+  try{const j=await get(false);if(j&&j.ok)draw(j,true);else if(!shown&&box.isConnected)box.innerHTML='<div class="note">The stock of each store is not available right now.</div>'}catch(_){if(!shown&&box.isConnected)box.innerHTML='<div class="note">The stock of each store is not available right now.</div>'}}
 function itemScreen(sku){const L=ITEMS.filter(x=>x.sku===sku).sort((a,b)=>b.qty-a.qty),i=L[0];if(!i)return {title:esc(sku),body:''};
   const m=J.months,q=sum(L,'qty'),amt=sum(L,'amt'),inf=(J.info||{})[sku]||{},st=Object.entries(inf.stores||{}).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]),smx=Math.max(1,...st.map(x=>x[1]));
   if(N)return {title:esc(i.name||sku),sub:esc(sku)+' · '+esc(i.cat),body:`<div class="bigpic ovp" data-hd="${esc(dvOf(sku))}">${pic(sku).replace('class="img"','class="img xl"')}</div><h3>${ic('bulb')} What to do${L.length>1?', store by store':''}</h3>${L.map(x=>`<div class="todo"><div class="row"><b>${esc(x.store)}</b><span>${pill(x.act)}</span></div><div class="note" style="margin-top:4px">${esc(x.why)}</div><div style="font-weight:700;margin-top:4px">${esc(x.how)}</div></div>`).join('')}`+(st.length?`<h3>${ic('store')} Who sells it</h3><div class="chips">${st.map(([k])=>`<span class="chip on" style="cursor:default">${esc(k)}</span>`).join('')}</div>`:'')};
@@ -432,6 +442,7 @@ function itemScreen(sku){const L=ITEMS.filter(x=>x.sku===sku).sort((a,b)=>b.qty-
     R?null:['Sold in all stores',fmt(Math.max(i.sold,sum(st.map(x=>({v:x[1]})),'v')))+' pcs','last '+m+' months']].filter(Boolean);
   return {title:esc(i.name||sku),sub:esc(sku)+' · '+esc(i.cat),body:`<div class="bigpic ovp" data-hd="${esc(dvOf(sku))}">${pic(sku).replace('class="img"','class="img xl"')}</div>
    <div class="hero" style="margin-top:10px">${facts.map(k=>`<div class="hk"><small>${k[0]}</small><b style="font-size:17px">${k[1]}</b><span>${k[2]}</span></div>`).join('')}</div>
+   <h3>${ic('store')} Where it is in stock today</h3><div data-stk="${esc(sku)}"><div class="note">Loading the stock of each store…</div></div>
    <h3>${ic('bulb')} What to do${L.length>1?', store by store':''}</h3>${L.map(x=>`<div class="todo"><div class="row"><b>${esc(x.store)} · ${fmt(x.qty)} pcs</b><span>${pill(x.act)}</span></div><div class="note" style="margin-top:4px">${esc(x.why)}</div><div style="font-weight:700;margin-top:4px">${esc(x.how)}</div></div>`).join('')}`+
    (!R&&st.length?`<h3>${ic('store')} Who sells it (last ${m} months)</h3>${st.map(([k,v])=>`<div class="br" style="cursor:default"><span>${esc(k)}</span>${bar(v,smx,'var(--good)')}<span>${fmt(v)} pcs</span></div>`).join('')}`:'')+
    (!R&&!st.length?`<h3>${ic('store')} Who sells it</h3><div class="note">No store sold it in the last ${m} months.</div>`:'')+
