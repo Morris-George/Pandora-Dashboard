@@ -424,7 +424,7 @@ module.exports = async function handler(req, res) {
   // its product pictures, in pieces (one response may not pass 4.5 MB); super admin only, kept by the browser for a day
   const picPart = /^\/stockcount-pics-([1-9])\.js$/.exec(requestedPath);
   if (picPart) {
-    if (!(facts.staff && facts.staff.role === 'admin') && !facts.sc && !(facts.refill && facts.refill !== 'none') && !(facts.dist && facts.dist !== 'none') && !(facts.recv && facts.recv !== 'none')) return res.status(404).end();
+    if (!(facts.staff && facts.staff.role === 'admin') && !facts.sc && !(facts.refill && facts.refill !== 'none') && !(facts.dist && facts.dist !== 'none') && !(facts.recv && facts.recv !== 'none') && !(facts.staff && facts.staff.role !== 'staff') && !facts.vm) return res.status(404).end(); // store managers, area managers and the VM see pictures in Slow Moving too
     try {
       const body = fs.readFileSync(path.join(PRIVATE_DIR, 'stockcount-pics-' + picPart[1] + '.js'));
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
