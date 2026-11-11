@@ -479,7 +479,7 @@ table.dt{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
     <button type="button" class="ghost fx" id="resetBtn" title="Back to yesterday, all branches, all categories"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5"/></svg>Reset</button>
   </div>
   <nav class="tabs" id="tabs" aria-label="Sections">
-    <a href="#sec-summary">Summary</a><a href="#sec-trend">Trend</a><a href="#sec-branches">Branches</a><a href="#sec-week">Weekdays &amp; payment</a><a href="#collections">Collections</a><a href="#explorer">Categories</a><a href="#sec-products">Products</a>
+    <a href="#sec-summary">Summary</a><a href="#sec-trend">Trend</a><a href="#sec-branches">Branches</a><a href="#sec-week">Weekdays &amp; payment</a><a href="#explorer">Categories</a><a href="#collections">Collections</a><a href="#sec-products">Products</a>
     <span class="scope" id="scopeTxt"></span>
   </nav>
  </div>
@@ -542,17 +542,17 @@ table.dt{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
   </article>
 </section>
 
-<section class="panel" id="collections" data-title="Sales by collection" hidden>
-  <div class="ph"><div><h3>Sales by collection</h3><p>Pandora's families, such as Moments, Timeless and Essence. Follows the dates, branches and category above. Pick a collection to see what is inside it.</p></div></div>
-  <div class="xk" id="colKpis"></div>
-  <div class="exp-grid"><div class="xlist" id="colList"></div><div class="xdetail" id="colDetail"></div></div>
-</section>
-
 <section class="panel" id="explorer" data-title="Category explorer" hidden>
   <div class="ph"><div><h3>Category explorer</h3><p>Pick a category, then a type, to see its sales. Follows the dates and branches above.</p></div></div>
   <div class="xtop"><div class="xchips" id="xChips"></div><div class="seg" id="xGroup" role="group" aria-label="Group by"><button type="button" data-g="type">By type</button><button type="button" data-g="metal">By metal</button></div></div>
   <label class="xsearch"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="xSearch" type="search" placeholder="Search a type, product or SKU, e.g. bangle, dangle, 590745" aria-label="Search types, products and SKUs"></label>
   <div class="exp-grid"><div class="xlist" id="xList"></div><div class="xdetail" id="xDetail"></div></div>
+</section>
+
+<section class="panel" id="collections" data-title="Sales by collection" hidden>
+  <div class="ph"><div><h3>Sales by collection</h3><p>Pandora's families, such as Moments, Timeless and Essence. Follows the dates, branches and category above. Pick a collection to see what is inside it.</p></div></div>
+  <div class="xk" id="colKpis"></div>
+  <div class="exp-grid"><div class="xlist" id="colList"></div><div class="xdetail" id="colDetail"></div></div>
 </section>
 
 <section class="panel" id="sec-products" data-title="Products">
