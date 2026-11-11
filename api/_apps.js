@@ -31,10 +31,12 @@ const APPS = [
   { id: 'vm', title: 'VM Report', desc: 'The Visual Merchandiser report.', href: '/vm', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') }
 ];
 
-// the Home card names the super admin changed ({ <report id>: name }), applied to a list from appsFor
-async function named(apps) {
+// the Home card names the super admin changed ({ <report id>: name, __hidden: [ids removed from Home] }), applied to a list from appsFor.
+// keep = the super admin's own Home: removed cards stay in the list, marked, so they can be brought back
+async function named(apps, keep) {
   let n = {}; try { n = (await require('./_store').getJSONCached('access/cardnames.json')) || {}; } catch (_) {}
-  return apps.map(a => n[a.id] ? { ...a, title: n[a.id], std: a.title } : a);
+  const h = Array.isArray(n.__hidden) ? n.__hidden : [], d = Array.isArray(n.__deleted) ? n.__deleted : [];
+  return apps.filter(a => keep || (!h.includes(a.id) && !d.includes(a.id))).map(a => ({ ...a, ...(n[a.id] && typeof n[a.id] === 'string' ? { title: n[a.id], std: a.title } : {}), ...(h.includes(a.id) ? { gone: true } : {}), ...(d.includes(a.id) ? { del: true } : {}) }));
 }
 function appsFor(f) {
   // area managers open the same Dashboards as the super admin, but the server only sends them the stores of their zone

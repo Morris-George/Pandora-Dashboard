@@ -127,7 +127,7 @@ function paint(j){
   document.getElementById('hello').innerHTML=g?'Hello,<br><em>'+esc(g)+'</em>':'Welcome';
   document.getElementById('date').textContent=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Cairo',weekday:'long',day:'numeric',month:'long'}).format(new Date());
   if(j.apps.some(a=>a.id==='uploads')&&!document.querySelector('a.upl')){const u=document.createElement('a');u.className='pandora-fab upl';u.href='/uploads';u.innerHTML=ICON.uploads+'All Uploads';document.body.appendChild(u)}
-  const apps=j.apps.filter(a=>a.id!=='uploads');
+  const apps=j.apps.filter(a=>a.id!=='uploads'&&!a.del&&(EDIT||!a.gone));
   const BASE=[['Sales',['overview','dashboards','staff','mysales','mysales2','storeteam','daily','film']],['Stock',['stock','stockcount','stockchecker','slow2','transfer']],['Ordering',['refill','dist','recv']],['Visual Merchandising',['vmzones','zonestock','vm']],['Team & Access',['schedule','approvals','access','activity']],['Maintenance',['maintenance']]];
   // the super admin's saved order, with anything newer kept at the end of its usual section
   const saved=EDIT||j.homeOrder||[];
@@ -137,7 +137,7 @@ function paint(j){
   const tile=(a,f,sp)=>`<a class="tile${f?' feat':''}" style="--sp:${sp||1}" href="${esc(a.href)}"${ext(a.href)} title="${esc(a.desc||'')}"><span class="ic">${ICON[a.id]||DEF}</span><span><b>${esc(a.title)}</b><span class="d">${esc(a.desc||'')}</span></span><span class="go" aria-hidden="true">${ARROW}</span></a>`;
   // on a wide screen every row is filled edge to edge: the big tile plus two, then rows of four, the last row shared out
   const spans=n=>{const r=[2],rest=n-1,first=Math.min(2,rest);for(let i=0;i<first;i++)r.push(first===1?2:1);let left=rest-first;while(left>0){const k=Math.min(4,left),base=Array(k).fill(1);for(let e=4-k,i=0;e>0;i=(i+1)%k,e--)base[i]++;r.push(...base);left-=k}return r};
-  const row=a=>`<a class="app" href="${esc(a.href)}"${ext(a.href)}><span class="ic">${ICON[a.id]||DEF}</span><b>${esc(a.title)}</b></a><button type="button" data-ren="${esc(a.id)}" title="Edit the card name">✎</button>`;
+  const row=a=>`<a class="app"${a.gone?' style="opacity:.45" title="Hidden from everyone"':''} href="${esc(a.href)}"${ext(a.href)}><span class="ic">${ICON[a.id]||DEF}</span><b>${esc(a.title)}</b></a><button type="button" data-ren="${esc(a.id)}" title="Edit the card name">✎</button>${a.id==='access'?'':`<button type="button" data-hide="${esc(a.id)}" data-on="${a.gone?0:1}" title="${a.gone?'Unhide: show this card again':'Hide this card from everyone'}">${a.gone?'Unhide':'Hide'}</button><button type="button" data-hide="${esc(a.id)}" data-on="1" data-kind="del" title="Delete this card">🗑</button>`}`;
   const used=new Set(),secs=[];
   GROUPS.forEach(([name,ids])=>{const list=ids.map(id=>apps.find(a=>a.id===id)).filter(Boolean);list.forEach(a=>used.add(a.id));if(list.length)secs.push([name,list])});
   const rest=apps.filter(a=>!used.has(a.id));if(rest.length)secs.push(['More',rest]);
@@ -153,7 +153,7 @@ function paint(j){
   VIS=secs.map(([n,l])=>[n,l.map(a=>a.id)]);
   document.getElementById('findbox').hidden=!!EDIT||apps.length<6;applyFind();
   if(apps.some(a=>a.id==='access')&&!document.getElementById('edbar')){const d=document.createElement('div');d.id='edbar';d.style.cssText='display:flex;gap:8px;justify-content:center;margin:26px 0 0';box.after(d)}
-  const bar=document.getElementById('edbar');if(bar)bar.innerHTML=EDIT?'<button type="button" id="edsave">Save order</button><button type="button" id="edcancel">Cancel</button><button type="button" id="edreset">Standard order</button>':'<button type="button" id="edopen">Edit cards order</button>';
+  const bar=document.getElementById('edbar');if(bar)bar.innerHTML=EDIT?'<button type="button" id="edsave">Save order</button><button type="button" id="edcancel">Cancel</button><button type="button" id="edreset">Standard order</button>'+(j.apps.some(a=>a.del)?'<button type="button" id="edrestore">Restore deleted cards ('+j.apps.filter(a=>a.del).length+')</button>':''):'<button type="button" id="edopen">Edit cards order</button>';
   return apps;
 }
 function applyFind(){const q=(document.getElementById('find').value||'').trim().toLowerCase(),box=document.getElementById('apps');if(EDIT)return;let any=false;
@@ -170,6 +170,14 @@ document.addEventListener('click',async e=>{
   if(t.dataset&&t.dataset.tab){TAB=t.dataset.tab;document.getElementById('find').value='';document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tab===TAB));document.body.classList.add('ready');applyFind();document.querySelectorAll('.sec:not([hidden])').forEach(x=>{x.classList.remove('swap');void x.offsetWidth;x.classList.add('swap')});return}
   if(t.id==='edopen'){e.preventDefault();EDIT=VIS.filter(v=>v[0]!=='More');paint(LAST);return}
   if(t.id==='edcancel'){EDIT=null;paint(LAST);return}
+  if(t.dataset&&t.dataset.hide){const a=LAST.apps.find(x=>x.id===t.dataset.hide);if(!a)return;const on=t.dataset.on==='1',kind=t.dataset.kind||'';
+    if(kind==='del'&&!confirm('Delete the card "'+a.title+'" from Home and the side menu for everyone?\n\nIt can be brought back with "Restore deleted cards".'))return;
+    const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'cardhide',id:a.id,on,kind})}).catch(()=>null);
+    if(!r||!r.ok){alert('Could not save.');return}
+    const f=kind==='del'?'del':'gone';if(on)a[f]=true;else delete a[f];paint(LAST);return}
+  if(t.id==='edrestore'){const l=LAST.apps.filter(a=>a.del);if(!l.length)return;const p=prompt('Type the number of the card to restore:\n\n'+l.map((a,i)=>(i+1)+'. '+a.title).join('\n'));const a=l[(+p||0)-1];if(!a)return;
+    const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'cardhide',id:a.id,on:false,kind:'del'})}).catch(()=>null);
+    if(!r||!r.ok){alert('Could not save.');return}delete a.del;paint(LAST);return}
   if(t.dataset&&t.dataset.ren){const a=LAST.apps.find(x=>x.id===t.dataset.ren);if(!a)return;const nm=prompt('Card name (leave empty for the standard name'+(a.std?': '+a.std:'')+'):',a.title);if(nm==null)return;
     const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'cardname',id:a.id,title:nm.trim()})}).catch(()=>null);
     if(!r||!r.ok){alert('Could not save the name.');return}

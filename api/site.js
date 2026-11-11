@@ -255,7 +255,7 @@ module.exports = async function handler(req, res) {
   if (requestedPath === '/' || requestedPath === '/home.html') {
     const label = facts.vm || facts.sc || facts.hr ? facts.vmName : facts.staff ? (facts.staff.role === 'staff' || facts.staff.role === 'store' ? facts.staff.name : facts.staff.label) : 'Pandora Dashboards';
     const homeOrder = (await require('./_store').getJSONCached('access/home.json').catch(() => null)) || [];
-    const boot = JSON.stringify({ ok: true, label, greet: greetName(facts), apps: await require('./_apps').named(appsFor(facts)), homeOrder }).replace(/</g, '\\u003c');
+    const boot = JSON.stringify({ ok: true, label, greet: greetName(facts), apps: await require('./_apps').named(appsFor(facts), appsFor(facts).some(a => a.id === 'access')), homeOrder }).replace(/</g, '\\u003c');
     const chrome = chromeFor('home', multi);
     return sendFile(res, 'home.html', 'text/html; charset=utf-8', function (buf) {
       let html = buf.toString('utf8');

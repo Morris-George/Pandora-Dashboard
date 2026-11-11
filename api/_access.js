@@ -60,6 +60,16 @@ async function depts() { const d = (await store.getJSON(DEPTS)) || {}; return { 
 async function deptOp(b, res) {
   const d = await depts(), name = String(b.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 40);
   if (b.op === 'newdept') { if (!name) return send(res, 400, { ok: false, error: 'Type a department name.' }); if (!d.list.some(x => x.toLowerCase() === name.toLowerCase())) d.list.push(name); }
+  else if (b.op === 'cardhide') {
+    // a Home card taken off Home and the side menu for everyone (the report itself stays reachable by its link); on = false shows it again
+    const id = String(b.id || '').slice(0, 40); if (!id || id === 'access') return send(res, 400, { ok: false, error: 'This card cannot be removed.' });
+    // kind 'del' = deleted (gone from the edit list too, brought back with Restore); otherwise hidden (stays in the edit list, greyed)
+    const k = b.kind === 'del' ? '__deleted' : '__hidden';
+    const n = (await store.getJSON('access/cardnames.json')) || {}, h = new Set(Array.isArray(n[k]) ? n[k] : []);
+    if (b.on === false) h.delete(id); else h.add(id);
+    n[k] = [...h]; await store.putJSON('access/cardnames.json', n);
+    return send(res, 200, { ok: true });
+  }
   else if (b.op === 'cardname') {
     // the super admin's own name for a Home card, for everyone: { <report id>: name }; empty = the standard name
     const id = String(b.id || '').slice(0, 40), nm = String(b.title || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 50);
