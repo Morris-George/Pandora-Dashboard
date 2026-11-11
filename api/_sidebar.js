@@ -16,7 +16,7 @@ async function dataFor(facts) {
   try {
     if (!facts) return null;
     const { appsFor } = require('./_apps');
-    const apps = appsFor(facts).filter(a => a.id !== 'film'); // the launch film is a presentation, not a report
+    const apps = (await require('./_apps').named(appsFor(facts))).filter(a => a.id !== 'film'); // the launch film is a presentation, not a report
     if (apps.length < 2) return null; // one report only: nothing to switch to
     let saved = [];
     try { saved = (await require('./_store').getJSONCached('access/home.json')) || []; } catch (_) {}

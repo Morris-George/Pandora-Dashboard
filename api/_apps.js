@@ -31,6 +31,11 @@ const APPS = [
   { id: 'vm', title: 'VM Report', desc: 'The Visual Merchandiser report.', href: '/vm', allow: f => !!f.vm || (!!f.staff && f.staff.role === 'admin') }
 ];
 
+// the Home card names the super admin changed ({ <report id>: name }), applied to a list from appsFor
+async function named(apps) {
+  let n = {}; try { n = (await require('./_store').getJSONCached('access/cardnames.json')) || {}; } catch (_) {}
+  return apps.map(a => n[a.id] ? { ...a, title: n[a.id], std: a.title } : a);
+}
 function appsFor(f) {
   // area managers open the same Dashboards as the super admin, but the server only sends them the stores of their zone
   const zoneManager = !!f.staff && f.staff.role !== 'admin' && f.staff.role !== 'staff' && f.staff.role !== 'store';
@@ -109,4 +114,4 @@ function greetName(f) {
   return first ? first.charAt(0).toUpperCase() + first.slice(1).toLowerCase() : '';
 }
 
-module.exports = { APPS, appsFor, sessionFacts, factsFromWho, greetName, OVERRIDES, extraFor };
+module.exports = { APPS, appsFor, named, sessionFacts, factsFromWho, greetName, OVERRIDES, extraFor };

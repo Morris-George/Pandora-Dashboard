@@ -137,7 +137,7 @@ function paint(j){
   const tile=(a,f,sp)=>`<a class="tile${f?' feat':''}" style="--sp:${sp||1}" href="${esc(a.href)}"${ext(a.href)} title="${esc(a.desc||'')}"><span class="ic">${ICON[a.id]||DEF}</span><span><b>${esc(a.title)}</b><span class="d">${esc(a.desc||'')}</span></span><span class="go" aria-hidden="true">${ARROW}</span></a>`;
   // on a wide screen every row is filled edge to edge: the big tile plus two, then rows of four, the last row shared out
   const spans=n=>{const r=[2],rest=n-1,first=Math.min(2,rest);for(let i=0;i<first;i++)r.push(first===1?2:1);let left=rest-first;while(left>0){const k=Math.min(4,left),base=Array(k).fill(1);for(let e=4-k,i=0;e>0;i=(i+1)%k,e--)base[i]++;r.push(...base);left-=k}return r};
-  const row=a=>`<a class="app" href="${esc(a.href)}"${ext(a.href)}><span class="ic">${ICON[a.id]||DEF}</span><b>${esc(a.title)}</b></a>`;
+  const row=a=>`<a class="app" href="${esc(a.href)}"${ext(a.href)}><span class="ic">${ICON[a.id]||DEF}</span><b>${esc(a.title)}</b></a><button type="button" data-ren="${esc(a.id)}" title="Edit the card name">✎</button>`;
   const used=new Set(),secs=[];
   GROUPS.forEach(([name,ids])=>{const list=ids.map(id=>apps.find(a=>a.id===id)).filter(Boolean);list.forEach(a=>used.add(a.id));if(list.length)secs.push([name,list])});
   const rest=apps.filter(a=>!used.has(a.id));if(rest.length)secs.push(['More',rest]);
@@ -170,6 +170,10 @@ document.addEventListener('click',async e=>{
   if(t.dataset&&t.dataset.tab){TAB=t.dataset.tab;document.getElementById('find').value='';document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tab===TAB));document.body.classList.add('ready');applyFind();document.querySelectorAll('.sec:not([hidden])').forEach(x=>{x.classList.remove('swap');void x.offsetWidth;x.classList.add('swap')});return}
   if(t.id==='edopen'){e.preventDefault();EDIT=VIS.filter(v=>v[0]!=='More');paint(LAST);return}
   if(t.id==='edcancel'){EDIT=null;paint(LAST);return}
+  if(t.dataset&&t.dataset.ren){const a=LAST.apps.find(x=>x.id===t.dataset.ren);if(!a)return;const nm=prompt('Card name (leave empty for the standard name'+(a.std?': '+a.std:'')+'):',a.title);if(nm==null)return;
+    const r=await fetch('/api/access',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'cardname',id:a.id,title:nm.trim()})}).catch(()=>null);
+    if(!r||!r.ok){alert('Could not save the name.');return}
+    if(nm.trim()){if(!a.std)a.std=a.title;a.title=nm.trim()}else if(a.std){a.title=a.std;delete a.std}paint(LAST);return}
   if(t.dataset&&t.dataset.sec){mv(EDIT,+t.dataset.sec,+t.dataset.d);paint(LAST);return}
   if(t.dataset&&t.dataset.id){const l=EDIT[+t.dataset.g][1];mv(l,l.indexOf(t.dataset.id),+t.dataset.d);paint(LAST);return}
   if(t.id==='edsave'||t.id==='edreset'){const home=t.id==='edsave'?EDIT:[];
