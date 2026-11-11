@@ -229,6 +229,11 @@ function describe(name, req) {
       if (b.op === 'pair') return { a: 'Stock Count: paired a phone', d: none };
       return null; // reading and the 4-second sync are not changes
     }
+    if (flag(u, 'checker')) {
+      const x = { scan: 'Stock Checker: scanned an item', adj: 'Stock Checker: changed a scanned quantity', verdict: 'Stock Checker: marked a scan', undo: 'Stock Checker: undid a scan', reset: 'Stock Checker: reset the scans' }[op];
+      return x ? { a: x, d: () => S(b.store), co: op === 'scan' || op === 'adj' ? 600000 : 0 } : null;
+    }
+    if (flag(u, 'checkerpair')) return { a: 'Stock Checker: paired a phone', d: none };
     if (flag(u, 'zonestock')) {
       const x = { count: 'Zone stock: counted zones', in: 'Zone stock: received goods', move: 'Zone stock: moved pieces', undo: 'Zone stock: undid a movement' }[op];
       return x ? { a: x, d: () => S(b.store) } : null;
