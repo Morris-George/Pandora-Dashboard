@@ -97,6 +97,23 @@ tr.st{cursor:pointer}tr.st:hover td{background:var(--hover)}tr.st.sel td{backgro
 .hb .v{text-align:right}
 .hb.c1{grid-template-columns:minmax(110px,1.1fr) 3fr 56px}.hb.c2{grid-template-columns:minmax(110px,1.1fr) 3fr 96px}.hb.c3{grid-template-columns:minmax(110px,1.1fr) 3fr 200px}
 @media (max-width:640px){.hb.c1,.hb.c2,.hb.c3{grid-template-columns:1fr 2fr auto}}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px 18px;margin:4px 0 14px;padding:12px 14px;border-radius:12px;background:var(--hover)}
+.facts div{font-size:13px;font-weight:700;min-width:0;overflow-wrap:anywhere}.facts span{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2)}
+.stat small{display:block;font-size:11px;font-weight:700;margin-top:1px}.stat small.same{color:var(--ink2);font-weight:600}
+.cal{display:flex;flex-wrap:wrap;gap:3px;margin:2px 0 4px}.cal i{width:15px;height:15px;border-radius:4px;background:var(--line);display:block}.cal i.on{background:var(--accent)}
+.cal i.wk{margin-left:5px}
+.sess{display:flex;flex-direction:column}.se{display:grid;grid-template-columns:150px 1fr auto;gap:4px 14px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;align-items:start}.se:last-child{border-bottom:0}
+.se .w{font-weight:700}.se .w small{display:block;color:var(--ink2);font-weight:500;font-size:12px}.se .r{color:var(--ink2);font-weight:600;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.pchips{display:flex;flex-wrap:wrap;gap:4px}.pchips span{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--ink2);white-space:nowrap}
+@media (max-width:640px){.se{grid-template-columns:1fr auto}.se .pchips{grid-column:1/-1}}
+.lb{display:grid;grid-template-columns:22px minmax(120px,1.2fr) 2fr auto;gap:10px;align-items:center;padding:6px 0;font-size:13px;cursor:pointer;border-radius:8px}.lb:hover .nm{color:var(--accent-text);text-decoration:underline}
+.lb .rk{font-weight:800;color:var(--ink2);text-align:right;font-variant-numeric:tabular-nums}.lb .t{height:12px;border-radius:6px;background:var(--hover);overflow:hidden}.lb .t i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.lb .v{color:var(--ink2);font-weight:600;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}.lb .v b{color:var(--ink)}
+@media (max-width:640px){.lb{grid-template-columns:22px 1fr auto}.lb .t{display:none}}
+.heat{width:100%;display:block}.heat text{fill:var(--ink2);font:600 10.5px var(--font)}
+.hlegend{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink2);font-weight:600;margin-top:6px}.hlegend i{width:14px;height:10px;border-radius:3px;background:var(--accent);display:inline-block}
+tr.day td small{font-weight:600;color:var(--ink2);margin-left:8px}
+.sub2{color:var(--ink2);font-weight:500;font-size:12px}
 </style>
 </head>
 <body>
@@ -139,7 +156,12 @@ tr.st{cursor:pointer}tr.st:hover td{background:var(--hover)}tr.st.sel td{backgro
       <section class="card"><h2>Most common changes</h2><div class="meta">Click a change to see every time it happened.</div><div id="acts"></div></section>
     </div>
     <div class="two">
-      <section class="card"><h2>Busiest hours</h2><div class="meta">When people use the site (Cairo time).</div><svg class="chart sm" id="hours" role="img" aria-label="Activity by hour of the day"></svg><div class="hint" id="hoursNote"></div></section>
+      <section class="card"><h2>Most active people</h2><div class="meta">Ranked by time in use. Click a name to open their page.</div><div id="leaders"></div></section>
+      <section class="card"><h2>Phone or computer</h2><div class="meta">What people use to open the site.</div><div id="devices"></div></section>
+    </div>
+    <section class="card"><h2>When the site is used</h2><div class="meta">Each square is one hour of a weekday (Cairo time). Darker means more sign-ins, pages opened and changes. Hover a square for the number.</div><svg class="heat" id="hours" role="img" aria-label="Activity by weekday and hour"></svg><div class="hlegend" id="heatLegend"></div><div class="hint" id="hoursNote"></div></section>
+    <div class="two">
+      <section class="card"><h2>Time per page</h2><div class="meta">Where the time goes, and how long one visit to the page lasts on average.</div><div id="pageTime"></div></section>
       <section class="card"><h2>Busiest days of the week</h2><div class="meta">Average number of people active on that weekday.</div><div id="wdays"></div></section>
     </div>
   </div>
@@ -181,7 +203,11 @@ const when=iso=>iso?fmtT.format(new Date(iso)):'';
 const addDays=(d,n)=>new Date(Date.parse(d+'T12:00:00Z')+n*ONE).toISOString().slice(0,10);
 const span=(a,b)=>{const o=[];for(let d=a;d<=b&&o.length<400;d=addDays(d,1))o.push(d);return o};
 const dayOf=iso=>new Date(Date.parse(iso)+3*3600000).toISOString().slice(0,10);
-const hourOf=iso=>new Date(Date.parse(iso)+3*3600000).getUTCHours();
+const fmtHr=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',hour12:false});
+const hourOf=iso=>Number(fmtHr.format(new Date(iso)))%24; // the real Cairo hour, summer and winter
+const wdOf=d=>(new Date(d+'T12:00:00Z').getUTCDay()+6)%7; // Monday = 0
+const WD=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const hh=h=>String(h).padStart(2,'0')+':00';
 const fmtDay=d=>fmtD.format(new Date(d+'T12:00:00Z'));
 const wday=d=>fmtW.format(new Date(d+'T12:00:00Z'));
 function ago(iso){if(!iso)return 'never';const s=Math.max(0,(Date.now()-Date.parse(iso))/1000);if(s<90)return 'just now';if(s<3600)return Math.round(s/60)+' min ago';if(s<86400)return Math.round(s/3600)+' h ago';const d=Math.round(s/86400);return d===1?'yesterday':d+' days ago'}
@@ -202,7 +228,8 @@ const KINDS=[['all','All'],['login','Sign-ins'],['view','Pages opened'],['action
 const kindOf=e=>e.w==='anon'?'anon':e.ty==='login'||e.ty==='logout'?'login':e.ty==='view'?'view':e.ty==='action'?'action':'bad';
 const TYPE_TAG={login:['Signed in','good'],logout:['Signed out','mute'],view:['Opened','mute'],action:['Changed',''],fail:['Problem','warn'],denied:['Not allowed','warn'],error:['Error','warn'],signup:['New sign-up',''],forgot:['Forgot password','']};
 const PAGE_NAMES={'/':'Home','/dashboards':'Pandora Dashboards','/staff':'Staff Performance','/staff/person':'A sales person page','/staff/me':'My sales','/staff/accounts':'Staff approvals','/uploads':'All Uploads','/film':'Launch Film','/daily':'Daily Store Report','/vm':'VM Report','/vm/zones':'VM Zones','/vm/stock':'Zone Stock','/stock':'Stock balance','/stockcount':'Stock Count','/stockchecker':'Stock Checker','/refill':'Refill Order','/slow':'Slow Moving','/distribution':'Orders Distribution'};
-const pageName=p=>PAGE_NAMES[String(p).replace(/\/+$/,'')||'/']||p;
+const pageName=p=>{const k=String(p).replace(/\/+$/,'')||'/';return (D&&D.pageNames&&D.pageNames[k])||PAGE_NAMES[k]||p};
+const kindOfDev=t=>/^Phone/i.test(t||'')?'Phone':/^Tablet/i.test(t||'')?'Tablet':/^Computer/i.test(t||'')?'Computer':'';
 
 // ---- stores: "Pandora - CFC" and "CFC" are one store ----
 const storeKey=s=>String(s||'').toLowerCase().replace(/pandora/g,'').replace(/[^a-z0-9]+/g,'');
@@ -350,7 +377,7 @@ function render(){
 }
 function renderTab(){
   if(!D)return;showPanels();
-  if(TAB==='overview'){renderKpis();renderShort();renderAttn();renderMetric();renderChart();renderPages();renderActs();renderHours();renderWdays()}
+  if(TAB==='overview'){renderKpis();renderShort();renderAttn();renderMetric();renderChart();renderPages();renderActs();renderLeaders();renderDevices();renderHours();renderPageTime();renderWdays()}
   else if(TAB==='people'){renderStatus();renderPeople();renderDetail()}
   else if(TAB==='timeline'){renderKinds();renderFeed()}
   else renderStores();
@@ -378,6 +405,7 @@ function renderKpis(){
     [num(t.views),'Pages opened',delta(t.views,c('views'))],
     [num(t.actions),'Changes made',delta(t.actions,c('actions'))],
     [dur(t.secs),'Time in use',delta(t.secs,c('secs'))],
+    [t.users?dur(t.secs/t.users):'–','Time per active person',pv&&pv.users?delta(Math.round(t.secs/Math.max(1,t.users)),Math.round(pv.secs/pv.users)):''],
     [num(t.failed),'Wrong passwords',delta(t.failed,c('failed'),true)]
   ];
   $('kpis').innerHTML=k.map(x=>`<div class="kpi"><b>${x[0]}</b><span>${x[1]}</span>${x[2]||''}</div>`).join('');
@@ -479,14 +507,61 @@ function openAct(r){KIND='action';TQ=r.dataset.act;$('tq').value=TQ;TAB='timelin
 $('acts').addEventListener('click',e=>{const r=e.target.closest('[data-act]');if(r)openAct(r)});
 $('acts').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const r=e.target.closest('[data-act]');if(r){e.preventDefault();openAct(r)}}});
 
+// hour of the day for every weekday. Newer days carry exact counters; older days are read from the log lines that are kept.
+function hourMatrix(list){
+  const M=WD.map(()=>new Array(24).fill(0)),have=new Set();let n=0;
+  if(!F.page)for(const p of list)for(const day of P.days){const d=p.days[day];if(!d||!d.h)continue;have.add(p.key+'|'+day);const w=wdOf(day);for(const h in d.h){M[w][+h]+=d.h[h];n+=d.h[h]}}
+  const keys=new Set(list.map(p=>p.key));
+  for(const e of feedBase()){if(!keys.has(e.w)||(e.ty!=='login'&&e.ty!=='view'&&e.ty!=='action'))continue;const day=dayOf(e.t);if(have.has(e.w+'|'+day))continue;const v=e.n||1;M[wdOf(day)][hourOf(e.t)]+=v;n+=v}
+  return{M,n};
+}
+function partOfDay(h){return h>=6&&h<12?'morning':h>=12&&h<17?'afternoon':h>=17&&h<22?'evening':'night'}
 function renderHours(){
-  const ev=feedBase().filter(e=>e.ty==='login'||e.ty==='view'||e.ty==='action'),c=new Array(24).fill(0);
-  ev.forEach(e=>{c[hourOf(e.t)]+=e.n||1});
-  const mx=Math.max(1,...c),W=Math.max(260,Math.round($('hours').getBoundingClientRect().width)||480),H=130,pl=30,pb=20,pt=6,iw=W-pl-6,ih=H-pb-pt,bw=iw/24;
-  let h=[0,1].map(f=>{const y=pt+ih-ih*f;return `<line x1="${pl}" x2="${W-6}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${pl-6}" y="${y+4}" text-anchor="end">${Math.round(mx*f)}</text>`}).join('');
-  c.forEach((v,i)=>{const hh=ih*v/mx,x0=pl+i*bw+2;h+=`<rect x="${x0}" y="${pt+ih-hh}" width="${Math.max(2,bw-4)}" height="${hh}" rx="2" fill="#FF93A0"><title>${String(i).padStart(2,'0')}:00 – ${v} ${v===1?'action':'actions'}</title></rect>`;if(i%(W<400?6:3)===0)h+=`<text x="${x0+(bw-4)/2}" y="${H-5}" text-anchor="middle">${String(i).padStart(2,'0')}</text>`});
-  $('hours').setAttribute('viewBox',`0 0 ${W} ${H}`);$('hours').innerHTML=h;
-  $('hoursNote').textContent=ev.length?'Counts sign-ins, pages opened and changes. Based on the newest log lines kept for each person.':'Nothing recorded in this period.';
+  const list=peopleF().filter(p=>p.status!=='pending'),{M,n}=hourMatrix(list);
+  const mx=Math.max(1,...M.map(r=>Math.max(...r))),W=Math.max(300,Math.round($('hours').getBoundingClientRect().width)||900),pl=W<520?34:78,pt=4,pb=18,cw=(W-pl-4)/24,ch=Math.min(26,Math.max(16,cw*.8)),H=pt+ch*7+pb;
+  const step=v=>!v?0:v/mx>.75?1:v/mx>.5?.78:v/mx>.25?.56:v/mx>.08?.36:.2;
+  let h='';
+  M.forEach((row,w)=>{
+    h+=`<text x="${pl-8}" y="${pt+w*ch+ch/2+4}" text-anchor="end">${W<520?WD[w].slice(0,3):WD[w]}</text>`;
+    row.forEach((v,i)=>{h+=`<rect x="${(pl+i*cw+1).toFixed(1)}" y="${(pt+w*ch+1).toFixed(1)}" width="${Math.max(2,cw-2).toFixed(1)}" height="${(ch-2).toFixed(1)}" rx="3" fill="${v?'var(--accent)':'var(--hover)'}"${v?` opacity="${step(v)}"`:''}><title>${WD[w]} ${hh(i)} to ${hh((i+1)%24)}: ${v} ${v===1?'action':'actions'}</title></rect>`});
+  });
+  for(let i=0;i<24;i+=(W<520?6:3))h+=`<text x="${(pl+i*cw+cw/2).toFixed(1)}" y="${H-4}" text-anchor="middle">${String(i).padStart(2,'0')}</text>`;
+  $('hours').setAttribute('viewBox',`0 0 ${W} ${H}`);$('hours').style.height=H+'px';$('hours').innerHTML=h;
+  $('heatLegend').innerHTML=n?'Less '+[.2,.36,.56,.78,1].map(o=>`<i style="opacity:${o}"></i>`).join('')+' More':'';
+  if(!n){$('hoursNote').textContent='Nothing recorded in this period.';return}
+  let best={v:0,w:0,i:0};const byH=new Array(24).fill(0),parts={morning:0,afternoon:0,evening:0,night:0};
+  M.forEach((row,w)=>row.forEach((v,i)=>{byH[i]+=v;parts[partOfDay(i)]+=v;if(v>best.v)best={v,w,i}}));
+  const topH=byH.indexOf(Math.max(...byH)),topP=Object.entries(parts).sort((a,b)=>b[1]-a[1])[0],late=byH.slice(0,6).reduce((x,y)=>x+y,0);
+  $('hoursNote').innerHTML=`Busiest single hour: <b>${WD[best.w]} ${hh(best.i)}</b> (${best.v}). Across the week the site is used most around <b>${hh(topH)}</b>; ${Math.round(topP[1]/n*100)}% of all activity is in the ${topP[0]}${late?`, and ${Math.round(late/n*100)}% between midnight and 06:00`:''}.`;
+}
+function renderLeaders(){
+  const all=peopleF().filter(p=>p.status!=='pending').map(p=>({p,a:ag(p)})).filter(r=>r.a.secs||r.a.views||r.a.actions).sort((x,y)=>y.a.secs-x.a.secs||y.a.views-x.a.views);
+  const top=all.slice(0,6),mx=Math.max(1,...top.map(r=>r.a.secs)),tot=all.reduce((n,r)=>n+r.a.secs,0);
+  $('leaders').innerHTML=top.length?top.map((r,i)=>`<div class="lb" data-open="${esc(r.p.key)}" tabindex="0" role="button"><div class="rk">${i+1}</div><div class="nm">${esc(r.p.name)}<small>${esc(r.p.label)}${r.p.store?' · '+esc(r.p.store):''}</small></div><div class="t"><i style="width:${Math.max(2,r.a.secs/mx*100)}%"></i></div><div class="v"><b>${esc(dur(r.a.secs))}</b> · ${num(r.a.views)} pages${F.page?'':' · '+num(r.a.actions)+' changes'}</div></div>`).join('')+
+    (all.length>1&&tot?`<div class="hint">These ${top.length} account for ${Math.round(top.reduce((n,r)=>n+r.a.secs,0)/tot*100)}% of all time in use (${all.length} people were active).</div>`:''):'<div class="empty">Nobody used the site in this period.</div>';
+}
+function openPerson(k){SEL=k;STATUS='all';Q='';$('q').value='';TAB='people';save();renderTab();$('detail').scrollIntoView({behavior:'smooth',block:'start'})}
+$('leaders').addEventListener('click',e=>{const r=e.target.closest('[data-open]');if(r)openPerson(r.dataset.open)});
+$('leaders').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const r=e.target.closest('[data-open]');if(r){e.preventDefault();openPerson(r.dataset.open)}}});
+// kind of device per person: exact counters on newer days, the device written on each sign-in on older days
+function devicesOf(list){
+  const c={Phone:0,Computer:0,Tablet:0},who={Phone:new Set(),Computer:new Set(),Tablet:new Set()},have=new Set();
+  for(const p of list)for(const day of P.days){const d=p.days[day];if(!d||!d.dv)continue;have.add(p.key+'|'+day);for(const k in d.dv)if(k in c){c[k]+=d.dv[k];who[k].add(p.key)}}
+  const keys=new Set(list.map(p=>p.key));
+  for(const e of D.feed){if(e.ty!=='login'||!keys.has(e.w))continue;const day=dayOf(e.t);if(day<P.from||day>P.to||have.has(e.w+'|'+day))continue;const k=kindOfDev(e.d);if(k){c[k]+=e.n||1;who[k].add(e.w)}}
+  return{c,who,n:c.Phone+c.Computer+c.Tablet};
+}
+function renderDevices(){
+  const list=peopleF().filter(p=>p.status!=='pending'),{c,who,n}=devicesOf(list);
+  if(!n){$('devices').innerHTML='<div class="empty">No sign-ins in this period.</div>';return}
+  const rows=Object.keys(c).filter(k=>c[k]).sort((a,b)=>c[b]-c[a]).map(k=>[k,c[k]]);
+  const both=list.filter(p=>who.Phone.has(p.key)&&who.Computer.has(p.key)).length;
+  $('devices').innerHTML=bars(rows,r=>`${Math.round(r[1]/n*100)}% · ${who[r[0]].size} ${who[r[0]].size===1?'person':'people'}`,null,'c2')+
+    `<div class="hint">${both?both+' '+(both===1?'person uses':'people use')+' both a phone and a computer. ':''}Counted from sign-ins and pages opened.</div>`;
+}
+function renderPageTime(){
+  const pg=pagesAgg().filter(o=>o.secs).sort((a,b)=>b.secs-a.secs).slice(0,10),tot=pagesAgg().reduce((n,o)=>n+o.secs,0);
+  $('pageTime').innerHTML=pg.length?bars(pg.map(o=>[o.label,o.secs,o.p]),r=>{const o=pg.find(x=>x.p===r[2]);return `${esc(dur(o.secs))} · ${Math.round(o.secs/tot*100)}%${o.views?' · '+esc(dur(o.secs/o.views))+' a visit':''}`},null,'c3'):'<div class="empty">No time recorded in this period.</div>';
 }
 function renderWdays(){
   if(P.n<7){$('wdays').innerHTML='<div class="empty">Choose 7 days or more to see this.</div>';return}
@@ -507,7 +582,8 @@ function renderStatus(){
 }
 $('status').addEventListener('click',e=>{const b=e.target.closest('[data-st]');if(!b)return;STATUS=b.dataset.st;renderStatus();renderPeople()});
 $('q').addEventListener('input',e=>{Q=e.target.value.trim().toLowerCase();renderPeople()});
-const COLS=[['name','Person',0],['lastSeen','Last seen',0],['logins','Sign-ins',1],['views','Pages',1],['actions','Changes',1],['secs','Time in use',1],['activeDays','Active days',1],['strip','Activity',0],['device','Last device',0]];
+const COLS=[['name','Person',0],['lastSeen','Last seen',0],['logins','Sign-ins',1],['views','Pages',1],['actions','Changes',1],['secs','Time in use',1],['activeDays','Active days',1],['top','Most used page',0],['strip','Activity',0],['device','Last device',0]];
+const topPage=a=>{const e=Object.entries(a.pages).sort((x,y)=>y[1].s-x[1].s||y[1].n-x[1].n)[0];return e?pageName(e[0]):''};
 function strip(a){
   const days=P.days;if(days.length<2)return '';
   const k=Math.max(1,Math.ceil(days.length/30)),cells=[];
@@ -517,7 +593,7 @@ function strip(a){
 }
 function peopleRows(){
   const f=renderStatus(),list=peopleF().map(p=>({p,a:ag(p)})).filter(f[STATUS]).filter(r=>!Q||[r.p.name,r.p.username,r.p.store,r.p.label].join(' ').toLowerCase().includes(Q));
-  const k=SORT.k,val=r=>k==='lastSeen'||k==='name'||k==='device'?r.p[k]:r.a[k];
+  const k=SORT.k,val=r=>k==='top'?topPage(r.a):k==='lastSeen'||k==='name'||k==='device'?r.p[k]:r.a[k];
   list.sort((x,y)=>{let a=val(x),b=val(y);if(typeof a==='string'||typeof b==='string'){a=String(a||'');b=String(b||'');if(k==='name')return a.localeCompare(b)*SORT.dir;return a<b?-SORT.dir:a>b?SORT.dir:0}return ((a||0)-(b||0))*SORT.dir||String(x.p.name).localeCompare(y.p.name)});
   return list;
 }
@@ -528,23 +604,75 @@ function renderPeople(){
   $('people').innerHTML=list.length?list.map(({p,a})=>{
     const st=p.status==='pending'?'<span class="tag mute">Waiting for approval</span>':p.status==='off'?'<span class="tag mute">Switched off</span>':p.status==='removed'?'<span class="tag mute">Removed</span>':'';
     const seen=p.lastSeen?`${esc(ago(p.lastSeen))}<small style="display:block;color:var(--ink2)">${esc(when(p.lastSeen))}</small>`:'<span class="tag '+(p.status==='active'?'warn':'mute')+'">Never</span>';
-    return `<tr class="pp${SEL===p.key?' sel':''}" data-k="${esc(p.key)}" tabindex="0"><td><div class="nm">${esc(p.name)}${st?' '+st:''}<small>${esc(p.label)}${p.store?' · '+esc(p.store):''}${p.zone?' · '+esc(p.zone):''}</small></div></td><td>${seen}</td>${F.page?'':`<td class="n">${num(a.logins)}</td>`}<td class="n">${num(a.views)}</td>${F.page?'':`<td class="n">${num(a.actions)}</td>`}<td class="n">${esc(dur(a.secs))}</td><td class="n">${a.activeDays}</td><td>${strip(a)}</td><td>${esc(p.device||'')}</td></tr>`}).join(''):`<tr><td colspan="9" class="empty">Nobody matches.</td></tr>`;
+    return `<tr class="pp${SEL===p.key?' sel':''}" data-k="${esc(p.key)}" tabindex="0"><td><div class="nm">${esc(p.name)}${st?' '+st:''}<small>${esc(p.label)}${p.store?' · '+esc(p.store):''}${p.zone?' · '+esc(p.zone):''}</small></div></td><td>${seen}</td>${F.page?'':`<td class="n">${num(a.logins)}</td>`}<td class="n">${num(a.views)}</td>${F.page?'':`<td class="n">${num(a.actions)}</td>`}<td class="n">${esc(dur(a.secs))}</td><td class="n">${a.activeDays}</td><td>${esc(topPage(a))||'<span class="note">–</span>'}</td><td>${strip(a)}</td><td>${esc(p.device||'')}</td></tr>`}).join(''):`<tr><td colspan="10" class="empty">Nobody matches.</td></tr>`;
 }
 $('phead').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(!b)return;const k=b.dataset.s;SORT=SORT.k===k?{k,dir:-SORT.dir}:{k,dir:k==='name'?1:-1};renderPeople()});
 function pick(e){const tr=e.target.closest('tr.pp');if(!tr)return;SEL=SEL===tr.dataset.k?'':tr.dataset.k;renderPeople();renderDetail();if(SEL)$('detail').scrollIntoView({behavior:'smooth',block:'nearest'})}
 $('people').addEventListener('click',pick);
 $('people').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick(e)}});
+// visits: log lines of one person that follow each other without a gap of more than 30 minutes (a sign-in always starts a new visit)
+function sessionsOf(key){
+  const ev=D.feed.filter(e=>e.w===key&&(e.ty==='login'||e.ty==='view'||e.ty==='action')).sort((x,y)=>String(x.t).localeCompare(String(y.t))),out=[];let cur=null;
+  for(const e of ev){
+    const t=Date.parse(e.t),t2=Date.parse(e.t2||e.t);
+    if(!cur||e.ty==='login'||t-cur.end>1800000){cur={start:t,end:t,iso:e.t,pages:[],views:0,acts:0,secs:0,dev:''};out.push(cur)}
+    cur.end=Math.max(cur.end,t2);
+    if(e.ty==='login')cur.dev=e.d||'';
+    else if(e.ty==='view'){cur.views++;cur.secs+=e.s||0;if(!cur.pages.includes(e.a))cur.pages.push(e.a);if(!cur.dev&&e.k)cur.dev=e.k}
+    else cur.acts+=e.n||1;
+  }
+  return out.reverse().filter(x=>{const d=dayOf(x.iso);return d>=P.from&&d<=P.to});
+}
+function pDelta(cur,prev,inv){
+  if(!P.hasPrev)return '';const d=cur-prev;if(!d)return '<small class="same">same as before</small>';
+  return `<small class="${(d>0)!==!!inv?'up':'down'}" title="Compared with ${P.n===1?'the day before':'the '+P.n+' days before'}">${d>0?'▲':'▼'} ${prev?Math.round(Math.abs(d)/prev*100)+'%':'new'}</small>`;
+}
+function calStrip(p){
+  const days=P.days.slice(-42);if(days.length<2)return '';
+  const mx=Math.max(1,...days.map(d=>{const x=p.days[d];return x?(x.s||0):0}));
+  return `<div class="cal" role="img" aria-label="Activity for each day">${days.map((d,i)=>{const x=p.days[d],v=x?dayVals(x):null,on=v&&(v.l||v.v||v.a);
+    const tip=`${wday(d)} ${fmtDay(d)}: `+(on?`${v.l} sign-in${v.l===1?'':'s'}, ${v.v} page${v.v===1?'':'s'}, ${v.a} change${v.a===1?'':'s'}, ${dur(v.s)} in use`:'not on the site');
+    return `<i class="${on?'on':''}${i&&wdOf(d)===0?' wk':''}"${on?` style="opacity:${v.s/mx>.66?1:v.s/mx>.33?.72:v.s/mx>.1?.5:.32}"`:''} title="${esc(tip)}"></i>`}).join('')}</div><div class="note">One square per day${days.length<P.days.length?' (the last 42 days)':''}; a gap marks a new week. Darker means more time in use.</div>`;
+}
 function renderDetail(){
   const box=$('detail'),p=D.people.find(x=>x.key===SEL);
   if(!p){box.hidden=true;return}
-  const a=ag(p),pages=Object.entries(a.pages).map(([k,v])=>[k,v.n,v.s]).sort((x,y)=>y[1]-x[1]||y[2]-x[2]).slice(0,10);
+  const a=ag(p),pv=P.hasPrev?aggP(p,P.pf,P.pt):null,c=k=>pv?pv[k]:0;
+  const pages=Object.entries(a.pages).map(([k,v])=>[k,v.n,v.s]).sort((x,y)=>y[2]-x[2]||y[1]-x[1]).slice(0,10),pmx=Math.max(1,...pages.map(r=>r[2]));
   const acts=Object.entries(a.acts).sort((x,y)=>y[1]-x[1]).slice(0,10);
-  const ev=D.feed.filter(e=>e.w===p.key&&dayOf(e.t2||e.t)>=P.from&&dayOf(e.t2||e.t)<=P.to&&(!F.page||e.p===F.page)).slice(0,12);
+  const inP=e=>{const d=dayOf(e.t2||e.t);return e.w===p.key&&d>=P.from&&d<=P.to};
+  const ev=D.feed.filter(e=>inP(e)&&(!F.page||e.p===F.page)).slice(0,12);
+  const sess=sessionsOf(p.key),shown=sess.slice(0,8);
+  // small facts
+  const peers=peopleF().filter(x=>x.status!=='pending').map(x=>({k:x.key,s:ag(x).secs})).filter(x=>x.s>0).sort((x,y)=>y.s-x.s),rank=peers.findIndex(x=>x.k===p.key)+1;
+  const {M,n:hn}=hourMatrix([p]),parts={morning:0,afternoon:0,evening:0,night:0},byH=new Array(24).fill(0),byW=new Array(7).fill(0);
+  M.forEach((row,w)=>row.forEach((v,i)=>{parts[partOfDay(i)]+=v;byH[i]+=v;byW[w]+=v}));
+  const tp=Object.entries(parts).sort((x,y)=>y[1]-x[1])[0],th=byH.indexOf(Math.max(...byH)),tw=byW.indexOf(Math.max(...byW));
+  const dv=devicesOf([p]),dvTxt=Object.keys(dv.c).filter(k=>dv.c[k]).sort((x,y)=>dv.c[y]-dv.c[x]).map(k=>`${k} ${Math.round(dv.c[k]/dv.n*100)}%`).join(' · ');
+  const fav=pages[0],lastAct=D.feed.find(e=>inP(e)&&e.ty==='action'),visitAvg=sess.length?sess.reduce((n,x)=>n+x.secs,0)/sess.length:0;
+  const facts=[
+    ['Last sign-in',p.lastLogin?when(p.lastLogin)+' · '+ago(p.lastLogin):'never'],
+    ['Last device',p.device||'–'],
+    p.createdAt?['Account created',when(p.createdAt)]:null,
+    p.firstSeen?['First seen on the site',when(p.firstSeen)]:null,
+    rank?['Rank by time in use','#'+rank+' of '+peers.length+' active '+(peers.length===1?'person':'people')]:null,
+    hn?['Usual time',`Mostly in the ${tp[0]} (${Math.round(tp[1]/hn*100)}%), most around ${hh(th)}`]:null,
+    hn&&P.n>=7?['Busiest weekday',WD[tw]]:null,
+    dv.n?['Devices used',dvTxt]:null,
+    fav&&fav[2]&&a.secs?['Spends most time on',pageName(fav[0])+' ('+Math.round(fav[2]/a.secs*100)+'% of their time)']:null,
+    sess.length?['Visits',sess.length+(sess.length===1?' visit':' visits')+(visitAvg>=5?', about '+dur(visitAvg)+' each':'')]:null,
+    a.activeDays&&P.n>1?['On a day they use it',dur(a.secs/a.activeDays)+' · '+Math.round(a.views/a.activeDays*10)/10+' pages']:null,
+    lastAct?['Last change',lastAct.a+' · '+when(lastAct.t2||lastAct.t)]:null
+  ].filter(Boolean);
+  const stTag=p.status==='pending'?' <span class="tag mute">Waiting for approval</span>':p.status==='off'?' <span class="tag mute">Switched off</span>':'';
   box.hidden=false;
-  box.innerHTML=`<div class="bar"><div><h2>${esc(p.name)}</h2><div class="meta" style="margin:0">${esc(p.label)}${p.store?' · '+esc(p.store):''}${p.zone?' · '+esc(p.zone):''}${p.username?' · username '+esc(p.username):''}${p.device?' · '+esc(p.device):''}</div></div><div class="actions"><button class="btn" type="button" id="dTimeline">Show only their timeline</button><button class="btn" type="button" id="closeDetail">Close</button></div></div>
-  <div class="stat"><div><b>${esc(p.lastSeen?ago(p.lastSeen):'never')}</b>last seen</div><div><b>${num(a.logins)}</b>sign-ins</div><div><b>${num(a.views)}</b>pages opened</div><div><b>${num(a.actions)}</b>changes</div><div><b>${esc(dur(a.secs))}</b>time in use</div><div><b>${a.activeDays}</b>active days</div><div><b>${num(a.failed)}</b>wrong passwords</div></div>
-  <div class="two"><div><h2 style="font-size:15px">Pages</h2>${pages.length?pages.map(r=>`<div class="hb c2"><div>${esc(pageName(r[0]))}</div><div class="t"><i style="width:${Math.max(2,r[1]/Math.max(1,pages[0][1])*100)}%"></i></div><div class="v">${r[1]}× · ${esc(dur(r[2]))}</div></div>`).join(''):'<div class="empty">No pages opened in this period.</div>'}</div>
+  box.innerHTML=`<div class="bar"><div><h2>${esc(p.name)}${stTag}</h2><div class="meta" style="margin:0">${esc(p.label)}${p.store?' · '+esc(p.store):''}${p.zone?' · '+esc(p.zone):''}${p.username?' · username '+esc(p.username):''} · ${esc(periodLabel())}</div></div><div class="actions"><button class="btn" type="button" id="dTimeline">Show only their timeline</button><button class="btn" type="button" id="closeDetail">Close</button></div></div>
+  <div class="stat"><div><b>${esc(p.lastSeen?ago(p.lastSeen):'never')}</b>last seen</div><div><b>${num(a.logins)}</b>sign-ins${pDelta(a.logins,c('logins'))}</div><div><b>${num(a.views)}</b>pages opened${pDelta(a.views,c('views'))}</div><div><b>${num(a.actions)}</b>changes${pDelta(a.actions,c('actions'))}</div><div><b>${esc(dur(a.secs))}</b>time in use${pDelta(a.secs,c('secs'))}</div><div><b>${a.activeDays}<span class="sub2"> of ${P.n}</span></b>active days${pDelta(a.activeDays,c('activeDays'))}</div><div><b>${num(a.failed)}</b>wrong passwords</div>${a.denied?`<div><b>${num(a.denied)}</b>not allowed</div>`:''}</div>
+  <div class="facts">${facts.map(f=>`<div><span>${esc(f[0])}</span>${esc(f[1])}</div>`).join('')}</div>
+  ${calStrip(p)}
+  <div class="two" style="margin-top:14px"><div><h2 style="font-size:15px">Pages</h2>${pages.length?pages.map(r=>`<div class="hb c3"><div>${esc(pageName(r[0]))}</div><div class="t"><i style="width:${Math.max(2,r[2]/pmx*100)}%"></i></div><div class="v">${esc(dur(r[2]))} · ${r[1]}×${r[1]&&r[2]?' · '+esc(dur(r[2]/r[1]))+' a visit':''}</div></div>`).join(''):'<div class="empty">No pages opened in this period.</div>'}</div>
   <div><h2 style="font-size:15px">Changes</h2>${acts.length?bars(acts,null,null,'c1'):'<div class="empty">No changes in this period.</div>'}</div></div>
+  ${F.page?'':`<h2 style="font-size:15px;margin-top:14px">Visits</h2><div class="note" style="margin-bottom:4px">Each time they came to the site: when, on what, which pages, and how long it was really in use.</div><div class="sess">${shown.length?shown.map(x=>{const d=dayOf(x.iso);return `<div class="se"><div class="w">${esc(dayHead(d))} ${esc(fmtDay(d))}<small>${esc(fmtH.format(new Date(x.start)))}${x.end-x.start>=60000?' to '+esc(fmtH.format(new Date(x.end))):''}${x.dev?' · '+esc(x.dev.split(' · ')[0]):''}</small></div><div class="pchips">${x.pages.length?x.pages.slice(0,8).map(n=>`<span>${esc(n)}</span>`).join('')+(x.pages.length>8?`<span>+${x.pages.length-8} more</span>`:''):'<span>Signed in only</span>'}</div><div class="r">${esc(dur(x.secs))}${x.acts?' · '+x.acts+(x.acts===1?' change':' changes'):''}</div></div>`}).join(''):'<div class="empty">No visits in this period.</div>'}</div>${sess.length>shown.length?`<div class="note">Showing the newest ${shown.length} of ${sess.length} visits.</div>`:''}`}
   <h2 style="font-size:15px;margin-top:14px">Latest</h2><div class="tw"><table class="feed"><tbody>${ev.length?ev.map(e=>feedRow(e,true)).join(''):'<tr><td class="empty">Nothing in this period.</td></tr>'}</tbody></table></div>`;
   $('closeDetail').onclick=()=>{SEL='';renderPeople();renderDetail()};
   $('dTimeline').onclick=()=>{F.person=p.key;SEL='';KIND='all';TQ='';$('tq').value='';TAB='timeline';save();SHOW=100;render();window.scrollTo({top:0,behavior:'smooth'})};
@@ -553,10 +681,11 @@ function renderDetail(){
 // ---- timeline ----
 function feedRow(e,noWho){
   const tt=TYPE_TAG[e.ty]||['',''];
-  const what=e.ty==='view'?esc(e.a)+(e.s?` <span class="note">· ${esc(dur(e.s))} in use</span>`:''):esc(e.a);
+  const what=e.ty==='view'?esc(e.a)+(e.s?` <span class="note">· ${esc(dur(e.s))} in use</span>`:'')+(e.k?` <span class="note">· ${esc(e.k)}</span>`:''):esc(e.a);
+  const t1=fmtH.format(new Date(e.t)),t2=e.t2?fmtH.format(new Date(e.t2)):'',span2=e.n>1&&t2&&t2!==t1&&e.ty!=='view'?t1+' to '+t2:fmtH.format(new Date(e.t2||e.t));
   const det=[e.d?esc(e.d):'',e.n>1?'<span class="note">'+e.n+' times</span>':'',e.dev&&e.w==='anon'?'<span class="note">'+esc(e.dev)+(e.v?' · visitor '+esc(e.v):'')+'</span>':''].filter(Boolean).join(' ');
   const who=e.w==='anon'||e.w==='system'?esc(e.who):`<button class="lnk" type="button" data-who="${esc(e.w)}">${esc(e.who)}</button>`;
-  return `<tr><td class="t">${esc(fmtH.format(new Date(e.t2||e.t)))}</td>${noWho?'':`<td><div class="nm">${who}<small>${esc(e.label||'')}${e.store?' · '+esc(e.store):''}</small></div></td>`}<td>${tt[0]?`<span class="tag ${tt[1]}">${esc(tt[0])}</span> `:''}${what}</td><td>${det}</td></tr>`;
+  return `<tr><td class="t">${esc(span2)}</td>${noWho?'':`<td><div class="nm">${who}<small>${esc(e.label||'')}${e.store?' · '+esc(e.store):''}</small></div></td>`}<td>${tt[0]?`<span class="tag ${tt[1]}">${esc(tt[0])}</span> `:''}${what}</td><td>${det}</td></tr>`;
 }
 function feedList(){
   const base=feedBase();
@@ -572,7 +701,9 @@ $('more').addEventListener('click',()=>{SHOW+=200;renderFeed()});
 function dayHead(d){return d===P.today?'Today':d===addDays(P.today,-1)?'Yesterday':wday(d)}
 function renderFeed(){
   const {list}=feedList(),shown=list.slice(0,SHOW);let last='',h='';
-  for(const e of shown){const d=dayOf(e.t2||e.t);if(d!==last){last=d;h+=`<tr class="day"><td colspan="4">${esc(dayHead(d))} · ${esc(fmtDay(d))}</td></tr>`}h+=feedRow(e)}
+  const sum={};for(const e of list){const d=dayOf(e.t2||e.t),o=sum[d]||(sum[d]={who:new Set(),l:0,v:0,a:0,b:0});if(e.w!=='anon'&&e.w!=='system')o.who.add(e.w);const k=kindOf(e),n=e.n||1;if(e.ty==='login')o.l+=n;else if(k==='view')o.v+=n;else if(k==='action')o.a+=n;else if(k==='bad'||e.ty==='fail')o.b+=n}
+  const part=(n,one,many)=>n?n+' '+(n===1?one:many):'';
+  for(const e of shown){const d=dayOf(e.t2||e.t);if(d!==last){last=d;const o=sum[d];h+=`<tr class="day"><td colspan="4">${esc(dayHead(d))} · ${esc(fmtDay(d))}<small>${esc([part(o.who.size,'person','people'),part(o.l,'sign-in','sign-ins'),part(o.v,'page','pages'),part(o.a,'change','changes'),part(o.b,'problem','problems')].filter(Boolean).join(' · '))}</small></td></tr>`}h+=feedRow(e)}
   $('feed').innerHTML=h||'<tr><td colspan="4" class="empty">Nothing here for these filters.</td></tr>';
   $('more').hidden=list.length<=SHOW;
   $('feednote').textContent=list.length+' line'+(list.length===1?'':'s')+(D.feedTotal>D.feed.length?' (only the newest '+D.feed.length+' of '+D.feedTotal+' log lines are loaded; choose a shorter period to see the rest)':'');
@@ -615,13 +746,13 @@ function csv(rows){return '﻿'+rows.map(r=>r.map(v=>{let s=String(v==null?'':v)
 function download(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
 const stamp=iso=>iso?new Date(Date.parse(iso)+3*3600000).toISOString().slice(0,16).replace('T',' '):'';
 $('expPeople').addEventListener('click',()=>{
-  const rows=[['Name','Role','Store','Username','Last seen (Cairo)','Sign-ins','Pages opened','Changes','Time in use (minutes)','Active days','Wrong passwords','Period']];
-  peopleRows().forEach(({p,a})=>rows.push([p.name,p.label,p.store||'',p.username||'',stamp(p.lastSeen),a.logins,a.views,a.actions,Math.round(a.secs/60),a.activeDays,a.failed,P.from+' to '+P.to]));
+  const rows=[['Name','Role','Store','Username','Last seen (Cairo)','Sign-ins','Pages opened','Changes','Time in use (minutes)','Active days','Most used page','Last device','First seen (Cairo)','Wrong passwords','Period']];
+  peopleRows().forEach(({p,a})=>rows.push([p.name,p.label,p.store||'',p.username||'',stamp(p.lastSeen),a.logins,a.views,a.actions,Math.round(a.secs/60),a.activeDays,topPage(a),p.device||'',stamp(p.firstSeen),a.failed,P.from+' to '+P.to]));
   download('activity-people-'+P.from+'-to-'+P.to+'.csv',csv(rows));
 });
 $('expFeed').addEventListener('click',()=>{
-  const rows=[['When (Cairo)','Who','Role','Store','Type','What','Details','Times','Seconds in use']];
-  feedList().list.forEach(e=>rows.push([stamp(e.t2||e.t),e.who,e.label||'',e.store||'',(TYPE_TAG[e.ty]||[e.ty])[0],e.a,e.d||'',e.n||1,e.s||'']));
+  const rows=[['When (Cairo)','Who','Role','Store','Type','What','Details','Times','Seconds in use','Device']];
+  feedList().list.forEach(e=>rows.push([stamp(e.t2||e.t),e.who,e.label||'',e.store||'',(TYPE_TAG[e.ty]||[e.ty])[0],e.a,e.d||'',e.n||1,e.s||'',e.k||(e.ty==='login'?kindOfDev(e.d):'')||'']));
   download('activity-timeline-'+P.from+'-to-'+P.to+'.csv',csv(rows));
 });
 

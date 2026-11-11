@@ -28,6 +28,8 @@ const SETTINGS = 'act/settings.json';
 const off = () => process.env.ACTIVITY_OFF === '1' || !store.configured();
 const iso = ms => new Date(ms).toISOString();
 const cairoDay = ms => new Date((ms === undefined ? Date.now() : ms) + 3 * 3600 * 1000).toISOString().slice(0, 10); // same clock as the rest of the site
+const hourFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', hour: '2-digit', hour12: false });
+const cairoHour = ms => { try { return Number(hourFmt.format(new Date(ms))) % 24; } catch (_) { return new Date(ms + 2 * 3600 * 1000).getUTCHours(); } };
 const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
 const S = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n || 80);
 const prettyName = u => String(u || '').split(/[\s._-]+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
@@ -79,6 +81,11 @@ function apply(rec, ev, now) {
   if (ev.st) e.st = ev.st;
   if (ev.s) e.s = ev.s;
 
+  // small extras for the Activity page: the hour of the day (Cairo) and the kind of device, counted per day
+  if (ev.ty === 'login' || ev.ty === 'view' || ev.ty === 'action') { const hr = cairoHour(now); (d.h || (d.h = {}))[hr] = (d.h[hr] || 0) + 1; }
+  if ((ev.ty === 'login' || ev.ty === 'view') && ev.k) (d.dv || (d.dv = {}))[ev.k] = (d.dv[ev.k] || 0) + 1;
+  if (ev.k && (ev.ty === 'view' || ev.ty === 'leave')) e.k = ev.k;
+
   if (ev.ty === 'login') { rec.logins++; rec.lastLogin = e.t; d.l++; }
   else if (ev.ty === 'fail') { rec.fails++; d.f++; }
   else if (ev.ty === 'denied') d.dn++;
@@ -111,7 +118,7 @@ async function recordFor(req, id, ev) {
   const rec = (await store.getJSON(path)) || blank(id, now);
   rec.username = id.username; rec.name = id.name; rec.role = id.role; rec.label = id.label; rec.store = id.store; rec.zone = id.zone;
   rec.lastSeen = iso(now);
-  const dev = device(req); if (dev) rec.device = dev;
+  const dev = device(req); if (dev) { rec.device = dev; ev = Object.assign({}, ev, { k: dev.split(' · ')[0] }); }
   apply(rec, ev, now);
   await store.putJSON(path, rec);
 }
@@ -242,6 +249,8 @@ function describe(name, req) {
       const x = { settings: 'Changed what the VM account can see', layout: 'Edited the zones of a store', place: 'Placed a collection in a zone', unplace: 'Removed a collection placement', file: 'Uploaded a floor plan or photo', delfile: 'Removed a floor plan or photo', plan: 'Changed the floor plan of a store' }[op];
       return x ? { a: x, d: () => S(b.store) + (op === 'place' ? ' · ' + S(b.col || (b.list && b.list.name)) + ' · from ' + S(b.start) : ''), co: op === 'file' ? 300000 : 0 } : null;
     }
+    // only a real VM report upload gets this name: anything else that reaches /api/vm under another address is left out, never guessed
+    if (u.pathname !== '/api/vm' || [...q.keys()].some(k => k !== 'op' && k !== 'id')) return null;
     if (op === 'delete') return { a: 'Removed a VM report', d: () => S(b.id) };
     return { a: 'Added a VM report (Excel)', d: r => (r && r.reports ? r.reports + ' report(s)' : '') };
   }
@@ -296,9 +305,21 @@ async function canView(who) {
 const PAGES = {
   '/': 'Home', '/dashboards': 'Pandora Dashboards', '/staff': 'Staff Performance', '/staff/person': 'A sales person page', '/staff/me': 'My sales', '/staff/accounts': 'Staff Approvals / New Users',
   '/uploads': 'All Uploads', '/film': 'Launch Film', '/daily': 'Daily Store Report', '/schedule': 'Weekly Schedule', '/vm': 'VM Report', '/vm/zones': 'VM Zones', '/vm/stock': 'Zone Stock', '/stock': 'Stock balance',
-  '/stockcount': 'Stock Count', '/stockchecker': 'Stock Checker', '/refill': 'Refill Order', '/slow': 'Slow Moving', '/slow2': 'Slowmoving 2.0', '/overview': 'Store Overview', '/distribution': 'Orders Distribution', '/activity': 'Activity', '/access': 'User Access Privileges'
+  '/stockcount': 'Stock Count', '/stockchecker': 'Stock Checker', '/refill': 'Refill Order', '/slow': 'Slow Moving', '/slow2': 'Slowmoving 2.0', '/overview': 'Store Overview', '/distribution': 'Orders Distribution', '/activity': 'Activity', '/access': 'User Access Privileges',
+  '/insights': 'Sales Intelligence', '/transfer': 'Transfer', '/receiving': 'Shipment Receiving', '/maintenance': 'Maintenance'
 };
-const pageLabel = p => PAGES[String(p || '').replace(/\/+$/, '') || '/'] || S(p, 40);
+// one name per page: "/schedule/", "/schedule.html" and "/schedule" are the same page. Older log lines can carry "/api/site",
+// the address the site itself answers under; those were the Home screen (the only page reached straight after signing in).
+const ALIAS = { '/api/site': '/', '/home': '/', '/index': '/dashboards', '/vmzones': '/vm/zones', '/zonestock': '/vm/stock', '/staff/index': '/staff' };
+const canonPage = p => { const s = String(p || '').replace(/\.html$/i, '').replace(/\/+$/, '') || '/'; return ALIAS[s] || s; };
+const pageLabel = p => PAGES[canonPage(p)] || S(p, 40);
+function foldPages(o) { const out = {}; for (const k of Object.keys(o || {})) { const c = canonPage(k); out[c] = (out[c] || 0) + o[k]; } return out; }
+// in memory only (nothing is rewritten in the store): every page key and page name in a person's record is made canonical
+function tidy(r) {
+  for (const day of Object.keys(r.days || {})) { const d = r.days[day]; if (d) { d.pg = foldPages(d.pg); d.ps = foldPages(d.ps); } }
+  for (const e of r.events || []) if (e.p) { e.p = canonPage(e.p); if (e.ty === 'view') e.a = pageLabel(e.p); }
+  return r;
+}
 
 async function inChunks(list, n, fn) {
   const out = [];
@@ -343,7 +364,7 @@ async function mergeAdminActivity(recs) {
 async function overview(rangeDays) {
   const days = dayList(rangeDays), first = days[0];
   const files = await store.list('act/u/');
-  const recs = await mergeAdminActivity((await inChunks(files, 12, p => store.getJSON(p))).filter(Boolean));
+  const recs = (await mergeAdminActivity((await inChunks(files, 12, p => store.getJSON(p))).filter(Boolean))).map(tidy);
   const byKey = new Map(recs.map(r => [r.key, r]));
 
   // everyone who has an account, so people who never signed in show up too
@@ -393,7 +414,7 @@ async function overview(rangeDays) {
   const real = people.filter(p => p.status !== 'pending');
   return {
     ok: true, now: iso(Date.now()), range: rangeDays, from: first, to: days[days.length - 1],
-    today: days[days.length - 1], people, series, feed: feed.slice(0, 1500), feedTotal: feed.length,
+    today: days[days.length - 1], pageNames: PAGES, people, series, feed: feed.slice(0, 1500), feedTotal: feed.length,
     pages: [...pageAgg.values()].map(o => ({ p: o.p, label: o.label, views: o.views, secs: o.secs, users: o.users.size })).sort((a, b) => b.views - a.views).slice(0, 30),
     acts: [...actAgg.entries()].map(([a, n]) => ({ a, n })).sort((x, y) => y.n - x.n).slice(0, 30),
     totals: {
@@ -447,9 +468,9 @@ async function handler(req, res) {
     if (b && (b.t === 'open' || b.t === 'leave')) { // the page beacon: any signed-in person
       const p = String(b.p || '');
       if (!/^\/[a-z0-9\/._-]{0,60}$/i.test(p) || p.replace(/\/+$/, '') === '/activity' || !/^[a-z0-9]{6,16}$/i.test(String(b.id || ''))) return send(res, 204);
-      const x = S(b.x, 80), label = pageLabel(p);
-      if (b.t === 'open') await record(req, who, { ty: 'view', a: label, p, d: x, id: b.id });
-      else await record(req, who, { ty: 'leave', a: label, p, d: x, id: b.id, s: Number(b.secs) || 0 });
+      const cp = canonPage(p), x = S(b.x, 80), label = pageLabel(cp);
+      if (b.t === 'open') await record(req, who, { ty: 'view', a: label, p: cp, d: x, id: b.id });
+      else await record(req, who, { ty: 'leave', a: label, p: cp, d: x, id: b.id, s: Number(b.secs) || 0 });
       return send(res, 204);
     }
     if (q.get('op') === 'share') { // the super admin lets the Overseer (Ibrahim) open this page, or takes it back

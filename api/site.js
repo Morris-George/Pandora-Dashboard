@@ -23,7 +23,7 @@ const THEME_HEAD = '<style id="pandora-theme-css">' +
 // Activity log (api/_activity.js): tells the server which page was opened and for how long it was actually in use
 // (page visible and the person touching it; a page left open and idle is not counted). Nothing about what is on the page is sent.
 const BEACON = String.raw`<script>(function(){try{
-var p=location.pathname;if(p.replace(/\/+$/,'')==='/activity')return;
+var p=location.pathname;try{if(p==='/api/site'){var pq=new URLSearchParams(location.search).get('path');p='/'+String(pq||'').replace(/^\/+/,'')}}catch(e){}if(p.replace(/\/+$/,'')==='/activity')return;
 var id=Math.random().toString(36).slice(2,12),x='',act=0,last=Date.now();
 try{if(/^\/staff\/person/.test(p)){var q=new URLSearchParams(location.search);x=[q.get('name'),q.get('store')].filter(Boolean).join(' · ')}}catch(e){}
 function send(o){try{var j=JSON.stringify(o);if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/activity',new Blob([j],{type:'application/json'}))))fetch('/api/activity',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:j,keepalive:true}).catch(function(){})}catch(e){}}
