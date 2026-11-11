@@ -4,7 +4,7 @@
 // Same sections and order as the home screen (including the order the super admin saved there), same pink look.
 const BASE = [
   ['Sales', ['overview', 'dashboards', 'staff', 'mysales', 'mysales2', 'storeteam', 'daily', 'film']],
-  ['Stock', ['stock', 'stockcount', 'stockchecker', 'slow', 'slow2', 'transfer']],
+  ['Stock', ['stock', 'stockcount', 'stockchecker', 'slow2', 'transfer']],
   ['Ordering', ['refill', 'dist', 'recv']],
   ['Visual Merchandising', ['vmzones', 'zonestock', 'vm']],
   ['Team & Access', ['schedule', 'approvals', 'access', 'activity', 'uploads']],

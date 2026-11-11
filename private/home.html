@@ -128,7 +128,7 @@ function paint(j){
   document.getElementById('date').textContent=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Cairo',weekday:'long',day:'numeric',month:'long'}).format(new Date());
   if(j.apps.some(a=>a.id==='uploads')&&!document.querySelector('a.upl')){const u=document.createElement('a');u.className='pandora-fab upl';u.href='/uploads';u.innerHTML=ICON.uploads+'All Uploads';document.body.appendChild(u)}
   const apps=j.apps.filter(a=>a.id!=='uploads');
-  const BASE=[['Sales',['overview','dashboards','staff','mysales','mysales2','storeteam','daily','film']],['Stock',['stock','stockcount','stockchecker','slow','slow2','transfer']],['Ordering',['refill','dist','recv']],['Visual Merchandising',['vmzones','zonestock','vm']],['Team & Access',['schedule','approvals','access','activity']],['Maintenance',['maintenance']]];
+  const BASE=[['Sales',['overview','dashboards','staff','mysales','mysales2','storeteam','daily','film']],['Stock',['stock','stockcount','stockchecker','slow2','transfer']],['Ordering',['refill','dist','recv']],['Visual Merchandising',['vmzones','zonestock','vm']],['Team & Access',['schedule','approvals','access','activity']],['Maintenance',['maintenance']]];
   // the super admin's saved order, with anything newer kept at the end of its usual section
   const saved=EDIT||j.homeOrder||[];
   const GROUPS=saved.length?saved.map(([n,ids])=>{const b=BASE.find(x=>x[0]===n);return [n,ids.concat(b?b[1].filter(i=>!ids.includes(i)):[])]}).concat(BASE.filter(b=>!saved.some(x=>x[0]===b[0]))):BASE;

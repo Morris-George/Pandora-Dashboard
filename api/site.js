@@ -409,9 +409,9 @@ module.exports = async function handler(req, res) {
     if (!(facts.staff && facts.staff.role === 'admin')) return toHome();
     return sendFile(res, 'overview.html', 'text/html; charset=utf-8', chromeFor('staff', multi));
   }
+  // The first Slow Moving report was replaced by Slowmoving 2.0. Its page file (private/slow.html) is kept but no longer served; old links and bookmarks land on 2.0.
   if (requestedPath === '/slow' || requestedPath === '/slow/' || requestedPath === '/slow.html') {
-    if ((!facts.refill || facts.refill === 'none') && !(facts.staff && facts.staff.role === 'store')) return toHome(); // store managers see their own store only (api/_slow.js)
-    return sendFile(res, 'slow.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
+    res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/slow2'); return res.status(302).end();
   }
   // Slowmoving 2.0: the same data and the same people as Slow Moving (api/_slow.js decides what each person receives)
   if (requestedPath === '/slow2' || requestedPath === '/slow2/' || requestedPath === '/slow2.html') {

@@ -49,7 +49,7 @@ function scopeOf(who) {
   return '';
 }
 
-const ADDABLE = { refill: 'refill', slow: 'refill', slow2: 'refill', dist: 'dist', recv: 'recv' }; // reports that carry their own access level, so they can be given to anyone
+const ADDABLE = { refill: 'refill', slow2: 'refill', dist: 'dist', recv: 'recv' }; // reports that carry their own access level, so they can be given to anyone
 const NEVER = ['approvals', 'access']; // accounts and passwords: the super admin only, never given to anyone
 const isSuperWho = who => !!who && who.kind === 'env' && who.info.role === 'admin' && !who.info.overseer;
 
