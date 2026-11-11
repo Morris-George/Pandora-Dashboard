@@ -111,7 +111,7 @@ details.card>summary{cursor:pointer;font-weight:700;list-style:none}details.card
   <div class="note" style="margin:4px 0 10px" id="trNote"></div><div id="trIn"></div><div id="tr" style="margin-top:12px"></div></div>
 <div id="trM" hidden><div id="trMB"></div></div>
 <div id="stM" hidden><div id="stB"></div></div>
-<div class="card" id="listCard"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Every Slow Item And Its Action</h2><span class="note" id="cnt"></span></div>
+<div class="card" id="listCard"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Every Slow Item And Its Action</h2><span class="row"><span class="note" id="cnt"></span><button class="btn" id="xList">Download Excel</button></span></div>
   <div class="chips" id="flt" style="margin:10px 0 8px"></div>
   <div class="lf"><input type="search" id="q" placeholder="Search SKU or name" style="flex:1;min-width:160px"><select id="fCat" aria-label="Category"></select><select id="fAge" aria-label="Idle time"></select><select id="fSort" aria-label="Sort"><option value="amt">Most money stuck first</option><option value="qty">Most pieces first</option><option value="age">Longest idle first</option></select></div>
   <div class="note" style="margin:8px 0" id="itNote"></div>
@@ -497,6 +497,13 @@ $('rawX').onclick=()=>{const S=J.snaps.filter(x=>x.rows.length);if(!S.length){sh
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa(S.flatMap(x=>x.rows))),'All stores');
   for(const x of S)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa(x.rows)),String(x.store||x.warehouse).replace(/[\/?*:[]]/g,' ').slice(0,31));
   XLSX.writeFile(wb,'Slowmoving 2.0 report '+new Date().toISOString().slice(0,10)+'.xlsx')};
+/* the list as filtered on screen, in Excel */
+$('xList').onclick=()=>{if(!ITEMS.length){showErr('Run the report first.');return}
+  const l=rowsF().sort((a,b)=>(SORT==='age'?(b.age==null?1e9:b.age)-(a.age==null?1e9:a.age):(b[SORT]||0)-(a[SORT]||0))||(b.qty-a.qty)||a.sku.localeCompare(b.sku)),m=J.money&&!HASV;
+  const ws=XLSX.utils.json_to_sheet(l.map(i=>({Store:i.store,Action:ACT[i.act].t,'What to do':i.how,SKU:i.sku,EAN:i.ean,Item:i.name,Category:i.cat,Pieces:i.qty,...(m?{'Price (EGP)':i.price||'','Money stuck (EGP)':Math.round(i.amt)||''}:{}),'Days idle':i.age==null?'No sale on record':i.age,'Why it is slow':i.why,'Transfer to':(i.dests||[]).map(d=>d.to+' '+d.qty).join(', '),'In refill order':i.order||''})));
+  ws['!cols']=[16,15,48,16,15,40,20,7].concat(m?[11,16]:[]).concat([16,48,26,13]).map(x=>({wch:x}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Slow items');
+  XLSX.writeFile(wb,'Slowmoving 2.0 items '+(F.act?ACT[F.act].t+' ':'')+(F.store?F.store+' ':'')+new Date().toISOString().slice(0,10)+'.xlsx')};
 /* the action plan in Excel: summary, one line per item and store with its action, by store, and one sheet per store */
 $('xPlan').onclick=()=>{if(!ITEMS.length){showErr('Run the report first.');return}
   const L=[...base()].sort((a,b)=>a.store.localeCompare(b.store)||ORDER.indexOf(a.act)-ORDER.indexOf(b.act)||(b.amt-a.amt)||(b.qty-a.qty)),P=partsOf(L),wb=XLSX.utils.book_new(),mk=(ws,w)=>{ws['!cols']=w.map(x=>({wch:x}));return ws};
