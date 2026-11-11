@@ -57,7 +57,7 @@ const isAdmin = who => !!who && who.kind === 'env' && who.info.role === 'admin' 
 async function levelFor(who) {
   if (!who) return 'none';
   if (isAdmin(who)) return 'manage';
-  const acc = (await store.getJSON(ACCESS)) || {};
+  const acc = (await store.getJSONCached(ACCESS)) || {};
   return LEVELS.includes(acc[keyOf(who)]) ? acc[keyOf(who)] : 'none';
 }
 const nameOf = who => who.kind === 'env' ? String((who.user && who.user.name) || (who.account.role === 'admin' ? require('./_projects').ADMIN_NAME : who.account.user) || 'Admin') : String((who.user && (who.user.name || who.user.username)) || '');

@@ -52,7 +52,7 @@ const isAdmin = who => !!who && who.kind === 'env' && who.info.role === 'admin' 
 async function levelFor(who) {
   if (!who) return 'none';
   if (isAdmin(who)) return 'manage';
-  const acc = (await store.getJSON(ACCESS)) || {};
+  const acc = (await store.getJSONCached(ACCESS)) || {};
   return LEVELS.includes(acc[keyOf(who)]) ? acc[keyOf(who)] : 'none';
 }
 const atLeast = (lvl, need) => LEVELS.indexOf(lvl) >= LEVELS.indexOf(need);

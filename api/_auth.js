@@ -89,7 +89,7 @@ function reportOf(req) {
 async function lift(req, who, key, user) {
   if (!who || !store.configured()) return who;
   const id = reportOf(req); if (!id) return who;
-  const o = ((await store.getJSON('access/overrides.json')) || {})[key];
+  const o = ((await store.getJSONCached('access/overrides.json')) || {})[key];
   if (!o || !Array.isArray(o.add) || !o.add.includes(id)) return who;
   const account = { role: 'admin', label: 'Overseer', user, overseer: true };
   return { kind: 'env', account, user: who.user, lifted: id, info: { ...roleInfo(account), overseer: true } };

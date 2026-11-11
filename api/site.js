@@ -210,6 +210,7 @@ module.exports = async function handler(req, res) {
   }
 
   // Everything below needs a login. Which logins this browser holds decides what it can open.
+  require('./_store').getJSONCached('access/home.json').catch(() => null); // started now, read by the report list below: both waits overlap
   const facts = await sessionFacts(req);
   const signedIn = facts.dash || facts.staff || facts.hr;
   const multi = appsFor(facts).length > 1;
@@ -253,7 +254,7 @@ module.exports = async function handler(req, res) {
   // Home: the options this person can open
   if (requestedPath === '/' || requestedPath === '/home.html') {
     const label = facts.vm || facts.sc || facts.hr ? facts.vmName : facts.staff ? (facts.staff.role === 'staff' || facts.staff.role === 'store' ? facts.staff.name : facts.staff.label) : 'Pandora Dashboards';
-    const homeOrder = (await require('./_store').getJSON('access/home.json').catch(() => null)) || [];
+    const homeOrder = (await require('./_store').getJSONCached('access/home.json').catch(() => null)) || [];
     const boot = JSON.stringify({ ok: true, label, greet: greetName(facts), apps: appsFor(facts), homeOrder }).replace(/</g, '\\u003c');
     const chrome = chromeFor('home', multi);
     return sendFile(res, 'home.html', 'text/html; charset=utf-8', function (buf) {

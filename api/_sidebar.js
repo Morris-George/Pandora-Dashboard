@@ -19,7 +19,7 @@ async function dataFor(facts) {
     const apps = appsFor(facts).filter(a => a.id !== 'film'); // the launch film is a presentation, not a report
     if (apps.length < 2) return null; // one report only: nothing to switch to
     let saved = [];
-    try { saved = (await require('./_store').getJSON('access/home.json')) || []; } catch (_) {}
+    try { saved = (await require('./_store').getJSONCached('access/home.json')) || []; } catch (_) {}
     const order = Array.isArray(saved) && saved.length
       ? saved.map(([n, ids]) => { const b = BASE.find(x => x[0] === n); return [n, (ids || []).concat(b ? b[1].filter(i => !(ids || []).includes(i)) : [])]; })
           .concat(BASE.filter(b => !saved.some(x => x[0] === b[0])))

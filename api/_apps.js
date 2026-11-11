@@ -47,7 +47,7 @@ async function extraFor(who) {
     if (!who) return [];
     const store = require('./_store');
     if (!store.configured()) return [];
-    const o = ((await store.getJSON(OVERRIDES)) || {})[require('./_refill').keyOf(who)];
+    const o = ((await store.getJSONCached(OVERRIDES)) || {})[require('./_refill').keyOf(who)];
     return o && Array.isArray(o.add) ? o.add.slice() : [];
   } catch (_) { return []; }
 }
@@ -56,7 +56,7 @@ async function hiddenFor(who) {
     if (!who || (who.kind === 'env' && who.info.role === 'admin' && !who.info.overseer)) return [];
     const store = require('./_store');
     if (!store.configured()) return [];
-    const all = (await store.getJSON(OVERRIDES)) || {};
+    const all = (await store.getJSONCached(OVERRIDES)) || {};
     const o = all[require('./_refill').keyOf(who)];
     const ids = o && Array.isArray(o.remove) ? o.remove.slice() : [];
     if (ids.includes('mysales')) ids.push('mysales2');
@@ -73,12 +73,15 @@ async function factsFromWho(who, dashOk, withOverrides) {
   const sc = !!who && who.kind === 'sc';
   const hr = !!who && who.kind === 'hr';
   const staff = who && !vm && !sc && !hr ? { role: who.info.role, label: who.info.label, name: who.kind === 'staff' ? who.user.name : '', overseer: !!who.info.overseer, who } : null;
-  const refill = who ? await require('./_refill').levelFor(who) : 'none'; // Refill Order access level, set on Staff approvals
-  const dist = who ? await require('./_dist').levelFor(who) : 'none'; // Orders Distribution access level, set on Staff approvals
-  const recv = who ? await require('./_recv').levelFor(who) : 'none'; // Shipment Receiving access level, set on Staff approvals
-  const activity = who ? await require('./_activity').canView(who) : false; // the Activity page: super admin, or the Overseer once it is switched on
-  const hidden = withOverrides ? await hiddenFor(who) : [];
-  const extra = withOverrides && !(who && who.lifted) ? await extraFor(who) : [];
+  // these lookups do not depend on each other, so they run together (one wait instead of six, one after the other)
+  const [refill, dist, recv, activity, hidden, extra] = await Promise.all([
+    who ? require('./_refill').levelFor(who) : 'none', // Refill Order access level, set on Staff approvals
+    who ? require('./_dist').levelFor(who) : 'none', // Orders Distribution access level
+    who ? require('./_recv').levelFor(who) : 'none', // Shipment Receiving access level
+    who ? require('./_activity').canView(who) : false, // the Activity page: super admin, or the Overseer once it is switched on
+    withOverrides ? hiddenFor(who) : [],
+    withOverrides && !(who && who.lifted) ? extraFor(who) : []
+  ]);
   return { extra, dash, staff, vm, sc, hr, refill, dist, recv, activity, hidden, vmName: vm || sc || hr ? who.user.name : '' };
 }
 

@@ -25,8 +25,22 @@ async function getJSON(p) {
   return JSON.parse(await new Response(r.stream).text());
 }
 
-async function putJSON(p, obj) {
+// A short-lived copy for settings that change rarely (who may open which report, the home order). Every page click reads several of
+// these, and each read is a trip to the storage service. A copy is kept for ttl ms inside the running function; saving or deleting
+// the same path here drops it at once, and other running copies pick the change up within ttl (10 s by default).
+const mem = new Map();
+async function getJSONCached(p, ttl) {
   safePath(p);
+  const now = Date.now(), hit = mem.get(p);
+  if (hit && now - hit.at < (ttl || 10000)) return hit.v === undefined ? hit.pr : hit.v;
+  const pr = getJSON(p).then(v => { const h = mem.get(p); if (h && h.pr === pr) mem.set(p, { at: Date.now(), v: v === null ? null : v }); return v; }, e => { const h = mem.get(p); if (h && h.pr === pr) mem.delete(p); throw e; });
+  mem.set(p, { at: now, pr }); // while it loads, other readers share this one read
+  return pr;
+}
+const forget = p => { mem.delete(p); };
+
+async function putJSON(p, obj) {
+  safePath(p); forget(p);
   const body = JSON.stringify(obj);
   if (dir()) {
     const f = path.join(dir(), p);
@@ -43,7 +57,7 @@ async function putJSON(p, obj) {
 }
 
 async function del(p) {
-  safePath(p);
+  safePath(p); forget(p);
   if (dir()) { try { await fs.promises.unlink(path.join(dir(), p)); } catch (_) {} return; }
   try { await blob().del(p); } catch (_) {}
 }
@@ -74,4 +88,7 @@ async function list(prefix) {
   return out;
 }
 
-module.exports = { configured, getJSON, putJSON, del, list };
+// forget again once a save is finished, so a read that started while it was being saved cannot keep the older copy
+const putJSONSafe = async (p, obj) => { try { return await putJSON(p, obj); } finally { forget(p); } };
+const delSafe = async p => { try { return await del(p); } finally { forget(p); } };
+module.exports = { configured, getJSON, getJSONCached, putJSON: putJSONSafe, del: delSafe, list };

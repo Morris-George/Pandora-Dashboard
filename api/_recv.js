@@ -41,7 +41,7 @@ const isAdmin = who => !!who && who.kind === 'env' && who.info.role === 'admin' 
 async function levelFor(who) {
   if (!who) return 'none';
   if (isAdmin(who)) return 'manage';
-  const acc = (await store.getJSON(ACCESS)) || {};
+  const acc = (await store.getJSONCached(ACCESS)) || {};
   const lvl = LEVELS.includes(acc[keyOf(who)]) ? acc[keyOf(who)] : 'none';
   if (lvl !== 'view') return lvl;
   // report-only Finance and Warehouse people still scan for their team
