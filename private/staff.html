@@ -118,7 +118,79 @@ body.clean .controls, body.clean .drop, body.clean header.top .actions .hideclea
 body.clean .exit{display:block}
 @media (max-width:620px){.brow{grid-template-columns:90px 1fr 92px}}
 @media (prefers-reduced-motion:no-preference){.brow .fill{transition:width .3s ease}}
-.pagefoot{margin-top:22px;padding-top:14px;border-top:1px solid var(--line,#e9e2dc);display:grid;gap:4px;font-size:12px}.pagefoot .sub{margin:0}.pagefoot:not(:has(.sub:not(:empty))){display:none}</style>
+.pagefoot{margin-top:22px;padding-top:14px;border-top:1px solid var(--line,#e9e2dc);display:grid;gap:4px;font-size:12px}.pagefoot .sub{margin:0}.pagefoot:not(:has(.sub:not(:empty))){display:none}
+/* ---- report additions: change vs the period before, daily rhythm, standouts, money within reach, team map ---- */
+:root{--bad:#B03A56;--fill2:#8E4B5C;--goodbg:#E3F3EA}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bad:#FF93A0;--fill2:#FFD0D6;--goodbg:#1D3A2C}}
+:root[data-theme="dark"]{--bad:#FF93A0;--fill2:#FFD0D6;--goodbg:#1D3A2C}
+.dl{display:inline-block;font-size:11px;font-weight:800;padding:1px 7px;border-radius:999px;white-space:nowrap;vertical-align:middle}
+.dl.up{color:var(--good);background:var(--goodbg)}.dl.down{color:var(--bad);background:var(--fill-soft)}.dl.flat{color:var(--ink2);background:var(--bg)}
+.kpi .d{margin-top:3px;min-height:18px;font-size:11px;color:var(--ink2)}
+.brief{margin:0 0 14px;padding:0;list-style:none;display:grid;gap:5px;font-size:14px}
+.brief li{padding-left:16px;position:relative}.brief li::before{content:'';position:absolute;left:0;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--fill)}
+.brief b{font-weight:800}
+.sectl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);font-weight:700;margin:14px 0 6px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.days{display:flex;align-items:flex-end;gap:2px;height:72px}
+.days i{flex:1;min-width:2px;background:var(--fill);border-radius:3px 3px 0 0;opacity:.75}
+.days i.best{background:var(--fill2);opacity:1}.days i.zero{background:var(--line);opacity:1}
+.days i:hover{opacity:1}
+.dayax{display:flex;justify-content:space-between;color:var(--ink2);font-size:11px;margin-top:4px}
+.brow4{grid-template-columns:120px 1fr 110px 62px}
+.awards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.award{display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;background:var(--bg);text-decoration:none;color:inherit;min-width:0;border:1px solid transparent}
+a.award:hover{border-color:var(--accent);background:var(--hover)}
+.award .ic{flex:none;width:38px;height:38px;border-radius:12px;background:var(--fill-soft);display:grid;place-items:center;color:var(--fill2)}
+.award .ic svg{width:20px;height:20px}
+.award .t{min-width:0}.award .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);font-weight:700}
+.award .nm{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.award .vv{font-size:12.5px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.oppgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;align-items:start}
+.oppbig{background:var(--fill-soft);border-radius:16px;padding:16px;min-width:0}
+.oppbig .k{font-size:12.5px;color:var(--ink2);font-weight:600}.oppbig .k b{color:var(--ink)}
+.oppbig .big{font-size:34px;font-weight:800;letter-spacing:-.03em;white-space:nowrap;line-height:1.15;margin-top:2px}
+.oppbig .sub{color:var(--ink2);font-size:12.5px;min-height:18px}
+.oppbig input[type=range]{width:100%;margin:12px 0 2px;accent-color:var(--fill2)}
+.simax{display:flex;justify-content:space-between;font-size:11px;color:var(--ink2)}
+.split{display:flex;height:12px;border-radius:999px;overflow:hidden;margin:14px 0 8px;background:var(--bg)}
+.split i{display:block;height:100%}.split .a{background:var(--fill)}.split .b{background:var(--fill2)}
+.leg{display:grid;gap:4px;font-size:12.5px}
+.leg span{display:flex;gap:8px;align-items:baseline}.leg em{flex:none;width:9px;height:9px;border-radius:3px;align-self:center}
+.leg b{margin-left:auto;white-space:nowrap}
+.how{display:grid;gap:10px}
+.how div{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:start;font-size:13px}
+.how p{margin:0;color:var(--ink2)}
+.play{display:inline-block;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap;border:1px solid transparent}
+.play.add{background:var(--fill);color:#2A1018}.play.up{background:var(--fill2);color:var(--surface)}
+.play.more{background:var(--bg);border-color:var(--line);color:var(--ink)}.play.lead{background:var(--goodbg);color:var(--good)}
+.coach{display:grid;gap:2px;margin-top:6px}
+.crow{display:grid;grid-template-columns:22px minmax(0,1.1fr) auto minmax(0,2fr) auto;gap:6px 12px;align-items:center;padding:9px 8px;border-radius:10px;text-decoration:none;color:inherit;border-bottom:1px solid var(--line)}
+.crow:last-child{border-bottom:0}.crow:hover{background:var(--hover)}
+.crow .no{color:var(--ink2);font-weight:700}.crow .who{min-width:0}.crow .who b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crow .who small{color:var(--ink2);font-size:12px}.crow .why{color:var(--ink2);font-size:12.5px;min-width:0}
+.crow .gain{font-weight:800;white-space:nowrap;text-align:right}
+.more-btn{margin-top:10px}
+.duo{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px}
+.mapwrap{position:relative}.mapwrap svg{display:block;width:100%;height:auto;overflow:visible}
+.mapwrap text{font-family:var(--font);fill:var(--ink2);font-size:11px}
+.mapwrap .qd{font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:10px;opacity:.8}
+.mapwrap .nm{fill:var(--ink);font-weight:700;font-size:11px;pointer-events:none}
+.mapwrap circle{fill:var(--fill);fill-opacity:.5;stroke:var(--fill2);stroke-width:1.2;cursor:pointer}
+.mapwrap a:hover circle,.mapwrap a:focus circle{fill-opacity:.95}
+.wk{display:grid;gap:6px}
+.wkrow{display:grid;grid-template-columns:38px 1fr 84px;gap:8px;align-items:center;font-size:13px}
+.wkrow .t{height:12px;border-radius:0 5px 5px 0}.wkrow .t i{display:block;height:100%;background:var(--fill);border-radius:0 5px 5px 0;min-width:2px;opacity:.75}
+.wkrow.best .t i{background:var(--fill2);opacity:1}.wkrow.best{font-weight:800}
+.wkrow .val{text-align:right;white-space:nowrap}
+#tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:10px;padding:7px 10px;font-size:12px;font-weight:600;max-width:240px;line-height:1.35;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+#tip b{display:block;font-weight:800}
+.stamp{display:none;text-align:center;color:var(--ink2);font-size:12px;font-weight:600;letter-spacing:.04em}
+body.clean .stamp{display:block}
+body.clean .oppbig input[type=range],body.clean .simax,body.clean .more-btn{display:none}
+td.foc{text-align:left}
+@media (max-width:900px){.oppgrid,.duo{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:620px){.crow{grid-template-columns:22px minmax(0,1fr) auto}.crow .why{grid-column:2/-1;order:5}.crow .gain{grid-column:2/-1;text-align:left;order:6}.oppbig .big{font-size:28px}.brow4{grid-template-columns:90px 1fr 92px 54px}}
+@media print{body{background:#fff;padding:0}.controls,.drop,.actions,.exit,.hint,.more-btn,.oppbig input[type=range],.simax,#pandora-side,.pandora-side{display:none!important}.card{break-inside:avoid;border-color:#ddd}.stamp{display:block}}
+</style>
 </head>
 <body>
 
@@ -128,6 +200,7 @@ body.clean .exit{display:block}
       <h1>Staff Performance</h1>
     </div>
     <div class="actions">
+      <button class="btn hideclean" id="xlsBtn" type="button">Download Excel</button>
       <button class="btn hideclean" id="cleanBtn" type="button">Screenshot view</button>
     </div>
   </header>
@@ -177,7 +250,7 @@ const METRICS=[
  {id:'upt',label:'UPT',f:p=>p.upt},
  {id:'atv',label:'ATV',f:p=>p.atv}];
 const DEFAULT_EX=/packaging|services|jewellery boxes/i;
-const st={span:false,data:null,store:'ALL',metric:'incl',q:'',ex:new Set(),from:'',to:'',fam:'',month:'',months:[],cur:null};
+const st={span:false,data:null,store:'ALL',metric:'incl',q:'',ex:new Set(),from:'',to:'',fam:'',month:'',months:[],cur:null,close:50,allCoach:false,prev:null,prevLabel:''};
 {const u=new URLSearchParams(location.search);st.from=/^\d{4}-\d{2}-\d{2}$/.test(u.get('from')||'')?u.get('from'):'';st.to=/^\d{4}-\d{2}-\d{2}$/.test(u.get('to')||'')?u.get('to'):'';st.month=/^\d{4}-\d{2}$/.test(u.get('month')||'')?u.get('month'):''}
 const dateQs=()=>[st.month?'month='+st.month:'',st.from?'from='+encodeURIComponent(st.from):'',st.to?'to='+encodeURIComponent(st.to):''].filter(Boolean).join('&');
 let SERVER=null; // true: the sales data lives on the server; false: this browser only (old way)
@@ -215,7 +288,7 @@ function setData(d){
     if(known?saved.ex.includes(g):DEFAULT_EX.test(g)) st.ex.add(g);
   });
   if(st.store!=='ALL' && !d.stores.includes(st.store)) st.store='ALL';
-  buildControls(); syncDates(d); render();
+  buildControls(); syncDates(d); render(); loadPrev();
 }
 let exTimer=null;
 function persistEx(){
@@ -223,23 +296,111 @@ function persistEx(){
   safeSet(EXKEY,{ex:[...st.ex],known:st.data.groups});
 }
 
-function compute(){
-  const d=st.data, exIdx=new Set(); d.groups.forEach((g,i)=>{if(st.ex.has(g))exIdx.add(i)});
-  const P=d.people.map(()=>({inv:new Set(),qty:0,amt:0}));
-  const S=d.stores.map(()=>({inv:new Set(),qty:0,amt:0}));
-  const G={inv:new Set(),qty:0,amt:0};
-  for(const r of d.rows){ // [person, group, invoice, qty, amt]
+/* ---- the numbers: one pass over the rows gives every person, store and the total. Each also keeps the pieces per invoice
+   (one-piece invoices), the invoices per category and the sales per day. Everything is worked out in the page from the rows the
+   server already sent to this person, so nobody sees more here than the table itself shows. ---- */
+const catOf=g=>{const s=String(g||''),i=s.lastIndexOf(' - ');return (i>=0?s.slice(i+3):s).trim()||'Other'};
+function computeOn(d,exSet){
+  const exIdx=new Set(); d.groups.forEach((g,i)=>{if(exSet.has(g))exIdx.add(i)});
+  const mk=()=>({inv:new Map(),qty:0,amt:0,cat:new Map(),days:new Map()});
+  const P=d.people.map(mk), S=d.stores.map(mk), G=mk(), cg=d.groups.map(catOf);
+  const add=(o,r,c)=>{o.inv.set(r[2],(o.inv.get(r[2])||0)+r[3]);o.qty+=r[3];o.amt+=r[4];
+    let k=o.cat.get(c);if(!k)o.cat.set(c,k=new Set());k.add(r[2]);
+    if(r[5]!=null)o.days.set(r[5],(o.days.get(r[5])||0)+r[4])};
+  for(const r of d.rows){ // [person, group, invoice, qty, amt, day, item]
     if(exIdx.has(r[1])) continue;
-    const p=P[r[0]], s=S[d.people[r[0]][1]];
-    p.inv.add(r[2]); s.inv.add(r[2]); G.inv.add(r[2]);
-    p.qty+=r[3]; s.qty+=r[3]; G.qty+=r[3];
-    p.amt+=r[4]; s.amt+=r[4]; G.amt+=r[4];
+    const c=cg[r[1]]; add(P[r[0]],r,c); add(S[d.people[r[0]][1]],r,c); add(G,r,c);
   }
-  const fin=o=>{const inv=o.inv.size;return{inv,qty:o.qty,amt:o.amt,incl:o.amt*VAT,upt:inv?o.qty/inv:0,atv:inv?o.amt*VAT/inv:0}};
+  const fin=o=>{const inv=o.inv.size;let one=0,pos=0;for(const q of o.inv.values()){if(q>0){pos++;if(q<=1)one++}}
+    const incl=o.amt*VAT;return{inv,qty:o.qty,amt:o.amt,incl,upt:inv?o.qty/inv:0,atv:inv?incl/inv:0,aup:o.qty>0?incl/o.qty:0,one,pos,cat:o.cat,days:o.days}};
   const stores=d.stores.map((name,si)=>({name,tot:fin(S[si]),people:[]}));
-  d.people.forEach((p,i)=>{const f=fin(P[i]); if(p[0]==='Returns & adjustments') return; /* counted in the store totals, never listed as a person */ if(f.inv>0||f.amt!==0) stores[p[1]].people.push({name:p[0],...f})});
+  d.people.forEach((p,i)=>{const f=fin(P[i]); if(p[0]==='Returns & adjustments') return; /* counted in the store totals, never listed as a person */ if(f.inv>0||f.amt!==0) stores[p[1]].people.push({name:p[0],store:d.stores[p[1]],...f})});
   return{stores:stores.filter(s=>s.people.length),grand:fin(G)};
 }
+function compute(){
+  const k=[...st.ex].sort().join('|');
+  if(!st.cmp||st.cmp.d!==st.data||st.cmp.k!==k) st.cmp={d:st.data,k,v:computeOn(st.data,st.ex)};
+  return st.cmp.v;
+}
+
+/* ---- the period before: the same days one month earlier (or the same number of days just before, when the dates cross months).
+   Asked from the same /api/data, so the server applies the same limits (zone, own store). ---- */
+const prevCache=new Map();
+const iso=d=>d.toISOString().slice(0,10);
+const dShort=s=>new Date(s+'T00:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'});
+function curRange(){const d=st.data;if(!d)return null;const a=d.from||d.dayMin,b=d.to||d.dayMax;return a&&b?{from:a,to:b,n:Math.round((Date.parse(b)-Date.parse(a))/864e5)+1}:null}
+function prevRange(){
+  const c=curRange(); if(!SERVER||!c) return null;
+  const A=new Date(c.from+'T00:00:00Z'),B=new Date(c.to+'T00:00:00Z'); let pa,pb;
+  if(c.from.slice(0,7)===c.to.slice(0,7)){
+    const y=A.getUTCFullYear(),m=A.getUTCMonth()-1,last=new Date(Date.UTC(y,m+1,0)).getUTCDate(),lastCur=new Date(Date.UTC(y,m+2,0)).getUTCDate();
+    pa=new Date(Date.UTC(y,m,Math.min(A.getUTCDate(),last)));
+    pb=new Date(Date.UTC(y,m,(A.getUTCDate()===1&&B.getUTCDate()===lastCur)?last:Math.min(B.getUTCDate(),last)));
+  } else { pb=new Date(A.getTime()-864e5); pa=new Date(pb.getTime()-(c.n-1)*864e5); }
+  return {from:iso(pa),to:iso(pb)};
+}
+async function loadPrev(){
+  const d=st.data, pr=prevRange(); st.prev=null; st.prevLabel=''; st.pc=null;
+  if(!pr) return;
+  const key=pr.from+'|'+pr.to; let j=prevCache.get(key);
+  if(j===undefined){
+    try{const r=await fetch('/api/data?from='+pr.from+'&to='+pr.to,{credentials:'same-origin',cache:'no-store'}); j=r.ok?scopeData(await r.json()):null}catch(_){j=null}
+    if(j&&(!Array.isArray(j.rows)||!j.rows.length)) j=null;
+    prevCache.set(key,j);
+  }
+  if(st.data!==d||!j) return;
+  st.prev=j; st.prevLabel=pr.from===pr.to?dShort(pr.from):dShort(pr.from)+' – '+dShort(pr.to); render();
+}
+function prevNumbers(){
+  if(!st.prev) return null;
+  const k=[...st.ex].sort().join('|');
+  if(!st.pc||st.pc.d!==st.prev||st.pc.k!==k){
+    const v=computeOn(st.prev,st.ex), S=new Map(), P=new Map();
+    v.stores.forEach(s=>{S.set(s.name,s.tot);s.people.forEach(p=>P.set(s.name+'|'+p.name,p))});
+    st.pc={d:st.prev,k,v:{grand:v.grand,S,P}};
+  }
+  return st.pc.v;
+}
+const chg=(a,b)=>b>0&&isFinite(a)?(a-b)/b:null;
+function dl(c){
+  if(c===null||c===undefined) return '';
+  const p=Math.round(c*100); if(Math.abs(p)>999) return '';
+  return `<span class="dl ${p>0?'up':p<0?'down':'flat'}">${p>0?'+':p<0?'−':''}${Math.abs(p)}%</span>`;
+}
+const egpK=v=>{const a=Math.abs(v);return 'EGP '+(a>=1e6?(v/1e6).toFixed(a>=1e7?1:2)+'M':a>=1e4?nf0.format(v/1e3)+'K':nf0.format(v))};
+const pct=v=>nf0.format(v*100)+'%';
+
+/* ---- money within reach: each person against the average of their OWN store (same customers, same mall).
+   Add a piece = their invoices x the pieces they are short per invoice x their own price per piece.
+   Trade up   = their pieces x how far their price per piece is under the store's. People already above the average add nothing. ---- */
+const MIN_INV=5;
+function coach(p,s){
+  const T=s.tot, o={p,store:s.name,add:0,up:0,play:'lead',why:'',hint:''};
+  if(p.inv>=MIN_INV&&p.qty>0&&T.inv>=MIN_INV*2&&s.people.length>1){
+    o.add=Math.max(0,T.upt-p.upt)*p.inv*p.aup;
+    o.up=Math.max(0,T.aup-p.aup)*p.qty;
+    if(o.add<p.incl*.01) o.add=0; if(o.up<p.incl*.01) o.up=0;
+  }
+  o.total=o.add+o.up;
+  const oneShare=p.pos?p.one/p.pos:0;
+  if(o.total>0&&o.add>=o.up){o.play='add';o.why=`${nf2.format(p.upt)} pieces per invoice, the store does ${nf2.format(T.upt)}. ${pct(oneShare)} of invoices are one piece.`}
+  else if(o.total>0){o.play='up';o.why=`Average piece ${egp(p.aup)}, the store sells at ${egp(T.aup)}.`}
+  else{
+    const med=[...s.people].map(x=>x.inv).sort((a,b)=>a-b)[Math.floor(s.people.length/2)]||0;
+    if(p.inv<med*.7&&s.people.length>2){o.play='more';o.why=`Strong baskets, but ${nf0.format(p.inv)} invoices against ${nf0.format(med)} for a typical colleague.`}
+    else o.why=`At or above the store on pieces per invoice and price per piece.`;
+  }
+  // the category this person offers least, compared with the store
+  let best=null;
+  if(p.inv>=MIN_INV) for(const [c,set] of T.cat){
+    const sp=set.size/T.inv, pp=((p.cat.get(c)||{size:0}).size)/p.inv, gap=sp-pp;
+    if(sp>=.1&&gap>=.06&&(!best||gap>best.gap)) best={c,gap,sp,pp};
+  }
+  if(best) o.hint=`${best.c}: in ${pct(best.pp)} of invoices, store ${pct(best.sp)}.`;
+  return o;
+}
+const PLAY={add:'Add a piece',up:'Trade up',more:'More customers',lead:'Leading'};
+const playChip=k=>`<span class="play ${k}">${PLAY[k]}</span>`;
 
 function buildControls(){
   const d=st.data;
@@ -262,24 +423,6 @@ function roleNote(){
 }
 function updGcount(){const n=st.ex.size;$('gcount').textContent=n?`(${n} left out)`:'(all counted)'}
 
-function kpis(t,label){
-  return `<div class="kpis">
-   <div class="kpi hero"><div class="k">${label} incl. VAT</div><div class="v num">${egp(t.incl)}</div></div>
-   <div class="kpi"><div class="k">Before VAT</div><div class="v num">${egp(t.amt)}</div></div>
-   <div class="kpi"><div class="k">Invoices</div><div class="v num">${nf0.format(t.inv)}</div></div>
-   <div class="kpi"><div class="k">Quantity</div><div class="v num">${nf0.format(t.qty)}</div></div>
-   <div class="kpi"><div class="k">UPT</div><div class="v num">${nf2.format(t.upt)}</div></div>
-   <div class="kpi"><div class="k">ATV</div><div class="v num">${egp(t.atv)}</div></div></div>`;
-}
-const pUrl=(store,name)=>'/staff/person?store='+encodeURIComponent(store)+'&name='+encodeURIComponent(name)+(dateQs()?'&'+dateQs():'');
-function head(m){
-  const cols=[['inv','# Invoices'],['qty','Total Qty'],['amt','Before VAT'],['incl','Incl. VAT'],['upt','UPT'],['atv','ATV']];
-  return cols.map(c=>`<th class="${c[0]===m?'sortcol':''}">${c[1]}</th>`).join('');
-}
-function cells(p,m,max,extraShare){
-  const mk=(id,txt)=>id===m?`<td class="cellbar"><i style="width:${max?Math.max(2,p[id]/max*100):0}%"></i><span class="num">${txt}</span></td>`:`<td class="num">${txt}</td>`;
-  return mk('inv',nf0.format(p.inv))+mk('qty',nf0.format(p.qty))+mk('amt',egp(p.amt))+mk('incl',egp(p.incl))+mk('upt',nf2.format(p.upt))+mk('atv',egp(p.atv));
-}
 
 /* ---- collections (Pandora families): "Pandora Moments - Charm" -> Moments. Follows the store chip, the dates and the item groups counted. ---- */
 const famOf=g=>String(g||'').split(' - ')[0].replace(/^\s*Pandora\s+/i,'').trim()||'Other';
@@ -311,22 +454,170 @@ function collectionsHtml(){
     <div class="tablewrap"><table><thead><tr><th class="l">Collection</th><th>Incl. VAT</th><th>Share</th><th>Qty</th><th>Invoices</th><th class="l">Top seller</th></tr></thead><tbody>${rows}</tbody></table></div>${detail}</section>`;
 }
 
+const IC={
+  crown:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-1.8 10H4.8L3 8z"/></svg>',
+  layers:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>',
+  tag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4h8l10 10-8 8L3 12z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg>',
+  up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>'};
+function kpis(t,label,pv,pace){
+  const tile=(k,v,c,hero)=>`<div class="kpi${hero?' hero':''}"><div class="k">${k}</div><div class="v num">${v}</div>${pv?`<div class="d">${dl(c)}</div>`:''}</div>`;
+  return `<div class="kpis">`+
+   tile(label+' incl. VAT',egp(t.incl),pv&&chg(t.incl,pv.incl),true)+
+   tile('Before VAT',egp(t.amt),pv&&chg(t.amt,pv.amt))+
+   tile('Invoices',nf0.format(t.inv),pv&&chg(t.inv,pv.inv))+
+   tile('Quantity',nf0.format(t.qty),pv&&chg(t.qty,pv.qty))+
+   tile('UPT',nf2.format(t.upt),pv&&chg(t.upt,pv.upt))+
+   tile('ATV',egp(t.atv),pv&&chg(t.atv,pv.atv))+
+   (pace?`<div class="kpi"><div class="k">Month pace</div><div class="v num">${egp(pace)}</div>${pv?'<div class="d">incl. VAT at this rate</div>':''}</div>`:'')+`</div>`;
+}
+const pUrl=(store,name)=>'/staff/person?store='+encodeURIComponent(store)+'&name='+encodeURIComponent(name)+(dateQs()?'&'+dateQs():'');
+function head(m){
+  const cols=[['inv','# Invoices'],['qty','Total Qty'],['amt','Before VAT'],['incl','Incl. VAT'],['upt','UPT'],['atv','ATV']];
+  return cols.map(c=>`<th class="${c[0]===m?'sortcol':''}">${c[1]}</th>`).join('');
+}
+function cells(p,m,max,extraShare){
+  const mk=(id,txt)=>id===m?`<td class="cellbar"><i style="width:${max?Math.max(2,p[id]/max*100):0}%"></i><span class="num">${txt}</span></td>`:`<td class="num">${txt}</td>`;
+  return mk('inv',nf0.format(p.inv))+mk('qty',nf0.format(p.qty))+mk('amt',egp(p.amt))+mk('incl',egp(p.incl))+mk('upt',nf2.format(p.upt))+mk('atv',egp(p.atv));
+}
+
+/* month pace: only when the dates start on the 1st of a month that is still running */
+function monthPace(t){
+  const c=curRange(); if(!c||c.from.slice(8)!=='01'||c.from.slice(0,7)!==c.to.slice(0,7)) return 0;
+  const [y,m]=c.from.split('-').map(Number), dim=new Date(Date.UTC(y,m,0)).getUTCDate(), done=Number(c.to.slice(8));
+  if(done>=dim||done<3||c.to.slice(0,7)!==new Date().toISOString().slice(0,7)) return 0;
+  return t.incl/done*dim;
+}
+function briefHtml(t,pv,stores,all){
+  const L=[];
+  const c=pv?chg(t.incl,pv.incl):null;
+  L.push(`Sales are <b>${egp(t.incl)}</b> incl. VAT from ${nf0.format(t.inv)} invoices`+(c!==null?`, <b>${c>=0?'up':'down'} ${nf0.format(Math.abs(c*100))}%</b> on ${esc(st.prevLabel)}.`:'.'));
+  if(all&&stores.length>1){
+    const top=[...stores].sort((a,b)=>b.tot.incl-a.tot.incl)[0]; let s=`<b>${esc(top.name)}</b> leads with ${pct(t.incl?top.tot.incl/t.incl:0)} of sales`;
+    const P=prevNumbers(); if(P){const g=stores.map(x=>({n:x.name,c:chg(x.tot.incl,(P.S.get(x.name)||{}).incl)})).filter(x=>x.c!==null).sort((a,b)=>b.c-a.c);
+      if(g.length>1&&g[0].c>0) s+=`; <b>${esc(g[0].n)}</b> grew fastest (+${nf0.format(g[0].c*100)}%)`;
+      if(g.length>1&&g[g.length-1].c<0) s+=`; <b>${esc(g[g.length-1].n)}</b> is down ${nf0.format(Math.abs(g[g.length-1].c*100))}%`}
+    L.push(s+'.');
+  }
+  if(t.pos) L.push(`<b>${pct(t.one/t.pos)}</b> of invoices leave with a single piece. Every second piece added is the fastest extra sale.`);
+  return `<ul class="brief">${L.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+}
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const dayDate=n=>new Date(n*864e5);
+const dayLbl=n=>WD[dayDate(n).getUTCDay()]+' '+dayDate(n).toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'});
+function daysHtml(t){
+  if(t.days.size<3) return '';
+  const ks=[...t.days.keys()], a=Math.min(...ks), b=Math.max(...ks); if(b-a>190) return '';
+  let max=0,best=a; const v=[]; for(let n=a;n<=b;n++){const x=(t.days.get(n)||0)*VAT; v.push(x); if(x>max){max=x;best=n}}
+  return `<div class="sectl"><span>Sales per day</span><span>Best day: ${dayLbl(best)} · ${egp(max)}</span></div>
+    <div class="days">${v.map((x,i)=>`<i class="${a+i===best?'best':x<=0?'zero':''}" style="height:${max?Math.max(3,x/max*100):3}%" data-tip="${esc('<b>'+dayLbl(a+i)+'</b>'+egp(x))}"></i>`).join('')}</div>
+    <div class="dayax"><span>${dayLbl(a)}</span><span>${dayLbl(b)}</span></div>`;
+}
+function weekHtml(t){
+  const c=curRange(); if(!c||c.n<7||!t.days.size) return '';
+  const sum=Array(7).fill(0), cnt=Array(7).fill(0), a=Math.round(Date.parse(c.from)/864e5);
+  for(let i=0;i<c.n;i++) cnt[dayDate(a+i).getUTCDay()]++;
+  for(const [n,x] of t.days) sum[dayDate(n).getUTCDay()]+=x*VAT;
+  const avg=sum.map((s,i)=>cnt[i]?s/cnt[i]:0), max=Math.max(...avg,1), order=[6,0,1,2,3,4,5], bi=avg.indexOf(Math.max(...avg));
+  const norm=avg.reduce((x,y)=>x+y,0)/7, lift=norm?avg[bi]/norm-1:0;
+  const FULL=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  return `<section class="card"><div class="cardhead"><h2>Best days of the week</h2><span class="meta">Average sales per day, incl. VAT</span></div>
+    <div class="wk">${order.map(i=>`<div class="wkrow${i===bi?' best':''}"><span>${WD[i]}</span><span class="t"><i style="width:${avg[i]/max*100}%"></i></span><span class="val num">${egpK(avg[i])}</span></div>`).join('')}</div>
+    <div class="hint"><b style="color:var(--ink)">${FULL[bi]}</b> is the strongest day${lift>.05?`, ${nf0.format(lift*100)}% above a normal day`:''}. Put the strongest sellers on the floor then.</div></section>`;
+}
+function awardsHtml(people,all){
+  if(people.length<3) return '';
+  const invs=people.map(p=>p.inv).sort((a,b)=>a-b), min=Math.max(3,Math.round(invs[Math.floor(invs.length/2)]*.3)), ok=people.filter(p=>p.inv>=min);
+  const top=(arr,f)=>arr.reduce((b,p)=>!b||f(p)>f(b)?p:b,null);
+  const A=[], P=prevNumbers();
+  const a1=top(people,p=>p.incl); if(a1) A.push(['crown','Top seller',a1,egp(a1.incl)]);
+  const a2=top(ok,p=>p.upt); if(a2) A.push(['layers','Best basket',a2,nf2.format(a2.upt)+' pieces per invoice']);
+  const a3=top(ok,p=>p.atv); if(a3) A.push(['tag','Highest ticket',a3,egp(a3.atv)+' per invoice']);
+  if(P){const g=ok.map(p=>({p,c:chg(p.incl,(P.P.get(p.store+'|'+p.name)||{}).incl)})).filter(x=>x.c!==null&&x.c>0&&(P.P.get(x.p.store+'|'+x.p.name)||{}).inv>=min).sort((x,y)=>y.c-x.c)[0];
+    if(g) A.push(['up','Most improved',g.p,'+'+nf0.format(g.c*100)+'% on '+st.prevLabel])}
+  return `<section class="card"><div class="cardhead"><h2>Standouts</h2><span class="meta">The people to learn from this period</span></div><div class="awards">${A.map(a=>
+    `<a class="award" href="${esc(pUrl(a[2].store,a[2].name))}"><span class="ic">${IC[a[0]]}</span><span class="t"><div class="k">${a[1]}</div><div class="nm">${esc(a[2].name)}</div><div class="vv">${all?esc(a[2].store)+' · ':''}${esc(a[3])}</div></span></a>`).join('')}</div></section>`;
+}
+function simText(full){
+  const c=curRange(), v=full*st.close/100, n=c?c.n:0;
+  return {v, month:n>=5&&n<27?`about ${egp(v/n*30)} more every month`:''};
+}
+function oppHtml(scope,all){
+  const list=scope.flatMap(s=>s.people.map(p=>coach(p,s)));
+  const add=list.reduce((n,o)=>n+o.add,0), up=list.reduce((n,o)=>n+o.up,0), full=add+up;
+  if(full<=0) return {html:'',by:new Map(list.map(o=>[o.store+'|'+o.p.name,o]))};
+  const s=simText(full), ranked=list.filter(o=>o.total>0).sort((a,b)=>b.total-a.total), show=st.allCoach?ranked:ranked.slice(0,6);
+  let right;
+  if(all){
+    const per=scope.map(x=>({n:x.name,v:x.people.reduce((n,p)=>n+coach(p,x).total,0)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v), mx=Math.max(...per.map(x=>x.v),1);
+    right=`<div><div class="sectl" style="margin-top:0"><span>Where it sits, by store</span></div><div class="bars">${per.map(x=>`<button class="brow" type="button" data-pick="${esc(x.n)}"><span class="n">${esc(x.n)}</span><span class="track"><span class="fill" style="display:block;width:${x.v/mx*100}%"></span></span><span class="val num" data-sim="${x.v}">${egp(x.v*st.close/100)}</span></button>`).join('')}</div><div class="hint">Select a store to see its people and their plays.</div></div>`;
+  } else {
+    right=`<div class="how"><div>${playChip('add')}<p>Before closing, offer one more piece: a charm for the bracelet, a safety chain, a matching ring.</p></div><div>${playChip('up')}<p>Show the next model up first. The customer can always come down, rarely up.</p></div><div>${playChip('more')}<p>The baskets are good. Greet earlier and start more conversations.</p></div><div>${playChip('lead')}<p>Ahead of the store. Pair them with a colleague for a shift.</p></div></div>`;
+  }
+  const html=`<section class="card" id="opp"><div class="cardhead"><h2>Money within reach</h2><span class="meta">Estimate · each person against the average of their own store</span></div>
+    <div class="oppgrid"><div class="oppbig">
+      <div class="k">If the team closes <b id="simPct">${st.close}%</b> of the gap to their store average</div>
+      <div class="big num" id="simVal">+${egp(s.v)}</div><div class="sub" id="simMonth">${s.month}</div>
+      <input type="range" id="sim" min="10" max="100" step="5" value="${st.close}" data-full="${full}" aria-label="How much of the gap the team closes">
+      <div class="simax"><span>A little (10%)</span><span>All of it (100%)</span></div>
+      <div class="split"><i class="a" style="width:${add/full*100}%"></i><i class="b" style="width:${up/full*100}%"></i></div>
+      <div class="leg"><span><em style="background:var(--fill)"></em>Add a piece (more pieces per invoice)<b class="num" data-sim="${add}">${egp(add*st.close/100)}</b></span>
+        <span><em style="background:var(--fill2)"></em>Trade up (higher price per piece)<b class="num" data-sim="${up}">${egp(up*st.close/100)}</b></span></div>
+    </div>${right}</div>
+    <div class="sectl"><span>Who to coach first</span><span>${ranked.length} of ${list.length} people have room</span></div>
+    <div class="coach">${show.map((o,i)=>`<a class="crow" href="${esc(pUrl(o.store,o.p.name))}"><span class="no num">${i+1}</span><span class="who"><b>${esc(o.p.name)}</b>${all?`<small>${esc(o.store)}</small>`:''}</span>${playChip(o.play)}<span class="why">${esc(o.why)}${o.hint?' Offer more '+esc(o.hint):''}</span><span class="gain num" data-sim="${o.total}" data-plus="1">+${egp(o.total*st.close/100)}</span></a>`).join('')}</div>
+    ${ranked.length>6?`<button class="btn more-btn" type="button" id="coachAll">${st.allCoach?'Show the first 6':'Show all '+ranked.length}</button>`:''}</section>`;
+  return {html,by:new Map(list.map(o=>[o.store+'|'+o.p.name,o]))};
+}
+function mapHtml(people,all){
+  const pts=people.filter(p=>p.inv>0&&p.atv>0); if(pts.length<4) return '';
+  const W=720,H=350,L=58,R=18,T=18,B=40, med=a=>{const s=[...a].sort((x,y)=>x-y);return s.length%2?s[(s.length-1)/2]:(s[s.length/2-1]+s[s.length/2])/2};
+  const xs=pts.map(p=>p.inv), ys=pts.map(p=>p.atv), xM=Math.max(...xs)*1.1, y0=Math.min(...ys)*.82, yM=Math.max(...ys)*1.1, mi=Math.max(...pts.map(p=>p.incl),1);
+  const X=v=>L+(v/xM)*(W-L-R), Y=v=>H-B-((v-y0)/(yM-y0||1))*(H-T-B), mx=med(xs), my=med(ys);
+  const lab=new Set([...pts].sort((a,b)=>b.incl-a.incl).slice(0,6));
+  const dots=[...pts].sort((a,b)=>b.incl-a.incl).map(p=>{const r=5+13*Math.sqrt(Math.max(0,p.incl)/mi), x=X(p.inv), y=Y(p.atv);
+    return `<a href="${esc(pUrl(p.store,p.name))}" data-tip="${esc('<b>'+esc(p.name)+'</b>'+(all?esc(p.store)+' · ':'')+nf0.format(p.inv)+' invoices · ATV '+egp(p.atv)+' · '+egp(p.incl))}"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}"/></a>`+
+      (lab.has(p)?`<text class="nm" x="${x.toFixed(1)}" y="${(y-r-4).toFixed(1)}" text-anchor="middle">${esc(p.name.split(/\s+/)[0])}</text>`:'')}).join('');
+  const yt=[y0+(yM-y0)*.1,(y0+yM)/2,yM-(yM-y0)*.08], xt=[0,xM/2,xM*.95];
+  return `<section class="card"><div class="cardhead"><h2>Team map</h2><span class="meta">Right = more customers served · up = bigger tickets · bubble = sales</span></div>
+    <div class="mapwrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Each sales person by invoices and average ticket">
+      <line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="var(--line)"/><line x1="${L}" y1="${T}" x2="${L}" y2="${H-B}" stroke="var(--line)"/>
+      <line x1="${X(mx)}" y1="${T}" x2="${X(mx)}" y2="${H-B}" stroke="var(--line)" stroke-dasharray="4 5"/><line x1="${L}" y1="${Y(my)}" x2="${W-R}" y2="${Y(my)}" stroke="var(--line)" stroke-dasharray="4 5"/>
+      <text class="qd" x="${W-R-4}" y="${T+10}" text-anchor="end">Stars</text><text class="qd" x="${L+8}" y="${T+10}">Big tickets, few customers</text>
+      <text class="qd" x="${W-R-4}" y="${H-B-8}" text-anchor="end">Many customers, small tickets</text><text class="qd" x="${L+8}" y="${H-B-8}">Room to grow</text>
+      ${yt.map(v=>`<text x="${L-8}" y="${Y(v)+4}" text-anchor="end">${nf0.format(v/1e3)}K</text>`).join('')}
+      ${xt.map(v=>`<text x="${X(v)}" y="${H-B+16}" text-anchor="middle">${nf0.format(v)}</text>`).join('')}
+      <text x="${(L+W-R)/2}" y="${H-6}" text-anchor="middle">Invoices</text><text transform="translate(12 ${(T+H-B)/2}) rotate(-90)" text-anchor="middle">ATV, EGP</text>
+      ${dots}</svg></div>
+    <div class="hint">The dashed lines are the middle of the team. Select a bubble for that person’s dashboard.</div></section>`;
+}
+
 function render(){
   if(!st.data) return;
   const {stores,grand}=compute(), m=METRICS.find(x=>x.id===st.metric), mf=m.f;
-  const q=st.q.trim().toLowerCase(), period=st.data.period||'';
+  const q=st.q.trim().toLowerCase(), period=st.data.period||'', PV=prevNumbers();
   const sortP=a=>[...a].sort((x,y)=>mf(y)-mf(x));
+  const vs=PV?` · change vs ${esc(st.prevLabel)}`:'';
+  const pTrend=(s,p)=>`<td class="num">${PV?dl(chg(p.incl,(PV.P.get(s.name+'|'+p.name)||{}).incl))||'<span class="share">new</span>':''}</td>`;
+  const sTrend=s=>`<td class="num">${PV?dl(chg(s.tot.incl,(PV.S.get(s.name)||{}).incl)):''}</td>`;
+  const thX=`<th>Trend</th><th class="l">Focus</th>`;
   let html='';
   if(st.store==='ALL'){
     const ranked=[...stores].sort((a,b)=>mf(b.tot)-mf(a.tot)), top=Math.max(...ranked.map(s=>mf(s.tot)),0);
+    const opp=q?{html:'',by:new Map(stores.flatMap(s=>s.people.map(p=>[s.name+'|'+p.name,coach(p,s)])))}:oppHtml(stores,true);
+    const everyone=stores.flatMap(s=>s.people);
     if(!q){
-    html+=`<section class="card"><div class="cardhead"><h2>All stores</h2><span class="meta">${esc(period)} · ${stores.length} stores · ${stores.reduce((n,s)=>n+s.people.length,0)} sales people</span></div>
-      ${kpis(grand,'Total')}
-      <div class="lbl" style="margin-bottom:6px">Stores by ${m.label.toLowerCase()}</div>
-      <div class="bars">${ranked.map(s=>`<button class="brow" type="button" data-pick="${esc(s.name)}" title="${esc(s.name)}: ${fmt(m.id,mf(s.tot))}">
+    html+=`<section class="card"><div class="cardhead"><h2>All stores</h2><span class="meta">${esc(period)} · ${stores.length} stores · ${everyone.length} sales people${vs}</span></div>
+      ${briefHtml(grand,PV&&PV.grand,stores,true)}
+      ${kpis(grand,'Total',PV&&PV.grand,monthPace(grand))}
+      ${daysHtml(grand)}
+      <div class="sectl"><span>Stores by ${m.label.toLowerCase()}</span></div>
+      <div class="bars">${ranked.map(s=>`<button class="brow${PV?' brow4':''}" type="button" data-pick="${esc(s.name)}" title="${esc(s.name)}: ${fmt(m.id,mf(s.tot))}">
         <span class="n">${esc(s.name)}</span><span class="track"><span class="fill" style="display:block;width:${top?mf(s.tot)/top*100:0}%"></span></span>
-        <span class="val num">${fmt(m.id,mf(s.tot))}</span></button>`).join('')}</div>
+        <span class="val num">${fmt(m.id,mf(s.tot))}</span>${PV?`<span style="text-align:right">${dl(chg(mf(s.tot),PV.S.get(s.name)?mf(PV.S.get(s.name)):0))}</span>`:''}</button>`).join('')}</div>
       <div class="hint">Select a store to see only its team.</div></section>`;
+    html+=opp.html+awardsHtml(everyone,true);
+    const mp=mapHtml(everyone,true), wk=weekHtml(grand);
+    html+=mp&&wk?`<div class="duo">${mp}${wk}</div>`:mp+wk;
     }
     const maxP=Math.max(...stores.flatMap(s=>s.people.map(mf)),0);
     let body='';const hit={inv:0,qty:0,amt:0};let hits=0;
@@ -334,33 +625,58 @@ function render(){
       const people=sortP(s.people).filter(p=>!q||p.name.toLowerCase().includes(q)||s.name.toLowerCase().includes(q));
       if(!people.length) return;
       people.forEach(p=>{hits++;hit.inv+=p.inv;hit.qty+=p.qty;hit.amt+=p.amt});
-      body+=`<tr class="storehead"><td colspan="8">${esc(s.name)}</td></tr>`;
-      people.forEach(p=>body+=`<tr class="person" data-href="${esc(pUrl(s.name,p.name))}"><td class="l" colspan="2"><a class="pname" href="${esc(pUrl(s.name,p.name))}">${esc(p.name)}</a></td>${cells(p,st.metric,maxP)}</tr>`);
-      body+=`<tr class="sub"><td class="l" colspan="2">${esc(s.name)} total</td>${cells(s.tot,'',0)}</tr>`;
+      body+=`<tr class="storehead"><td colspan="10">${esc(s.name)}</td></tr>`;
+      people.forEach(p=>body+=`<tr class="person" data-href="${esc(pUrl(s.name,p.name))}"><td class="l" colspan="2"><a class="pname" href="${esc(pUrl(s.name,p.name))}">${esc(p.name)}</a></td>${cells(p,st.metric,maxP)}${pTrend(s,p)}<td class="foc">${playChip(opp.by.get(s.name+'|'+p.name).play)}</td></tr>`);
+      body+=`<tr class="sub"><td class="l" colspan="2">${esc(s.name)} total</td>${cells(s.tot,'',0)}${sTrend(s)}<td></td></tr>`;
     });
     const mt=q?{...hit,incl:hit.amt*VAT,upt:hit.inv?hit.qty/hit.inv:0,atv:hit.inv?hit.amt*VAT/hit.inv:0}:grand;
     if(q) html+=`<section class="card"><div class="cardhead"><h2>Search results for “${esc(st.q.trim())}”</h2><span class="meta">${hits} sales ${hits===1?'person':'people'} · ${esc(period)}</span></div>${hits?kpis(mt,'Matches'):''}</section>`;
     html+=`<section class="card"><div class="cardhead"><h2>${q?'Matching staff':'Staff performance'}</h2><span class="meta">Bars follow “${m.label}” · select a name for their dashboard</span></div>
-      <div class="tablewrap"><table><thead><tr><th colspan="2">Store / Sales person</th>${head(st.metric)}</tr></thead><tbody>${body||'<tr><td colspan="8" class="empty">No sales person or store matches “'+esc(st.q.trim())+'”.</td></tr>'}
-      ${hits||!q?`<tr class="grand"><td class="l" colspan="2">${q?'Matches total':'Grand total'}</td>${cells(mt,'',0)}</tr>`:''}</tbody></table></div></section>`;
+      <div class="tablewrap"><table><thead><tr><th colspan="2">Store / Sales person</th>${head(st.metric)}${thX}</tr></thead><tbody>${body||'<tr><td colspan="10" class="empty">No sales person or store matches “'+esc(st.q.trim())+'”.</td></tr>'}
+      ${hits||!q?`<tr class="grand"><td class="l" colspan="2">${q?'Matches total':'Grand total'}</td>${cells(mt,'',0)}<td class="num">${!q&&PV?dl(chg(grand.incl,PV.grand.incl)):''}</td><td></td></tr>`:''}</tbody></table></div></section>`;
   } else {
     const s=stores.find(x=>x.name===st.store);
     if(!s){html='<div class="card empty">No sales for this store with the current item groups.</div>';}
     else{
       const all=sortP(s.people), people=all.filter(p=>!q||p.name.toLowerCase().includes(q)), max=Math.max(...all.map(mf),0);
-      const rankOf=new Map(all.map((p,i)=>[p.name,i+1]));
+      const rankOf=new Map(all.map((p,i)=>[p.name,i+1])), opp=oppHtml([s],false), sp=PV&&PV.S.get(s.name);
       const rows=people.map(p=>{const r=rankOf.get(p.name);
-        return `<tr class="person" data-href="${esc(pUrl(s.name,p.name))}"><td class="rank num">${r}</td><td class="l"><a class="pname" href="${esc(pUrl(s.name,p.name))}">${esc(p.name)}</a>${r===1?'<span class="pill">Top seller</span>':''}</td>${cells(p,st.metric,max)}<td class="num share">${s.tot.amt?nf0.format(p.amt/s.tot.amt*100):0}%</td></tr>`}).join('');
-      html+=`<section class="card"><div class="cardhead"><h2>${esc(s.name)}</h2><span class="meta">${esc(period)} · ${q?people.length+' of ':''}${s.people.length} sales people</span></div>
-        ${kpis(s.tot,'Store total')}
-        <div class="tablewrap"><table><thead><tr><th>#</th><th class="l">Sales person</th>${head(st.metric)}<th>Share</th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="empty">No sales person matches that search.</td></tr>'}
-        <tr class="grand"><td></td><td class="l">${esc(s.name)} total</td>${cells(s.tot,'',0)}<td class="num">100%</td></tr></tbody></table></div></section>`;
+        return `<tr class="person" data-href="${esc(pUrl(s.name,p.name))}"><td class="rank num">${r}</td><td class="l"><a class="pname" href="${esc(pUrl(s.name,p.name))}">${esc(p.name)}</a>${r===1?'<span class="pill">Top seller</span>':''}</td>${cells(p,st.metric,max)}<td class="num share">${s.tot.amt?nf0.format(p.amt/s.tot.amt*100):0}%</td>${pTrend(s,p)}<td class="foc">${playChip(opp.by.get(s.name+'|'+p.name).play)}</td></tr>`}).join('');
+      html+=`<section class="card"><div class="cardhead"><h2>${esc(s.name)}</h2><span class="meta">${esc(period)} · ${q?people.length+' of ':''}${s.people.length} sales people${vs}</span></div>
+        ${q?'':briefHtml(s.tot,sp,[s],false)}
+        ${kpis(s.tot,'Store total',sp,monthPace(s.tot))}
+        ${q?'':daysHtml(s.tot)}
+        <div class="tablewrap" style="margin-top:14px"><table><thead><tr><th>#</th><th class="l">Sales person</th>${head(st.metric)}<th>Share</th>${thX}</tr></thead><tbody>${rows||'<tr><td colspan="11" class="empty">No sales person matches that search.</td></tr>'}
+        <tr class="grand"><td></td><td class="l">${esc(s.name)} total</td>${cells(s.tot,'',0)}<td class="num">100%</td>${sTrend(s)}<td></td></tr></tbody></table></div></section>`;
+      if(!q){
+        html+=opp.html+awardsHtml(s.people,false);
+        const mp=mapHtml(s.people,false), wk=weekHtml(s.tot);
+        html+=mp&&wk?`<div class="duo">${mp}${wk}</div>`:mp+wk;
+      }
     }
   }
   html+=collectionsHtml();
+  html+=`<div class="stamp">Pandora Egypt · Staff Performance · ${st.store==='ALL'?'All stores':esc(st.store)} · ${esc(period)}</div>`;
   $('out').innerHTML=html;fitNums();
   document.querySelectorAll('#storeChips .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.store===st.store));
   document.querySelectorAll('#metricChips .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.metric===st.metric));
+}
+
+/* ---- Excel: the table on screen plus each person's focus and estimate ---- */
+function exportXlsx(){
+  if(!st.data||typeof XLSX==='undefined'){showErr('Excel export is not available right now. Check the connection and reload.');return}
+  const {stores,grand}=compute(), PV=prevNumbers(), scope=st.store==='ALL'?stores:stores.filter(s=>s.name===st.store);
+  const r2=v=>Math.round(v*100)/100, tr=c=>c===null||c===undefined?'':Math.round(c*100)/100;
+  const A=[['Store','Sales person','Invoices','Quantity','Before VAT (EGP)','Incl. VAT (EGP)','UPT','ATV (EGP)','Price per piece (EGP)','One-piece invoices','Change vs '+(st.prevLabel||'previous period'),'Focus','Why','Within reach at 100% (EGP)']];
+  scope.forEach(s=>[...s.people].sort((a,b)=>b.incl-a.incl).forEach(p=>{const o=coach(p,s);
+    A.push([s.name,p.name,p.inv,r2(p.qty),r2(p.amt),r2(p.incl),r2(p.upt),r2(p.atv),r2(p.aup),p.pos?r2(p.one/p.pos):'',PV?tr(chg(p.incl,(PV.P.get(s.name+'|'+p.name)||{}).incl)):'',PLAY[o.play],o.why+(o.hint?' Offer more '+o.hint:''),r2(o.total)])}));
+  const B=[['Store','Sales people','Invoices','Quantity','Before VAT (EGP)','Incl. VAT (EGP)','UPT','ATV (EGP)','One-piece invoices','Change vs '+(st.prevLabel||'previous period'),'Within reach at 100% (EGP)']];
+  scope.forEach(s=>B.push([s.name,s.people.length,s.tot.inv,r2(s.tot.qty),r2(s.tot.amt),r2(s.tot.incl),r2(s.tot.upt),r2(s.tot.atv),s.tot.pos?r2(s.tot.one/s.tot.pos):'',PV?tr(chg(s.tot.incl,(PV.S.get(s.name)||{}).incl)):'',r2(s.people.reduce((n,p)=>n+coach(p,s).total,0))]));
+  const wb=XLSX.utils.book_new(), w1=XLSX.utils.aoa_to_sheet(B), w2=XLSX.utils.aoa_to_sheet(A);
+  w1['!cols']=B[0].map((h,i)=>({wch:i?16:22})); w2['!cols']=A[0].map((h,i)=>({wch:i===12?70:i<2?24:16}));
+  XLSX.utils.book_append_sheet(wb,w1,'Stores'); XLSX.utils.book_append_sheet(wb,w2,'Staff');
+  const c=curRange();
+  XLSX.writeFile(wb,'Staff Performance '+(st.store==='ALL'?'All stores':st.store).replace(/[^\w -]/g,'')+(c?' '+c.from+' to '+c.to:'')+'.xlsx');
 }
 
 /* ---- loading a query file ---- */
@@ -429,6 +745,7 @@ $('file').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);e.target
 document.addEventListener('click',e=>{
   const fr=e.target.closest('tr[data-fam]');
   if(fr&&!getSelection().toString()){st.fam=st.fam===fr.dataset.fam?'':fr.dataset.fam;render();return}
+  if(e.target.closest('#coachAll')){st.allCoach=!st.allCoach;render();return}
   const row=e.target.closest('tr.person[data-href]');
   if(row&&!e.target.closest('a')&&!getSelection().toString()){location.href=row.dataset.href;return}
   const c=e.target.closest('[data-store]'),m=e.target.closest('[data-metric]'),p=e.target.closest('[data-pick]');
@@ -438,6 +755,26 @@ document.addEventListener('click',e=>{
 });
 $('q').oninput=e=>{st.q=e.target.value;render()};
 $('glist').onchange=e=>{const g=e.target.dataset.g;if(e.target.checked)st.ex.delete(g);else st.ex.add(g);persistEx();updGcount();render()};
+$('xlsBtn').onclick=exportXlsx;
+/* the slider only rewrites the amounts, so it keeps moving smoothly */
+document.addEventListener('input',e=>{
+  if(e.target.id!=='sim') return;
+  st.close=Number(e.target.value)||50; const full=Number(e.target.dataset.full)||0, s=simText(full);
+  $('simPct').textContent=st.close+'%'; $('simVal').textContent='+'+egp(s.v); $('simMonth').textContent=s.month;
+  document.querySelectorAll('[data-sim]').forEach(el=>{el.textContent=(el.dataset.plus?'+':'')+egp(Number(el.dataset.sim)*st.close/100)});
+});
+/* small hover notes on the day bars and the team map */
+(function(){
+  let tip=null; const hide=()=>{if(tip){tip.remove();tip=null}};
+  document.addEventListener('pointerover',e=>{
+    const t=e.target.closest&&e.target.closest('[data-tip]'); if(!t){hide();return}
+    if(!tip){tip=document.createElement('div');tip.id='tip';document.body.appendChild(tip)}
+    tip.innerHTML=t.dataset.tip; const r=t.getBoundingClientRect(), w=tip.offsetWidth, h=tip.offsetHeight;
+    tip.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';
+    tip.style.top=(r.top-h-8<8?r.bottom+8:r.top-h-8)+'px';
+  });
+  addEventListener('scroll',hide,{passive:true});
+})();
 $('cleanBtn').onclick=()=>document.body.classList.add('clean');
 $('exitClean').onclick=()=>document.body.classList.remove('clean');
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.body.classList.remove('clean')});
