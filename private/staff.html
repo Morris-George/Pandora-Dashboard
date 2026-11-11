@@ -175,7 +175,20 @@ a.award:hover{border-color:var(--accent);background:var(--hover)}
 .mapwrap .qd{font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:10px;opacity:.8}
 .mapwrap .nm{fill:var(--ink);font-weight:700;font-size:11px;pointer-events:none}
 .mapwrap circle{fill:var(--fill);fill-opacity:.5;stroke:var(--fill2);stroke-width:1.2;cursor:pointer}
-.mapwrap a:hover circle,.mapwrap a:focus circle{fill-opacity:.95}
+.mapwrap circle.hit{fill:transparent;stroke:none}
+.mapwrap .pt{outline:none;-webkit-tap-highlight-color:transparent}
+.mapwrap .pt:hover circle.dot,.mapwrap .pt:focus-visible circle.dot{fill-opacity:.95}
+.mapwrap .pt.sel circle.dot{fill:var(--fill2);fill-opacity:1;stroke:var(--ink);stroke-width:2}
+.ptpanel{margin-top:12px;border-radius:14px;background:var(--bg);padding:14px;min-height:64px}
+.pthint{color:var(--ink2);font-size:13px;text-align:center;padding:14px 0}
+.pth{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
+.pth b{font-size:16px;font-weight:800;display:block}.pth small{color:var(--ink2);font-size:12px}
+.ptk{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px 14px;margin-bottom:8px}
+.ptk div{display:grid;gap:1px;align-content:start;min-width:0}.ptk span{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);font-weight:700}
+.ptk b{font-size:16px;font-weight:800;white-space:nowrap}
+.ptk .dl{justify-self:start;margin-top:2px}
+.ptw{margin:6px 0 0;font-size:13px;color:var(--ink2)}.ptw b{color:var(--ink)}
+.ptcard .btn{display:inline-block;margin-top:12px}
 .wk{display:grid;gap:6px}
 .wkrow{display:grid;grid-template-columns:38px 1fr 84px;gap:8px;align-items:center;font-size:13px}
 .wkrow .t{height:12px;border-radius:0 5px 5px 0}.wkrow .t i{display:block;height:100%;background:var(--fill);border-radius:0 5px 5px 0;min-width:2px;opacity:.75}
@@ -574,9 +587,16 @@ function mapHtml(people,all){
   const xs=pts.map(p=>p.inv), ys=pts.map(p=>p.atv), xM=Math.max(...xs)*1.1, y0=Math.min(...ys)*.82, yM=Math.max(...ys)*1.1, mi=Math.max(...pts.map(p=>p.incl),1);
   const X=v=>L+(v/xM)*(W-L-R), Y=v=>H-B-((v-y0)/(yM-y0||1))*(H-T-B), mx=med(xs), my=med(ys);
   const lab=new Set([...pts].sort((a,b)=>b.incl-a.incl).slice(0,6));
-  const dots=[...pts].sort((a,b)=>b.incl-a.incl).map(p=>{const r=5+13*Math.sqrt(Math.max(0,p.incl)/mi), x=X(p.inv), y=Y(p.atv);
-    return `<a href="${esc(pUrl(p.store,p.name))}" data-tip="${esc('<b>'+esc(p.name)+'</b>'+(all?esc(p.store)+' · ':'')+nf0.format(p.inv)+' invoices · ATV '+egp(p.atv)+' · '+egp(p.incl))}"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}"/></a>`+
+  const S0=compute().stores, PVn=prevNumbers(), sorted=[...pts].sort((a,b)=>b.incl-a.incl), key=p=>p.store+'|'+p.name;
+  const dots=sorted.map(p=>{const r=5+13*Math.sqrt(Math.max(0,p.incl)/mi), x=X(p.inv), y=Y(p.atv);
+    return `<g class="pt${st.ptKey===key(p)?' sel':''}" data-key="${esc(key(p))}" tabindex="0" role="button" aria-label="${esc(p.name)}"><circle class="hit" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${Math.max(r,18).toFixed(1)}"/><circle class="dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}"/></g>`+
       (lab.has(p)?`<text class="nm" x="${x.toFixed(1)}" y="${(y-r-4).toFixed(1)}" text-anchor="middle">${esc(p.name.split(/\s+/)[0])}</text>`:'')}).join('');
+  const cards=sorted.map(p=>{const s0=S0.find(x=>x.name===p.store), o=s0?coach(p,s0):null, c=PVn?chg(p.incl,(PVn.P.get(key(p))||{}).incl):null;
+    return `<div class="ptcard" data-key="${esc(key(p))}"${st.ptKey===key(p)?'':' hidden'}><div class="pth"><div><b>${esc(p.name)}</b>${all?`<small>${esc(p.store)}</small>`:''}</div>${o?playChip(o.play):''}</div>
+      <div class="ptk"><div><span>Sales incl. VAT</span><b class="num">${egp(p.incl)}</b>${dl(c)}</div><div><span>Invoices</span><b class="num">${nf0.format(p.inv)}</b></div><div><span>UPT</span><b class="num">${nf2.format(p.upt)}</b></div><div><span>ATV</span><b class="num">${egp(p.atv)}</b></div></div>
+      ${o?`<p class="ptw">${esc(o.why)}${o.hint?' Offer more '+esc(o.hint):''}</p>`:''}
+      ${o&&o.total>0?`<p class="ptw">Within reach: <b class="num" data-sim="${o.total}" data-plus="1">+${egp(o.total*st.close/100)}</b></p>`:''}
+      <a class="btn" href="${esc(pUrl(p.store,p.name))}">Open ${esc(p.name.split(/\s+/)[0])}\u2019s dashboard</a></div>`}).join('');
   const yt=[y0+(yM-y0)*.1,(y0+yM)/2,yM-(yM-y0)*.08], xt=[0,xM/2,xM*.95];
   return `<section class="card"><div class="cardhead"><h2>Team map</h2><span class="meta">Right = more customers served · up = bigger tickets · bubble = sales</span></div>
     <div class="mapwrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Each sales person by invoices and average ticket">
@@ -588,7 +608,8 @@ function mapHtml(people,all){
       ${xt.map(v=>`<text x="${X(v)}" y="${H-B+16}" text-anchor="middle">${nf0.format(v)}</text>`).join('')}
       <text x="${(L+W-R)/2}" y="${H-6}" text-anchor="middle">Invoices</text><text transform="translate(12 ${(T+H-B)/2}) rotate(-90)" text-anchor="middle">ATV, EGP</text>
       ${dots}</svg></div>
-    <div class="hint">The dashed lines are the middle of the team. Select a bubble for that person’s dashboard.</div></section>`;
+    <div class="ptpanel" id="ptPanel"><div class="pthint"${st.ptKey&&sorted.some(p=>key(p)===st.ptKey)?' hidden':''}>Touch a bubble to see that person here.</div>${cards}</div>
+    <div class="hint">The dashed lines are the middle of the team.</div></section>`;
 }
 
 function render(){
@@ -662,6 +683,13 @@ function render(){
   document.querySelectorAll('#metricChips .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.metric===st.metric));
 }
 
+function selectPt(k){
+  st.ptKey=k||'';
+  document.querySelectorAll('.mapwrap .pt').forEach(g=>g.classList.toggle('sel',g.dataset.key===st.ptKey));
+  const pan=$('ptPanel'); if(!pan) return; let any=false;
+  pan.querySelectorAll('.ptcard').forEach(c=>{const on=c.dataset.key===st.ptKey;c.hidden=!on;if(on)any=true});
+  const h=pan.querySelector('.pthint'); if(h) h.hidden=any;
+}
 /* ---- Excel: the table on screen plus each person's focus and estimate ---- */
 function exportXlsx(){
   if(!st.data||typeof XLSX==='undefined'){showErr('Excel export is not available right now. Check the connection and reload.');return}
@@ -745,6 +773,8 @@ $('file').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);e.target
 document.addEventListener('click',e=>{
   const fr=e.target.closest('tr[data-fam]');
   if(fr&&!getSelection().toString()){st.fam=st.fam===fr.dataset.fam?'':fr.dataset.fam;render();return}
+  const pt=e.target.closest('.mapwrap .pt');
+  if(pt){selectPt(st.ptKey===pt.dataset.key?'':pt.dataset.key);return}
   if(e.target.closest('#coachAll')){st.allCoach=!st.allCoach;render();return}
   const row=e.target.closest('tr.person[data-href]');
   if(row&&!e.target.closest('a')&&!getSelection().toString()){location.href=row.dataset.href;return}
@@ -756,6 +786,7 @@ document.addEventListener('click',e=>{
 $('q').oninput=e=>{st.q=e.target.value;render()};
 $('glist').onchange=e=>{const g=e.target.dataset.g;if(e.target.checked)st.ex.delete(g);else st.ex.add(g);persistEx();updGcount();render()};
 $('xlsBtn').onclick=exportXlsx;
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('pt')){e.preventDefault();selectPt(st.ptKey===e.target.dataset.key?'':e.target.dataset.key)}});
 /* the slider only rewrites the amounts, so it keeps moving smoothly */
 document.addEventListener('input',e=>{
   if(e.target.id!=='sim') return;
