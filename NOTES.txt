@@ -194,3 +194,8 @@ STAFF PERFORMANCE REPORT UPGRADE (private/staff.html only; no server or access c
 - Money within reach: each person against the average of their OWN store. Add a piece = invoices x pieces short per invoice x own price per piece; Trade up = pieces x price-per-piece gap. Slider = how much of the gap is closed (10-100%, default 50%). "Who to coach first" list, Focus chip per person in the table (Add a piece / Trade up / More customers / Leading), category hint from the item group suffix ("... - Charm"). People under 5 invoices are not judged.
 - Standouts (top seller, best basket, highest ticket, most improved), Team map (invoices vs ATV, bubble = sales), Best days of the week (Sat to Fri).
 - Download Excel (Stores + Staff sheets with focus and estimate). Screenshot view hides the slider and adds a footer line; the page also prints cleanly.
+
+STOCK BALANCE - ITEM TABLE FILTERS (private/stock.html, page only, nothing new on the server)
+- "Balance Qty by item" has a toolbar: Quick views (Everything, Almost gone = 1-3 pieces, Money tied up = qty x price, Stuck in one store, Needs checking = negative), Sort by (Most stock, Least stock, Most money in stock, Price high/low, A-Z), Stock (All / In stock / Low 1-3 / Out / Negative), Price bands and "Sitting in" (1 store, 2-3, 4+ stores; only when All locations is chosen). Chips show live counts; the total row and "x of y items" follow the filters.
+- Price chips, price sorts and Money tied up only show for people who may see prices (canSeeValue), so the VM never gets them. Balance Qty now sits right after Price so it shows on a tablet without sideways scrolling.
+- Not included: best-selling sort (the stock data has no sales; that needs a join with the sales lines, as Sales Intelligence does).
