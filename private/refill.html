@@ -389,7 +389,7 @@ async function openOrder(id){
     const months=j.months,today=j.today;
     // the Sell Out period: the last full months before this month
     S.months=months;S.today=today;S.notListed=j.notListed||[];S.allCats=j.allCats||{};S.allSkipped=j.allSkipped||{};S.allNeg=j.allNeg||{pcs:0,skus:0};S.allSohRaw=j.allSohRaw||0;
-    items=j.items.map(r=>({sku:r[0],av:!!r[1],dv:r[2]||r[0].split('-')[0],name:r[3],cat:r[4]==='Charm'?'Charms':(r[4]||'No category'),sub:r[5],launch:r[6],fob:r[7],rrp:r[8],status:r[9],inMaster:!!r[10],soh:Math.max(0,r[11]),neg:r[11]<0?r[11]:0,pipe:r[12],slow:!!r[13],slow2:r[13]===2,soldBy:r[14],boughtBy:r[15],grp:r[16]||'',wh:r[17]||[],fb:O.fb[r[0]]??null,note:O.notes[r[0]]||'',reason:(O.reasons||{})[r[0]]||''}));S.prev=j.prev||null;
+    items=j.items.map(r=>({sku:r[0],av:!!r[1],dv:r[2]||r[0].split('-')[0],name:r[3],cat:r[4]==='Charm'?'Charms':(r[4]||'No category'),sub:r[5],launch:r[6],fob:r[7],rrp:r[8],status:r[9],inMaster:!!r[10],soh:Math.max(0,r[11]),neg:r[11]<0?r[11]:0,pipe:r[12],slow:!!r[13],slow2:r[18]||null,soldBy:r[14],boughtBy:r[15],grp:r[16]||'',wh:r[17]||[],fb:O.fb[r[0]]??null,note:O.notes[r[0]]||'',reason:(O.reasons||{})[r[0]]||''}));S.prev=j.prev||null;
     CATS=[...new Set(items.map(i=>i.cat))].sort();SUBS=[...new Set(items.map(i=>i.grp).filter(Boolean))].sort();
     $('subs').innerHTML=SUBS.map(c=>`<span class="chip" data-sub="${esc(c)}">${esc(c)}</span>`).join('')||'<span class="note">No item groups yet. Press Sync from ERP.</span>';
     $('fc').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
@@ -542,6 +542,8 @@ function filtered(){
 // SKUs of the same DV stay together; DVs that run out first come first
 function grouped(l){const g=new Map();for(const i of l){if(!g.has(i.dv))g.set(i.dv,[]);g.get(i.dv).push(i)}
   return [...g.values()].map(x=>{x.sort((a,b)=>a.sku.localeCompare(b.sku,undefined,{numeric:true}));const s=x.reduce((a,i)=>a+i.soh+i.pipe,0),mon=x.reduce((a,i)=>a+i.mon,0);x.cover=mon?s/mon:99;return x}).sort((a,b)=>a.cover-b.cover)}
+// Slowmoving 2.0: not moving at all, or stuck in some stores while it sells in others
+const s2why=i=>i.sell>0?'Stuck in '+i.slow2.join(', ')+' but sells in other stores':'Not moving at all (stuck in '+i.slow2.join(', ')+', no sales in the period)';
 const TAG={slow:'<span class="tag t-slow">slow</span>',stop:'<span class="tag t-stop">stopped</span>',man:'<span class="tag t-man">decide</span>',pri:'<span class="tag t-pri">priority</span>',na:'<span class="tag t-na">not available</span>'};
 function drawTable(){
   const l=filtered(),gs=grouped(l),P=40,pages=Math.max(1,Math.ceil(gs.length/P));S.page=Math.min(S.page,pages-1);
@@ -550,7 +552,7 @@ function drawTable(){
   const row=(i,one)=>`<tr class="${one?'':'size'}"><td>${pic(i.dv)}</td><td class="l cl" data-d="${esc(i.sku)}" title="Details">${esc(i.sku)}</td><td class="name" title="${esc(i.name)}">${esc(i.name)||'<span class="note">not in the master</span>'}</td><td class="l">${esc(i.cat)}</td><td>${fmt(i.soh)}${i.neg?` <span class="bad" style="font-size:11px" title="ERP shows ${i.neg} (negative stock: a sale posted before the receipt or transfer). Counted as 0. Fix it in ERP.">(${i.neg})</span>`:''}</td><td>${fmt(i.pipe)}</td><td>${fmt(i.sell)}</td><td>${spark(i.soldBy)}</td><td>${fmt(i.bought)}</td><td>${m1(i.mon)}</td><td>${Math.round(i.st*100)}%</td>
     <td>${pill(i.coverNow,lt)}</td><td>${i.prop||''}${i.flag==='stop'&&i.would?`<span class="note"> (${i.would})</span>`:''}</td>
     <td><input type="number" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}></td><td><input class="nt" data-n="${esc(i.sku)}" value="${esc(i.note)}" placeholder="comment" ${ro?'disabled':''}></td><td><select data-r="${esc(i.sku)}" ${ro?'disabled':''}>${REASONS.map(x=>`<option${x===i.reason?' selected':''}>${esc(x)}</option>`).join('')}${i.reason&&!REASONS.includes(i.reason)?`<option selected>${esc(i.reason)}</option>`:''}</select></td>
-    <td>${pill(i.coverAfter,lt)}</td><td>${i.fob}</td><td>${fmt(i.fin*i.fob)}</td><td class="l">${i.abc?`<span class="tag t-abc">${i.abc}</span> `:''}${i.isNew?'<span class="tag t-new">new</span> ':''}${i.inMaster?'':'<span class="tag t-nm">no master</span> '}${TAG[i.flag]||''}</td></tr>`;
+    <td>${pill(i.coverAfter,lt)}</td><td>${i.fob}</td><td>${fmt(i.fin*i.fob)}</td><td class="l">${i.abc?`<span class="tag t-abc">${i.abc}</span> `:''}${i.isNew?'<span class="tag t-new">new</span> ':''}${i.inMaster?'':'<span class="tag t-nm">no master</span> '}${TAG[i.flag]||''}${i.slow2?` <span class="tag t-slow" title="${esc(s2why(i))}">slow 2.0</span>`:''}</td></tr>`;
   $('tbl').innerHTML=`<tr><th></th><th class="l">SKU</th><th class="l">Item</th><th class="l">Category</th><th>SOH</th><th>Pipeline</th><th>Sell Out</th><th>Trend</th><th>Bought</th><th>Sold/mo</th><th>Sell-through</th><th>Cover now</th><th>Proposed</th><th>Team</th><th class="l">Comment</th><th class="l">Reason</th><th>Cover after</th><th>FOB</th><th>Total FOB</th><th class="l"></th></tr>`+
     gs.slice(S.page*P,S.page*P+P).map(g=>{const one=g.length===1,sum=k=>g.reduce((a,i)=>a+i[k],0);
       return (one?'':`<tr class="dvh"><td>${pic(g[0].dv)}</td><td class="l"><b>${esc(g[0].dv)}</b></td><td class="name"><b>${esc(g[0].name)}</b> · ${g.length} sizes</td><td class="l">${esc(g[0].cat)}</td><td>${fmt(sum('soh'))}</td><td>${fmt(sum('pipe'))}</td><td>${fmt(sum('sell'))}</td><td>${spark(g[0].soldBy.map((_,k)=>g.reduce((a,i)=>a+(i.soldBy[k]||0),0)))}</td><td>${fmt(sum('bought'))}</td><td>${m1(sum('mon'))}</td><td></td><td>${m1(g.cover)}</td><td>${fmt(sum('prop'))}</td><td><b>${fmt(sum('fin'))}</b></td><td></td><td></td><td></td><td></td><td>${fmt(g.reduce((a,i)=>a+i.fin*i.fob,0))}</td><td></td></tr>`)+g.map(i=>row(i,one)).join('')}).join('');
@@ -663,8 +665,8 @@ document.addEventListener('keydown',e=>{if(!$('ov').hidden&&e.key==='Escape')ovC
 async function setStatus(status){
   try{const body={id:O.id,status};if(status==='Approved')body.lines=items.filter(i=>i.fin>0||i.prop>0).map(i=>[i.sku,i.prop,i.fin,i.fob]);
     await api('/api/refill?op=status',body);H=await api('/api/refill');boot()}catch(e){showErr(e.message)}}
-$('stBtn').onclick=()=>{const to=O.status==='Draft'?'Submitted':'Approved';const sl=items.filter(i=>i.slow&&i.fin>0);
-  if(sl.length&&!confirm(`These ${sl.length} items are slow moving (Slow Moving list or Slowmoving 2.0) but are on the order:\n\n${sl.slice(0,25).map(x=>x.sku+' · '+x.fin+' pcs'+(x.slow2?' (Slowmoving 2.0)':'')).join('\n')}${sl.length>25?'\n… and '+(sl.length-25)+' more':''}\n\nOrder them anyway?`))return;
+$('stBtn').onclick=()=>{const to=O.status==='Draft'?'Submitted':'Approved';const sl=items.filter(i=>(i.slow||i.slow2)&&i.fin>0);
+  if(sl.length&&!confirm(`These ${sl.length} items are slow moving (Slow Moving list or Slowmoving 2.0) but are on the order:\n\n${sl.slice(0,25).map(x=>x.sku+' · '+x.fin+' pcs'+(x.slow?' · Slow Moving list':'')+(x.slow2?' · '+s2why(x):'')).join('\n')}${sl.length>25?'\n… and '+(sl.length-25)+' more':''}\n\nOrder them anyway?`))return;
   if(confirm(to==='Approved'?'Approve this order? It will be locked.':'Submit this order for approval?'))setStatus(to)};
 $('delo').onclick=async()=>{if(!O)return;const t=prompt(`Delete the order "${O.name}" (${O.status}) for good? Its quantities, comments and history are removed and cannot be brought back.
 

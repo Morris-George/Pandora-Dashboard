@@ -163,10 +163,11 @@ const NOT_JEWEL_CAT = /accessor|packag|bag|box|pouch|consumable|marketing|displa
 const NOT_JEWEL_NAME = /\b(gift|paper|shopping|carrier|tote)\s*bags?\b|\bbags?\b.*\b(small|medium|large|xl)\b|\bjewel(le)?ry\s*box|\bgift\s*box|\bpouch|\bpackaging|\bwrapping|\bribbon\b|\bcleaning\s*(kit|cloth)/i;
 const notJewel = (cat, name) => NOT_JEWEL_CAT.test(cat || '') || NOT_JEWEL_NAME.test(name || '');
 const a2r = a => { a[0] = Math.round(a[0]); a[1] = Math.round(a[1]); };
-// every SKU on the saved Slowmoving 2.0 snapshots (one per store warehouse)
+// every SKU on the saved Slowmoving 2.0 snapshots (one per store warehouse), with the stores it is stuck in
 async function slow2Skus() {
-  const out = new Set(), idx = (await store.getJSON('slow/index.json')) || {};
-  for (const v of Object.values(idx)) { const s = await store.getJSON('slow/w/' + v.k + '.json'); if (!s || !Array.isArray(s.cols)) continue; const c = s.cols.findIndex(x => x.fieldname === '_sku'); if (c >= 0) for (const r of s.rows || []) { const k = String(r[c] || '').trim().toUpperCase().replace(/.0$/, ''); if (k) out.add(k); } }
+  const { storeOf, settings } = require('./_dist'), st = await settings();
+  const out = new Map(), idx = (await store.getJSON('slow/index.json')) || {};
+  for (const v of Object.values(idx)) { const s = await store.getJSON('slow/w/' + v.k + '.json'); if (!s || !Array.isArray(s.cols)) continue; const where = storeOf(s.warehouse, st.stores) || String(s.warehouse || ''); const c = s.cols.findIndex(x => x.fieldname === '_sku'); if (c >= 0) for (const r of s.rows || []) { const k = String(r[c] || '').trim().toUpperCase().replace(/.0$/, ''); if (k) { const l = out.get(k) || []; if (!l.includes(where)) l.push(where); out.set(k, l); } } }
   return out;
 }
 async function joined() {
@@ -175,17 +176,17 @@ async function joined() {
   const M = new Map((md ? md.rows : []).map(r => [r[0], r]));
   const P = new Map(); (pp ? pp.rows : []).forEach(r => P.set(r[0], (P.get(r[0]) || 0) + r[1]));
   const S = new Set((sl ? sl.rows : []).map(r => r[0]));
-  const S2 = await slow2Skus(); // also stuck in a store on Slowmoving 2.0 (its ERP snapshots): 2 = only there
+  const S2 = await slow2Skus(); // stuck in a store on Slowmoving 2.0 (its ERP snapshots): a warning only, the order is not changed
   const e = erp || { soh: {}, sold: {}, buy: {} };
   const months = Object.keys(e.sold).sort();
-  // item: [sku, available, dv, name, cat, sub, launch, fob, rrp, status, inMaster, soh, pipe, slow, [sold per month], [bought per month], ERP item group, [[store, pcs]]]
+  // item: [sku, available, dv, name, cat, sub, launch, fob, rrp, status, inMaster, soh, pipe, slow, [sold per month], [bought per month], ERP item group, [[store, pcs]], [stores stuck on Slowmoving 2.0]]
   const G = (erp && erp.grp) || {}, OUT = await groupsOut();
   const outGroup = s => !!G[s] && OUT.has(G[s]);
   const items = av.rows.filter(([s]) => { const m = M.get(s); return !(m && notJewel(m[3], m[2])) && !(G[s] && notJewel(G[s], '')) && !outGroup(s); }).map(([s, a]) => {
     const m = M.get(s);
     return [s, a, m ? m[1] : s.split('-')[0], m ? m[2] : '', m ? m[3] : '', m ? m[4] : '', m ? m[5] : '', m ? m[6] : 0, m ? m[7] : 0, m ? m[8] : '', m ? 1 : 0,
-      Math.round(e.soh[s] || 0), P.get(s) || 0, S.has(s) ? 1 : S2.has(s) ? 2 : 0,
-      months.map(k => Math.round((e.sold[k] || {})[s] || 0)), months.map(k => Math.round((e.buy[k] || {})[s] || 0)), G[s] || '', Object.entries((e.wh || {})[s] || {}).filter(x => x[1]).map(([w, q]) => [w, Math.round(q)])];
+      Math.round(e.soh[s] || 0), P.get(s) || 0, S.has(s) ? 1 : 0,
+      months.map(k => Math.round((e.sold[k] || {})[s] || 0)), months.map(k => Math.round((e.buy[k] || {})[s] || 0)), G[s] || '', Object.entries((e.wh || {})[s] || {}).filter(x => x[1]).map(([w, q]) => [w, Math.round(q)]), S2.get(s) || null];
   });
   // selling, but not on the Available to Order list (for information only)
   const avs = new Set(av.rows.map(r => r[0])), off = new Map();
