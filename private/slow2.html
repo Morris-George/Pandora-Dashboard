@@ -111,7 +111,7 @@ details.card>summary{cursor:pointer;font-weight:700;list-style:none}details.card
   <div class="note" style="margin:4px 0 10px" id="trNote"></div><div id="trIn"></div><div id="tr" style="margin-top:12px"></div></div>
 <div id="trM" hidden><div id="trMB"></div></div>
 <div id="stM" hidden><div id="stB"></div></div>
-<div class="card" id="listCard"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Every Slow Item And Its Action</h2><span class="row"><span class="note" id="cnt"></span><button class="btn" id="xList">Download Excel</button></span></div>
+<div class="card" id="listCard"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Every Slow Item And Its Action</h2><span class="row"><span class="note" id="cnt"></span><button class="btn" id="xList">Download Excel</button><button class="btn" id="xSum">Summary per action</button></span></div>
   <div class="chips" id="flt" style="margin:10px 0 8px"></div>
   <div class="lf"><input type="search" id="q" placeholder="Search SKU or name" style="flex:1;min-width:160px"><select id="fCat" aria-label="Category"></select><select id="fAge" aria-label="Idle time"></select><select id="fSort" aria-label="Sort"><option value="amt">Most money stuck first</option><option value="qty">Most pieces first</option><option value="age">Longest idle first</option></select></div>
   <div class="note" style="margin:8px 0" id="itNote"></div>
@@ -504,6 +504,17 @@ $('xList').onclick=()=>{if(!ITEMS.length){showErr('Run the report first.');retur
   ws['!cols']=[16,15,48,16,15,40,20,7].concat(m?[11,16]:[]).concat([16,48,26,13]).map(x=>({wch:x}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Slow items');
   XLSX.writeFile(wb,'Slowmoving 2.0 items '+(F.act?ACT[F.act].t+' ':'')+(F.store?F.store+' ':'')+new Date().toISOString().slice(0,10)+'.xlsx')};
+/* summary per action: one sheet per action, a transfer split into one line per receiving store */
+$('xSum').onclick=()=>{if(!ITEMS.length){showErr('Run the report first.');return}
+  const l=rowsF(),m=J.money&&!HASV,wb=XLSX.utils.book_new(),W=[16,15,16,16,7,20,40].concat(m?[11]:[]).concat([12]);
+  // one action of one line: a transfer gets one row per receiving store, everything else one row for its pieces
+  const rows=(i,k)=>{const q=(i.parts||{})[k]||0;if(!q)return [];const x={'SKU#':i.sku,EAN:i.ean||''},y={Category:i.cat,Item:i.name,...(m?{'Price (EGP)':i.price||''}:{}),'Days idle':i.age==null?'No sale':i.age};
+    if(k!=='move')return [{...x,'Transfer from':i.store,'Transfer to':'',QTY:q,...y}];
+    return (i.dests||[]).filter(t=>t.qty>0).map(t=>({...x,'Transfer from':i.store,'Transfer to':t.to,QTY:t.qty,...y}))};
+  for(const k of ORDER){const r=l.slice().sort((a,b)=>a.store.localeCompare(b.store)||a.sku.localeCompare(b.sku)).flatMap(i=>rows(i,k));if(!r.length)continue;
+    const ws=XLSX.utils.json_to_sheet(r);ws['!cols']=W.map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,String(ACT[k].t).replace(/[\\\/?*:\[\]]/g,' ').slice(0,31))}
+  if(!wb.SheetNames.length){showErr('No item matches these filters.');return}
+  XLSX.writeFile(wb,'Slowmoving 2.0 summary per action '+(F.store?F.store+' ':'')+new Date().toISOString().slice(0,10)+'.xlsx')};
 /* the action plan in Excel: summary, one line per item and store with its action, by store, and one sheet per store */
 $('xPlan').onclick=()=>{if(!ITEMS.length){showErr('Run the report first.');return}
   const L=[...base()].sort((a,b)=>a.store.localeCompare(b.store)||ORDER.indexOf(a.act)-ORDER.indexOf(b.act)||(b.amt-a.amt)||(b.qty-a.qty)),P=partsOf(L),wb=XLSX.utils.book_new(),mk=(ws,w)=>{ws['!cols']=w.map(x=>({wch:x}));return ws};
