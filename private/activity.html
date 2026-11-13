@@ -114,6 +114,21 @@ tr.st{cursor:pointer}tr.st:hover td{background:var(--hover)}tr.st.sel td{backgro
 .hlegend{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink2);font-weight:600;margin-top:6px}.hlegend i{width:14px;height:10px;border-radius:3px;background:var(--accent);display:inline-block}
 tr.day td small{font-weight:600;color:var(--ink2);margin-left:8px}
 .sub2{color:var(--ink2);font-weight:500;font-size:12px}
+/* online now */
+.onhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;justify-content:space-between;margin-bottom:10px}
+.onhead h2{display:flex;align-items:center;gap:10px;margin:0}
+.ondot{width:10px;height:10px;border-radius:50%;background:var(--good);flex:none;box-shadow:0 0 0 0 rgba(31,122,77,.5);animation:onpulse 2s infinite}
+.ondot.idle{background:var(--ink2);animation:none;opacity:.55}.ondot.none{background:var(--line);animation:none}
+@keyframes onpulse{0%{box-shadow:0 0 0 0 rgba(47,160,104,.55)}70%{box-shadow:0 0 0 8px rgba(47,160,104,0)}100%{box-shadow:0 0 0 0 rgba(47,160,104,0)}}
+@media (prefers-reduced-motion: reduce){.ondot{animation:none}}
+.onlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px}
+.onp{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--bg);display:flex;flex-direction:column;gap:6px;min-width:0}
+.onp .who{display:flex;align-items:center;gap:9px;min-width:0}
+.onp .nm{border:0;background:none;padding:0;font:inherit;font-weight:800;color:var(--ink);cursor:pointer;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.onp .nm:hover{color:var(--accent-text);text-decoration:underline}
+.onp .rl{color:var(--ink2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.onp .pg{display:flex;align-items:center;gap:7px;align-self:flex-start;max-width:100%;text-decoration:none;font-weight:700;color:var(--ink);background:var(--fill-soft);border-radius:10px;padding:7px 11px;min-height:36px}
+.onp .pg:hover,.onp .pg:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.onp .pg span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.onp .pg svg{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 </style>
 </head>
 <body>
@@ -121,6 +136,11 @@ tr.day td small{font-weight:600;color:var(--ink2);margin-left:8px}
   <header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>Activity</h1><div class="sub">Who signed in, which pages they opened and for how long, and every change they made. Choose a period and narrow it down with the filters; everything below follows them. Only you can see this page.</div></div>
     <div class="actions"><label class="share" id="shareBox" hidden><input type="checkbox" id="share"> Let Ibrahim (Overseer) open this page</label><button class="btn" id="refresh" type="button">Refresh</button></div></header>
   <div class="err" id="err" hidden></div>
+
+  <section class="card" id="onCard" aria-label="Online now">
+    <div class="onhead"><h2><span class="ondot none" id="onDot"></span><span id="onTitle">Online now</span></h2><div class="note" id="onNote"></div></div>
+    <div id="onBody"><div class="empty">Checking who is on the site…</div></div>
+  </section>
 
   <section class="card fbar" aria-label="Filters">
     <div class="bar"><div class="chips" id="range" role="group" aria-label="Period"></div><div class="note" id="asof"></div></div>
@@ -189,7 +209,7 @@ tr.day td small{font-weight:600;color:var(--ink2);margin-left:8px}
     <section class="card"><h2>Daily store sheet</h2><div class="meta">Did each store type in the morning and night shift? Pink = typed in, grey = came from an Excel sheet, empty = nothing yet. Today's night shift is not expected until the evening.</div><div class="tw" id="daily"><div class="empty">Loading…</div></div></section>
   </div>
 
-  <section class="card"><h2>About this page</h2><div class="note" style="font-size:13px;line-height:1.6">It records sign-ins, wrong passwords, the pages people open (and the time a page is actually in use: the page is on screen and being touched), and every change made on the site. It never records passwords, and it does not look at what is on a page. The last 300 lines are kept for each person, and daily totals for 150 days. Anyone who is not signed in (a wrong username, a new sign-up, a forgotten password) is shown as "Not signed in". It is a good idea to tell the team the site keeps this log.</div></section>
+  <section class="card"><h2>About this page</h2><div class="note" style="font-size:13px;line-height:1.6">Online now shows who has the site open on their screen at this moment and which page; it is checked every 15 seconds, and a person leaves the list as soon as they close or hide the page, or within about a minute and a half if their connection drops. It records sign-ins, wrong passwords, the pages people open (and the time a page is actually in use: the page is on screen and being touched), and every change made on the site. It never records passwords, and it does not look at what is on a page. The last 300 lines are kept for each person, and daily totals for 150 days. Anyone who is not signed in (a wrong username, a new sign-up, a forgotten password) is shown as "Not signed in". It is a good idea to tell the team the site keeps this log.</div></section>
 </div>
 <script>
 const $=id=>document.getElementById(id);
@@ -762,6 +782,32 @@ $('share').addEventListener('change',async e=>{
   catch(err){e.target.checked=!on;showErr(err.message)}
   finally{e.target.disabled=false}
 });
+
+// ---- online now: asked again every 15 seconds while this page is on screen ----
+let ON=null,ONERR=false,onAt=0;
+const since=iso=>{const m=Math.max(0,Math.round((Date.now()-Date.parse(iso))/60000));return m<1?'less than a minute':m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min'};
+const safeHref=h=>/^\/(?!\/)[^\s<>"'\\]*$/.test(String(h||''))?h:'/';
+function renderOnline(){
+  if(!ON){if(ONERR){$('onBody').innerHTML='<div class="empty">Could not check who is online. Trying again…</div>'}return}
+  const L=ON.online,act=L.filter(o=>o.idle<120).length;
+  $('onDot').className='ondot'+(L.length?'':' none');
+  $('onTitle').textContent='Online now'+(L.length?' · '+L.length:'');
+  $('onNote').textContent=(L.length&&act<L.length?act+' active, '+(L.length-act)+' not touching the page · ':'')+'Checked at '+fmtH.format(new Date(onAt))+(ONERR?' (could not check again just now)':'');
+  $('onBody').innerHTML=L.length?`<div class="onlist">${L.map(o=>{const idle=o.idle>=120;return `<div class="onp">
+    <div class="who"><span class="ondot${idle?' idle':''}" title="${idle?'Page open, not touched':'Using the page now'}"></span><button class="nm" type="button" data-open="${esc(o.key)}" title="See what ${esc(o.name)} does on the site">${esc(o.name)}</button></div>
+    <div class="rl">${esc([o.label,o.store,kindOfDev(o.dev)].filter(Boolean).join(' · '))}</div>
+    <a class="pg" href="${esc(safeHref(o.h))}" target="_blank" rel="noopener" title="Open this page"><span>${esc(o.pl)}${o.x?' · '+esc(o.x):''}</span><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a>
+    <div class="note">On this page for ${since(o.since)}${idle?' · not touched for '+Math.round(o.idle/60)+' min':''}</div></div>`}).join('')}</div>`
+    :'<div class="empty">Nobody is on the site right now.</div>';
+}
+async function loadOnline(){
+  if(document.visibilityState!=='visible')return;
+  try{ON=await api('/api/activity?view=online');onAt=Date.now();ONERR=false}catch(e){if(e.message==='sign in')return;ONERR=true}
+  renderOnline();
+}
+$('onBody').addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(b&&D){if(D.people.some(p=>p.key===b.dataset.open))openPerson(b.dataset.open)}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadOnline()});
+setInterval(loadOnline,15000);setTimeout(loadOnline,1500); /* a moment after opening, so your own "still here" has arrived */
 
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(D&&TAB==='overview'){renderChart();renderHours()}},150)});
 buildRange();showPanels();load();

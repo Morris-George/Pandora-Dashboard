@@ -88,7 +88,25 @@ async function list(prefix) {
   return out;
 }
 
+// like list(), with the time each file was last saved: [{ path, at (ms) }]
+async function listMeta(prefix) {
+  safePath(prefix);
+  if (dir()) {
+    const out = [];
+    for (const f of await list(prefix)) { try { out.push({ path: f, at: (await fs.promises.stat(path.join(dir(), f))).mtimeMs }); } catch (_) {} }
+    return out;
+  }
+  const out = [];
+  let cursor;
+  do {
+    const r = await blob().list({ prefix, cursor, limit: 1000 });
+    r.blobs.forEach(b => out.push({ path: b.pathname, at: new Date(b.uploadedAt).getTime() }));
+    cursor = r.hasMore ? r.cursor : null;
+  } while (cursor);
+  return out;
+}
+
 // forget again once a save is finished, so a read that started while it was being saved cannot keep the older copy
 const putJSONSafe = async (p, obj) => { try { return await putJSON(p, obj); } finally { forget(p); } };
 const delSafe = async p => { try { return await del(p); } finally { forget(p); } };
-module.exports = { configured, getJSON, getJSONCached, putJSON: putJSONSafe, del: delSafe, list };
+module.exports = { configured, getJSON, getJSONCached, putJSON: putJSONSafe, del: delSafe, list, listMeta };

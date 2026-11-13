@@ -425,6 +425,38 @@ async function overview(rangeDays) {
   };
 }
 
+// ---- online now ----
+// Every open page tells the server "still here" every 40 seconds while it is on screen and in use (see BEACON in api/site.js), and
+// "gone" the moment it is closed, hidden or left untouched for 10 minutes. One small file per person: act/on/<person>.json
+// {key, name, role, label, store, zone, id (the tab), p (page), x, h (link to the page), t (last signal), since (on this page since), idle (seconds), dev, off?}
+const ON_DIR = 'act/on/';
+const ONLINE_MS = 100000; // no signal for this long (two missed in a row) = not online: lost connection, battery, closed without saying so
+async function presence(req, who, b) {
+  if (off() || !who || who.viewAs) return; // "View as" is the super admin looking, not that person being online
+  const id = ident(who); if (!id) return;
+  const p = String(b.p || ''), tab = String(b.id || '');
+  if (!/^\/[a-z0-9\/._-]{0,60}$/i.test(p) || !/^[a-z0-9]{6,16}$/i.test(tab)) return;
+  const path = ON_DIR + id.key + '.json', now = Date.now();
+  if (b.t === 'gone') { // only the tab that was last seen can say the person left (another tab may still be open)
+    const cur = await store.getJSON(path).catch(() => null);
+    if (cur && cur.id === tab && !cur.off) await store.putJSON(path, Object.assign(cur, { off: iso(now) }));
+    return;
+  }
+  const cp = canonPage(p), num = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
+  let h = cp;
+  if (cp === '/staff/person' && typeof b.q === 'string' && /^\?[A-Za-z0-9%&=._+~-]{1,200}$/.test(b.q)) h = cp + b.q; // the same sales person page
+  await store.putJSON(path, { key: id.key, name: id.name, role: id.role, label: id.label, store: id.store, zone: id.zone, id: tab, p: cp, x: S(b.x, 80), h,
+    t: iso(now), since: iso(now - num(b.age, 86400) * 1000), idle: num(b.idle, 3600), dev: device(req) });
+}
+async function onlineView() {
+  const now = Date.now();
+  const fresh = (await store.listMeta(ON_DIR)).filter(f => now - f.at < ONLINE_MS + 20000); // only files saved a moment ago are opened
+  const recs = (await inChunks(fresh, 12, f => store.getJSON(f.path).catch(() => null))).filter(r => r && !r.off && now - Date.parse(r.t) < ONLINE_MS);
+  const online = recs.map(r => ({ key: r.key, name: r.name, role: r.role, label: r.label, store: r.store || '', p: r.p, pl: pageLabel(r.p), x: r.x || '', h: r.h || r.p, t: r.t, since: r.since, idle: r.idle || 0, dev: r.dev || '' }))
+    .sort((a, b) => (a.idle >= 120) - (b.idle >= 120) || String(a.name).localeCompare(String(b.name)));
+  return { ok: true, now: iso(now), online };
+}
+
 // Who filled the daily store sheet: for every store and day of the last N days, was the morning and the night shift typed in, and by whom
 async function dailyView(n) {
   const { CANON } = require('./_daily');
@@ -465,6 +497,7 @@ async function handler(req, res) {
 
   if (req.method === 'POST') {
     const b = await body(req);
+    if (b && (b.t === 'ping' || b.t === 'gone')) { await presence(req, who, b).catch(() => {}); return send(res, 204); } // online now: any signed-in person
     if (b && (b.t === 'open' || b.t === 'leave')) { // the page beacon: any signed-in person
       const p = String(b.p || '');
       if (!/^\/[a-z0-9\/._-]{0,60}$/i.test(p) || p.replace(/\/+$/, '') === '/activity' || !/^[a-z0-9]{6,16}$/i.test(String(b.id || ''))) return send(res, 204);
@@ -485,6 +518,7 @@ async function handler(req, res) {
   if (req.method !== 'GET') { res.setHeader('Allow', 'GET, POST'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
   if (!(await canView(who))) return send(res, 403, { ok: false, error: 'Only the super admin can open Activity.' });
   try {
+    if (q.get('view') === 'online') return send(res, 200, await onlineView());
     if (q.get('view') === 'daily') return send(res, 200, await dailyView(Math.max(3, Math.min(31, parseInt(q.get('days'), 10) || 14))));
     const range = Math.max(1, Math.min(KEEP_DAYS, parseInt(q.get('range'), 10) || 7));
     const o = await overview(range);

@@ -23,16 +23,21 @@ const THEME_HEAD = '<style id="pandora-theme-css">' +
 // Activity log (api/_activity.js): tells the server which page was opened and for how long it was actually in use
 // (page visible and the person touching it; a page left open and idle is not counted). Nothing about what is on the page is sent.
 const BEACON = String.raw`<script>(function(){try{
-var p=location.pathname;try{if(p==='/api/site'){var pq=new URLSearchParams(location.search).get('path');p='/'+String(pq||'').replace(/^\/+/,'')}}catch(e){}if(p.replace(/\/+$/,'')==='/activity')return;
-var id=Math.random().toString(36).slice(2,12),x='',act=0,last=Date.now();
-try{if(/^\/staff\/person/.test(p)){var q=new URLSearchParams(location.search);x=[q.get('name'),q.get('store')].filter(Boolean).join(' · ')}}catch(e){}
+var p=location.pathname;try{if(p==='/api/site'){var pq=new URLSearchParams(location.search).get('path');p='/'+String(pq||'').replace(/^\/+/,'')}}catch(e){}
+var A=p.replace(/\/+$/,'')==='/activity'; /* the Activity page is not written in the log, but its reader is still online */
+var id=Math.random().toString(36).slice(2,12),x='',q='',act=0,last=Date.now(),t0=Date.now(),on=0;
+try{if(/^\/staff\/person/.test(p)){var sp=new URLSearchParams(location.search);x=[sp.get('name'),sp.get('store')].filter(Boolean).join(' · ');q=location.search}}catch(e){}
 function send(o){try{var j=JSON.stringify(o);if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/activity',new Blob([j],{type:'application/json'}))))fetch('/api/activity',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:j,keepalive:true}).catch(function(){})}catch(e){}}
-['pointerdown','keydown','scroll','touchstart','mousemove'].forEach(function(n){addEventListener(n,function(){last=Date.now()},{passive:true,capture:true})});
+/* online now: "still here" every 40 s while the page is on screen and was touched in the last 10 minutes; "gone" as soon as it is not */
+function gone(){if(on){on=0;send({t:'gone',id:id,p:p})}}
+function ping(){if(document.visibilityState!=='visible')return;var idle=Date.now()-last;if(idle>600000){gone();return}on=1;send({t:'ping',id:id,p:p,x:x,q:q,idle:Math.round(idle/1000),age:Math.round((Date.now()-t0)/1000)})}
+['pointerdown','keydown','scroll','touchstart','mousemove'].forEach(function(n){addEventListener(n,function(){last=Date.now();if(!on)ping()},{passive:true,capture:true})});
 setInterval(function(){if(document.visibilityState==='visible'&&Date.now()-last<120000)act+=5},5000);
-setTimeout(function(){send({t:'open',id:id,p:p,x:x})},1200);
-function leave(){if(act>=5){send({t:'leave',id:id,p:p,x:x,secs:act});act=0}}
-document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')leave()});
-addEventListener('pagehide',leave);
+setTimeout(ping,800);setInterval(ping,40000);
+if(!A)setTimeout(function(){send({t:'open',id:id,p:p,x:x})},1200);
+function leave(){if(!A&&act>=5){send({t:'leave',id:id,p:p,x:x,secs:act});act=0}}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'){leave();gone()}else ping()});
+addEventListener('pagehide',function(){leave();gone()});
 }catch(e){}})();</script>`;
 
 // kind: 'dashboards' | 'staff' | 'home' | 'login'.  multi: the person can open more than one thing, so a Home button is shown.
