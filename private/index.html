@@ -812,7 +812,7 @@ const PAY_ORDER=['Cash','Visa','Valu'],PAY_COLOR={Cash:'var(--pay-cash)',Visa:'v
 const payOf=v=>{const t=String(v||'').toLowerCase();return /valu/.test(t)?'Valu':/visa|card|master|credit|debit|pos/.test(t)?'Visa':'Cash'};
 
 /* ---------- state ---------- */
-const S={from:'',to:'',cat:'All',basis:'net',cmp:'auto',metric:'rev',grain:'auto',table:false,brSort:{k:'rev',d:-1},pTab:'top',pBy:'rev',pAll:false,pQ:'',pShow:50,rfAll:false,rfShow:50};
+const S={from:'',to:'',cat:'All',basis:'net',cmp:'prev',metric:'rev',grain:'auto',table:false,brSort:{k:'rev',d:-1},pTab:'top',pBy:'rev',pAll:false,pQ:'',pShow:50,rfAll:false,rfShow:50};
 let data=[],FILES=[],LAST={};
 const META={min:'',max:'',anchor:'',ng:0.877};
 const HOOKS=[]; // extra sections (explorer, collections) re-draw after every render
@@ -1293,7 +1293,7 @@ $('presets').addEventListener('click',e=>{const b=e.target.closest('[data-p]');i
 $('basisSeg').addEventListener('click',e=>{const b=e.target.closest('[data-b]');if(b){S.basis=b.dataset.b;render()}});
 $('catFilter').addEventListener('change',e=>{S.cat=e.target.value;render()});
 $('cmpSel').addEventListener('change',e=>{S.cmp=e.target.value;render()});
-$('resetBtn').addEventListener('click',()=>{const r=presetRange('yday');setRange(r[0],r[1]);BR.clear();S.cat='All';S.basis='net';S.cmp='auto';render()});
+$('resetBtn').addEventListener('click',()=>{const r=presetRange('yday');setRange(r[0],r[1]);BR.clear();S.cat='All';S.basis='net';S.cmp='prev';render()});
 $('fToggle').addEventListener('click',()=>{const o=$('rail').classList.toggle('open');$('fToggle').setAttribute('aria-expanded',o)});
 document.addEventListener('click',e=>{if(!$('branchField').contains(e.target))BR.open(false)});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')BR.open(false)});
@@ -1303,13 +1303,13 @@ if('IntersectionObserver' in window){const seen=new Map();const io=new Intersect
   document.querySelectorAll('#tabs a').forEach(a=>{const t=document.querySelector(a.getAttribute('href'));if(t)io.observe(t)})}
 
 /* ---------- the address keeps the filters, so a refresh or a shared link opens the same view ---------- */
-function writeHash(){const p=new URLSearchParams();p.set('from',S.from);p.set('to',S.to);if(BR.sel.size)p.set('br',[...BR.sel].join('|'));if(S.cat!=='All')p.set('cat',S.cat);if(S.basis!=='net')p.set('basis',S.basis);if(S.cmp!=='auto')p.set('cmp',S.cmp);
+function writeHash(){const p=new URLSearchParams();p.set('from',S.from);p.set('to',S.to);if(BR.sel.size)p.set('br',[...BR.sel].join('|'));if(S.cat!=='All')p.set('cat',S.cat);if(S.basis!=='net')p.set('basis',S.basis);if(S.cmp!=='prev')p.set('cmp',S.cmp);
   const h='#'+p.toString();if(location.hash!==h)try{history.replaceState(null,'',location.pathname+location.search+h)}catch(_){}}
 function readHash(){const h=location.hash.slice(1);if(!/(^|&)from=/.test(h))return false;const p=new URLSearchParams(h),D=/^\d{4}-\d{2}-\d{2}$/;
   let f=p.get('from')||'',t=p.get('to')||'';if(!D.test(f)||!D.test(t))return false;if(f<META.min)f=META.min;if(t>META.max)t=META.max;if(f>t)return false;setRange(f,t);
   (p.get('br')||'').split('|').filter(b=>BR.all.includes(b)).forEach(b=>BR.sel.add(b));BR.draw();
   const c=p.get('cat');if(c&&[...$('catFilter').options].some(o=>o.value===c))S.cat=c;
-  if(p.get('basis')==='gross')S.basis='gross';const m=p.get('cmp');if(['prev','week','month','year','none'].includes(m))S.cmp=m;return true}
+  if(p.get('basis')==='gross')S.basis='gross';const m=p.get('cmp');if(['auto','prev','week','month','year','none'].includes(m))S.cmp=m;return true}
 
 /* ---------- loading ---------- */
 function setFresh(state,txt,title){const f=$('fresh');f.className='fresh'+(state?' '+state:'');$('freshTxt').textContent=txt;f.title=title||''}
