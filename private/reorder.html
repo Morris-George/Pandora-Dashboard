@@ -34,7 +34,8 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:6px 7px
 th.l,td.l{text-align:left}td.name{max-width:250px;overflow:hidden;text-overflow:ellipsis;text-align:left}td.name small{display:block;color:var(--ink2);font-size:11px}
 tbody tr{cursor:pointer}tbody tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr.cut>td{opacity:.45}
 tr.cath>td{background:var(--soft);font-weight:800;text-align:left;cursor:default;font-size:13px}
-.img{width:38px;height:38px;border-radius:8px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;vertical-align:middle;font-size:9px;color:var(--ink2);line-height:1.1;text-align:center}.img img{width:100%;height:100%;object-fit:cover}.img.xl{width:120px;height:120px;border-radius:16px;flex:none}
+.img{width:38px;height:38px;border-radius:8px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;vertical-align:middle;font-size:9px;color:var(--ink2);line-height:1.1;text-align:center}.img img{width:100%;height:100%;object-fit:cover}.img.xl{width:120px;height:120px;border-radius:16px;flex:none}.img[data-dv]{cursor:zoom-in;transition:transform .12s}.img[data-dv]:hover{transform:scale(1.08)}
+#ov{position:fixed;inset:0;z-index:80;background:rgba(23,16,19,.72);display:flex;align-items:center;justify-content:center;padding:14px;cursor:zoom-out}#ovB{background:var(--surface);color:var(--ink);border-radius:20px;padding:12px;max-width:min(760px,100%);max-height:94vh;display:flex;flex-direction:column;gap:8px;align-items:center;box-shadow:0 20px 60px rgba(0,0,0,.4)}#ovB .ovp{width:min(680px,86vw,72vh);height:min(680px,86vw,72vh);border-radius:14px;background:var(--soft);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:13px;color:var(--ink2)}#ovB .ovp img{width:100%;height:100%;object-fit:contain;background:#fff}#ovB b{font-size:14px;text-align:center}#ovB small{color:var(--ink2)}
 .tag{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;margin:1px 3px 1px 0}.t-good{background:var(--good);color:#fff}.t-bad{background:var(--bad);color:#fff}.t-warn{background:var(--warn);color:#fff}.t-soft{background:var(--soft);color:var(--ink)}
 .cl{display:inline-flex;width:22px;height:22px;border-radius:50%;align-items:center;justify-content:center;font-weight:800;font-size:11.5px}.cl.A{background:var(--accent);color:#2A1018}.cl.B{background:var(--soft);color:var(--ink)}.cl.C{border:1px solid var(--line);color:var(--ink2)}
 .qty{font-size:15px;font-weight:800}.qty.z{color:var(--ink2);font-weight:600;font-size:12.5px}
@@ -95,8 +96,40 @@ tr.cath>td{background:var(--soft);font-weight:800;text-align:left;cursor:default
 </div>
 </div>
 <div id="M" hidden><div id="MB"></div></div>
+<div id="ov" hidden><div id="ovB"><div class="ovp" data-hd=""><span id="ovN">Loading the picture…</span></div><b id="ovT"></b><small id="ovS"></small></div></div>
 
 <script src="/stockcount-pics-1.js" async></script><script src="/stockcount-pics-2.js" async></script><script src="/stockcount-pics-3.js" async></script><script src="/stockcount-pics-4.js" async></script>
+
+<script>
+/* Sharp pictures: the small built-in picture shows first, the full-size one (from pandoraeg.com, found by our server at /api/pic) replaces it whenever a picture is shown big. */
+window.HD=(function(){const KEY='pandora-hd-v1',M=new Map(),L=new Map(),R=new Map(),F=new Map();let c={};try{c=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+const base=s=>String(s||'').trim().toUpperCase().split('-')[0];
+const big=u=>{try{const x=new URL(String(u).replace(/^http:/,'https:'),location.href);x.searchParams.set('width','900');return x.href}catch(e){return u}};
+function url(sku){const b=base(sku);if(!b||b[0]==='?')return Promise.resolve('');if(c[b])return Promise.resolve(c[b]);
+  if(!M.has(b)){const pr=fetch('/api/pic?sku='+encodeURIComponent(b),{credentials:'same-origin'}).then(r=>r.json()).then(j=>{const u=j&&j.url||'';if(u){c[b]=u;try{localStorage.setItem(KEY,JSON.stringify(c))}catch(e){}}return u}).catch(()=>'');M.set(b,pr);pr.then(u=>{if(!u)M.delete(b)})}return M.get(b)}
+/* load(): finds the full-size picture AND downloads + decodes it ahead of time, so showing it later is instant (no small blurry picture first) */
+function load(sku){const b=base(sku);if(!b||b[0]==='?')return Promise.resolve('');if(R.has(b))return Promise.resolve(R.get(b));if(L.has(b))return L.get(b);
+  if(F.has(b)&&Date.now()-F.get(b)<60000)return Promise.resolve('');
+  const p=url(sku).then(u=>u?new Promise(res=>{const im=new Image();im.referrerPolicy='no-referrer';im.onload=()=>{const d=()=>{R.set(b,im.src);res(im.src)};im.decode?im.decode().then(d,d):d()};im.onerror=()=>res('');im.src=big(u)}):'');
+  L.set(b,p);p.then(s=>{L.delete(b);if(!s)F.set(b,Date.now())});return p}
+/* up(): swaps the small picture for the sharp one. hold=true keeps the small one hidden until the sharp one is ready (max 1.5 s), so the blurry picture is never seen */
+function up(img,sku,hold){if(!img||!sku)return;const t=(img._hd=(img._hd||0)+1),b=base(sku),r=R.get(b);
+  if(r){img.src=r;img.style.opacity='';return}
+  if(hold&&b&&b[0]!=='?'){img.style.transition='opacity .12s';img.style.opacity='0';setTimeout(()=>{if(img._hd===t)img.style.opacity=''},1500)}
+  load(sku).then(s=>{if(img._hd!==t)return;if(s)img.src=s;img.style.opacity=''})}
+const dvOf=img=>{const e=img.closest&&img.closest('[data-hd]');return e?e.dataset.hd:''};
+/* warm-up: pictures that are on screen (or about to be) are fetched in the background, 3 at a time; touching one fetches it straight away */
+const WQ=[];let wbusy=0,wio=null;
+function wpump(){while(wbusy<3&&WQ.length){const s=WQ.shift();wbusy++;load(s).finally(()=>{wbusy--;wpump()})}}
+const SEL='.img img,.ovp img,#hitPic img,#sidePic img';
+let q=0;function scan(){q=0;
+  document.querySelectorAll('.ovp img,#hitPic img').forEach(i=>{if(i._hdSeen)return;i._hdSeen=1;up(i,dvOf(i),true)});
+  if('IntersectionObserver' in window){if(!wio)wio=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;wio.unobserve(e.target);const d=dvOf(e.target);if(d){WQ.push(d);wpump()}}),{rootMargin:'200px'});
+    document.querySelectorAll('.img img,#sidePic img').forEach(i=>{if(i._hdW)return;i._hdW=1;wio.observe(i)})}}
+try{new MutationObserver(()=>{if(!q)q=requestAnimationFrame(scan)}).observe(document.documentElement,{childList:true,subtree:true})}catch(e){}
+['pointerover','pointerdown','touchstart'].forEach(ev=>document.addEventListener(ev,e=>{const i=e.target&&e.target.closest&&e.target.closest(SEL);if(i){const d=dvOf(i);if(d)load(d)}},{capture:true,passive:true}));
+return {up,url,big,dvOf,load}})();
+</script>
 
 <script id="engine">
 /* The thinking part, with no page code in it (it is tested on its own).
@@ -260,7 +293,7 @@ const fmt=n=>Math.round(n||0).toLocaleString('en-US'),f1=n=>(Math.round((n||0)*1
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const dd=d=>d.getUTCDate()+' '+MON[d.getUTCMonth()]+' '+d.getUTCFullYear(),dshort=d=>d.getUTCDate()+' '+MON[d.getUTCMonth()];
 const PICS=(window.__PICS=window.__PICS||{});
-const pic=(dv,c)=>{const k=String(dv||'').toUpperCase(),v=PICS[k]||PICS[String(dv||'')];return `<span class="img ${c||''}" data-dv="${esc(k)}">${v?`<img src="data:image/jpeg;base64,${v}" alt="" loading="lazy">`:'no<br>image'}</span>`};
+const pic=(dv,c)=>{const k=String(dv||'').toUpperCase(),v=PICS[k]||PICS[String(dv||'')];return `<span class="img ${c||''}" data-dv="${esc(k)}" data-hd="${esc(k)}" title="Click to enlarge">${v?`<img src="data:image/jpeg;base64,${v}" alt="" loading="lazy">`:'no<br>image'}</span>`};
 const ARROW='<svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h21M17 2l6 5-6 5"/></svg>';
 let DATA=null,P=null,CAT='',LIMIT=80;
 const S=(()=>{let s={};try{s=JSON.parse(localStorage.getItem('reorder.v1')||'{}')}catch(e){}return s})();
@@ -373,6 +406,16 @@ function explain(sku){
   </div>`;
   $('M').hidden=false;
 }
+function zoom(dv){
+  const k=String(dv||'').toUpperCase(),o=P&&P.lines.find(x=>String(x.it.dv).toUpperCase()===k),it=o&&o.it,v=PICS[k]||PICS[dv];
+  $('ovT').textContent=it?(it.name||it.sku):k;$('ovS').textContent=it?it.sku+' · '+it.cat+(it.rrp?' · EGP '+fmt(it.rrp):''):k;
+  const box=$('ovB').querySelector('.ovp');box.dataset.hd=k;
+  box.innerHTML=v?`<img src="data:image/jpeg;base64,${v}" alt="">`:'<span id="ovN">Loading the picture…</span>';
+  $('ov').hidden=false;
+  const img=box.querySelector('img');
+  if(img)HD.up(img,k,false);   // the sharp full-size picture replaces the small one as soon as it is ready
+  else HD.load(k).then(src=>{if($('ov').hidden||box.dataset.hd!==k)return;box.innerHTML=src?`<img src="${esc(src)}" alt="">`:'<span>No picture for this item.</span>'});
+}
 async function excel(){
   const b=$('bX');b.disabled=true;
   try{
@@ -406,8 +449,8 @@ async function sync(){
 $('fShow').addEventListener('change',()=>{LIMIT=80;rows()});$('fQ').addEventListener('input',()=>{LIMIT=80;rows()});
 $('more').addEventListener('click',()=>{LIMIT+=150;rows()});
 $('cats').addEventListener('click',e=>{const c=e.target.closest('[data-c]');if(!c)return;CAT=c.dataset.c;LIMIT=80;head();rows()});
-document.addEventListener('click',e=>{const r=e.target.closest('[data-sku]');if(r&&!$('M').contains(r))explain(r.dataset.sku);else if(e.target.id==='mX'||e.target.id==='M')$('M').hidden=true});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')$('M').hidden=true});
+document.addEventListener('click',e=>{if(!$('ov').hidden){$('ov').hidden=true;return}const pc=e.target.closest('.img[data-dv]');if(pc){e.stopPropagation();zoom(pc.dataset.dv);return}const r=e.target.closest('[data-sku]');if(r&&!$('M').contains(r))explain(r.dataset.sku);else if(e.target.id==='mX'||e.target.id==='M')$('M').hidden=true});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('ov').hidden)$('ov').hidden=true;else $('M').hidden=true}});
 $('bX').addEventListener('click',excel);$('bSync').addEventListener('click',sync);
 load();
 </script>
