@@ -89,7 +89,7 @@ tr.cath>td{background:var(--soft);font-weight:800;text-align:left;cursor:default
   <h2>The order</h2>
   <div class="row noprint" style="margin-bottom:8px;justify-content:space-between">
     <div class="chips" id="cats"></div>
-    <div class="row"><select id="fShow"><option value="order">Items to order</option><option value="season">Seasonal items</option><option value="risk">Will run out before arrival</option><option value="na">Best sellers we cannot order</option><option value="all">Everything</option></select><input id="fQ" placeholder="Search item or SKU" style="width:170px"></div>
+    <div class="row"><select id="fShow"><option value="order">Items to order</option><option value="season">Seasonal items</option><option value="risk">Will run out before arrival</option><option value="skip">Good sellers not in the order (and why)</option><option value="na">Best sellers we cannot order</option><option value="all">Everything</option></select><input id="fQ" placeholder="Search item or SKU" style="width:170px"></div>
   </div>
   <div id="sum" class="sumline"></div>
   <div class="tw"><table><thead><tr><th class="l">#</th><th class="l"></th><th class="l">Item</th><th>Sells / month</th><th>In stock</th><th>Coming</th><th>Left on arrival</th><th>Will sell</th><th>Order</th><th>Cost $</th><th class="l">Why</th></tr></thead><tbody id="rows"></tbody></table></div>
@@ -266,6 +266,12 @@ function plan(data,opt){
     else if(it.slow&&!(th&&th.hard&&o.verdict&&o.verdict!=='late'&&o.verdict!=='wait')&&!(it.cls==='A'&&it.avg3>=3)){if(q)o.tags.push(['soft','Slow moving'+(it.slowIn.length?' in '+it.slowIn.slice(0,2).join(', '):'')+': move stock first']);q=0}
     if(!it.months&&!it.soh){o.tags.push(['soft','No sales history yet'])}
     if(o.lost>=1&&it.cls!=='C')o.tags.push(['bad','Runs out '+(o.out?'about '+o.out.getUTCDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][o.out.getUTCMonth()]:'before it arrives')]);
+    // why a good seller is NOT in the order
+    if(!q){const thr=it.cls==='C'?1:.5,sells=it.avg3>0||it.base>0,rate=win/cover;
+      if(!it.avail){if(sells&&!o.want)o.skip='Not on the Available to Order list'}
+      else if(!it.months)o.skip='No sales found for it in the months read from ERP';
+      else if(o.need<thr&&sells&&!(th&&th.hard&&o.verdict))o.skip='Enough stock: '+Math.round(stock)+' pieces last about '+(rate>0?Math.round(stock/rate*10)/10+' months':'a long time')+' at '+Math.round(rate*10)/10+' a month, so nothing is needed yet';
+      if(o.skip&&!o.tags.length)o.tags.push(['soft',o.skip.split(':')[0]])}
     o.qty=q;o.cost=q*it.fob;o.retail=q*it.rrp;
     o.pri=q?(it.cls==='A'?1:it.cls==='B'?2:3):9;
     return o});
@@ -387,6 +393,7 @@ function view(){
   if(show==='order')l=l.filter(o=>o.qty);
   else if(show==='season')l=l.filter(o=>o.it.theme&&(o.season||o.verdict));
   else if(show==='risk')l=l.filter(o=>o.lost>=1&&o.it.cls!=='C').sort((a,b)=>b.lost*b.it.rrp-a.lost*a.it.rrp);
+  else if(show==='skip')l=l.filter(o=>!o.qty&&o.skip&&o.it.cls!=='C').sort((a,b)=>a.it.rank-b.it.rank);
   else if(show==='na')l=l.filter(o=>!o.it.avail&&o.want&&o.it.cls!=='C').sort((a,b)=>a.it.rank-b.it.rank);
   // grouped by category, best sellers of each category first
   if(show==='order'||show==='all'){const tq={};l.forEach(o=>tq[o.it.cat]=(tq[o.it.cat]||0)+o.qty);
@@ -412,6 +419,7 @@ function explain(sku){
   const bars=hist.map(k=>`<div title="${k}: ${it.s[k]}"><span>${it.s[k]||''}</span><i style="height:${it.s[k]/mx*64}px"></i>${MON[+k.slice(5)-1]}</div>`).join('')+fut.map(k=>`<div title="${k}: expected ${f1(it.f(k))}"><span>${f1(it.f(k))}</span><i class="f" style="height:${it.f(k)/mx*64}px"></i>${MON[+k.slice(5)-1]}</div>`).join('');
   const tips=[];
   if(o.why)tips.push(o.why);
+  if(o.skip)tips.push('Not in the order: '+o.skip+'.');
   if(it.cls==='A')tips.push(`Best seller: number ${it.rank} in ${it.cat}. It gets ordered first${o.safe>=.5?' and carries '+S.safe+' weeks of extra stock':''}.`);
   if(o.lost>=1)tips.push(`The stock finishes ${o.out?'about '+dd(o.out):'before the order arrives'}: around ${fmt(o.lost)} sales (EGP ${fmt(o.lost*it.rrp)}) would be missed. Move pieces between stores now.`);
   if(o.season&&!(it.theme&&it.theme.hard))tips.push(`${o.season.name} (${dshort(o.season.date)}) falls while this order is on sale, so a little more is expected than usual.`);
