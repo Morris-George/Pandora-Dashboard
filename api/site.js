@@ -425,7 +425,7 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'slow2.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   if (requestedPath === '/reorder' || requestedPath === '/reorder/' || requestedPath === '/reorder.html') {
-    if (!facts.refill || facts.refill === 'none') return toHome();
+    if (!(facts.staff && facts.staff.role === 'admin' && !facts.staff.overseer)) return toHome(); // super admins only
     return sendFile(res, 'reorder.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   if (requestedPath === '/transfer' || requestedPath === '/transfer/' || requestedPath === '/transfer.html') {

@@ -294,6 +294,7 @@ module.exports = async function handler(req, res) {
   }
   if (req.method === 'GET' && url.searchParams.get('smart')) {
     // Smart Reorder (/reorder): the same join as an order, with no order needed; the page works out the season-aware order itself
+    if (!isAdmin(who)) return send(res, 403, { ok: false, error: 'Smart Reorder is for the super admin only.' });
     const erp0 = (await store.getJSON(ERP)) || { at: {} };
     return send(res, 200, { ok: true, level: lvl, today: cairoToday(), erpOn: !!(process.env.ERP_URL && process.env.ERP_API_KEY && process.env.ERP_API_SECRET), sohAt: (erp0.at || {}).soh || '', ...(await joined()) });
   }

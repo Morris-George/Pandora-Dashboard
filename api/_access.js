@@ -18,7 +18,7 @@ const LEVEL_TEXT = { view: 'view only', input: 'can add and change', manage: 'fu
 // the little note shown next to a report: how much of it this person gets
 function noteFor(app, f, who) {
   if (app.id === 'refill') return LEVEL_TEXT[f.refill] || '';
-  if (app.id === 'slow' || app.id === 'slow2' || app.id === 'reorder') return LEVEL_TEXT[f.refill] || '';
+  if (app.id === 'slow' || app.id === 'slow2') return LEVEL_TEXT[f.refill] || '';
   if (app.id === 'dist') return LEVEL_TEXT[f.dist] || '';
   if (app.id === 'recv') return ({ accounts: 'scans for Finance', warehouse: 'scans for the Warehouse', view: 'report only', manage: 'full control' })[f.recv] || '';
   const role = f.staff && f.staff.role;
@@ -49,8 +49,8 @@ function scopeOf(who) {
   return '';
 }
 
-const ADDABLE = { refill: 'refill', slow2: 'refill', reorder: 'refill', dist: 'dist', recv: 'recv' }; // reports that carry their own access level, so they can be given to anyone
-const NEVER = ['approvals', 'access']; // accounts and passwords: the super admin only, never given to anyone
+const ADDABLE = { refill: 'refill', slow2: 'refill', dist: 'dist', recv: 'recv' }; // reports that carry their own access level, so they can be given to anyone
+const NEVER = ['approvals', 'access', 'reorder']; // accounts and passwords: the super admin only, never given to anyone
 const isSuperWho = who => !!who && who.kind === 'env' && who.info.role === 'admin' && !who.info.overseer;
 
 async function overrides() { return (await store.getJSON(OVERRIDES)) || {}; }
@@ -190,7 +190,7 @@ async function setOne(key, app, on) {
         await level('recv', /finance|account/i.test(team + ' ' + title) ? 'accounts' : /warehouse/i.test(team + ' ' + title) || who.kind === 'sc' ? 'warehouse' : 'view');
       }
       else if (!NEVER.includes(app.id)) ad.add(app.id); // opened as an Overseer would see it (api/_auth.js)
-      else return 'Accounts and passwords stay with the super admin only.';
+      else return app.id === 'reorder' ? 'Smart Reorder stays with the super admin only.' : 'Accounts and passwords stay with the super admin only.';
     }
   } else {
     if (app.id === 'refill') await level('refill', 'none');       // Slow Moving follows Refill Order access
