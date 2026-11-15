@@ -10,7 +10,6 @@ const { whoami } = require('./_auth');
 const { dashRows } = require('./_sales');
 
 const STATUS = 'digest/status.json';
-const SITE = 'pandora-eg.online/dashboards';
 const DAY = 864e5;
 const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -58,7 +57,7 @@ function build(rows, want, today) {
   const cur = of(day), wk = addD(day, -7), prev = of(wk);
   const a = agg(cur), p = prev.length ? agg(prev) : null;
   const L = [];
-  L.push('*Pandora daily digest*');
+  L.push('*Pandora daily sales*');
   L.push(fDay(day));
   if (note) L.push('_' + note + '_');
   L.push('');
@@ -82,14 +81,6 @@ function build(rows, want, today) {
   L.push('');
   if (top && top.v > 0) L.push(`*Top item:* ${top.name}${top.sku ? ' (' + top.sku + ')' : ''}: ${Math.round(top.u)} pcs, ${egp(top.v)}`);
 
-  // the store that lost the most against the same weekday last week (stores that sold nothing that day count too)
-  if (p) {
-    const names = new Set([...cb.keys(), ...pb.keys()]);
-    const drops = [...names].map(b => ({ b, d: (cb.get(b) || 0) - (pb.get(b) || 0), was: pb.get(b) || 0 })).filter(x => x.d < 0 && x.was > 0).sort((x, y) => x.d - y.d);
-    if (drops.length) { const w = drops[0]; L.push(`*Biggest drop:* ${w.b} ▼ ${egp(-w.d)} (${Math.round(w.d / w.was * 100)}%) vs last ${WD[new Date(t(day)).getUTCDay()]}`); }
-    else L.push('*Biggest drop:* none, no store fell against last week');
-  }
-
   // the month so far against the same dates last month
   const m0 = day.slice(0, 8) + '01';
   const mtd = rows.filter(r => r[0] >= m0 && r[0] <= day);
@@ -99,8 +90,6 @@ function build(rows, want, today) {
   const mn = mtd.reduce((s, r) => s + (Number(r[3]) || 0), 0), ln = lm.reduce((s, r) => s + (Number(r[3]) || 0), 0);
   L.push('');
   L.push(`*${MONL[+day.slice(5, 7) - 1]} so far:* ${short(mn)}${ln > 0 ? `  ${chg(mn, ln)} vs the same dates in ${MONL[pmEnd.getUTCMonth()]}` : ''}`);
-  L.push('');
-  L.push(SITE);
   return { ok: true, day, wanted: want, fallback: day !== want, text: L.join('\n'), sales: Math.round(a.net), orders: a.orders, today };
 }
 
