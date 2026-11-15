@@ -425,7 +425,7 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'slow2.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   if (requestedPath === '/reorder' || requestedPath === '/reorder/' || requestedPath === '/reorder.html') {
-    if (!(facts.staff && facts.staff.role === 'admin')) return toHome(); // the super admin and the overseers (the super admin can switch it off for one person on User Access Privileges)
+    if (!(facts.staff && require('./_smart').smartOk(facts.staff.who))) return toHome(); // super admins, overseers and the people named in api/_smart.js
     return sendFile(res, 'reorder.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   if (requestedPath === '/transfer' || requestedPath === '/transfer/' || requestedPath === '/transfer.html') {
@@ -435,7 +435,7 @@ module.exports = async function handler(req, res) {
   // its product pictures, in pieces (one response may not pass 4.5 MB); super admin only, kept by the browser for a day
   if (requestedPath === '/reorder-engine.js') {
     // the Smart Reorder calculation (no data in it): for Refill Order people and the super admin
-    if (!(facts.staff && facts.staff.role === 'admin') && !(facts.refill && facts.refill !== 'none')) return res.status(404).end();
+    if (!(facts.staff && facts.staff.role === 'admin') && !(facts.staff && require('./_smart').smartOk(facts.staff.who)) && !(facts.refill && facts.refill !== 'none')) return res.status(404).end();
     try {
       const body = fs.readFileSync(path.join(PRIVATE_DIR, 'reorder-engine.js'));
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
@@ -446,7 +446,7 @@ module.exports = async function handler(req, res) {
   }
   const picPart = /^\/stockcount-pics-([1-9])\.js$/.exec(requestedPath);
   if (picPart) {
-    if (!(facts.staff && facts.staff.role === 'admin') && !facts.sc && !(facts.refill && facts.refill !== 'none') && !(facts.dist && facts.dist !== 'none') && !(facts.recv && facts.recv !== 'none') && !(facts.staff && facts.staff.role !== 'staff') && !facts.vm) return res.status(404).end(); // store managers, area managers and the VM see pictures in Slow Moving too
+    if (!(facts.staff && facts.staff.role === 'admin') && !(facts.staff && require('./_smart').smartOk(facts.staff.who)) && !facts.sc && !(facts.refill && facts.refill !== 'none') && !(facts.dist && facts.dist !== 'none') && !(facts.recv && facts.recv !== 'none') && !(facts.staff && facts.staff.role !== 'staff') && !facts.vm) return res.status(404).end(); // store managers, area managers and the VM see pictures in Slow Moving too
     try {
       const body = fs.readFileSync(path.join(PRIVATE_DIR, 'stockcount-pics-' + picPart[1] + '.js'));
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');

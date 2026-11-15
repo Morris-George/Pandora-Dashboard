@@ -48,7 +48,7 @@ function keyOf(who) {
   if (who.kind === 'env') return 'env:' + String(who.account.user || '').toLowerCase();
   return who.user ? 'u:' + who.user.username : '';
 }
-const canSmart = who => !!who && who.kind === 'env' && who.info.role === 'admin'; // Smart Reorder: the super admin and the overseers (read only)
+const canSmart = who => require('./_smart').smartOk(who); // Smart Reorder: super admins, overseers and the people named in api/_smart.js (read only)
 const isAdmin = who => !!who && who.kind === 'env' && who.info.role === 'admin' && !who.info.overseer;
 async function levelFor(who) {
   if (!who) return 'none';
