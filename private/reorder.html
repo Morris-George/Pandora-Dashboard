@@ -30,6 +30,7 @@ header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-
 .sea{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:12px;margin-top:6px;border:1px solid var(--line)}.sea .dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex:none}.sea b{font-weight:800}.sea small{display:block;color:var(--ink2)}
 .sea.good{background:color-mix(in srgb,var(--good) 9%,transparent)}.sea.good .dot{background:var(--good)}.sea.mid .dot{background:var(--warn)}.sea.mid{background:color-mix(in srgb,var(--warn) 9%,transparent)}.sea.late .dot{background:var(--bad)}.sea.late{background:color-mix(in srgb,var(--bad) 8%,transparent)}.sea.next .dot{background:var(--ink2)}
 .tw{overflow:auto;max-height:72vh}
+.cr{display:grid;grid-template-columns:auto 1fr auto 130px;gap:8px 14px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}.cr:first-child{border-top:0}.cr label{display:flex;gap:10px;align-items:center;font-weight:700;cursor:pointer}.cr input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}.cr .cv{font-variant-numeric:tabular-nums;color:var(--ink2);font-size:12.5px;text-align:right}.cr input[type=number]{width:130px}.cr.off .nm,.cr.off .cv{opacity:.45;text-decoration:line-through}@media(max-width:640px){.cr{grid-template-columns:auto 1fr 110px}.cr .cv{grid-column:2/-1;text-align:left}.cr input[type=number]{width:110px}}
 table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:6px 7px;border-top:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}th{position:sticky;top:0;background:var(--surface);color:var(--ink2);font-size:11.5px;z-index:1}
 th.l,td.l{text-align:left}td.name{white-space:normal;text-align:left}td.name>b{display:block}.img.lg{width:112px;height:112px;border-radius:14px;background:#fff}.img.lg img{object-fit:contain}td.name{padding:10px 12px}td.name>b{font-size:14px}.sxs{display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:8px}.sx{background:var(--soft);border-radius:10px;padding:5px 14px;min-width:92px;text-align:left}.sx small{display:block;font-size:10.5px;margin:0}.sx b{font-size:15px;font-variant-numeric:tabular-nums}.sx.bad b{color:var(--bad)}.sx.ord{background:var(--accent);color:#2A1018}.sx.ord small{color:#2A1018}.sx.ord b{font-size:16px}.sx.z{background:var(--soft);color:var(--ink2)}.sx.z small{color:var(--ink2)}.why{margin-top:8px}tbody td:nth-child(2){padding-left:4px;padding-right:4px;width:124px}tbody td:first-child{width:54px}td.name small{display:block;color:var(--ink2);font-size:11px}
 tbody tr{cursor:pointer}tbody tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr.cut>td{opacity:.45}
@@ -74,6 +75,12 @@ tr.cath>td{background:var(--soft);font-weight:800;text-align:left;cursor:default
   </div>
   <div class="tl" id="tl" style="margin-top:12px"></div>
   <div id="seasons"></div>
+</div>
+
+<div class="card" id="catCard">
+  <h2>Categories</h2>
+  <div class="sub" style="margin-bottom:8px">Tick the categories you want in this order. To order a certain amount of one category, type it in $: the category is filled up to it, or cut down to it. Leave it empty to follow the sales and the budget above.</div>
+  <div id="catList"></div>
 </div>
 
 <div class="kpis" id="kpis"></div>
@@ -167,8 +174,23 @@ async function load(){
 }
 function run(){
   S.date=$('fDate').value||DATA.today;S.lead=+$('fLead').value||2;S.cover=+$('fCover').value||2;S.budget=+$('fBud').value||0;S.safe=+$('fSafe').value;save();
-  P=ReorderEngine.plan(DATA,{order:S.date,lead:S.lead,cover:S.cover,budget:S.budget,safeA:S.safe});
+  S.skip=S.skip||[];S.catBud=S.catBud||{};if($('catList').dataset.on)readCats();
+  P=ReorderEngine.plan(DATA,{order:S.date,lead:S.lead,cover:S.cover,budget:S.budget,safeA:S.safe,skip:S.skip,catBud:S.catBud});buildCats();
   LIMIT=80;head();rows();
+}
+
+// Categories: tick the ones to order, and an optional amount ($) for each
+function readCats(){const sk=[],cb={};document.querySelectorAll('#catList .cr').forEach(r=>{const c=r.dataset.c;if(!r.querySelector('input[type=checkbox]').checked)sk.push(c);const v=+r.querySelector('input[type=number]').value;if(v>0)cb[c]=v});S.skip=sk;S.catBud=cb;save()}
+function buildCats(){
+  const el=$('catList'),cats=[...new Set(P.lines.map(o=>o.it.cat))].sort();
+  if(!el.dataset.on){
+    el.innerHTML=cats.map(c=>`<div class="cr${S.skip.includes(c)?' off':''}" data-c="${esc(c)}"><label><input type="checkbox" ${S.skip.includes(c)?'':'checked'}><span class="nm">${esc(c)}</span></label><span class="cv"></span><span></span><input type="number" min="0" step="500" placeholder="$ amount" value="${S.catBud[c]||''}" aria-label="Amount in $ for ${esc(c)}"></div>`).join('');
+    el.dataset.on='1';
+    el.addEventListener('change',()=>run());
+  }
+  el.querySelectorAll('.cr').forEach(r=>{const c=r.dataset.c,l=P.lines.filter(o=>o.it.cat===c&&o.qty&&!o.cut),off=S.skip.includes(c);r.classList.toggle('off',off);
+    const f=P.catFill&&P.catFill[c],lim=P.catBud&&P.catBud[c],cost=l.reduce((a,o)=>a+o.cost,0);
+    r.querySelector('.cv').textContent=off?'left out':fmt(l.reduce((a,o)=>a+o.qty,0))+' pieces · $'+fmt(cost)+(lim?(f&&f.capped&&cost<lim*.98?' (the best sellers cannot use more than that)':' of $'+fmt(lim)):'')})
 }
 function head(){
   const p=P;
@@ -202,12 +224,12 @@ function head(){
   $('alertCard').hidden=!al.length;
   $('alerts').innerHTML=`<div class="sub" style="margin-bottom:6px">These best sellers will be finished before ${dd(p.A)}, and an order cannot fix that. Move pieces from the stores that sell them slowly, or ask for a faster shipment.</div>`+al.map(o=>`<div class="cal" data-sku="${esc(o.it.sku)}" style="cursor:pointer;grid-template-columns:auto 1fr auto">${pic(o.it.dv)}<div><b>${esc(o.it.name||o.it.sku)}</b><small><br>${esc(o.it.sku)} · ${fmt(o.stock)} in stock and coming · sells ${f1(o.it.avg3)} a month</small></div><div class="when" style="color:var(--bad)">${o.out?'out about '+dshort(o.out):''}<small><br>${fmt(o.lost)} sales missed</small></div></div>`).join('');
   // chips
-  const cc={},cx={};p.lines.forEach(o=>{if(o.qty){cc[o.it.cat]=(cc[o.it.cat]||0)+o.qty;cx[o.it.cat]=(cx[o.it.cat]||0)+o.cost}});
+  const cc={},cx={};p.lines.forEach(o=>{if(o.qty&&!o.cut){cc[o.it.cat]=(cc[o.it.cat]||0)+o.qty;cx[o.it.cat]=(cx[o.it.cat]||0)+o.cost}});
   const allc=[...new Set(p.lines.map(o=>o.it.cat))].sort((a,b)=>(cc[b]||0)-(cc[a]||0));
   if(CAT&&!allc.includes(CAT))CAT='';
   $('cats').innerHTML=`<button class="chip ${CAT?'':'on'}" data-c="">All categories <b>${fmt(p.tot.pcs)} · $${fmt(p.tot.costAll)}</b></button>`+allc.map(c=>`<button class="chip ${CAT===c?'on':''}" data-c="${esc(c)}">${esc(c)} <b>${fmt(cc[c]||0)} · $${fmt(cx[c]||0)}</b></button>`).join('');
   // the cost of whatever is chosen above the table: the whole order, or the whole category
-  const sl=p.lines.filter(o=>o.qty&&(!CAT||o.it.cat===CAT)),sc=sl.reduce((a,o)=>a+o.cost,0),sp=sl.reduce((a,o)=>a+o.qty,0),sr=sl.reduce((a,o)=>a+o.retail,0);
+  const sl=p.lines.filter(o=>o.qty&&!o.cut&&(!CAT||o.it.cat===CAT)),sc=sl.reduce((a,o)=>a+o.cost,0),sp=sl.reduce((a,o)=>a+o.qty,0),sr=sl.reduce((a,o)=>a+o.retail,0);
   $('sum').innerHTML=`<span><small>${CAT?esc(CAT)+' (whole category)':'All categories (whole order)'}</small><br><b>$${fmt(sc)}</b></span><span><small>Pieces</small><br><b>${fmt(sp)}</b></span><span><small>Items</small><br><b>${fmt(sl.length)}</b></span><span><small>Worth in the stores</small><br><b>EGP ${fmt(sr)}</b></span>`+(p.budget?`<span><small>Budget</small><br><b>$${fmt(p.budget)}</b></span>`:'');
   const hm=p.H.length?p.H[0]+' to '+p.H[p.H.length-1]:'none';
   $('foot').textContent=`Stock counted ${DATA.sohDate||'?'} · sales history ${hm} (${p.H.length} full months) · sales against last year ×${f1(p.growth)} · A = the designs that make 70% of a category's pieces, B the next 20%, C the rest. Stock, pipeline and sales are the ones Refill Order uses.`;
@@ -301,10 +323,10 @@ async function syncRf(){
     const l=await call('/api/refill');const d=(l.orders||[]).find(o=>o.status==='Draft');
     if(!d)throw new Error('There is no Draft Refill Order to sync with. Open Refill Order and start one first.');
     const o=(await call('/api/refill?order='+d.id)).order,s=Object.assign({},o.settings);
-    s.od=S.date;s.lt=S.lead;s.cv=S.cover;s.sa=S.safe;s.sb=S.budget||0;s.smart=true;
+    s.od=S.date;s.lt=S.lead;s.cv=S.cover;s.sa=S.safe;s.sb=S.budget||0;s.sk=(S.skip||[]).slice();s.sc=Object.assign({},S.catBud||{});s.smart=true;
     await call('/api/refill?op=settings',{id:d.id,settings:s,stop:o.stop||[],stopSub:o.stopSub||[]});
     $('err').hidden=true;b.textContent='Synced ✓';
-    $('syncNote').textContent='Refill Order "'+d.name+'" now uses order date '+dd(P.D)+', '+f1(P.lead)+' months to arrive, must last '+f1(S.cover)+' months, '+S.safe+' weeks of safety'+(S.budget?' and the $'+fmt(S.budget)+' budget':'')+'. Open (or reload) Refill Order and its Other view shows the same insights and numbers.';$('syncNote').hidden=false;
+    $('syncNote').textContent='Refill Order "'+d.name+'" now uses order date '+dd(P.D)+', '+f1(P.lead)+' months to arrive, must last '+f1(S.cover)+' months, '+S.safe+' weeks of safety'+(S.budget?', the $'+fmt(S.budget)+' budget':'')+((S.skip||[]).length?' and '+S.skip.length+' categor'+(S.skip.length>1?'ies':'y')+' left out':'')+'. Open (or reload) Refill Order and its Other view shows the same insights and numbers.';$('syncNote').hidden=false;
     setTimeout(()=>{b.textContent=t},4000);
   }catch(e){$('err').textContent=e.message;$('err').hidden=false;b.textContent=t}
   b.disabled=false;

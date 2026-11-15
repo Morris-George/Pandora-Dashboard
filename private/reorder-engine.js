@@ -1,7 +1,7 @@
 /* Smart Reorder engine: used by /reorder and by Refill Order (Other view + proposed quantities). Served by api/site.js at /reorder-engine.js. */
 /* The thinking part, with no page code in it (it is tested on its own).
    plan(data, opt) -> { A, N, lines, events, catIdx, growth, histMonths ... }
-   data = /api/refill?smart=1 ; opt = { order:'YYYY-MM-DD', lead: months, cover: months, safeA: weeks, budget: $ } */
+   data = /api/refill?smart=1 ; opt = { order:'YYYY-MM-DD', lead: months, cover: months, safeA: weeks, budget: $, skip: [categories left out], catBud: {category: $ amount} } */
 var ReorderEngine=(function(){
 const DAY=864e5;
 const d0=s=>{const a=String(s).split('-').map(Number);return new Date(Date.UTC(a[0],a[1]-1,a[2]||1))};
@@ -58,6 +58,7 @@ function plan(data,opt){
   const all=data.months||[],H=all.filter(k=>k<curKey),hi={};all.forEach((k,i)=>hi[k]=i);   // H = full months we have sales for
   const known=new Set(H);
   const D=d0(opt.order||data.today),lead=clip(+opt.lead||2,.5,8),cover=clip(+opt.cover||2,.5,8);
+  const skipC=new Set(opt.skip||[]),catBud={};Object.keys(opt.catBud||{}).forEach(c=>{const v=+opt.catBud[c];if(v>0&&!skipC.has(c))catBud[c]=v});
   const A=addM(D,lead),N=addM(A,cover);          // A = arrives in the stores, N = the order after it arrives
   const from=A>today?today:A;                    // stock is counted today
   const EV=seasonEvents(today.getUTCFullYear()-1,N.getUTCFullYear()+2);
@@ -136,14 +137,17 @@ function plan(data,opt){
       else if(!it.months)o.skip='No sales found for it in the months read from ERP';
       else if(o.need<thr&&sells&&!(th&&th.hard&&o.verdict))o.skip='Enough stock: '+Math.round(stock)+' pieces last about '+(rate>0?Math.round(stock/rate*10)/10+' months':'a long time')+' at '+Math.round(rate*10)/10+' a month, so nothing is needed yet';
       if(o.skip&&!o.tags.length)o.tags.push(['soft',o.skip.split(':')[0]])}
+    if(skipC.has(it.cat)){q=0;o.skip='This category is left out of the order';o.tags=[['soft','Category left out']]}
     o.qty=q;o.cost=q*it.fob;o.retail=q*it.rrp;
     o.pri=q?(it.cls==='A'?1:it.cls==='B'?2:3):9;
     return o});
 
-  /* a budget bigger than the order the sales need: the rest buys more of the best sellers (A the most, then B, then C), so the order uses the budget */
-  let fill=null;const bud=+opt.budget||0,base=lines.reduce((a,o)=>a+o.cost,0);
-  if(bud>base*1.01){
-    const W={A:1,B:.6,C:.3},el=lines.filter(o=>o.it.avail&&!(o.it.slow&&!o.qty)&&!(o.it.theme&&o.it.theme.hard)&&o.it.base>0&&o.it.fob>0);
+  /* a budget bigger than the order the sales need: the rest buys more of the best sellers (A the most, then B, then C), so the order uses the budget.
+     It runs for each category that has its own amount, and for all the other categories together with what is left of the budget. */
+  const fillGroup=(grp,bud)=>{
+    const base=grp.reduce((a,o)=>a+o.cost,0);
+    if(!(bud>base*1.01))return null;
+    const W={A:1,B:.6,C:.3},el=grp.filter(o=>o.it.avail&&!(o.it.slow&&!o.qty)&&!(o.it.theme&&o.it.theme.hard)&&o.it.base>0&&o.it.fob>0);
     const qAt=(o,e)=>{const nd=o.need+dem(o.it,N,addM(N,e*W[o.it.cls]));return Math.max(o.qty,nd>=(o.it.cls==='C'?1:.5)?Math.max(1,Math.round(nd)):0)};
     const rest=base-el.reduce((a,o)=>a+o.cost,0),costAt=e=>rest+el.reduce((a,o)=>a+qAt(o,e)*o.it.fob,0);
     const CAP=12;let e=CAP,capped=true;
@@ -154,11 +158,20 @@ function plan(data,opt){
       const ord=el.slice().sort((a,b)=>(a.it.cls>b.it.cls?1:a.it.cls<b.it.cls?-1:0)||a.it.rank-b.it.rank);
       for(let pass=0;pass<6;pass++){let any=false;for(const o of ord){if(o.it.cls==='C'&&!o.qty)continue;if(spent+o.it.fob<=bud){o.qty++;o.extra++;spent+=o.it.fob;any=true}}if(!any)break}}
     el.forEach(o=>{o.cost=o.qty*o.it.fob;o.retail=o.qty*o.it.rrp;if(o.extra>=1)o.tags.push(['soft','+'+fmt0(o.extra)+' for the budget'])});
-    fill={e,capped,base,spent,budget:bud,pcs:el.reduce((a,o)=>a+Math.max(0,o.extra||0),0),n:el.filter(o=>o.extra>=1).length};
-  }
+    return {e,capped,base,spent,budget:bud,pcs:el.reduce((a,o)=>a+Math.max(0,o.extra||0),0),n:el.filter(o=>o.extra>=1).length};
+  };
+  const bud=+opt.budget||0,catIn=Object.keys(catBud),catSum=catIn.reduce((a,c)=>a+catBud[c],0);
+  const restLines=lines.filter(o=>!skipC.has(o.it.cat)&&!(o.it.cat in catBud)),restBud=bud>0?Math.max(0,bud-catSum):0;
+  const catFill={};catIn.forEach(c=>{catFill[c]=fillGroup(lines.filter(o=>o.it.cat===c),catBud[c])});
+  const fill=bud>0&&restBud>0?fillGroup(restLines,restBud):null;
   // order of importance: best sellers first, inside a class the ones losing sales first, then the bigger value
   lines.sort((a,b)=>a.pri-b.pri||(b.lost>=1)-(a.lost>=1)||b.qty*(b.it.rrp||1)-a.qty*(a.it.rrp||1)||a.it.rank-b.it.rank);
-  const budget=+opt.budget||0;let cum=0;lines.forEach(o=>{if(!o.qty)return;cum+=o.cost;o.cum=cum;o.cut=budget>0&&cum>budget});
+  // over the amount: the most important items are kept first; one that does not fit is cut and a smaller one further down can still fit
+  const budget=bud;let cum=0;const gc={};
+  lines.forEach(o=>{if(!o.qty)return;cum+=o.cost;o.cum=cum;
+    const g=o.it.cat in catBud?'c:'+o.it.cat:'*',lim=g==='*'?(bud>0&&catIn.length?restBud:bud):catBud[o.it.cat],has=g==='*'?(bud>0):true;
+    if(!has){o.cut=false;return}
+    const used=gc[g]||0;o.cut=used+o.cost>lim;if(!o.cut)gc[g]=used+o.cost});
 
   /* the seasons against this order */
   const events=EV.filter(e=>!e.minor&&e.date>=today&&e.date<=addD(N,330)&&e.date<=addD(today,720)).map(e=>{const S=addD(e.date,-e.lead),orderBy=addM(S,-lead);
@@ -167,8 +180,8 @@ function plan(data,opt){
   // window index per category (how busy the selling window is against a normal month)
   const winIdx={};for(const c in catIdx){let t=0,w=0;for(let m=new Date(Date.UTC(A.getUTCFullYear(),A.getUTCMonth(),1));m<N;m=addM(m,1)){const e=addM(m,1),ov=(Math.min(+e,+N)-Math.max(+m,+A))/(+e-+m);if(ov>0){t+=ov*idx(c,mk(m));w+=ov}}winIdx[c]=w?t/w:1}
   const seasonKnown=last12.length>=9;
-  return {today,D,A,N,fill,far:D>addD(today,45),lead,cover,lines,events,catIdx,winIdx,growth,H,last12,seasonKnown,budget,
-    tot:{pcs:lines.reduce((a,o)=>a+o.qty,0),n:lines.filter(o=>o.qty).length,cost:lines.reduce((a,o)=>a+(o.cut?0:o.cost),0),costAll:cum,retail:lines.reduce((a,o)=>a+o.retail,0),
+  return {today,D,A,N,fill,far:D>addD(today,45),lead,cover,lines,events,catIdx,winIdx,growth,H,last12,seasonKnown,budget,catBud,catFill,skip:[...skipC],
+    tot:{pcs:lines.reduce((a,o)=>a+(o.cut?0:o.qty),0),n:lines.filter(o=>o.qty&&!o.cut).length,cost:lines.reduce((a,o)=>a+(o.cut?0:o.cost),0),costAll:lines.reduce((a,o)=>a+(o.cut?0:o.cost),0),costNeed:cum,retail:lines.reduce((a,o)=>a+(o.cut?0:o.retail),0),
       risk:lines.filter(o=>o.lost>=1&&o.it.cls==='A').length,lostEGP:lines.reduce((a,o)=>a+(o.it.cls!=='C'?o.lost*o.it.rrp:0),0),cutN:lines.filter(o=>o.cut).length}};
 }
 return {plan,seasonEvents,themeOf,addM,iso,d0};
