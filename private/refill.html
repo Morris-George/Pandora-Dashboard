@@ -143,7 +143,7 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
   #ov .ovr .ovq{margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}#ov .ovr .ovq small{flex:1 0 100%;margin:0}
   #ov .ovr .ovq input{width:190px}#ov .ovr .ovh{margin-top:8px}
 }
-#ov .ovs div.hl{background:var(--accent);border-color:var(--accent)}#ov .ovs div.hl small{color:#2A1018}#ov .ovs div.bad b{color:var(--bad)}
+#ov .ovs div.hl{background:var(--accent);border-color:var(--accent)}#ov .ovs div.hl b{font-size:26px}#ov .ovq .btn.go{font-size:18px;padding:14px 22px;border-radius:14px}#ov .ovs div.hl small{color:#2A1018}#ov .ovs div.bad b{color:var(--bad)}
 #ov .ovs.sx b{font-size:20px}
 
 </style>
@@ -701,11 +701,11 @@ function ovDraw(msg){
     const why=OV.ex?`<div class="ovwhy">${i.fin>0?'Was left out because: ':'Left out because: '}${esc(w==='none'&&i.sm&&i.sm.skip?i.sm.skip:OVR[w])}${w==='stop'&&i.would?` (it would have ordered ${i.would})`:''}</div>`:'';
     const quick=OV.ex&&!ro&&i.would>0&&i.fin<=0?`<button class="btn go" id="ovInc" style="margin-top:10px">Include ${i.would}</button>`:'';
     const o=i.sm,sm=S.smartOn&&o&&i.sell!=null,f1b=n=>(Math.round(n*10)/10).toLocaleString('en-US');
-    const tiles=`<div class="ovs"><div><small>SOH</small><b>${fmt(i.soh)}</b></div><div><small>Pipeline</small><b>${fmt(i.pipe)}</b></div><div><small>Sell out</small><b>${fmt(i.sell)}</b></div>${sm&&i.sm.it.months?`<div><small>Sells / month</small><b>${f1b(o.it.avg3)}</b></div><div class="${o.left<1&&o.pre>=1?'bad':''}"><small>Left on arrival</small><b>${fmt(Math.round(o.left))}</b></div><div><small>Will sell</small><b>${f1b(o.win)}</b></div>${o.cost?`<div><small>Cost $ (suggested)</small><b>${fmt(Math.round(o.cost))}</b></div>`:''}`:''}</div>`;
+    const tiles=`<div class="ovs"><div><small>SOH</small><b>${fmt(i.soh)}</b></div><div><small>Pipeline</small><b>${fmt(i.pipe)}</b></div><div><small>Sell out</small><b>${fmt(i.sell)}</b></div>${sm&&i.sm.it.months?`<div><small>Sells / month</small><b>${f1b(o.it.avg3)}</b></div><div class="${o.left<1&&o.pre>=1?'bad':''}"><small>Left on arrival</small><b>${fmt(Math.round(o.left))}</b></div><div><small>Forecast to ${ovD(S.plan.N)}</small><b>${f1b(o.win)}</b></div>${o.cost?`<div><small>Cost $ (suggested)</small><b>${fmt(Math.round(o.cost))}</b></div>`:''}`:''}${!OV.ex?`<div class="hl"><small>Suggested order</small><b>${i.prop||0}</b></div>`:''}</div>`;
     body=`<div class="ovcard"><div class="ovp">${pic(i.dv)}</div><div class="ovr">
     <div class="ovn">${esc(i.name)||'<span class="note">not in the master</span>'}</div>
     <div class="ovm">${esc(i.sku)} · ${esc(i.cat)}</div>${sc.badges}${tiles}${why}${OV.ex&&ovWhy(i)!=='late'&&ovWhy(i)!=='wait'?'':sc.say}
-    <div class="ovq"><small>${ro?'Qty (view only)':OV.ex?'Qty to include':'Qty'}${OV.ex?'':' · suggested '+(i.prop||0)}${tag}</small><input type="number" inputmode="numeric" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}>${quick}</div>
+    <div class="ovq"><small>${ro?'Qty (view only)':OV.ex?'Qty to include':'Qty'}${OV.ex?'':' · suggested '+(i.prop||0)}${tag}</small><input type="number" inputmode="numeric" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}>${quick}${!OV.ex&&!ro&&(i.prop||0)>0?`<button class="btn go" id="ovUse" type="button">Order ${i.prop} ›</button>`:''}</div>
     <div class="ovh">${msg||''}</div>${sc.math}</div></div>`;
   }
   $('ov').innerHTML=top+body;
@@ -720,6 +720,7 @@ function ovDraw(msg){
     ovBuild();ovDraw();
   };
   if($('ovFf'))$('ovFf').onchange=e=>{ovSave0();OV.ff=e.target.value;OV.orderBase=ovOrderBase();OV.base=OV.orderBase;OV.cat='';OV.miss=false;ovBuild();ovDraw()};
+  if($('ovUse'))$('ovUse').onclick=()=>{const q=$('ov').querySelector('input[data-s]');q.value=OV.list[OV.k].prop;ovGo(1)};
   if($('ovInc'))$('ovInc').onclick=()=>{const i=OV.list[OV.k];ovSet(i,i.would);ovDraw('Included ✓')};
   const inp=$('ov').querySelector('input[data-s]');if(!inp)return;
   inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ovGo(1)}};
