@@ -31,7 +31,7 @@ header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-
 .sea.good{background:color-mix(in srgb,var(--good) 9%,transparent)}.sea.good .dot{background:var(--good)}.sea.mid .dot{background:var(--warn)}.sea.mid{background:color-mix(in srgb,var(--warn) 9%,transparent)}.sea.late .dot{background:var(--bad)}.sea.late{background:color-mix(in srgb,var(--bad) 8%,transparent)}.sea.next .dot{background:var(--ink2)}
 .tw{overflow:auto;max-height:72vh}
 table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:6px 7px;border-top:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}th{position:sticky;top:0;background:var(--surface);color:var(--ink2);font-size:11.5px;z-index:1}
-th.l,td.l{text-align:left}td.name{max-width:250px;overflow:hidden;text-overflow:ellipsis;text-align:left}td.name small{display:block;color:var(--ink2);font-size:11px}
+th.l,td.l{text-align:left}td.name{white-space:normal;text-align:left}td.name>b{display:block}.sxs{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:6px}.sx{background:var(--soft);border-radius:10px;padding:3px 10px;min-width:74px;text-align:left}.sx small{display:block;font-size:10.5px;margin:0}.sx b{font-size:14px;font-variant-numeric:tabular-nums}.sx.bad b{color:var(--bad)}.sx.ord{background:var(--accent);color:#2A1018}.sx.ord small{color:#2A1018}.sx.ord b{font-size:16px}.sx.z{background:var(--soft);color:var(--ink2)}.sx.z small{color:var(--ink2)}.why{margin-top:5px}td.name small{display:block;color:var(--ink2);font-size:11px}
 tbody tr{cursor:pointer}tbody tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr.cut>td{opacity:.45}
 tr.cath>td{background:var(--soft);font-weight:800;text-align:left;cursor:default;font-size:13px}
 .img{width:38px;height:38px;border-radius:8px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;vertical-align:middle;font-size:9px;color:var(--ink2);line-height:1.1;text-align:center}.img img{width:100%;height:100%;object-fit:cover}.img.xl{width:120px;height:120px;border-radius:16px;flex:none}.img[data-dv]{cursor:zoom-in;transition:transform .12s}.img[data-dv]:hover{transform:scale(1.08)}
@@ -56,9 +56,10 @@ tr.cath>td{background:var(--soft);font-weight:800;text-align:left;cursor:default
 <div class="wrap">
 <header class="top">
   <div><h1>Smart Reorder</h1><div class="sub" id="sub">What to buy in the next order, best sellers of each category first, timed for the season it arrives in.</div></div>
-  <div class="row noprint"><button class="btn" id="bSync" hidden>Get more sales history</button><button class="btn go" id="bX">Download Excel</button></div>
+  <div class="row noprint"><button class="btn" id="bSync" hidden>Get more sales history</button><button class="btn" id="bRf" hidden>Sync with Refill Order</button><button class="btn go" id="bX">Download Excel</button></div>
 </header>
 <div class="err" id="err" hidden></div>
+<div class="tip" id="syncNote" hidden></div>
 <div id="load" class="card">Reading stock, pipeline and sales…</div>
 <div id="app" hidden style="display:flex;flex-direction:column;gap:14px">
 
@@ -92,7 +93,7 @@ tr.cath>td{background:var(--soft);font-weight:800;text-align:left;cursor:default
     <div class="row"><select id="fShow"><option value="order">Items to order</option><option value="season">Seasonal items</option><option value="risk">Will run out before arrival</option><option value="skip">Good sellers not in the order (and why)</option><option value="na">Best sellers we cannot order</option><option value="all">Everything</option></select><input id="fQ" placeholder="Search item or SKU" style="width:170px"></div>
   </div>
   <div id="sum" class="sumline"></div>
-  <div class="tw"><table><thead><tr><th class="l">#</th><th class="l"></th><th class="l">Item</th><th>Sells / month</th><th>In stock</th><th>Coming</th><th>Left on arrival</th><th>Will sell</th><th>Order</th><th>Cost $</th><th class="l">Why</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <div class="tw"><table><thead><tr><th class="l">#</th><th class="l"></th><th class="l">Item</th></tr></thead><tbody id="rows"></tbody></table></div>
   <div class="row noprint" style="margin-top:8px;justify-content:space-between"><span class="note" id="cnt"></span><button class="btn" id="more" hidden>Show more</button></div>
 </div>
 <div class="note" id="foot"></div>
@@ -158,7 +159,7 @@ async function load(){
     if(!j.items||!j.items.length)return fail('No items yet. Open Refill Order first and add the "Available to Order" list, then press Sync from ERP there. This report reads the same stock, pipeline and sales.');
     $('fDate').value=S.date&&S.date>=j.today?S.date:j.today;$('fLead').value=S.lead||2;$('fCover').value=S.cover||2;$('fBud').value=S.budget||'';$('fSafe').value=S.safe==null?2:S.safe;
     $('load').hidden=true;$('app').hidden=false;
-    $('bSync').hidden=!(j.level==='manage'&&j.erpOn);
+    $('bRf').hidden=j.level!=='manage';$('bSync').hidden=!(j.level==='manage'&&j.erpOn);
     run();
     // the pictures arrive after the page: draw them in when they do
     let n=0;const t=setInterval(()=>{const c=Object.keys(PICS).length;if(c!==n){n=c;rows()}else if(c)clearInterval(t)},1500);setTimeout(()=>clearInterval(t),30000);
@@ -227,12 +228,12 @@ function view(){
 function rows(){
   if(!P)return;const l=view(),grp=['order','all'].includes($('fShow').value);let last=null,h='';
   l.slice(0,LIMIT).forEach(o=>{const it=o.it;
-    if(grp&&it.cat!==last){last=it.cat;const cl=l.filter(x=>x.it.cat===last);h+=`<tr class="cath"><td colspan="11">${esc(last)} · ${fmt(cl.reduce((a,x)=>a+x.qty,0))} pieces · $${fmt(cl.reduce((a,x)=>a+x.cost,0))}</td></tr>`}
-    h+=`<tr data-sku="${esc(it.sku)}" class="${o.cut?'cut':''}"><td class="l"><span class="cl ${it.cls}" title="Best seller class">${it.cls}</span> <small>#${it.rank}</small></td><td class="l">${pic(it.dv)}</td><td class="name"><b>${esc(it.name||it.sku)}</b><small>${esc(it.sku)}</small></td>
-     <td>${f1(it.avg3)}</td><td>${fmt(it.soh)}</td><td>${it.pipe?fmt(it.pipe):''}</td><td style="${o.left<1&&o.pre>=1?'color:var(--bad);font-weight:700':''}">${fmt(o.left)}</td><td>${f1(o.win)}</td>
-     <td><span class="qty ${o.qty?'':'z'}">${o.qty?fmt(o.qty):'0'}</span></td><td>${o.cost?fmt(o.cost):''}</td>
-     <td class="l">${o.tags.map(t=>`<span class="tag t-${t[0]}">${esc(t[1])}</span>`).join('')}${o.cut?'<span class="tag t-soft">over budget</span>':''}</td></tr>`});
-  $('rows').innerHTML=h||'<tr><td colspan="11" class="l" style="padding:18px">Nothing here for this choice.</td></tr>';
+    if(grp&&it.cat!==last){last=it.cat;const cl=l.filter(x=>x.it.cat===last);h+=`<tr class="cath"><td colspan="3">${esc(last)} · ${fmt(cl.reduce((a,x)=>a+x.qty,0))} pieces · $${fmt(cl.reduce((a,x)=>a+x.cost,0))}</td></tr>`}
+    const sx=(k,v,x)=>`<div class="sx${x||''}"><small>${k}</small><b>${v}</b></div>`;
+    h+=`<tr data-sku="${esc(it.sku)}" class="${o.cut?'cut':''}"><td class="l"><span class="cl ${it.cls}" title="Best seller class">${it.cls}</span><br><small>#${it.rank}</small></td><td class="l">${pic(it.dv)}</td><td class="name"><b>${esc(it.name||it.sku)}</b><small>${esc(it.sku)}</small>
+     <div class="sxs">${sx('Sells / month',f1(it.avg3))}${sx('In stock',fmt(it.soh))}${it.pipe?sx('Coming',fmt(it.pipe)):''}${sx('Left on arrival',fmt(o.left),o.left<1&&o.pre>=1?' bad':'')}${sx('Will sell',f1(o.win))}${sx('Order',o.qty?fmt(o.qty):'0',' ord'+(o.qty?'':' z'))}${o.cost?sx('Cost $',fmt(o.cost)):''}</div>
+     ${o.tags.length||o.cut?`<div class="why">${o.tags.map(t=>`<span class="tag t-${t[0]}">${esc(t[1])}</span>`).join('')}${o.cut?'<span class="tag t-soft">over budget</span>':''}</div>`:''}</td></tr>`});
+  $('rows').innerHTML=h||'<tr><td colspan="3" class="l" style="padding:18px">Nothing here for this choice.</td></tr>';
   $('cnt').textContent=`Showing ${fmt(Math.min(LIMIT,l.length))} of ${fmt(l.length)} items. Touch an item to see how its number was worked out.`;
   $('more').hidden=l.length<=LIMIT;
 }
@@ -290,6 +291,24 @@ async function excel(){
   }catch(e){$('err').textContent='Could not make the Excel file. Check the connection and try again.';$('err').hidden=false}
   b.disabled=false;
 }
+
+// Sync with Refill Order: the open Draft order takes this page's order date, delivery time, cover and safety weeks,
+// so its Other view shows the same insights (seasons, runs out, best sellers) and the same suggested numbers.
+async function syncRf(){
+  const b=$('bRf');b.disabled=true;const t=b.textContent;b.textContent='Syncing…';
+  const call=async(u,body)=>{const r=await fetch(u,body?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{credentials:'same-origin',cache:'no-store'});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('error '+r.status));return j};
+  try{
+    const l=await call('/api/refill');const d=(l.orders||[]).find(o=>o.status==='Draft');
+    if(!d)throw new Error('There is no Draft Refill Order to sync with. Open Refill Order and start one first.');
+    const o=(await call('/api/refill?order='+d.id)).order,s=Object.assign({},o.settings);
+    s.od=S.date;s.lt=S.lead;s.cv=S.cover;s.sa=S.safe;s.smart=true;
+    await call('/api/refill?op=settings',{id:d.id,settings:s,stop:o.stop||[],stopSub:o.stopSub||[]});
+    $('err').hidden=true;b.textContent='Synced ✓';
+    $('syncNote').textContent='Refill Order "'+d.name+'" now uses order date '+dd(P.D)+', '+f1(P.lead)+' months to arrive, must last '+f1(S.cover)+' months and '+S.safe+' weeks of safety. Open its Other view to see the same insights.';$('syncNote').hidden=false;
+    setTimeout(()=>{b.textContent=t},4000);
+  }catch(e){$('err').textContent=e.message;$('err').hidden=false;b.textContent=t}
+  b.disabled=false;
+}
 async function sync(){
   const b=$('bSync');if(!confirm('Read the last 14 months of sales and today’s stock from ERP? It takes a few minutes; keep this page open.'))return;
   b.disabled=true;const have=new Set(DATA.months||[]),t=ReorderEngine.d0(DATA.today),want=[];
@@ -309,7 +328,7 @@ $('more').addEventListener('click',()=>{LIMIT+=150;rows()});
 $('cats').addEventListener('click',e=>{const c=e.target.closest('[data-c]');if(!c)return;CAT=c.dataset.c;LIMIT=80;head();rows()});
 document.addEventListener('click',e=>{if(!$('ov').hidden){$('ov').hidden=true;return}const pc=e.target.closest('.img[data-dv]');if(pc){e.stopPropagation();zoom(pc.dataset.dv);return}const r=e.target.closest('[data-sku]');if(r&&!$('M').contains(r))explain(r.dataset.sku);else if(e.target.id==='mX'||e.target.id==='M')$('M').hidden=true});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('ov').hidden)$('ov').hidden=true;else $('M').hidden=true}});
-$('bX').addEventListener('click',excel);$('bSync').addEventListener('click',sync);
+$('bX').addEventListener('click',excel);$('bSync').addEventListener('click',sync);$('bRf').addEventListener('click',syncRf);
 load();
 </script>
 </body>

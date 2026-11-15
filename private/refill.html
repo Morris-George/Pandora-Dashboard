@@ -405,14 +405,14 @@ async function openOrder(id){
     $('subs').innerHTML=SUBS.map(c=>`<span class="chip" data-sub="${esc(c)}">${esc(c)}</span>`).join('')||'<span class="note">No item groups yet. Press Sync from ERP.</span>';
     $('fc').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
     $('cats').innerHTML=CATS.map(c=>`<span class="chip" data-c="${esc(c)}">${esc(c)}</span>`).join('');
-    const s=O.settings;$('pm').value=s.pm;$('erpM').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=fmtMoney(s.budget);$('tw').value=s.tw??60;$('season').checked=!!s.season;$('abc').checked=!!s.abc;$('ca').value=s.ca??4;$('cb').value=s.cb??3;$('cc').value=s.cc??2;$('smart').checked=s.smart==null?O.status==='Draft':!!s.smart;$('od').value=s.od||'';
+    const s=O.settings;$('pm').value=s.pm;$('erpM').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=fmtMoney(s.budget);$('tw').value=s.tw??60;$('season').checked=!!s.season;$('abc').checked=!!s.abc;$('ca').value=s.ca??4;$('cb').value=s.cb??3;$('cc').value=s.cc??2;$('smart').checked=s.smart==null?O.status==='Draft':!!s.smart;$('od').value=s.od||'';S.sa=s.sa==null?2:s.sa;
     S.stop=new Set(O.stop||[]);S.stopSub=new Set(O.stopSub||[]);S.page=0;$('main').hidden=false;$('ord').value=O.id;
     if(!months.length)showErr('No sell out from ERP yet. Press Sync from ERP.');
     calc();
   }catch(e){showErr('Could not open the order: '+e.message)}
 }
 let saveT=0;
-async function saveNow(){clearTimeout(saveT);if(!O||!can('manage')||locked())return;try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:bgVal(),tw:+$('tw').value,season:$('season').checked,abc:$('abc').checked,ca:+$('ca').value,cb:+$('cb').value,cc:+$('cc').value,smart:$('smart').checked,od:$('od').value},stop:[...S.stop],stopSub:[...S.stopSub]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}}
+async function saveNow(){clearTimeout(saveT);if(!O||!can('manage')||locked())return;try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:bgVal(),tw:+$('tw').value,season:$('season').checked,abc:$('abc').checked,ca:+$('ca').value,cb:+$('cb').value,cc:+$('cc').value,smart:$('smart').checked,od:$('od').value,sa:S.sa==null?2:S.sa},stop:[...S.stop],stopSub:[...S.stopSub]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}}
 function saveSettings(){if(!can('manage')||locked())return;clearTimeout(saveT);saveT=setTimeout(saveNow,700)}
 ['pm','lt','cv','mq','nm','bg','tw','season','abc','ca','cb','cc','smart','od'].forEach(id=>$(id).oninput=()=>{if(id==='pm')$('erpM').value=$('pm').value;calc();saveSettings();applyTips()});
 $('erpM').oninput=()=>{const v=$('erpM').value;if(O&&!$('pm').disabled){$('pm').value=v;calc();saveSettings();applyTips()}};
@@ -451,8 +451,8 @@ function calc(){
   // Smart Reorder: worked out once for the same date, lead time and cover
   let SM=null;S.smartOn=false;
   if($('smart').checked&&window.ReorderEngine&&S.raw&&idx.length){
-    const od=$('od').value||S.today,key=[od,lt,cv,O&&O.id].join('|');
-    if(S.planKey!==key||!S.plan){try{S.plan=ReorderEngine.plan(S.raw,{order:od,lead:lt||2,cover:cv||2,safeA:2});S.planMap=new Map(S.plan.lines.map(o=>[o.it.sku,o]));S.planKey=key}catch(e){S.plan=null}}
+    const od=$('od').value||S.today,key=[od,lt,cv,S.sa,O&&O.id].join('|');
+    if(S.planKey!==key||!S.plan){try{S.plan=ReorderEngine.plan(S.raw,{order:od,lead:lt||2,cover:cv||2,safeA:S.sa==null?2:S.sa});S.planMap=new Map(S.plan.lines.map(o=>[o.it.sku,o]));S.planKey=key}catch(e){S.plan=null}}
     if(S.plan){SM=S.planMap;S.smartOn=true}
   }
   for(const i of items){

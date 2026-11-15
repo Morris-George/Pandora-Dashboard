@@ -390,7 +390,7 @@ module.exports = async function handler(req, res) {
     const s = b.settings || {}, cl = (v, lo, hi, d) => { const n = Number(v); return isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
     o.settings = { pm: cl(s.pm, 1, 24, 6), lt: cl(s.lt, 0, 12, 2), cv: cl(s.cv, 0, 24, 3), mq: Math.round(cl(s.mq, 1, 1000, 1)), nm: cl(s.nm, 0, 36, 9), budget: Math.round(cl(s.budget, 0, 1e8, 0) * 100) / 100,
       tw: Math.round(cl(s.tw, 0, 100, 60)), season: !!s.season, abc: !!s.abc, ca: cl(s.ca, 0, 24, 4), cb: cl(s.cb, 0, 24, 3), cc: cl(s.cc, 0, 24, 2),
-      smart: !!s.smart, od: /^\d{4}-\d{2}-\d{2}$/.test(s.od || '') ? s.od : '' }; // smart = proposed quantities from the Smart Reorder engine; od = the order date it plans from
+      sa: cl(s.sa, 0, 8, 2), smart: !!s.smart, od: /^\d{4}-\d{2}-\d{2}$/.test(s.od || '') ? s.od : '' }; // smart = proposed quantities from the Smart Reorder engine; od = the order date it plans from
     o.stop = Array.isArray(b.stop) ? b.stop.map(c => str(c, 40)).filter(Boolean).slice(0, 30) : o.stop;
     o.stopSub = Array.isArray(b.stopSub) ? b.stopSub.map(c => str(c, 80)).filter(Boolean).slice(0, 60) : (o.stopSub || []);
     log('Settings changed');
