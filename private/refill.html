@@ -132,6 +132,20 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
 #ov .ovsay{margin-top:10px;background:var(--soft);border-radius:12px;padding:9px 12px;font-size:13.5px;font-weight:600;text-align:left}
 #ov .ovmath{margin-top:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px;font-size:12.5px}#ov .ovmath summary{font-weight:700;cursor:pointer;font-size:13px}#ov .ovmath div{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin-top:8px}#ov .ovmath b{text-align:right}#ov .ovmath .tot{border-top:2px solid var(--ink);padding-top:4px;font-weight:800}#ov .ovmath p{margin:8px 0 0;color:var(--bad);font-weight:600}
 #ov .ovwhy{margin-top:8px;font-size:13.5px;font-weight:600;color:var(--bad)}
+@media(min-width:880px){
+  #ov .ovbar,#ov .ovtools,#ov .ovprog,#ov .ovmode{max-width:1040px}#ov .ovsm{max-width:1012px}
+  #ov .ovcard{max-width:1040px;display:grid;grid-template-columns:minmax(300px,400px) 1fr;gap:6px 34px;align-items:start;text-align:left;padding-top:10px}
+  #ov .ovcard>.ovp{position:sticky;top:64px}#ov .ovp .img{width:min(400px,60vh);height:min(400px,60vh)}
+  #ov .ovtop{width:100%;max-width:1040px;display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;align-items:start;padding:0 0 4px}#ov .ovtop .ovmode,#ov .ovtop .ovprog{grid-column:1/-1;max-width:none;padding:0 14px}#ov .ovtop .ovsm{width:auto;max-width:none;margin:0 0 0 14px}#ov .ovtop .ovtl{display:flex;flex-direction:column;gap:6px;margin-right:14px}#ov .ovtop .ovtools{padding:0;max-width:none}
+  #ov .ovr{min-width:0}#ov .ovr .ovn{margin-top:0;font-size:22px}
+  #ov .ovr .ovs{grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin-top:12px;text-align:center}#ov .ovr .ovs div{padding:6px 4px}#ov .ovr .ovs b{font-size:19px}#ov .ovr .ovs small{font-size:11px}
+  #ov .ovr .ovchips{justify-content:flex-start!important;margin-top:10px!important}
+  #ov .ovr .ovq{margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}#ov .ovr .ovq small{flex:1 0 100%;margin:0}
+  #ov .ovr .ovq input{width:190px}#ov .ovr .ovh{margin-top:8px}
+}
+#ov .ovs div.hl{background:var(--accent);border-color:var(--accent)}#ov .ovs div.hl small{color:#2A1018}#ov .ovs div.bad b{color:var(--bad)}
+#ov .ovs.sx b{font-size:20px}
+
 </style>
 </head>
 <body><div class="wrap">
@@ -405,14 +419,14 @@ async function openOrder(id){
     $('subs').innerHTML=SUBS.map(c=>`<span class="chip" data-sub="${esc(c)}">${esc(c)}</span>`).join('')||'<span class="note">No item groups yet. Press Sync from ERP.</span>';
     $('fc').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
     $('cats').innerHTML=CATS.map(c=>`<span class="chip" data-c="${esc(c)}">${esc(c)}</span>`).join('');
-    const s=O.settings;$('pm').value=s.pm;$('erpM').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=fmtMoney(s.budget);$('tw').value=s.tw??60;$('season').checked=!!s.season;$('abc').checked=!!s.abc;$('ca').value=s.ca??4;$('cb').value=s.cb??3;$('cc').value=s.cc??2;$('smart').checked=s.smart==null?O.status==='Draft':!!s.smart;$('od').value=s.od||'';S.sa=s.sa==null?2:s.sa;
+    const s=O.settings;$('pm').value=s.pm;$('erpM').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=fmtMoney(s.budget);$('tw').value=s.tw??60;$('season').checked=!!s.season;$('abc').checked=!!s.abc;$('ca').value=s.ca??4;$('cb').value=s.cb??3;$('cc').value=s.cc??2;$('smart').checked=s.smart==null?O.status==='Draft':!!s.smart;$('od').value=s.od||'';S.sa=s.sa==null?2:s.sa;S.sb=+s.sb||0;
     S.stop=new Set(O.stop||[]);S.stopSub=new Set(O.stopSub||[]);S.page=0;$('main').hidden=false;$('ord').value=O.id;
     if(!months.length)showErr('No sell out from ERP yet. Press Sync from ERP.');
     calc();
   }catch(e){showErr('Could not open the order: '+e.message)}
 }
 let saveT=0;
-async function saveNow(){clearTimeout(saveT);if(!O||!can('manage')||locked())return;try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:bgVal(),tw:+$('tw').value,season:$('season').checked,abc:$('abc').checked,ca:+$('ca').value,cb:+$('cb').value,cc:+$('cc').value,smart:$('smart').checked,od:$('od').value,sa:S.sa==null?2:S.sa},stop:[...S.stop],stopSub:[...S.stopSub]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}}
+async function saveNow(){clearTimeout(saveT);if(!O||!can('manage')||locked())return;try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:bgVal(),tw:+$('tw').value,season:$('season').checked,abc:$('abc').checked,ca:+$('ca').value,cb:+$('cb').value,cc:+$('cc').value,smart:$('smart').checked,od:$('od').value,sa:S.sa==null?2:S.sa,sb:S.sb||0},stop:[...S.stop],stopSub:[...S.stopSub]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}}
 function saveSettings(){if(!can('manage')||locked())return;clearTimeout(saveT);saveT=setTimeout(saveNow,700)}
 ['pm','lt','cv','mq','nm','bg','tw','season','abc','ca','cb','cc','smart','od'].forEach(id=>$(id).oninput=()=>{if(id==='pm')$('erpM').value=$('pm').value;calc();saveSettings();applyTips()});
 $('erpM').oninput=()=>{const v=$('erpM').value;if(O&&!$('pm').disabled){$('pm').value=v;calc();saveSettings();applyTips()}};
@@ -451,8 +465,8 @@ function calc(){
   // Smart Reorder: worked out once for the same date, lead time and cover
   let SM=null;S.smartOn=false;
   if($('smart').checked&&window.ReorderEngine&&S.raw&&idx.length){
-    const od=$('od').value||S.today,key=[od,lt,cv,S.sa,O&&O.id].join('|');
-    if(S.planKey!==key||!S.plan){try{S.plan=ReorderEngine.plan(S.raw,{order:od,lead:lt||2,cover:cv||2,safeA:S.sa==null?2:S.sa});S.planMap=new Map(S.plan.lines.map(o=>[o.it.sku,o]));S.planKey=key}catch(e){S.plan=null}}
+    const od=$('od').value||S.today,key=[od,lt,cv,S.sa,S.sb,O&&O.id].join('|');
+    if(S.planKey!==key||!S.plan){try{S.plan=ReorderEngine.plan(S.raw,{order:od,lead:lt||2,cover:cv||2,safeA:S.sa==null?2:S.sa,budget:S.sb||0});S.planMap=new Map(S.plan.lines.map(o=>[o.it.sku,o]));S.planKey=key}catch(e){S.plan=null}}
     if(S.plan){SM=S.planMap;S.smartOn=true}
   }
   for(const i of items){
@@ -673,10 +687,10 @@ function ovDraw(msg){
   const cats=[...new Set(OV.base.map(i=>i.cat))].sort();
   const nEx=ovExcl().length;
   const top=`<div class="ovbar"><button class="btn" id="ovBack">‹ Back</button><div class="ovcount">${OV.list.length?OV.k+1+' / '+OV.list.length:'0 / 0'}</div><button class="btn" id="ovFwd">Forward ›</button><button class="btn" id="ovX" title="Close">✕</button></div>
-  <div class="ovmode">${OV.ex?'Excluded from the order: type a qty to include an item':'In the order'+(S.smartOn?' · best sellers first':'')}</div>${ovSmartTop()}
-  <div class="ovtools"><select id="ovCat" aria-label="Category"><option value="">All categories</option>${cats.map(c=>`<option${c===OV.cat?' selected':''}>${esc(c)}</option>`).join('')}</select>${OV.ex?`<select id="ovRs" aria-label="Why excluded"><option value="">Any reason</option>${Object.keys(OVR).map(k=>`<option value="${k}"${k===OV.rs?' selected':''}>${esc(OVR[k])}</option>`).join('')}</select>`:`<button class="btn ${OV.miss?'go':''}" id="ovMiss">${OV.miss?'View all items':'View missing items ('+left+')'}</button>`}</div>
-  <div class="ovtools">${OV.ex?'':`<select id="ovFf" aria-label="Filter">${[...$('ff').options].map(o=>`<option value="${esc(o.value)}"${o.value===OV.ff?' selected':''}>${esc(o.textContent)}</option>`).join('')}</select>`}<button class="btn ${OV.ex?'go':''}" id="ovEx" style="${OV.ex?'flex:1':'white-space:nowrap'}">${OV.ex?'‹ Back to the order':'View excluded items ('+fmt(nEx)+')'}</button></div>
-  <div class="ovprog"><div class="ovpt"><b>${done} of ${tot} ${OV.ex?'included':'done'}</b><span>${OV.ex?(tot-done)+' still out':(left?left+' missing':'All done ✓')}</span></div><div class="bar"><i style="width:${tot?done/tot*100:0}%"></i></div></div>`;
+  <div class="ovtop"><div class="ovmode">${OV.ex?'Excluded from the order: type a qty to include an item':'In the order'+(S.smartOn?' · best sellers first':'')}</div>${ovSmartTop()}
+  <div class="ovtl"><div class="ovtools"><select id="ovCat" aria-label="Category"><option value="">All categories</option>${cats.map(c=>`<option${c===OV.cat?' selected':''}>${esc(c)}</option>`).join('')}</select>${OV.ex?`<select id="ovRs" aria-label="Why excluded"><option value="">Any reason</option>${Object.keys(OVR).map(k=>`<option value="${k}"${k===OV.rs?' selected':''}>${esc(OVR[k])}</option>`).join('')}</select>`:`<button class="btn ${OV.miss?'go':''}" id="ovMiss">${OV.miss?'View all items':'View missing items ('+left+')'}</button>`}</div>
+  <div class="ovtools">${OV.ex?'':`<select id="ovFf" aria-label="Filter">${[...$('ff').options].map(o=>`<option value="${esc(o.value)}"${o.value===OV.ff?' selected':''}>${esc(o.textContent)}</option>`).join('')}</select>`}<button class="btn ${OV.ex?'go':''}" id="ovEx" style="${OV.ex?'flex:1':'white-space:nowrap'}">${OV.ex?'‹ Back to the order':'View excluded items ('+fmt(nEx)+')'}</button></div></div>
+  <div class="ovprog"><div class="ovpt"><b>${done} of ${tot} ${OV.ex?'included':'done'}</b><span>${OV.ex?(tot-done)+' still out':(left?left+' missing':'All done ✓')}</span></div><div class="bar"><i style="width:${tot?done/tot*100:0}%"></i></div></div></div>`;
   let body;
   if(!OV.list.length){
     body=`<div class="ovcard"><div class="ovn" style="margin-top:40px">${OV.ex?'Nothing excluded here.':OV.miss?'Nothing is missing here ✓':'No products match this filter.'}</div></div>`;
@@ -686,12 +700,13 @@ function ovDraw(msg){
     const sc=ovSmartCard(i);
     const why=OV.ex?`<div class="ovwhy">${i.fin>0?'Was left out because: ':'Left out because: '}${esc(w==='none'&&i.sm&&i.sm.skip?i.sm.skip:OVR[w])}${w==='stop'&&i.would?` (it would have ordered ${i.would})`:''}</div>`:'';
     const quick=OV.ex&&!ro&&i.would>0&&i.fin<=0?`<button class="btn go" id="ovInc" style="margin-top:10px">Include ${i.would}</button>`:'';
-    body=`<div class="ovcard"><div class="ovp">${pic(i.dv)}</div>${sc.badges}
-    <div class="ovs"><div><small>SOH</small><b>${fmt(i.soh)}</b></div><div><small>Pipeline</small><b>${fmt(i.pipe)}</b></div><div><small>Sell out</small><b>${fmt(i.sell)}</b></div></div>
+    const o=i.sm,sm=S.smartOn&&o&&i.sell!=null,f1b=n=>(Math.round(n*10)/10).toLocaleString('en-US');
+    const tiles=`<div class="ovs"><div><small>SOH</small><b>${fmt(i.soh)}</b></div><div><small>Pipeline</small><b>${fmt(i.pipe)}</b></div><div><small>Sell out</small><b>${fmt(i.sell)}</b></div>${sm&&i.sm.it.months?`<div><small>Sells / month</small><b>${f1b(o.it.avg3)}</b></div><div class="${o.left<1&&o.pre>=1?'bad':''}"><small>Left on arrival</small><b>${fmt(Math.round(o.left))}</b></div><div><small>Will sell</small><b>${f1b(o.win)}</b></div>${o.cost?`<div><small>Cost $ (suggested)</small><b>${fmt(Math.round(o.cost))}</b></div>`:''}`:''}</div>`;
+    body=`<div class="ovcard"><div class="ovp">${pic(i.dv)}</div><div class="ovr">
     <div class="ovn">${esc(i.name)||'<span class="note">not in the master</span>'}</div>
-    <div class="ovm">${esc(i.sku)} · ${esc(i.cat)}</div>${why}${OV.ex&&ovWhy(i)!=='late'&&ovWhy(i)!=='wait'?'':sc.say}
+    <div class="ovm">${esc(i.sku)} · ${esc(i.cat)}</div>${sc.badges}${tiles}${why}${OV.ex&&ovWhy(i)!=='late'&&ovWhy(i)!=='wait'?'':sc.say}
     <div class="ovq"><small>${ro?'Qty (view only)':OV.ex?'Qty to include':'Qty'}${OV.ex?'':' · suggested '+(i.prop||0)}${tag}</small><input type="number" inputmode="numeric" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}>${quick}</div>
-    <div class="ovh">${msg||''}</div>${sc.math}</div>`;
+    <div class="ovh">${msg||''}</div>${sc.math}</div></div>`;
   }
   $('ov').innerHTML=top+body;
   $('ovBack').onclick=()=>ovGo(-1);$('ovFwd').onclick=()=>ovGo(1);$('ovX').onclick=ovClose;

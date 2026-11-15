@@ -301,10 +301,10 @@ async function syncRf(){
     const l=await call('/api/refill');const d=(l.orders||[]).find(o=>o.status==='Draft');
     if(!d)throw new Error('There is no Draft Refill Order to sync with. Open Refill Order and start one first.');
     const o=(await call('/api/refill?order='+d.id)).order,s=Object.assign({},o.settings);
-    s.od=S.date;s.lt=S.lead;s.cv=S.cover;s.sa=S.safe;s.smart=true;
+    s.od=S.date;s.lt=S.lead;s.cv=S.cover;s.sa=S.safe;s.sb=S.budget||0;s.smart=true;
     await call('/api/refill?op=settings',{id:d.id,settings:s,stop:o.stop||[],stopSub:o.stopSub||[]});
     $('err').hidden=true;b.textContent='Synced ✓';
-    $('syncNote').textContent='Refill Order "'+d.name+'" now uses order date '+dd(P.D)+', '+f1(P.lead)+' months to arrive, must last '+f1(S.cover)+' months and '+S.safe+' weeks of safety. Open its Other view to see the same insights.';$('syncNote').hidden=false;
+    $('syncNote').textContent='Refill Order "'+d.name+'" now uses order date '+dd(P.D)+', '+f1(P.lead)+' months to arrive, must last '+f1(S.cover)+' months, '+S.safe+' weeks of safety'+(S.budget?' and the $'+fmt(S.budget)+' budget':'')+'. Open (or reload) Refill Order and its Other view shows the same insights and numbers.';$('syncNote').hidden=false;
     setTimeout(()=>{b.textContent=t},4000);
   }catch(e){$('err').textContent=e.message;$('err').hidden=false;b.textContent=t}
   b.disabled=false;
