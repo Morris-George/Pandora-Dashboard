@@ -433,6 +433,17 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'transfer.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   // its product pictures, in pieces (one response may not pass 4.5 MB); super admin only, kept by the browser for a day
+  if (requestedPath === '/reorder-engine.js') {
+    // the Smart Reorder calculation (no data in it): for Refill Order people and the super admin
+    if (!(facts.staff && facts.staff.role === 'admin') && !(facts.refill && facts.refill !== 'none')) return res.status(404).end();
+    try {
+      const body = fs.readFileSync(path.join(PRIVATE_DIR, 'reorder-engine.js'));
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Cache-Control', 'private, max-age=300');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      return res.status(200).send(body);
+    } catch (_) { return res.status(404).end(); }
+  }
   const picPart = /^\/stockcount-pics-([1-9])\.js$/.exec(requestedPath);
   if (picPart) {
     if (!(facts.staff && facts.staff.role === 'admin') && !facts.sc && !(facts.refill && facts.refill !== 'none') && !(facts.dist && facts.dist !== 'none') && !(facts.recv && facts.recv !== 'none') && !(facts.staff && facts.staff.role !== 'staff') && !facts.vm) return res.status(404).end(); // store managers, area managers and the VM see pictures in Slow Moving too

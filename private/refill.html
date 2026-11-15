@@ -126,6 +126,11 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
 #ov .ovtools{width:100%;max-width:560px;display:flex;gap:8px;padding:0 14px 8px}#ov .ovtools select{flex:1;min-width:0}
 #ov .ovprog{width:100%;max-width:560px;padding:0 14px 6px}#ov .ovpt{display:flex;justify-content:space-between;font-size:13.5px}#ov .ovpt span{color:var(--ink2)}
 #ov .ovmode{width:100%;max-width:560px;padding:0 14px 8px;font-size:12.5px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em}
+#ov .ovsm{width:calc(100% - 28px);max-width:532px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:0 14px 8px;display:flex;flex-direction:column;gap:8px}
+#ov .ovsmd{display:flex;align-items:center;gap:6px}#ov .ovsmd span{flex:1;min-width:0;background:var(--soft);border-radius:10px;padding:6px 8px;display:flex;flex-direction:column}#ov .ovsmd small{font-size:11px;font-weight:700;color:var(--ink2)}#ov .ovsmd b{font-size:14.5px}#ov .ovsmd i{font-style:normal;color:var(--accent);font-weight:800}#ov .ovsmd input{font:inherit;font-weight:700;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:2px 4px;background:var(--surface);color:var(--ink);min-width:0;width:100%}
+#ov .ovchips{display:flex;flex-wrap:wrap;gap:6px}#ov .ovchip{font-size:11.5px;font-weight:700;border-radius:99px;padding:3px 10px;background:var(--soft);color:var(--ink)}#ov .ovchip.good{background:color-mix(in srgb,var(--good) 16%,var(--surface));color:var(--good)}#ov .ovchip.mid{background:color-mix(in srgb,var(--warn) 18%,var(--surface));color:var(--warn)}#ov .ovchip.late{background:color-mix(in srgb,var(--bad) 13%,var(--surface));color:var(--bad)}#ov .ovchip.best{background:var(--accent);color:#2A1018}
+#ov .ovsay{margin-top:10px;background:var(--soft);border-radius:12px;padding:9px 12px;font-size:13.5px;font-weight:600;text-align:left}
+#ov .ovmath{margin-top:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px;font-size:12.5px}#ov .ovmath summary{font-weight:700;cursor:pointer;font-size:13px}#ov .ovmath div{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin-top:8px}#ov .ovmath b{text-align:right}#ov .ovmath .tot{border-top:2px solid var(--ink);padding-top:4px;font-weight:800}#ov .ovmath p{margin:8px 0 0;color:var(--bad);font-weight:600}
 #ov .ovwhy{margin-top:8px;font-size:13.5px;font-weight:600;color:var(--bad)}
 </style>
 </head>
@@ -152,6 +157,11 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
     <label class="f">Min. qty per SKU<input type="number" id="mq" min="1"></label>
     <label class="f">New = launched within (months)<input type="number" id="nm" min="0" max="36"></label>
     <label class="f">Budget FOB ($)<input type="text" id="bg" inputmode="decimal" style="text-align:right"></label>
+  </div>
+  <div class="row" style="margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--soft)">
+    <label style="font-weight:700;display:flex;gap:8px;align-items:center"><input type="checkbox" id="smart" style="width:18px;height:18px"> Smart Reorder quantities</label>
+    <label class="f">Order date<input type="date" id="od"></label>
+    <span class="note" style="flex:1;min-width:220px">Best sellers of each category first, timed for the season the order arrives in. It uses the lead time and cover above. Switch it off to go back to the classic formula.</span>
   </div>
   <div class="row" style="margin-top:10px">
     <label class="f">Recent 3 months weight (%)<input type="number" id="tw" min="0" max="100" step="5"></label>
@@ -210,6 +220,7 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
 <div id="ov" hidden></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="/reorder-engine.js"></script>
 <script src="/stockcount-pics-1.js" async></script><script src="/stockcount-pics-2.js" async></script><script src="/stockcount-pics-3.js" async></script><script src="/stockcount-pics-4.js" async></script>
 <script>
 /* Sharp pictures: the small built-in picture shows first, the full-size one (from pandoraeg.com, found by our server at /api/pic) replaces it whenever a picture is shown big. */
@@ -388,22 +399,22 @@ async function openOrder(id){
     if(!j.items.length){$('main').hidden=true;showErr('Upload the Available to Order file first.');drawStatus();return}
     const months=j.months,today=j.today;
     // the Sell Out period: the last full months before this month
-    S.months=months;S.today=today;S.notListed=j.notListed||[];S.allCats=j.allCats||{};S.allSkipped=j.allSkipped||{};S.allNeg=j.allNeg||{pcs:0,skus:0};S.allSohRaw=j.allSohRaw||0;
+    S.months=months;S.today=today;S.raw={items:j.items,months:j.months,allCats:j.allCats,today:j.today};S.planKey='';S.plan=null;S.notListed=j.notListed||[];S.allCats=j.allCats||{};S.allSkipped=j.allSkipped||{};S.allNeg=j.allNeg||{pcs:0,skus:0};S.allSohRaw=j.allSohRaw||0;
     items=j.items.map(r=>({sku:r[0],av:!!r[1],dv:r[2]||r[0].split('-')[0],name:r[3],cat:r[4]==='Charm'?'Charms':(r[4]||'No category'),sub:r[5],launch:r[6],fob:r[7],rrp:r[8],status:r[9],inMaster:!!r[10],soh:Math.max(0,r[11]),neg:r[11]<0?r[11]:0,pipe:r[12],slow:!!r[13],slow2:r[18]||null,soldBy:r[14],boughtBy:r[15],grp:r[16]||'',wh:r[17]||[],fb:O.fb[r[0]]??null,note:O.notes[r[0]]||'',reason:(O.reasons||{})[r[0]]||''}));S.prev=j.prev||null;
     CATS=[...new Set(items.map(i=>i.cat))].sort();SUBS=[...new Set(items.map(i=>i.grp).filter(Boolean))].sort();
     $('subs').innerHTML=SUBS.map(c=>`<span class="chip" data-sub="${esc(c)}">${esc(c)}</span>`).join('')||'<span class="note">No item groups yet. Press Sync from ERP.</span>';
     $('fc').innerHTML='<option value="">All categories</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
     $('cats').innerHTML=CATS.map(c=>`<span class="chip" data-c="${esc(c)}">${esc(c)}</span>`).join('');
-    const s=O.settings;$('pm').value=s.pm;$('erpM').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=fmtMoney(s.budget);$('tw').value=s.tw??60;$('season').checked=!!s.season;$('abc').checked=!!s.abc;$('ca').value=s.ca??4;$('cb').value=s.cb??3;$('cc').value=s.cc??2;
+    const s=O.settings;$('pm').value=s.pm;$('erpM').value=s.pm;$('lt').value=s.lt;$('cv').value=s.cv;$('mq').value=s.mq;$('nm').value=s.nm;$('bg').value=fmtMoney(s.budget);$('tw').value=s.tw??60;$('season').checked=!!s.season;$('abc').checked=!!s.abc;$('ca').value=s.ca??4;$('cb').value=s.cb??3;$('cc').value=s.cc??2;$('smart').checked=s.smart==null?O.status==='Draft':!!s.smart;$('od').value=s.od||'';
     S.stop=new Set(O.stop||[]);S.stopSub=new Set(O.stopSub||[]);S.page=0;$('main').hidden=false;$('ord').value=O.id;
     if(!months.length)showErr('No sell out from ERP yet. Press Sync from ERP.');
     calc();
   }catch(e){showErr('Could not open the order: '+e.message)}
 }
 let saveT=0;
-async function saveNow(){clearTimeout(saveT);if(!O||!can('manage')||locked())return;try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:bgVal(),tw:+$('tw').value,season:$('season').checked,abc:$('abc').checked,ca:+$('ca').value,cb:+$('cb').value,cc:+$('cc').value},stop:[...S.stop],stopSub:[...S.stopSub]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}}
+async function saveNow(){clearTimeout(saveT);if(!O||!can('manage')||locked())return;try{await api('/api/refill?op=settings',{id:O.id,settings:{pm:+$('pm').value,lt:+$('lt').value,cv:+$('cv').value,mq:+$('mq').value,nm:+$('nm').value,budget:bgVal(),tw:+$('tw').value,season:$('season').checked,abc:$('abc').checked,ca:+$('ca').value,cb:+$('cb').value,cc:+$('cc').value,smart:$('smart').checked,od:$('od').value},stop:[...S.stop],stopSub:[...S.stopSub]});$('saved').textContent='Saved.'}catch(e){showErr(e.message)}}
 function saveSettings(){if(!can('manage')||locked())return;clearTimeout(saveT);saveT=setTimeout(saveNow,700)}
-['pm','lt','cv','mq','nm','bg','tw','season','abc','ca','cb','cc'].forEach(id=>$(id).oninput=()=>{if(id==='pm')$('erpM').value=$('pm').value;calc();saveSettings();applyTips()});
+['pm','lt','cv','mq','nm','bg','tw','season','abc','ca','cb','cc','smart','od'].forEach(id=>$(id).oninput=()=>{if(id==='pm')$('erpM').value=$('pm').value;calc();saveSettings();applyTips()});
 $('erpM').oninput=()=>{const v=$('erpM').value;if(O&&!$('pm').disabled){$('pm').value=v;calc();saveSettings();applyTips()}};
 $('subs').onclick=e=>{const c=e.target.dataset.sub;if(!c||!can('manage')||locked())return;S.stopSub.has(c)?S.stopSub.delete(c):S.stopSub.add(c);calc();saveSettings()};
 $('cats').onclick=e=>{const c=e.target.dataset.c;if(!c||!can('manage')||locked())return;S.stop.has(c)?S.stop.delete(c):S.stop.add(c);calc();saveSettings()};
@@ -437,6 +448,13 @@ function calc(){
   // ABC by sales value
   const byVal=items.filter(i=>i.sell>0).sort((a,b)=>b.sell*(b.rrp||b.fob)-a.sell*(a.rrp||a.fob)),totV=byVal.reduce((a,i)=>a+i.sell*(i.rrp||i.fob),0);let run=0;
   items.forEach(i=>i.abc='');for(const i of byVal){run+=i.sell*(i.rrp||i.fob);i.abc=run<=totV*.8||run===i.sell*(i.rrp||i.fob)?'A':run<=totV*.95?'B':'C'}
+  // Smart Reorder: worked out once for the same date, lead time and cover
+  let SM=null;S.smartOn=false;
+  if($('smart').checked&&window.ReorderEngine&&S.raw&&idx.length){
+    const od=$('od').value||S.today,key=[od,lt,cv,O&&O.id].join('|');
+    if(S.planKey!==key||!S.plan){try{S.plan=ReorderEngine.plan(S.raw,{order:od,lead:lt||2,cover:cv||2,safeA:2});S.planMap=new Map(S.plan.lines.map(o=>[o.it.sku,o]));S.planKey=key}catch(e){S.plan=null}}
+    if(S.plan){SM=S.planMap;S.smartOn=true}
+  }
   for(const i of items){
     if(useSeason&&S.season[i.cat])i.mon*=S.season[i.cat];
     const c=useAbc&&i.abc?cov[i.abc]:cv;i.flag='';
@@ -445,11 +463,19 @@ function calc(){
     else if(i.slow){p=0;i.flag='slow'}
     else if(S.stop.has(i.cat)||S.stopSub.has(i.grp)){i.flag='stop';i.would=p;p=0}
     else if(i.isNew&&(i.age<1||i.sell<=0)){p=0;i.flag='man'}
+    if(SM){ // Smart Reorder: the engine's quantity replaces the classic formula; stopped categories and new items with no sales keep their rules
+      const L=SM.get(i.sku);i.sm=L||null;i.flag='';p=L?L.qty:0;if(p&&p<mq)p=0;
+      if(!i.av){p=0;i.flag='na'}
+      else if(S.stop.has(i.cat)||S.stopSub.has(i.grp)){i.flag='stop';i.would=p;p=0}
+      else if(i.isNew&&(i.age<1||i.sell<=0)){p=0;i.flag='man'}
+      else if(L&&!L.qty&&L.it.slow&&L.want>0)i.flag='slow';
+    }else i.sm=null;
     i.prop=p;i.fin=i.fb==null?p:i.fb;
     i.coverNow=i.mon?(i.soh+i.pipe)/i.mon:99;i.coverAfter=i.mon?(i.soh+i.pipe+i.fin)/i.mon:99;
     i.st=i.sell+i.soh?i.sell/(i.sell+i.soh):0;
     if(!i.flag&&i.sell>0&&i.soh<=0&&i.pipe===0)i.flag='pri';
   }
+  if(S.smartOn){const P=S.plan,dd=d=>d.getUTCDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()]+' '+d.getUTCFullYear();$('formula').innerHTML=`<b>Smart Reorder is on.</b> Ordered ${dd(P.D)}, in the stores ${dd(P.A)}, must last until ${dd(P.N)}. <b>Proposed = what it will sell while on sale + 2 weeks extra for best sellers − what is left when it arrives.</b> Seasonal items are ordered only by the order that arrives for their season. Slow moving, stopped and not available items stay 0 (0 if below ${mq}). The classic settings (sell out period, weights, seasonality, ABC cover) are not used while it is on.`;draw();return}
   $('formula').innerHTML=`Sell Out period: <b>${esc(S.period)}</b> (${idx.length} months). Monthly sales = Sell Out ÷ months${tw?` (recent 3 months weigh ${Math.round(tw*100)}%)`:''}${useSeason?(S.seasonMissing?' · <span class="bad">Seasonality needs last year: press Sync from ERP</span>':' · seasonality on'):''}${useAbc?` · cover A ${cov.A} / B ${cov.B} / C ${cov.C} months`:''} · Target = monthly × (${lt} lead + ${cv} cover) · <b>Proposed = Target − SOH − Pipeline</b> (0 if below ${mq}). Cover = (SOH + Pipeline + order) ÷ monthly sales. <b>New</b> = launched in the last ${nm} months: its sales are spread over the months it has been on sale; with no sales yet, or launched this month, it waits for a manual decision.`;
   draw();
 }
@@ -467,7 +493,7 @@ function draw(){
   drawStatus();
   document.querySelectorAll('#cats .chip').forEach(c=>c.classList.toggle('off',S.stop.has(c.dataset.c)));
   document.querySelectorAll('#subs .chip').forEach(c=>c.classList.toggle('off',S.stopSub.has(c.dataset.sub)));
-  ['pm','lt','cv','mq','nm','bg','tw','season','abc','ca','cb','cc'].forEach(id=>$(id).disabled=locked()||!can('manage'));
+  ['pm','lt','cv','mq','nm','bg','tw','season','abc','ca','cb','cc','smart','od'].forEach(id=>$(id).disabled=locked()||!can('manage'));
   const t=totals(items),bg=bgVal()||0,ord=items.filter(i=>i.fin>0);
   const stopped=items.filter(i=>i.flag==='stop').reduce((a,i)=>a+(i.would||0),0);
   $('kpis').innerHTML=[['SKUs to order',fmt(ord.length)],['Pieces',fmt(t.q)],['Total FOB',usd(t.f)],['Need a manual decision',fmt(items.filter(i=>i.flag==='man').length)],['Held back by stopped categories',fmt(stopped)+' pcs']]
@@ -582,9 +608,37 @@ function drawTable(){
 // ---- Other view: big picture, one product at a time. Type a qty, Enter saves and moves to the next product.
 // Second list: the items left OUT of the order, so you can include them.
 let OV={orderBase:[],base:[],list:[],k:0,cat:'',miss:false,ex:false,rs:'',ff:'order'};
-function ovOrderBase(){const q=$('q').value.trim().toUpperCase();return grouped(items.filter(i=>(!q||i.sku.includes(q)||i.dv.includes(q)||i.name.toUpperCase().includes(q))&&ffMatch(i,OV.ff))).flat()}
-const OVR={slow:'On the Slow Moving list',stop:'Its category is stopped',man:'New item with no sales yet: your decision',team:'The team set it to 0',none:'Not needed: stock and pipeline cover the sales'};
-const ovWhy=i=>i.flag==='slow'?'slow':i.flag==='stop'?'stop':i.flag==='man'?'man':i.fb===0?'team':'none';
+function ovOrderBase(){const q=$('q').value.trim().toUpperCase();const l=grouped(items.filter(i=>(!q||i.sku.includes(q)||i.dv.includes(q)||i.name.toUpperCase().includes(q))&&ffMatch(i,OV.ff))).flat();
+  // Smart Reorder: best sellers first (A, B, C, then the rank in the category); the sizes of one design stay together
+  if(S.smartOn){const k=i=>i.sm?[i.sm.it.cls,i.sm.it.rank]:['Z',1e6];l.sort((a,b)=>{const x=k(a),y=k(b);return (x[0]>y[0]?1:x[0]<y[0]?-1:0)||x[1]-y[1]||a.cat.localeCompare(b.cat)||a.dv.localeCompare(b.dv)||a.sku.localeCompare(b.sku,undefined,{numeric:true})})}
+  return l}
+/* Smart Reorder inside the Other view: the dates and seasons on top, and for each product one plain sentence + how the number was worked out */
+const ovD=d=>d.getUTCDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
+function ovSmartTop(){
+  if(!S.smartOn)return '';const P=S.plan,rk={good:0,mid:1,late:2},ev=P.events.filter(e=>e.st in rk).sort((a,b)=>rk[a.st]-rk[b.st]||a.date-b.date);
+  const chip=e=>`<span class="ovchip ${e.st}">${e.st==='good'?'Good for ':e.st==='mid'?'Tight for ':'Too late for '}${esc(e.name.replace(/ and New Year| starts| \(4 November\)/,''))}</span>`;
+  const edit=can('manage')&&!locked();
+  return `<div class="ovsm"><div class="ovsmd"><span><small>Order</small>${edit?`<input type="date" id="ovOd" value="${esc($('od').value||S.today)}" aria-label="Order date">`:`<b>${ovD(P.D)}</b>`}</span><i>›</i><span><small>In the stores</small><b>${ovD(P.A)}</b></span><i>›</i><span><small>Must last until</small><b>${ovD(P.N)}</b></span></div>${ev.length?`<div class="ovchips">${ev.slice(0,4).map(chip).join('')}</div>`:''}</div>`;
+}
+function ovSmartCard(i){
+  const o=i.sm;if(!S.smartOn||!o)return {badges:'',say:'',math:''};const P=S.plan,it=o.it,r=n=>fmt(Math.round(n)),f1=n=>(Math.round(n*10)/10).toLocaleString('en-US');
+  const badges=`<div class="ovchips" style="justify-content:center;margin-top:12px">${it.cls==='A'?`<span class="ovchip best">Best seller · #${it.rank} in ${esc(it.cat)}</span>`:''}${o.tags.filter(t=>!/^Slow moving|^Not available/.test(t[1])).map(t=>`<span class="ovchip ${t[0]==='good'?'good':t[0]==='bad'?'late':t[0]==='warn'?'mid':''}">${esc(t[1])}</span>`).join('')}</div>`;
+  let say;
+  if(o.verdict==='late'||o.verdict==='wait'||o.verdict)say=o.why;
+  else if(!it.months)say='No sales found for it yet, so there is no suggestion. Decide by hand.';
+  else say=`Sells about ${f1(it.avg3)} a month. `+(o.lost>=1?`The stock finishes ${o.out?'about '+ovD(o.out):'early'}, before the order arrives on ${ovD(P.A)}.`:`${r(o.left)} will be left when the order arrives on ${ovD(P.A)}.`)+(o.win>=.5?` After that it should sell about ${r(o.win)} until ${ovD(P.N)}.`:'');
+  const hard=it.theme&&it.theme.hard&&o.season;
+  const math=it.months?`<details class="ovmath"><summary>How the suggested number is worked out</summary><div>
+    <span>In stock today${it.pipe?' + already coming':''}</span><b>${r(o.stock)}</b>
+    <span>Will sell before it arrives (until ${ovD(P.A)})</span><b>− ${f1(o.pre)}</b>
+    <span>Left when it arrives</span><b>${f1(o.left)}</b>
+    <span>${hard?'Will sell in its season after it arrives':'Will sell while on sale (until '+ovD(P.N)+')'}</span><b>${f1(o.win)}</b>
+    ${o.safe>=.05?`<span>Extra for a best seller (2 weeks)</span><b>+ ${f1(o.safe)}</b>`:''}
+    <span class="tot">Suggested</span><b class="tot">${i.prop||0}</b></div>${i.prop!==o.qty||(o.want&&!o.qty)?`<p>${esc(i.flag==='stop'?'Its category is stopped, so the suggestion is 0.':i.flag==='slow'?'It is slow moving, so the suggestion is 0: move the stock first.':i.flag==='man'?'New item with no sales yet: your decision.':o.skip?o.skip+'.':'')}</p>`:''}</details>`:'';
+  return {badges,say:say?`<div class="ovsay">${esc(say)}</div>`:'',math};
+}
+const OVR={late:'Too late for its season',wait:'Seasonal: the next order is still in time',slow:'On the Slow Moving list',stop:'Its category is stopped',man:'New item with no sales yet: your decision',team:'The team set it to 0',none:'Not needed: stock and pipeline cover the sales'};
+const ovWhy=i=>i.sm&&i.sm.verdict==='late'&&i.fb!==0?'late':i.sm&&i.sm.verdict==='wait'&&i.fb!==0?'wait':i.flag==='slow'?'slow':i.flag==='stop'?'stop':i.flag==='man'?'man':i.fb===0?'team':'none';
 const ovExcl=()=>items.filter(i=>i.av&&i.fin<=0);
 const ovDone=i=>OV.ex?i.fin>0:i.fb!=null;
 function ovScope(){return OV.base.filter(i=>(!OV.cat||i.cat===OV.cat)&&(!OV.ex||!OV.rs||ovWhy(i)===OV.rs))}
@@ -619,7 +673,7 @@ function ovDraw(msg){
   const cats=[...new Set(OV.base.map(i=>i.cat))].sort();
   const nEx=ovExcl().length;
   const top=`<div class="ovbar"><button class="btn" id="ovBack">‹ Back</button><div class="ovcount">${OV.list.length?OV.k+1+' / '+OV.list.length:'0 / 0'}</div><button class="btn" id="ovFwd">Forward ›</button><button class="btn" id="ovX" title="Close">✕</button></div>
-  <div class="ovmode">${OV.ex?'Excluded from the order: type a qty to include an item':'In the order'}</div>
+  <div class="ovmode">${OV.ex?'Excluded from the order: type a qty to include an item':'In the order'+(S.smartOn?' · best sellers first':'')}</div>${ovSmartTop()}
   <div class="ovtools"><select id="ovCat" aria-label="Category"><option value="">All categories</option>${cats.map(c=>`<option${c===OV.cat?' selected':''}>${esc(c)}</option>`).join('')}</select>${OV.ex?`<select id="ovRs" aria-label="Why excluded"><option value="">Any reason</option>${Object.keys(OVR).map(k=>`<option value="${k}"${k===OV.rs?' selected':''}>${esc(OVR[k])}</option>`).join('')}</select>`:`<button class="btn ${OV.miss?'go':''}" id="ovMiss">${OV.miss?'View all items':'View missing items ('+left+')'}</button>`}</div>
   <div class="ovtools">${OV.ex?'':`<select id="ovFf" aria-label="Filter">${[...$('ff').options].map(o=>`<option value="${esc(o.value)}"${o.value===OV.ff?' selected':''}>${esc(o.textContent)}</option>`).join('')}</select>`}<button class="btn ${OV.ex?'go':''}" id="ovEx" style="${OV.ex?'flex:1':'white-space:nowrap'}">${OV.ex?'‹ Back to the order':'View excluded items ('+fmt(nEx)+')'}</button></div>
   <div class="ovprog"><div class="ovpt"><b>${done} of ${tot} ${OV.ex?'included':'done'}</b><span>${OV.ex?(tot-done)+' still out':(left?left+' missing':'All done ✓')}</span></div><div class="bar"><i style="width:${tot?done/tot*100:0}%"></i></div></div>`;
@@ -629,18 +683,20 @@ function ovDraw(msg){
   }else{
     const i=OV.list[OV.k],w=ovWhy(i);
     const tag=OV.ex?(i.fin>0?' · <span style="color:var(--good)">included ✓</span>':''):(ovDone(i)?' · <span style="color:var(--good)">done ✓</span>':' · <span style="color:var(--bad)">missing</span>');
-    const why=OV.ex?`<div class="ovwhy">${i.fin>0?'Was left out because: ':'Left out because: '}${esc(OVR[w])}${w==='stop'&&i.would?` (it would have ordered ${i.would})`:''}</div>`:'';
+    const sc=ovSmartCard(i);
+    const why=OV.ex?`<div class="ovwhy">${i.fin>0?'Was left out because: ':'Left out because: '}${esc(w==='none'&&i.sm&&i.sm.skip?i.sm.skip:OVR[w])}${w==='stop'&&i.would?` (it would have ordered ${i.would})`:''}</div>`:'';
     const quick=OV.ex&&!ro&&i.would>0&&i.fin<=0?`<button class="btn go" id="ovInc" style="margin-top:10px">Include ${i.would}</button>`:'';
-    body=`<div class="ovcard"><div class="ovp">${pic(i.dv)}</div>
+    body=`<div class="ovcard"><div class="ovp">${pic(i.dv)}</div>${sc.badges}
     <div class="ovs"><div><small>SOH</small><b>${fmt(i.soh)}</b></div><div><small>Pipeline</small><b>${fmt(i.pipe)}</b></div><div><small>Sell out</small><b>${fmt(i.sell)}</b></div></div>
     <div class="ovn">${esc(i.name)||'<span class="note">not in the master</span>'}</div>
-    <div class="ovm">${esc(i.sku)} · ${esc(i.cat)}</div>${why}
+    <div class="ovm">${esc(i.sku)} · ${esc(i.cat)}</div>${why}${OV.ex&&ovWhy(i)!=='late'&&ovWhy(i)!=='wait'?'':sc.say}
     <div class="ovq"><small>${ro?'Qty (view only)':OV.ex?'Qty to include':'Qty'}${OV.ex?'':' · suggested '+(i.prop||0)}${tag}</small><input type="number" inputmode="numeric" min="0" data-s="${esc(i.sku)}" value="${i.fb==null?'':i.fb}" placeholder="${i.prop}" ${ro?'disabled':''}>${quick}</div>
-    <div class="ovh">${msg||''}</div></div>`;
+    <div class="ovh">${msg||''}</div>${sc.math}</div>`;
   }
   $('ov').innerHTML=top+body;
   $('ovBack').onclick=()=>ovGo(-1);$('ovFwd').onclick=()=>ovGo(1);$('ovX').onclick=ovClose;
   $('ovCat').onchange=e=>{ovSave0();OV.cat=e.target.value;ovBuild();ovDraw()};
+  if($('ovOd'))$('ovOd').onchange=e=>{ovSave0();$('od').value=e.target.value;calc();saveSettings();OV.orderBase=ovOrderBase();OV.base=OV.ex?ovExcl().sort((a,b)=>b.sell-a.sell||a.sku.localeCompare(b.sku,undefined,{numeric:true})):OV.orderBase;ovBuild();ovDraw('Suggested quantities updated for the new date.')};
   if($('ovRs'))$('ovRs').onchange=e=>{ovSave0();OV.rs=e.target.value;ovBuild();ovDraw()};
   if($('ovMiss'))$('ovMiss').onclick=()=>{ovSave0();OV.miss=!OV.miss;ovBuild();ovDraw()};
   $('ovEx').onclick=()=>{
