@@ -30,7 +30,7 @@ header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-
 .sea{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:12px;margin-top:6px;border:1px solid var(--line)}.sea .dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex:none}.sea b{font-weight:800}.sea small{display:block;color:var(--ink2)}
 .sea.good{background:color-mix(in srgb,var(--good) 9%,transparent)}.sea.good .dot{background:var(--good)}.sea.mid .dot{background:var(--warn)}.sea.mid{background:color-mix(in srgb,var(--warn) 9%,transparent)}.sea.late .dot{background:var(--bad)}.sea.late{background:color-mix(in srgb,var(--bad) 8%,transparent)}.sea.next .dot{background:var(--ink2)}
 .tw{overflow:auto;max-height:72vh}
-.cr{display:grid;grid-template-columns:auto 1fr auto 130px;gap:8px 14px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}.cr:first-child{border-top:0}.cr label{display:flex;gap:10px;align-items:center;font-weight:700;cursor:pointer}.cr input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}.cr .cv{font-variant-numeric:tabular-nums;color:var(--ink2);font-size:12.5px;text-align:right}.cr input[type=number]{width:130px}.cr.off .nm,.cr.off .cv{opacity:.45;text-decoration:line-through}@media(max-width:640px){.cr{grid-template-columns:auto 1fr 110px}.cr .cv{grid-column:2/-1;text-align:left}.cr input[type=number]{width:110px}}
+.btn.dirty{outline:3px solid color-mix(in srgb,var(--accent) 45%,transparent)}.cr{display:grid;grid-template-columns:auto 1fr auto 130px;gap:8px 14px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}.cr:first-child{border-top:0}.cr label{display:flex;gap:10px;align-items:center;font-weight:700;cursor:pointer}.cr input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}.cr .cv{font-variant-numeric:tabular-nums;color:var(--ink2);font-size:12.5px;text-align:right}.cr input[type=number]{width:130px}.cr.off .nm,.cr.off .cv{opacity:.45;text-decoration:line-through}@media(max-width:640px){.cr{grid-template-columns:auto 1fr 110px}.cr .cv{grid-column:2/-1;text-align:left}.cr input[type=number]{width:110px}}
 table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:6px 7px;border-top:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}th{position:sticky;top:0;background:var(--surface);color:var(--ink2);font-size:11.5px;z-index:1}
 th.l,td.l{text-align:left}td.name{white-space:normal;text-align:left}td.name>b{display:block}.img.lg{width:112px;height:112px;border-radius:14px;background:#fff}.img.lg img{object-fit:contain}td.name{padding:10px 12px}td.name>b{font-size:14px}.sxs{display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:8px}.sx{background:var(--soft);border-radius:10px;padding:5px 14px;min-width:92px;text-align:left}.sx small{display:block;font-size:10.5px;margin:0}.sx b{font-size:15px;font-variant-numeric:tabular-nums}.sx.bad b{color:var(--bad)}.sx.ord{background:var(--accent);color:#2A1018}.sx.ord small{color:#2A1018}.sx.ord b{font-size:16px}.sx.z{background:var(--soft);color:var(--ink2)}.sx.z small{color:var(--ink2)}.why{margin-top:8px}tbody td:nth-child(2){padding-left:4px;padding-right:4px;width:124px}tbody td:first-child{width:54px}td.name small{display:block;color:var(--ink2);font-size:11px}
 tbody tr{cursor:pointer}tbody tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr.cut>td{opacity:.45}
@@ -81,6 +81,7 @@ tr.cath>td{background:var(--soft);font-weight:800;text-align:left;cursor:default
   <h2>Categories</h2>
   <div class="sub" style="margin-bottom:8px">Tick the categories you want in this order. To order a certain amount of one category, type it in $: the category is filled up to it, or cut down to it. Leave it empty to follow the sales and the budget above.</div>
   <div id="catList"></div>
+  <div class="row noprint" style="margin-top:10px;gap:8px"><button class="btn go" id="catGo" type="button">Apply</button><button class="btn" id="catAll" type="button">Tick all</button><button class="btn" id="catNone" type="button">Untick all</button><span class="note" id="catMsg"></span></div>
 </div>
 
 <div class="kpis" id="kpis"></div>
@@ -186,7 +187,10 @@ function buildCats(){
   if(!el.dataset.on){
     el.innerHTML=cats.map(c=>`<div class="cr${S.skip.includes(c)?' off':''}" data-c="${esc(c)}"><label><input type="checkbox" ${S.skip.includes(c)?'':'checked'}><span class="nm">${esc(c)}</span></label><span class="cv"></span><span></span><input type="number" min="0" step="500" placeholder="$ amount" value="${S.catBud[c]||''}" aria-label="Amount in $ for ${esc(c)}"></div>`).join('');
     el.dataset.on='1';
-    el.addEventListener('change',()=>run());
+    el.addEventListener('change',()=>{$('catGo').classList.add('dirty');$('catMsg').textContent='Press Apply to update the order.'});
+    $('catGo').onclick=()=>{run();$('catGo').classList.remove('dirty');$('catMsg').textContent='Applied ✓';setTimeout(()=>{if($('catMsg').textContent==='Applied ✓')$('catMsg').textContent=''},3000)};
+    $('catAll').onclick=()=>{el.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=true);el.dispatchEvent(new Event('change'))};
+    $('catNone').onclick=()=>{el.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=false);el.dispatchEvent(new Event('change'))};
   }
   el.querySelectorAll('.cr').forEach(r=>{const c=r.dataset.c,l=P.lines.filter(o=>o.it.cat===c&&o.qty&&!o.cut),off=S.skip.includes(c);r.classList.toggle('off',off);
     const f=P.catFill&&P.catFill[c],lim=P.catBud&&P.catBud[c],cost=l.reduce((a,o)=>a+o.cost,0);
