@@ -93,6 +93,42 @@ function build(rows, want, today) {
   return { ok: true, day, wanted: want, fallback: day !== want, text: L.join('\n'), sales: Math.round(a.net), orders: a.orders, today };
 }
 
+// The numbers for the picture: one row per store (best first) with invoices, gross, net, change against the same weekday last week, and the month so far.
+const WDL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+function tableData(rows, day, note) {
+  const cur = rows.filter(r => r[0] === day), prev = rows.filter(r => r[0] === addD(day, -7));
+  const m0 = day.slice(0, 8) + '01', mtd = rows.filter(r => r[0] >= m0 && r[0] <= day);
+  const by = (list, k) => { const m = new Map(); for (const r of list) { const b = String(r[7] || 'Unspecified'); (m.get(b) || m.set(b, []).get(b)).push(r); } return m; };
+  const cb = by(cur), pb = by(prev), mb = by(mtd);
+  const sum = (list, i) => list.reduce((x, r) => x + (Number(r[i]) || 0), 0);
+  const pc = (a, b) => (b > 0 ? (a / b - 1) * 100 : null);
+  const out = [...cb.entries()].map(([name, l]) => ({ name, orders: agg(l).orders, gross: sum(l, 4), net: sum(l, 3), mtd: sum(mb.get(name) || [], 3), chg: pb.has(name) ? pc(sum(l, 3), sum(pb.get(name), 3)) : null }))
+    .filter(r => Math.round(r.net) !== 0).sort((x, y) => y.net - x.net);
+  const a = agg(cur), pa = prev.length ? agg(prev) : null;
+  const pmEnd = new Date(Date.UTC(+day.slice(0, 4), +day.slice(5, 7) - 1, 0));
+  const pmKey = pmEnd.toISOString().slice(0, 8), pmTo = pmKey + String(Math.min(+day.slice(8), pmEnd.getUTCDate())).padStart(2, '0');
+  const ln = sum(rows.filter(r => r[0] >= pmKey + '01' && r[0] <= pmTo), 3), mn = sum(mtd, 3);
+  const d0 = new Date(t(day)).getUTCDay();
+  const pm = new Map();
+  for (const r of cur) { const k = String(r[5] || r[6]); let o = pm.get(k); if (!o) pm.set(k, o = { sku: String(r[5] || ''), name: String(r[6] || 'Unspecified'), u: 0, v: 0 }); o.u += Number(r[2]) || 0; o.v += Number(r[3]) || 0; }
+  const top = [...pm.values()].sort((x, y) => y.v - x.v)[0];
+  const tot = out.reduce((x, r) => x + r.net, 0) || 1;
+  return {
+    weekday: WDL[d0], dateLong: `${+day.slice(8)} ${MONL[+day.slice(5, 7) - 1]} ${day.slice(0, 4)}`, wd: WD[d0],
+    net: a.net, orders: out.reduce((x, r) => x + r.orders, 0), mtd: mn, mtdLabel: `net sales, 1–${+day.slice(8)} ${MON[+day.slice(5, 7) - 1]}`,
+    mtdChg: ln > 0 ? pc(mn, ln) : null, mtdVs: MONL[pmEnd.getUTCMonth()], dayChg: pa && pa.net > 0 ? pc(a.net, pa.net) : null,
+    rows: out,
+    leader: out.length ? `${out[0].name} led the day with ${Math.round(out[0].net / tot * 100)}% of net sales.` : '',
+    top: top && top.v > 0 ? `Top item: ${top.name.length > 38 ? top.name.slice(0, 37) + '…' : top.name}${top.sku ? ' (' + top.sku + ')' : ''}: ${Math.round(top.u)} pcs, ${egp(top.v)}` : '',
+    note: note || ''
+  };
+}
+async function picture(rows, day, fallback, want) {
+  const tbl = tableData(rows, day, fallback ? 'latest day with sales (none saved for ' + fDay(want) + ')' : '');
+  if (!tbl.rows.length) throw new Error('no store has sales on ' + day);
+  return require('./_digestimg').render(tbl);
+}
+
 // ---- where it is sent: Telegram (free, instant) and/or WhatsApp (CallMeBot) -- whichever has its settings in Vercel ----
 // Telegram: TELEGRAM_BOT_TOKEN (from @BotFather). TELEGRAM_CHAT_ID is optional: when it is missing the chat is found from the
 // newest message sent to the bot (so the person only has to press Start once) and remembered in digest/tgchat.json.
@@ -132,6 +168,18 @@ async function sendTelegram(text) {
   return 'Telegram';
 }
 
+async function sendTelegramPhoto(png, caption) {
+  const chat = await tgChat();
+  const fd = new FormData();
+  fd.append('chat_id', chat);
+  fd.append('caption', caption);
+  fd.append('photo', new Blob([png], { type: 'image/png' }), 'pandora-daily-sales.png');
+  const r = await fetch('https://api.telegram.org/bot' + String(process.env.TELEGRAM_BOT_TOKEN).trim() + '/sendPhoto', { method: 'POST', body: fd, signal: AbortSignal.timeout(30000) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.ok) throw new Error(j.description ? 'Telegram said: ' + j.description : 'Telegram did not answer (' + r.status + ')');
+  return 'Telegram (picture)';
+}
+
 // CallMeBot: one GET with the number, the key it gave that number, and the text. It answers 200 with a short page; errors are written in it.
 async function sendWhatsApp(text) {
   const u = 'https://api.callmebot.com/whatsapp.php?source=pandora&phone=' + encodeURIComponent(phone()) + '&apikey=' + encodeURIComponent(process.env.CALLMEBOT_APIKEY) + '&text=' + encodeURIComponent(text);
@@ -141,15 +189,17 @@ async function sendWhatsApp(text) {
   return 'WhatsApp';
 }
 // every channel that is set up; it counts as sent when at least one took it
-async function sendAll(text) {
+// The picture goes to Telegram instead of the text. If the picture cannot be made or sent, the text goes instead, so a day is never missed.
+async function sendAll(text, png, caption) {
   if (!configured()) throw new Error('Nothing is connected yet: add TELEGRAM_BOT_TOKEN (Telegram) in Vercel.');
   const jobs = [];
-  if (tgOn()) jobs.push(sendTelegram(text));
+  const prob = [];
+  if (tgOn()) jobs.push(png ? sendTelegramPhoto(png, caption).catch(e => { prob.push('Picture not sent (' + String(e && e.message || e).slice(0, 120) + '), sent the text instead.'); return sendTelegram(text); }) : sendTelegram(text));
   if (waOn()) jobs.push(sendWhatsApp(text));
   const res = await Promise.allSettled(jobs);
   const ok = res.filter(x => x.status === 'fulfilled').map(x => x.value), bad = res.filter(x => x.status === 'rejected').map(x => String(x.reason && x.reason.message || x.reason));
   if (!ok.length) throw new Error(bad.join(' · ').slice(0, 280));
-  return { via: ok, problems: bad };
+  return { via: ok, problems: prob.concat(bad) };
 }
 
 module.exports = async function handler(req, res) {
@@ -167,16 +217,24 @@ module.exports = async function handler(req, res) {
   const want = ISO.test(asked || '') && asked < today ? asked : addD(today, -1);
   const status = await store.getJSON(STATUS);
   const base = { configured: configured(), to: where(), status: status || null };
-  let d;
-  try { d = build(await dashRows(), want, today); } catch (e) { return send(res, 500, { ok: false, error: String(e && e.message || e).slice(0, 300), ...base }); }
+  let d, all;
+  try { all = await dashRows(); d = build(all, want, today); } catch (e) { return send(res, 500, { ok: false, error: String(e && e.message || e).slice(0, 300), ...base }); }
 
+  if (!cron && req.method === 'GET' && url.searchParams.get('image')) {
+    if (!d.ok) return send(res, 404, { ...d, ...base });
+    try { const png = await picture(all, d.day, d.fallback, want); res.setHeader('Cache-Control', 'no-store'); res.setHeader('Content-Type', 'image/png'); return res.status(200).send(png); }
+    catch (e) { return send(res, 500, { ok: false, error: 'Could not draw the picture: ' + String(e && e.message || e).slice(0, 200), ...base }); }
+  }
   if (!cron && req.method === 'GET') return send(res, d.ok ? 200 : 404, { ...d, ...base });
 
   // The cron sends once per day: a second call the same day (a retry) does nothing.
   if (cron && status && status.ok && status.sentOn === today) return send(res, 200, { ok: true, skipped: 'already sent today', ...base });
   if (!d.ok) { await store.putJSON(STATUS, { ok: false, at: new Date().toISOString(), error: d.error }); return send(res, 404, { ...d, ...base }); }
   try {
-    const sent = await sendAll(d.text);
+    let png = null, pbad = '';
+    if (tgOn()) { try { png = await picture(all, d.day, d.fallback, want); } catch (e) { pbad = 'Could not draw the picture (' + String(e && e.message || e).slice(0, 120) + '), sent the text instead.'; } }
+    const sent = await sendAll(d.text, png, 'Pandora daily sales · ' + fDay(d.day));
+    if (pbad) sent.problems.unshift(pbad);
     const st = { ok: true, at: new Date().toISOString(), via: sent.via.join(' + '), problems: sent.problems.join(' · ').slice(0, 200), sentOn: cron ? today : (status && status.sentOn) || '', day: d.day, by: cron ? 'schedule' : 'button' };
     await store.putJSON(STATUS, st);
     return send(res, 200, { ok: true, day: d.day, text: d.text, ...base, status: st });
@@ -188,3 +246,4 @@ module.exports = async function handler(req, res) {
 };
 module.exports.build = build;
 module.exports.toHtml = toHtml;
+module.exports.tableData = tableData;

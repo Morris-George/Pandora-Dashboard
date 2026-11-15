@@ -5,7 +5,8 @@
       "includeFiles": "private/**"
     },
     "api/erp.js": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "api/_fonts/**"
     },
     "api/vm.js": {
       "includeFiles": "private/stockcount-pics-*.js"

@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "description": "Pandora Egypt dashboards (static pages and Vercel functions)",
   "dependencies": {
-    "@vercel/blob": "latest"
+    "@vercel/blob": "latest",
+    "sharp": "^0.34.0"
   },
   "engines": {
     "node": ">=20"
