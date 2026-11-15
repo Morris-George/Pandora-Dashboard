@@ -355,6 +355,40 @@ table.dt{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
 .fill{height:100%;background:var(--mark);border-radius:0 4px 4px 0}
 .barval{font-variant-numeric:tabular-nums;font-weight:750;white-space:nowrap;min-width:96px;text-align:right}
 
+/* ---------- campaign uplift + store cards ---------- */
+.cpchips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.cpchip{border:1px solid var(--line2);background:var(--surface);color:var(--text);border-radius:12px;padding:8px 12px;text-align:left;font-weight:700;font-size:13px;line-height:1.3}
+.cpchip small{display:block;color:var(--muted);font-weight:600;font-size:11.5px}
+.cpchip[aria-pressed="true"]{background:var(--seg-on);color:var(--seg-on-text);border-color:var(--seg-on)}.cpchip[aria-pressed="true"] small{color:inherit;opacity:.75}
+.cpform{border:1px solid var(--line2);background:var(--surface2);border-radius:14px;padding:14px;margin-bottom:14px;display:grid;gap:12px}
+.cpform .cprow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.cpform label{font-size:12px;font-weight:700;color:var(--muted);display:grid;gap:4px}
+.cpform input[type=text],.cpform input[type=date]{height:38px;border:1px solid var(--line2);border-radius:10px;background:var(--surface);color:var(--text);padding:0 10px;font:650 13px var(--font);min-width:0}
+.cpform input[type=text]{width:min(320px,74vw)}
+.cpform .cpmsg{font-size:12.5px;font-weight:650;color:var(--down)}
+.cpgo{height:36px;padding:0 16px;border-radius:10px;border:0;background:var(--pink);color:#2A1018;font-weight:750;font-size:13px}
+.cpverdict{display:flex;gap:12px;align-items:flex-start;border-radius:14px;padding:14px 16px;background:var(--surface2);border:1px solid var(--line);font-size:14px;line-height:1.5}
+.cpverdict.good{background:var(--up-bg);border-color:transparent}.cpverdict.bad{background:var(--down-bg);border-color:transparent}.cpverdict.warn{background:var(--warn-bg);border-color:transparent}
+.cpverdict .ico{width:20px;height:20px;flex:none;margin-top:1px}.cpverdict.good .ico{color:var(--up)}.cpverdict.bad .ico{color:var(--down)}.cpverdict.warn .ico{color:var(--warn)}
+.cpk{grid-template-columns:repeat(6,minmax(0,1fr))}
+.cpk small b{display:inline;font-size:inherit;font-weight:700;letter-spacing:0}
+.cphead{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cphead h4{margin:0;font-size:16px;font-weight:780}.cphead .minor{display:block;margin-top:2px}
+.cpdays{display:flex;align-items:flex-end;gap:6px;height:150px;padding:6px 2px 0;overflow-x:auto}
+.cpday{flex:1 0 26px;max-width:64px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;position:relative;min-width:26px}
+.cpday i{display:block;border-radius:5px 5px 0 0;background:var(--mark);min-height:2px}
+.cpday i.low{background:var(--cmp)}
+.cpday u{position:absolute;left:-2px;right:-2px;height:0;border-top:2px dashed var(--text);opacity:.55}
+.cpdlab{display:flex;gap:6px;padding:4px 2px 0;overflow:hidden}.cpdlab span{flex:1 0 26px;max-width:64px;min-width:26px;text-align:center;font-size:10.5px;color:var(--muted);font-weight:650;white-space:nowrap}
+.cpleg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);font-weight:650;margin-top:8px}.cpleg i{display:inline-block;width:12px;height:10px;border-radius:3px;background:var(--mark);margin-right:5px;vertical-align:-1px}.cpleg u{display:inline-block;width:14px;border-top:2px dashed var(--text);opacity:.55;margin-right:5px;vertical-align:3px}
+.cardbtn{height:28px;padding:0 9px}.cardbtn .ico{width:14px;height:14px}
+.cmodal{position:fixed;inset:0;z-index:80;background:rgba(20,12,14,.55);display:grid;place-items:center;padding:16px}.cmodal[hidden]{display:none}
+.ccard{background:var(--surface);color:var(--text);border-radius:20px;box-shadow:var(--sh2);padding:16px;width:min(470px,100%);max-height:94vh;display:flex;flex-direction:column;gap:12px}
+.ccard .cimg{overflow:auto;border-radius:12px;border:1px solid var(--line);background:var(--sunk);min-height:120px}.ccard img{display:block;width:100%;height:auto}
+.ccard .cbtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.ccard .cbtns span{margin-right:auto;font-weight:750;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:900px){.cpk{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:520px){.cpk{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 /* ---------- popups ---------- */
 .bmodal,.pmodal{position:fixed;inset:0;z-index:70;background:rgba(20,12,14,.45);display:grid;place-items:center;padding:20px}
 .bmodal[hidden],.pmodal[hidden]{display:none}
@@ -479,7 +513,7 @@ table.dt{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
     <button type="button" class="ghost fx" id="resetBtn" title="Back to yesterday, all branches, all categories"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5"/></svg>Reset</button>
   </div>
   <nav class="tabs" id="tabs" aria-label="Sections">
-    <a href="#sec-summary">Summary</a><a href="#sec-trend">Trend</a><a href="#sec-branches">Branches</a><a href="#sec-week">Weekdays &amp; payment</a><a href="#explorer">Categories</a><a href="#collections">Collections</a><a href="#sec-products">Products</a>
+    <a href="#sec-summary">Summary</a><a href="#sec-trend">Trend</a><a href="#sec-branches">Branches</a><a href="#sec-week">Weekdays &amp; payment</a><a href="#explorer">Categories</a><a href="#collections">Collections</a><a href="#sec-products">Products</a><a href="#campaigns" id="cpTab" hidden>Campaigns</a>
     <span class="scope" id="scopeTxt"></span>
   </nav>
  </div>
@@ -562,12 +596,25 @@ table.dt{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
   <div id="prodBody"></div>
 </section>
 
+<section class="panel" id="campaigns" data-title="Campaign uplift" hidden>
+  <div class="ph"><div><h3>Campaign uplift</h3><p>Did an offer add sales, or only discount them? The days of a campaign are set against the same weekdays in the 4 weeks before it started. Follows the branches, category and Net / Gross above, not the dates.</p></div><div class="acts" id="cpActs"></div></div>
+  <form class="cpform" id="cpForm" hidden autocomplete="off">
+    <div class="cprow"><label>Campaign name<input type="text" id="cpName" maxlength="60" placeholder="e.g. Thursday twins"></label><label>First day<input type="date" id="cpFrom"></label><label>Last day<input type="date" id="cpTo"></label></div>
+    <div class="cprow"><label>Runs on<div class="seg" id="cpDays" role="group" aria-label="Weekdays of the campaign"></div></label></div>
+    <div class="cprow"><label>Note (optional)<input type="text" id="cpNote" maxlength="140" placeholder="e.g. buy one get one"></label></div>
+    <div class="cprow"><button type="submit" class="cpgo" id="cpSave">Save campaign</button><button type="button" class="ghost" id="cpCancel">Cancel</button><span class="cpmsg" id="cpMsg"></span></div>
+  </form>
+  <div class="cpchips" id="cpChips"></div>
+  <div id="cpBody"></div>
+</section>
+
 <div class="footer"><span>Saved sales stay until they are removed on the All Uploads page. Figures follow ERP's Sales Report by Item &amp; SKU.</span><span id="lastUpdated"></span></div>
 </main>
 </div>
 
 <div class="bmodal" id="bModal" hidden><div class="bcard" role="dialog" aria-modal="true" aria-label="Branches that sold this item"><button type="button" class="bclose" id="bClose" aria-label="Close">&times;</button><div class="bname" id="bName"></div><div class="binfo" id="bInfo"></div><div class="btabs" id="bTabs"><button type="button" id="bTabSold" aria-pressed="true">Sold by branch</button><button type="button" id="bTabStock" aria-pressed="false">Qty in each store</button></div><div id="bBody"></div><div class="bmore"><button type="button" class="linkbtn" id="bMore">Open full item details</button></div></div></div>
 <div class="pmodal" id="pModal" hidden><div class="pcard" role="dialog" aria-modal="true" aria-label="Product picture"><button type="button" class="pclose" id="pClose" aria-label="Close">&times;</button><div class="pbig" id="pBig"></div><div class="pname" id="pName"></div><div class="pinfo" id="pInfo"></div></div></div>
+<div class="cmodal" id="cModal" hidden><div class="ccard" role="dialog" aria-modal="true" aria-label="Store card"><div class="cimg"><img id="cImg" alt="Store card"></div><div class="cbtns"><span id="cName"></span><button type="button" class="small-btn" id="cShare" hidden>Share</button><button type="button" class="cpgo" id="cDown">Download</button><button type="button" class="ghost" id="cCloseBtn">Close</button></div></div></div>
 <div class="drawer" id="drawer" hidden><div class="dpanel" role="dialog" aria-modal="true" aria-label="Item details"><button type="button" class="dclose" id="dClose" aria-label="Close">&times;</button><div id="dBody"></div></div></div>
 <script>
 /* Product thumbnails beside product rows: built-in pictures first (super admin), then the pandoraeg.com site; click a thumbnail to enlarge it. */
@@ -773,6 +820,12 @@ const ICONS={
  sortu:'<path d="m7 14 5-5 5 5"/>',
  search:'<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
  info:'<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>',
+ dl:'<path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/>',
+ idcard:'<rect x="4" y="3.5" width="16" height="17" rx="3"/><path d="M8 8.5h8M8 12.5h8M8 16.5h4.5"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ pen:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+ bin:'<path d="M5 7h14M10 7V4.5h4V7M7 7l1 12.5h8L17 7"/>',
+ flag:'<path d="M5 21V4M5 5h11l-2 3.5 2 3.5H5"/>',
  pin:'<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>'
 };
 const ic=(n,cls)=>`<svg class="ico${cls?' '+cls:''}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]||''}</svg>`;
@@ -993,7 +1046,7 @@ function render(){
 function stampPeriod(){
   const t=fRange(S.from,S.to);
   document.querySelectorAll('#main .ph h3').forEach(h=>{
-    if(h.parentElement.querySelector('#wkSub'))return;
+    if(h.parentElement.querySelector('#wkSub')||h.closest('#campaigns'))return;
     let b=h.querySelector('.per');if(!b){b=document.createElement('span');b.className='per';h.appendChild(b)}
     b.textContent=t;b.title='These figures cover '+t;
   });
@@ -1206,15 +1259,19 @@ function renderBranches(L){
   list.sort((a,b)=>{const va=key(a),vb=key(b);return (typeof va==='string'?va.localeCompare(vb):va-vb)*S.brSort.d});
   const mx=Math.max(1,...list.map(o=>Math.abs(o.x.rev)));
   const th=(k,l,r)=>`<th class="${r?'r':''}" ${S.brSort.k===k?`aria-sort="${S.brSort.d<0?'descending':'ascending'}"`:''}><button type="button" data-sort="${k}">${l}${S.brSort.k===k?`<svg viewBox="0 0 24 24" class="ico">${ICONS[S.brSort.d<0?'sortd':'sortu']}</svg>`:''}</button></th>`;
+  BRL=list.slice().sort((a,b)=>b.x.rev-a.x.rev);
+  $('brActs').innerHTML=list.length?`<button type="button" class="small-btn" id="cardAll" title="Download one picture per store with its key numbers, ready to send">${ic('dl')}All store cards</button>`:'';
   if(!list.length){$('brTable').innerHTML='<div class="empty">No sales for this selection.</div>';$('brNote').textContent='';return}
   const all=agg(rows),allP=rp.length?agg(rp):null;
-  $('brTable').innerHTML=`<table class="dt"><thead><tr><th class="rk">#</th>${th('name','Branch')}${th('rev','Sales')}${th('share','Share',1)}${C&&C.has?th('d','vs '+(C.mode==='week'?'last week':C.mode==='month'?'last month':C.mode==='year'?'last year':'before'),1):''}${th('orders','Orders',1)}${th('atv','Avg order',1)}${th('upt','Units / order',1)}${th('units','Units',1)}${hasT?th('tg','Target',1):''}${hasV?th('conv','Conversion',1):''}</tr></thead><tbody>`+
-   list.map((o,i)=>`<tr class="click${BR.sel.has(o.b)?' sel':''}" data-br="${esc(o.b)}" tabindex="0" aria-label="${esc(o.b)}: ${money(o.x.rev)}. ${BR.sel.has(o.b)?'Selected. Press Enter to remove.':'Press Enter to show only this branch.'}"><td class="rk">${i+1}</td><td class="bn">${esc(o.b)}${BR.sel.has(o.b)?'<small>shown alone on the page</small>':''}</td><td><div class="inbar"><span><i style="width:${Math.max(1,Math.abs(o.x.rev)/mx*100)}%"></i></span><b>${money(o.x.rev)}</b></div></td><td class="r">${pct1(o.share)}</td>${C&&C.has?`<td class="r">${o.p?deltaChip(o.x.rev,o.p.rev,{title:'Was '+money(o.p.rev)}):'<span class="minor">new</span>'}</td>`:''}<td class="r">${num(o.x.orders)}</td><td class="r">${money(o.x.atv)}</td><td class="r">${o.x.upt.toFixed(2)}</td><td class="r">${num(o.x.units)}</td>${hasT?`<td class="r">${o.tg?`<span class="pill-mini" title="Target ${money(o.tg.t)}">${(o.tg.r*100).toFixed(0)}%</span>`:'<span class="minor">—</span>'}</td>`:''}${hasV?`<td class="r">${o.vis?`<span title="${num(o.vis.t)} buyers of ${num(o.vis.v)} visitors">${(o.vis.conv*100).toFixed(1)}%</span>`:'<span class="minor">—</span>'}</td>`:''}</tr>`).join('')+
-   `</tbody><tfoot><tr><td></td><td>All branches</td><td><b>${money(all.rev)}</b></td><td class="r">100%</td>${C&&C.has?`<td class="r">${allP?deltaChip(all.rev,allP.rev):''}</td>`:''}<td class="r">${num(all.orders)}</td><td class="r">${money(all.atv)}</td><td class="r">${all.upt.toFixed(2)}</td><td class="r">${num(all.units)}</td>${hasT?'<td></td>':''}${hasV?'<td></td>':''}</tr></tfoot></table>`;
+  $('brTable').innerHTML=`<table class="dt"><thead><tr><th class="rk">#</th>${th('name','Branch')}${th('rev','Sales')}${th('share','Share',1)}${C&&C.has?th('d','vs '+(C.mode==='week'?'last week':C.mode==='month'?'last month':C.mode==='year'?'last year':'before'),1):''}${th('orders','Orders',1)}${th('atv','Avg order',1)}${th('upt','Units / order',1)}${th('units','Units',1)}${hasT?th('tg','Target',1):''}${hasV?th('conv','Conversion',1):''}<th class="r"><span class="sr">Store card</span></th></tr></thead><tbody>`+
+   list.map((o,i)=>`<tr class="click${BR.sel.has(o.b)?' sel':''}" data-br="${esc(o.b)}" tabindex="0" aria-label="${esc(o.b)}: ${money(o.x.rev)}. ${BR.sel.has(o.b)?'Selected. Press Enter to remove.':'Press Enter to show only this branch.'}"><td class="rk">${i+1}</td><td class="bn">${esc(o.b)}${BR.sel.has(o.b)?'<small>shown alone on the page</small>':''}</td><td><div class="inbar"><span><i style="width:${Math.max(1,Math.abs(o.x.rev)/mx*100)}%"></i></span><b>${money(o.x.rev)}</b></div></td><td class="r">${pct1(o.share)}</td>${C&&C.has?`<td class="r">${o.p?deltaChip(o.x.rev,o.p.rev,{title:'Was '+money(o.p.rev)}):'<span class="minor">new</span>'}</td>`:''}<td class="r">${num(o.x.orders)}</td><td class="r">${money(o.x.atv)}</td><td class="r">${o.x.upt.toFixed(2)}</td><td class="r">${num(o.x.units)}</td>${hasT?`<td class="r">${o.tg?`<span class="pill-mini" title="Target ${money(o.tg.t)}">${(o.tg.r*100).toFixed(0)}%</span>`:'<span class="minor">—</span>'}</td>`:''}${hasV?`<td class="r">${o.vis?`<span title="${num(o.vis.t)} buyers of ${num(o.vis.v)} visitors">${(o.vis.conv*100).toFixed(1)}%</span>`:'<span class="minor">—</span>'}</td>`:''}<td class="r"><button type="button" class="small-btn cardbtn" data-card="${esc(o.b)}" title="A picture of ${esc(o.b)}'s numbers to send to the store">${ic('idcard')}Card</button></td></tr>`).join('')+
+   `</tbody><tfoot><tr><td></td><td>All branches</td><td><b>${money(all.rev)}</b></td><td class="r">100%</td>${C&&C.has?`<td class="r">${allP?deltaChip(all.rev,allP.rev):''}</td>`:''}<td class="r">${num(all.orders)}</td><td class="r">${money(all.atv)}</td><td class="r">${all.upt.toFixed(2)}</td><td class="r">${num(all.units)}</td>${hasT?'<td></td>':''}${hasV?'<td></td>':''}<td></td></tr></tfoot></table>`;
   $('brNote').innerHTML=(S.cat!=='All'?`Showing <b>${esc(S.cat)}</b> only. `:'')+(hasT?'Target = gross sales against the store’s target in the Daily Store Report. ':'')+(hasV?'Conversion = buyers ÷ visitors typed in the Daily Store Report. ':'')+(BR.sel.size?`<button type="button" class="linkbtn" id="brAll">Show all branches again</button>`:'');
 }
-$('brTable').addEventListener('click',e=>{const s=e.target.closest('[data-sort]');if(s){const k=s.dataset.sort;S.brSort=S.brSort.k===k?{k,d:-S.brSort.d}:{k,d:k==='name'?1:-1};renderBranches(LAST);return}const tr=e.target.closest('tr[data-br]');if(tr)BR.toggle(tr.dataset.br)});
-$('brTable').addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const tr=e.target.closest('tr[data-br]');if(tr){e.preventDefault();BR.toggle(tr.dataset.br)}});
+let BRL=[];
+$('brTable').addEventListener('click',e=>{const cb=e.target.closest('[data-card]');if(cb){e.stopPropagation();window.PCard&&PCard.open(cb.dataset.card);return}const s=e.target.closest('[data-sort]');if(s){const k=s.dataset.sort;S.brSort=S.brSort.k===k?{k,d:-S.brSort.d}:{k,d:k==='name'?1:-1};renderBranches(LAST);return}const tr=e.target.closest('tr[data-br]');if(tr)BR.toggle(tr.dataset.br)});
+$('brActs').addEventListener('click',e=>{if(e.target.closest('#cardAll'))window.PCard&&PCard.all()});
+$('brTable').addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;if(e.target.closest('[data-card]'))return;const tr=e.target.closest('tr[data-br]');if(tr){e.preventDefault();BR.toggle(tr.dataset.br)}});
 $('brNote').addEventListener('click',e=>{if(e.target.id==='brAll')BR.toggle('')});
 
 /* ---------- weekdays: the average day, Saturday first ---------- */
@@ -1525,6 +1582,245 @@ async function skuStock(sku){
   if(fast.ok&&!fast.miss)draw(fast);
   const j=await live;draw(j.ok||!fast.ok||fast.miss?j:fast);
 }
+})();
+</script>
+<script>
+/* ---- Campaign uplift: saved campaigns (name + dates, /api/campaigns) against the same weekdays in the 4 weeks before each one started.
+       Follows the branches, the category and Net / Gross; the date filter does not apply because every campaign has its own dates. ---- */
+(function(){
+const root=$('campaigns');if(!root)return;
+const CP={list:[],canEdit:false,ok:false,sel:'',edit:null,memo:null};
+const WKO=[6,0,1,2,3,4,5]; /* Saturday first, like the rest of the page */
+const daysTxt=c=>!c.days||!c.days.length?'every day':c.days.length===1?'every '+WDL[c.days[0]]:WKO.filter(w=>c.days.includes(w)).map(w=>WD[w]).join(', ');
+async function api(body){
+  const r=await fetch('/api/campaigns',body?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{credentials:'same-origin',cache:'no-store'});
+  const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||'The server answered '+r.status+'.');return j;
+}
+async function init(){try{const j=await api();CP.list=j.campaigns||[];CP.canEdit=!!j.canEdit;CP.ok=true}catch(_){CP.ok=false}draw()}
+
+/* one pass over the sales in view: per day (sales, pieces, orders and the sales / pieces of those orders) and per branch per day (sales) */
+function stats(){
+  const key=S.basis+'|'+S.cat+'|'+BR.names().join('\u0001')+'|'+data.length;
+  if(CP.memo&&CP.memo.key===key)return CP.memo;
+  const day=new Map(),inv=new Map(),br=new Map();
+  for(const r of data){if(!BR.test(r)||!inCat(r))continue;const v=rev(r);
+    let d=day.get(r.date);if(!d)day.set(r.date,d={rev:0,units:0,orders:0,ov:0,oq:0});d.rev+=v;d.units+=r.qty;
+    const k=r.date+'|'+r.branch+'|'+r.invoice;let o=inv.get(k);if(!o)inv.set(k,o={d:r.date,v:0,q:0});o.v+=v;o.q+=r.qty;
+    let b=br.get(r.branch);if(!b)br.set(r.branch,b=new Map());b.set(r.date,(b.get(r.date)||0)+v)}
+  for(const o of inv.values())if(o.v>0&&o.q>0){const d=day.get(o.d);d.orders++;d.ov+=o.v;d.oq+=o.q}
+  return CP.memo={key,day,br};
+}
+/* the campaign's days that the saved sales cover */
+function campDays(c){const out=[],set=new Set(c.days||[]);let d=c.from<META.min?META.min:c.from;const end=c.to>META.max?META.max:c.to;
+  for(let i=0;i<400&&d<=end;i++){if(!set.size||set.has(wdOf(d)))out.push(d);d=addD(d,1)}return out}
+function allCampDays(){const s=new Set();for(const c of CP.list){const set=new Set(c.days||[]);let d=c.from;for(let i=0;i<400&&d<=c.to;i++){if(!set.size||set.has(wdOf(d)))s.add(d);d=addD(d,1)}}return s}
+/* normal days: the nearest 4 of each weekday before the first day, at most 8 weeks back, never a day of this or another campaign */
+function baseDays(c,wds){const need=new Map([...wds].map(w=>[w,4])),busy=allCampDays(),out=new Map();
+  for(let i=1;i<=56;i++){const d=addD(c.from,-i);if(d<META.min)break;const w=wdOf(d);if(!need.get(w)||busy.has(d))continue;need.set(w,need.get(w)-1);if(!out.has(w))out.set(w,[]);out.get(w).push(d)}
+  return out}
+const Z=()=>({rev:0,units:0,orders:0,ov:0,oq:0});
+const addTo=(t,x,k)=>{if(!x)return;k=k||1;t.rev+=x.rev*k;t.units+=x.units*k;t.orders+=x.orders*k;t.ov+=x.ov*k;t.oq+=x.oq*k};
+function work(c){
+  const st=stats(),cd=campDays(c);
+  const base=baseDays(c,new Set(cd.length?cd.map(wdOf):(c.days&&c.days.length?c.days:[0,1,2,3,4,5,6])));
+  /* the average normal day of each weekday */
+  const norm=new Map();let nb=0;
+  base.forEach((ds,w)=>{const t=Z();ds.forEach(d=>addTo(t,st.day.get(d)));const k=1/ds.length;norm.set(w,{rev:t.rev*k,units:t.units*k,orders:t.orders*k,ov:t.ov*k,oq:t.oq*k});nb+=ds.length});
+  const used=cd.filter(d=>norm.has(wdOf(d))),act=Z(),exp=Z();
+  used.forEach(d=>{addTo(act,st.day.get(d));addTo(exp,norm.get(wdOf(d)))});
+  /* each branch: its own sales on the campaign days against its own normal days */
+  const brs=[];
+  st.br.forEach((m,b)=>{let a=0,e=0;used.forEach(d=>{a+=m.get(d)||0;const ds=base.get(wdOf(d));e+=ds.reduce((s,x)=>s+(m.get(x)||0),0)/ds.length});if(a||e)brs.push({b,a,e,extra:a-e,up:e>0?a/e-1:null})});
+  brs.sort((x,y)=>y.extra-x.extra);
+  return {cd,used,n:used.length,nb,act,exp,brs,norm,st,
+    state:c.from>META.max?'soon':c.to>META.max?'running':'done'};
+}
+const dchip=(a,b,inv)=>b>0?deltaChip(a,b,{inverse:inv}):'';
+function verdict(c,W){
+  const {act,exp,n}=W;
+  if(W.state==='soon')return {k:'',i:'cal',h:`<b>${esc(c.name)}</b> has not started in the saved sales yet. Its result shows here from its first day.`};
+  if(!W.cd.length)return {k:'warn',i:'alert',h:`The saved sales do not cover the days of <b>${esc(c.name)}</b> (they run from ${esc(fDM(META.min,true))} to ${esc(fDM(META.max,true))}).`};
+  if(!n||!(exp.rev>0))return {k:'warn',i:'alert',h:`There are no normal days to compare with: the saved sales need to go back at least a week before <b>${esc(fDM(c.from,true))}</b>, on days with no other campaign.`};
+  const u=act.rev/exp.rev-1,q=exp.units>0?act.units/exp.units-1:0,pa=act.units>0?act.rev/act.units:0,pe=exp.units>0?exp.rev/exp.units:0,p=pe>0?pa/pe-1:0;
+  const P=x=>(Math.abs(x)*100).toFixed(Math.abs(x)<.1?1:0)+'%',days=`${n} campaign ${n===1?'day':'days'}`;
+  if(u>=.05){const cheap=p<=-.05;
+    return {k:'good',i:'up',h:`<b>It added sales.</b> Sales per day were <b>${P(u)} higher</b> than normal: about <b>${money(act.rev-exp.rev)}</b> extra over ${days}. `+(cheap?`Customers paid <b>${P(p)} less per piece</b>, so part of the gain was bought with the discount: check the margin before repeating it.`:`The price per piece held (${p>=0?'+':'−'}${P(p)}), so the gain did not come from giving value away.`)}}
+  if(u>-.05){
+    if(q>=.05)return {k:'warn',i:'tag',h:`<b>It mostly discounted sales that would have happened anyway.</b> ${P(q)} more pieces went out, but sales per day stayed close to normal (${u>=0?'+':'−'}${P(u)}) and customers paid ${P(p)} less per piece.`};
+    return {k:'',i:'info',h:`<b>No clear effect.</b> Sales per day stayed within 5% of normal (${u>=0?'+':'−'}${P(u)}) over ${days}.`}}
+  return {k:'bad',i:'down',h:`<b>It did not add sales.</b> Sales per day were <b>${P(u)} lower</b> than normal over ${days}: about ${money(exp.rev-act.rev)} less.`+(q>=.05?` Pieces went up ${P(q)}, so the offer gave value away without bringing money in.`:'')};
+}
+function draw(){
+  const tab=$('cpTab'),show=CP.ok&&data.length&&(CP.list.length||CP.canEdit);
+  root.hidden=!show;if(tab)tab.hidden=!show;if(!show)return;
+  $('cpActs').innerHTML=CP.canEdit&&!CP.edit?`<button type="button" class="small-btn" id="cpAdd">${ic('plus')}Add a campaign</button>`:'';
+  $('cpForm').hidden=!CP.edit;
+  if(!CP.list.length){$('cpChips').innerHTML='';$('cpBody').innerHTML=CP.edit?'':'<div class="xempty">No campaigns saved yet. Add the dates of an offer, for example <b>Thursday twins</b> on every Thursday, to see what it added to sales.</div>';return}
+  if(!CP.list.some(c=>c.id===CP.sel))CP.sel=CP.list[0].id;
+  $('cpChips').innerHTML=CP.list.map(c=>`<button type="button" class="cpchip" data-cp="${esc(c.id)}" aria-pressed="${c.id===CP.sel}">${esc(c.name)}<small>${esc(fRange(c.from,c.to))} · ${esc(daysTxt(c))}</small></button>`).join('');
+  const c=CP.list.find(x=>x.id===CP.sel),W=work(c),v=verdict(c,W),{act,exp,n}=W;
+  const head=`<div class="cphead"><div><h4>${esc(c.name)}${W.state==='running'?' <span class="per">still running</span>':''}</h4><span class="minor">${esc(fRange(c.from,c.to,true))} · ${esc(daysTxt(c))}${c.note?' · '+esc(c.note):''}</span></div>${CP.canEdit?`<div class="acts"><button type="button" class="small-btn" id="cpEdit">${ic('pen')}Edit</button><button type="button" class="small-btn" id="cpDel">${ic('bin')}Remove</button></div>`:''}</div>`;
+  let html=head+`<div class="cpverdict ${v.k}">${ic(v.i)}<span>${v.h}</span></div>`;
+  if(n&&exp.rev>0){
+    const per=x=>x/n,tile=(l,a,b,f,inv,sub)=>`<div><span>${l}</span><b>${f(a)}</b><small>${dchip(a,b,inv)} normal ${f(b)}${sub||''}</small></div>`;
+    html+=`<div class="xk cpk">`+
+      tile('Sales per day',per(act.rev),per(exp.rev),money)+
+      tile('Orders per day',per(act.orders),per(exp.orders),x=>x.toFixed(x<100?1:0))+
+      tile('Pieces per day',per(act.units),per(exp.units),x=>x.toFixed(x<100?1:0))+
+      tile('Average order',act.orders?act.ov/act.orders:0,exp.orders?exp.ov/exp.orders:0,money)+
+      tile('Price per piece',act.units>0?act.rev/act.units:0,exp.units>0?exp.rev/exp.units:0,money)+
+      `<div><span>Extra sales</span><b>${signed(act.rev-exp.rev,money)}</b><small>over ${n} ${n===1?'day':'days'}, against ${W.nb} normal ${W.nb===1?'day':'days'}</small></div></div>`;
+    /* day by day: the bar is the campaign day, the dashed line is a normal day of that weekday */
+    const days=W.used.slice(-31),mx=Math.max(1,...days.map(d=>Math.max((W.st.day.get(d)||{rev:0}).rev,W.norm.get(wdOf(d)).rev)));
+    html+=`<div class="xh">Day by day${W.used.length>31?' (the last 31 days)':''}</div><div class="cpdays">`+days.map(d=>{const a=(W.st.day.get(d)||{rev:0}).rev,e=W.norm.get(wdOf(d)).rev;
+      return `<div class="cpday" title="${esc(fD(d,true))}: ${money(a)} · a normal ${WDL[wdOf(d)]}: ${money(e)}"><i class="${a<e?'low':''}" style="height:${Math.max(0,a)/mx*100}%"></i><u style="bottom:${e/mx*100}%"></u></div>`}).join('')+
+      `</div><div class="cpdlab">${days.map(d=>`<span>${+d.slice(8)}/${+d.slice(5,7)}</span>`).join('')}</div><div class="cpleg"><span><i></i>Campaign day</span><span><i style="background:var(--cmp)"></i>Campaign day below normal</span><span><u></u>A normal day of that weekday</span></div>`;
+    if(W.brs.length>1)html+=`<div class="xh">By branch</div><div class="tw"><table class="dt"><thead><tr><th>Branch</th><th class="r">Sales per day</th><th class="r">Normal day</th><th class="r">Change</th><th class="r">Extra sales</th></tr></thead><tbody>`+
+      W.brs.map(x=>`<tr><td class="bn">${esc(x.b)}</td><td class="r">${money(x.a/n)}</td><td class="r">${money(x.e/n)}</td><td class="r">${x.e>0?deltaChip(x.a,x.e):'<span class="minor">new</span>'}</td><td class="r"><b>${signed(x.extra,money)}</b></td></tr>`).join('')+`</tbody></table></div>`;
+    html+=`<div class="ctxnote">Normal = the average of the same weekdays in the 4 weeks before ${esc(fDM(c.from,true))}, leaving out days of any saved campaign. Seasons, paydays and holidays also move sales, so read this as a guide, not a proof.${BR.sel.size||S.cat!=='All'?' Showing '+esc(BR.label())+(S.cat!=='All'?', '+esc(S.cat):'')+' only.':''}</div>`;
+  }
+  $('cpBody').innerHTML=html;
+}
+function openForm(c){
+  CP.edit=c||{};
+  $('cpName').value=c?c.name:'';$('cpFrom').value=c?c.from:'';$('cpTo').value=c?c.to:'';$('cpNote').value=c&&c.note||'';$('cpMsg').textContent='';
+  const on=new Set(c&&c.days||[]);
+  $('cpDays').innerHTML=`<button type="button" data-d="all" aria-pressed="${!on.size}">Every day</button>`+WKO.map(w=>`<button type="button" data-d="${w}" aria-pressed="${on.has(w)}">${WD[w]}</button>`).join('');
+  $('cpSave').textContent=c?'Save changes':'Save campaign';draw();$('cpName').focus();
+}
+$('cpDays').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const all=$('cpDays').querySelector('[data-d=all]');
+  if(b===all){$('cpDays').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===all))}
+  else{b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')!=='true');const any=[...$('cpDays').querySelectorAll('button:not([data-d=all])')].some(x=>x.getAttribute('aria-pressed')==='true');all.setAttribute('aria-pressed',!any)}});
+$('cpForm').addEventListener('submit',async e=>{e.preventDefault();
+  const days=[...$('cpDays').querySelectorAll('button:not([data-d=all])[aria-pressed=true]')].map(b=>+b.dataset.d);
+  const c={id:CP.edit&&CP.edit.id||'',name:$('cpName').value.trim(),from:$('cpFrom').value,to:$('cpTo').value||$('cpFrom').value,days,note:$('cpNote').value.trim()};
+  if(!c.name){$('cpMsg').textContent='Give the campaign a name.';return}
+  if(!c.from){$('cpMsg').textContent='Choose the first day of the campaign.';return}
+  const b=$('cpSave');b.disabled=true;$('cpMsg').textContent='';
+  try{const j=await api({op:'save',campaign:c});CP.list=j.campaigns;CP.sel=j.id;CP.edit=null;draw()}catch(err){$('cpMsg').textContent=err.message}
+  b.disabled=false});
+root.addEventListener('click',async e=>{
+  const ch=e.target.closest('[data-cp]');if(ch){CP.sel=ch.dataset.cp;draw();return}
+  if(e.target.closest('#cpAdd')){openForm(null);return}
+  if(e.target.closest('#cpCancel')){CP.edit=null;draw();return}
+  if(e.target.closest('#cpEdit')){openForm(CP.list.find(x=>x.id===CP.sel));return}
+  const d=e.target.closest('#cpDel');
+  if(d){if(!d.dataset.sure){d.dataset.sure='1';d.lastChild.textContent='Sure? Remove';setTimeout(()=>{if(d.isConnected){delete d.dataset.sure;d.lastChild.textContent='Remove'}},4000);return}
+    d.disabled=true;try{const j=await api({op:'delete',id:CP.sel});CP.list=j.campaigns;CP.sel='';draw()}catch(err){showNotice('The campaign could not be removed: '+err.message);d.disabled=false}}
+});
+HOOKS.push(draw);
+init();
+})();
+
+/* ---- Store cards: one picture per store with its key numbers for the dates, category and Net / Gross on the page, drawn here in the browser
+       (nothing is uploaded). Open from the Card button on a branch row, then Download or Share; "All store cards" downloads one per store. ---- */
+window.PCard=(function(){
+const W=1080,PAD=64,INK='#2A1018',TEXT='#2A2024',MUTED='#7A6E73',PINK='#FF93A0',LINE='#EADFDA',UP='#2F8A63',UPBG='#E3F3EA',DOWN='#C0506A',DOWNBG='#FFE7EB',MARK='#D46D83',PAPER='#FFFAF1',WHITE='#FFFFFF';
+let logo=null,cur=null;
+const FONT=()=>'"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif';
+function getLogo(){return logo||(logo=new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src='/pandora-logo.png'}))}
+function rr(x,X,Y,w,h,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath()}
+const font=(x,wt,px)=>{x.font=`${wt} ${px}px ${FONT()}`};
+/* text that shrinks to fit its width, then is cut with … */
+function fitText(x,t,X,Y,maxW,wt,px,min,col,align){t=String(t);let s=px;font(x,wt,s);while(x.measureText(t).width>maxW&&s>(min||px*.6)){s-=1;font(x,wt,s)}
+  if(x.measureText(t).width>maxW){while(t.length>1&&x.measureText(t+'…').width>maxW)t=t.slice(0,-1);t=t.trimEnd()+'…'}
+  x.fillStyle=col;x.textAlign=align||'left';x.fillText(t,X,Y);x.textAlign='left';return x.measureText(t).width}
+function pill(x,X,Y,a,b,inv){ /* a change chip; returns its width */
+  if(!(b>0))return 0;const d=a/b-1,flat=Math.abs(d)<.0005,good=inv?d<0:d>0;const t=(flat?'':d>0?'▲ ':'▼ ')+(Math.abs(d)*100).toFixed(Math.abs(d)<.1?1:0)+'%';
+  font(x,750,26);const w=x.measureText(t).width+32;rr(x,X,Y-30,w,42,21);x.fillStyle=flat?'#F2ECE9':good?UPBG:DOWNBG;x.fill();x.fillStyle=flat?MUTED:good?UP:DOWN;x.fillText(t,X+16,Y);return w}
+function build(b){
+  const L=LAST,o=BRL.find(x=>x.b===b);if(!o||!L.cur)return null;
+  const rows=L.cur.filter(r=>r.branch===b&&inCat(r)),C=L.C,p=o.p;
+  const pm=new Map();for(const r of rows){const k=r.sku||r.name;let q=pm.get(k);if(!q)pm.set(k,q={n:r.name,u:0,v:0});q.u+=r.qty;q.v+=rev(r)}
+  const prods=[...pm.values()].filter(q=>q.v>0).sort((x,y)=>y.v-x.v).slice(0,3);
+  const cats=tally(rows,r=>r.category).filter(c=>c.value>0).slice(0,4);
+  const nd=diffD(S.from,S.to)+1;let days=null;
+  if(nd>1&&nd<=62){const m=new Map();for(const r of rows)m.set(r.date,(m.get(r.date)||0)+rev(r));days=[];for(let i=0;i<nd;i++){const d=addD(S.from,i);days.push({d,v:m.get(d)||0})}}
+  const tiles=[['Orders',num(o.x.orders),o.x.orders,p&&p.orders],['Average order',money(o.x.atv),o.x.atv,p&&p.atv],['Units per order',o.x.upt.toFixed(2),o.x.upt,p&&p.upt],['Units sold',num(o.x.units),o.x.units,p&&p.units]];
+  if(o.tg)tiles.push(['Target reached',(o.tg.r*100).toFixed(0)+'%',null,null,'of '+shortMoney(o.tg.t)]);
+  if(o.vis)tiles.push(['Conversion',(o.vis.conv*100).toFixed(1)+'%',null,null,num(o.vis.t)+' of '+num(o.vis.v)+' visitors']);
+  if(BRL.length>1)tiles.push(['Rank by sales','#'+(BRL.indexOf(o)+1),null,null,'of '+BRL.length+' branches']);
+  tiles.push(['Price per piece',money(o.x.asp),o.x.asp,p&&p.asp]);
+  return {b,o,p,C,prods,cats,days,tiles:tiles.slice(0,6)};
+}
+async function render(b){
+  const D=build(b);if(!D)return null;
+  const lg=await getLogo();try{if(document.fonts&&document.fonts.ready)await document.fonts.ready}catch(_){}
+  const H=(()=>{let h=300+250+40+2*170+30;if(D.days)h+=280;if(D.prods.length)h+=70+D.prods.length*74+20;if(D.cats.length)h+=70+D.cats.length*52+20;return h+90})();
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');x.textBaseline='alphabetic';
+  x.fillStyle=PAPER;x.fillRect(0,0,W,H);
+  /* header band */
+  x.fillStyle=PINK;x.fillRect(0,0,W,300);
+  x.fillStyle=WHITE;x.beginPath();x.arc(PAD+44,92,44,0,Math.PI*2);x.fill();
+  if(lg){const s=Math.min(60/lg.width,60/lg.height),w=lg.width*s,h=lg.height*s;x.drawImage(lg,PAD+44-w/2,92-h/2,w,h)}
+  fitText(x,'PANDORA EGYPT',PAD+108,84,500,800,24,20,INK);
+  fitText(x,'Store report card',PAD+108,118,500,600,24,20,INK);
+  fitText(x,fRange(S.from,S.to,true),W-PAD,102,420,700,26,18,INK,'right');
+  fitText(x,D.b,PAD,222,W-PAD*2,800,76,40,INK);
+  fitText(x,(S.cat==='All'?'All categories':S.cat)+' · '+(S.basis==='net'?'net sales, without VAT':'gross sales, with VAT'),PAD,266,W-PAD*2,600,24,18,INK);
+  /* sales */
+  let y=300+70;
+  fitText(x,'Sales',PAD,y,300,700,28,24,MUTED);
+  y+=96;fitText(x,money(D.o.x.rev),PAD,y,W-PAD*2,800,100,56,TEXT);
+  y+=64;
+  if(D.C&&D.C.has&&D.p){const w=pill(x,PAD,y,D.o.x.rev,D.p.rev);fitText(x,`${signed(D.o.x.rev-D.p.rev,money)} vs ${D.C.text}`,PAD+w+(w?16:0),y,W-PAD*2-w-16,600,26,18,MUTED)}
+  else fitText(x,D.C&&D.C.has?'New: no sales in '+D.C.text:'No comparison for these dates',PAD,y,W-PAD*2,600,26,18,MUTED);
+  /* tiles: 3 across, 2 rows */
+  y=300+250+40;const gap=20,tw=(W-PAD*2-gap*2)/3,th=150;
+  D.tiles.forEach((t,i)=>{const X=PAD+(i%3)*(tw+gap),Y=y+Math.floor(i/3)*(th+gap);
+    rr(x,X,Y,tw,th,22);x.fillStyle=WHITE;x.fill();x.strokeStyle=LINE;x.lineWidth=2;x.stroke();
+    fitText(x,t[0],X+22,Y+42,tw-44,700,22,18,MUTED);
+    fitText(x,t[1],X+22,Y+96,tw-44,800,46,28,TEXT);
+    if(t[4])fitText(x,t[4],X+22,Y+130,tw-44,600,20,15,MUTED);
+    else if(t[3]>0){const d=t[2]/t[3]-1,flat=Math.abs(d)<.0005;fitText(x,(flat?'= ':d>0?'▲ ':'▼ ')+(Math.abs(d)*100).toFixed(Math.abs(d)<.1?1:0)+'%',X+22,Y+130,tw-44,750,20,15,flat?MUTED:d>0?UP:DOWN)}
+  });
+  y+=2*170+30;
+  const title=t=>{fitText(x,t,PAD,y+34,W-PAD*2,800,30,24,TEXT);y+=70};
+  /* sales by day */
+  if(D.days){title('Sales by day');const n=D.days.length,h=140,mx=Math.max(1,...D.days.map(d=>d.v)),bw=(W-PAD*2)/n,g=Math.min(8,bw*.25);
+    D.days.forEach((d,i)=>{const bh=Math.max(d.v>0?4:0,d.v/mx*h);x.fillStyle=d.v===mx?INK:MARK;rr(x,PAD+i*bw+g/2,y+h-bh,Math.max(2,bw-g),bh,Math.min(6,(bw-g)/2,bh/2||1));x.fill()});
+    x.fillStyle=LINE;x.fillRect(PAD,y+h,W-PAD*2,2);
+    fitText(x,fDM(D.days[0].d),PAD,y+h+30,300,600,20,16,MUTED);fitText(x,fDM(D.days[n-1].d),W-PAD,y+h+30,300,600,20,16,MUTED,'right');
+    const best=D.days.reduce((a,c)=>c.v>a.v?c:a,D.days[0]);fitText(x,'Best day: '+fD(best.d)+', '+shortMoney(best.v),W/2,y+h+30,440,700,20,16,TEXT,'center');
+    y+=210}
+  /* top products */
+  if(D.prods.length){title('Top products');D.prods.forEach((q,i)=>{
+      x.fillStyle=PINK;x.beginPath();x.arc(PAD+22,y+24,22,0,Math.PI*2);x.fill();fitText(x,String(i+1),PAD+22,y+33,30,800,24,20,INK,'center');
+      const vw=fitText(x,money(q.v),W-PAD,y+34,300,800,28,22,TEXT,'right');
+      fitText(x,q.n,PAD+62,y+22,W-PAD*2-62-vw-24,700,25,20,TEXT);fitText(x,num(q.u)+(Math.round(q.u)===1?' piece':' pieces'),PAD+62,y+52,400,600,20,16,MUTED);
+      y+=74});y+=20}
+  /* categories */
+  if(D.cats.length){title('What sold');const tot=sum(D.cats,c=>c.value)||1,mx=D.cats[0].value,bx=PAD+300,bw=W-PAD-bx-190;
+    D.cats.forEach(c=>{fitText(x,c.name,PAD,y+26,280,700,24,18,TEXT);
+      rr(x,bx,y+6,bw,22,11);x.fillStyle='#F2ECE9';x.fill();rr(x,bx,y+6,Math.max(22,bw*c.value/mx),22,11);x.fillStyle=MARK;x.fill();
+      fitText(x,shortMoney(c.value),W-PAD,y+26,180,750,24,18,TEXT,'right');y+=52});y+=20}
+  /* footer */
+  x.fillStyle=LINE;x.fillRect(PAD,H-78,W-PAD*2,2);
+  fitText(x,'Pandora Egypt · pandora-eg.online',PAD,H-36,520,600,20,16,MUTED);
+  fitText(x,'Made '+fDM(cairoToday(),true),W-PAD,H-36,400,600,20,16,MUTED,'right');
+  const blob=await new Promise(res=>cv.toBlob(res,'image/png'));
+  return {blob,name:`Pandora_${b.replace(/[^A-Za-z0-9]+/g,'_')}_${S.from}${S.to!==S.from?'_to_'+S.to:''}.png`,b};
+}
+function save(c){const a=document.createElement('a');a.href=URL.createObjectURL(c.blob);a.download=c.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+const canShare=c=>{try{return !!(navigator.canShare&&navigator.canShare({files:[new File([c.blob],c.name,{type:'image/png'})]}))}catch(_){return false}};
+async function open(b){
+  let c;try{c=await render(b)}catch(e){c=null;console.error(e)}
+  if(!c||!c.blob){showNotice('The card for '+b+' could not be made.');return}
+  cur=c;const img=$('cImg');if(img.src)URL.revokeObjectURL(img.src);img.src=URL.createObjectURL(c.blob);img.alt='Store card for '+b;
+  $('cName').textContent=b+' · '+fRange(S.from,S.to);$('cShare').hidden=!canShare(c);$('cModal').hidden=false;$('cDown').focus();
+}
+async function all(){
+  const btn=$('cardAll'),list=BRL.map(o=>o.b);if(!list.length)return;if(btn)btn.disabled=true;let n=0;
+  for(const b of list){try{const c=await render(b);if(c&&c.blob){save(c);n++;await new Promise(r=>setTimeout(r,450))}}catch(e){console.error(e)}}
+  if(btn)btn.disabled=false;
+  showNotice(n?`${n} store ${n===1?'card':'cards'} downloaded for ${fRange(S.from,S.to)}. If only one arrived, allow this site to download several files, then press the button again.`:'The store cards could not be made.');
+}
+const close=()=>{$('cModal').hidden=true};
+$('cModal').addEventListener('click',e=>{if(e.target.id==='cModal'||e.target.id==='cCloseBtn')close()});
+$('cDown').addEventListener('click',()=>{if(cur)save(cur)});
+$('cShare').addEventListener('click',async()=>{if(!cur)return;try{await navigator.share({files:[new File([cur.blob],cur.name,{type:'image/png'})],title:cur.b+' store card'})}catch(_){}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('cModal').hidden)close()});
+return {open,all,render};
 })();
 </script>
 <script>

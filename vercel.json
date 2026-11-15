@@ -15,6 +15,10 @@
     {
       "path": "/api/erp",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/erp?digest=1",
+      "schedule": "0 5 * * *"
     }
   ],
   "redirects": [
@@ -64,6 +68,14 @@
     {
       "source": "/api/transfer",
       "destination": "/api/erp?transfer=1"
+    },
+    {
+      "source": "/api/digest",
+      "destination": "/api/erp?digest=1"
+    },
+    {
+      "source": "/api/campaigns",
+      "destination": "/api/vm?campaigns=1"
     },
     {
       "source": "/api/slow",

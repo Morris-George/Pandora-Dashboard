@@ -236,6 +236,7 @@ module.exports = activity.wrap('erp', async function handler(req, res) {
     if (u.searchParams.get('insights') || u.pathname === '/api/insights') return require('./_insights')(req, res); // Sales Intelligence (api/_insights.js)
     if (u.searchParams.get('overview') || u.pathname === '/api/overview') return require('./_overview')(req, res); // Store Overview (api/_overview.js)
     if (u.searchParams.get('transfer') || u.pathname === '/api/transfer') return require('./_transfer')(req, res);
+    if (u.searchParams.get('digest') || u.pathname === '/api/digest') return require('./_digest')(req, res); // Daily WhatsApp digest (api/_digest.js)
     if (u.searchParams.get('slow') || u.pathname === '/api/slow') return require('./_slow')(req, res); } // Refill Order (api/_refill.js)
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   if (!process.env.ERP_URL || !process.env.ERP_API_KEY || !process.env.ERP_API_SECRET) return send(res, 503, { ok: false, error: 'ERP_URL / ERP_API_KEY / ERP_API_SECRET are not set in Vercel.' });
@@ -251,7 +252,11 @@ module.exports = activity.wrap('erp', async function handler(req, res) {
   }
 
   try {
-    return send(res, 200, { ok: true, ...(await sync(url.searchParams.get('month'))) });
+    let month = url.searchParams.get('month');
+    // The morning run on the 1st would open the new, still empty month and never pick up the last day of the month before,
+    // so on the 1st (Cairo) the schedule syncs last month instead; from the 2nd it syncs the running month as usual.
+    if (cron && !month) { const c = new Date(Date.now() + 2 * 3600 * 1000); if (c.getUTCDate() === 1) { const p = new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth(), 0)); month = `${p.getUTCFullYear()}-${pad(p.getUTCMonth() + 1)}`; } }
+    return send(res, 200, { ok: true, ...(await sync(month)) });
   } catch (e) {
     return send(res, 502, { ok: false, error: String(e && e.message || e).slice(0, 300) });
   }
