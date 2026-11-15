@@ -68,7 +68,7 @@ tr.cath>td{background:var(--soft);font-weight:800;text-align:left;cursor:default
     <label class="fld">Order date<input type="date" id="fDate"></label>
     <label class="fld">Months to arrive<input type="number" id="fLead" min="0.5" max="8" step="0.5"></label>
     <label class="fld">Must last (months until the order after it arrives)<input type="number" id="fCover" min="0.5" max="8" step="0.5"></label>
-    <label class="fld">Budget in $ (optional)<input type="number" id="fBud" min="0" step="1000" placeholder="no limit"></label>
+    <label class="fld">Budget in $ (the order is filled up to it)<input type="number" id="fBud" min="0" step="1000" placeholder="no limit"></label>
     <label class="fld">Extra safety for best sellers<select id="fSafe"><option value="0">None</option><option value="2">2 weeks</option><option value="4">4 weeks</option><option value="6">6 weeks</option></select></label>
   </div>
   <div class="tl" id="tl" style="margin-top:12px"></div>
@@ -76,6 +76,7 @@ tr.cath>td{background:var(--soft);font-weight:800;text-align:left;cursor:default
 </div>
 
 <div class="kpis" id="kpis"></div>
+<div class="tip" id="fill" hidden></div>
 
 <div class="grid2">
   <div class="card"><h2>Ordering calendar</h2><div class="sub" style="margin-bottom:6px">The last day to order so the goods are in the stores before each season starts.</div><div id="cal"></div></div>
@@ -143,6 +144,7 @@ const d0=s=>{const a=String(s).split('-').map(Number);return new Date(Date.UTC(a
 const iso=d=>d.toISOString().slice(0,10),mk=d=>d.toISOString().slice(0,7);
 const addD=(d,n)=>new Date(+d+n*DAY);
 function addM(d,n){const w=Math.trunc(n),fr=n-w,x=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+w,1)),last=new Date(Date.UTC(x.getUTCFullYear(),x.getUTCMonth()+1,0)).getUTCDate();x.setUTCDate(Math.min(d.getUTCDate(),last));return addD(x,Math.round(fr*30))}
+const fmt0=n=>Math.round(n).toLocaleString('en-US');
 const clip=(v,a,b)=>Math.max(a,Math.min(b,v));
 const prevYear=k=>(+k.slice(0,4)-1)+k.slice(4);
 
@@ -268,6 +270,22 @@ function plan(data,opt){
     o.pri=q?(it.cls==='A'?1:it.cls==='B'?2:3):9;
     return o});
 
+  /* a budget bigger than the order the sales need: the rest buys more of the best sellers (A the most, then B, then C), so the order uses the budget */
+  let fill=null;const bud=+opt.budget||0,base=lines.reduce((a,o)=>a+o.cost,0);
+  if(bud>base*1.01){
+    const W={A:1,B:.6,C:.3},el=lines.filter(o=>o.it.avail&&!(o.it.slow&&!o.qty)&&!(o.it.theme&&o.it.theme.hard)&&o.it.base>0&&o.it.fob>0);
+    const qAt=(o,e)=>{const nd=o.need+dem(o.it,N,addM(N,e*W[o.it.cls]));return Math.max(o.qty,nd>=(o.it.cls==='C'?1:.5)?Math.max(1,Math.round(nd)):0)};
+    const rest=base-el.reduce((a,o)=>a+o.cost,0),costAt=e=>rest+el.reduce((a,o)=>a+qAt(o,e)*o.it.fob,0);
+    const CAP=12;let e=CAP,capped=true;
+    if(costAt(CAP)>bud){capped=false;let lo=0,hi=CAP;for(let i=0;i<30;i++){const m=(lo+hi)/2;if(costAt(m)<=bud)lo=m;else hi=m}e=lo}
+    el.forEach(o=>{const nq=qAt(o,e);o.extra=nq-o.qty;o.qty=nq});
+    let spent=rest+el.reduce((a,o)=>a+o.qty*o.it.fob,0);
+    if(!capped){ // a few pieces more of the best sellers until the budget is used up
+      const ord=el.slice().sort((a,b)=>(a.it.cls>b.it.cls?1:a.it.cls<b.it.cls?-1:0)||a.it.rank-b.it.rank);
+      for(let pass=0;pass<6;pass++){let any=false;for(const o of ord){if(o.it.cls==='C'&&!o.qty)continue;if(spent+o.it.fob<=bud){o.qty++;o.extra++;spent+=o.it.fob;any=true}}if(!any)break}}
+    el.forEach(o=>{o.cost=o.qty*o.it.fob;o.retail=o.qty*o.it.rrp;if(o.extra>=1)o.tags.push(['soft','+'+fmt0(o.extra)+' for the budget'])});
+    fill={e,capped,base,spent,budget:bud,pcs:el.reduce((a,o)=>a+Math.max(0,o.extra||0),0),n:el.filter(o=>o.extra>=1).length};
+  }
   // order of importance: best sellers first, inside a class the ones losing sales first, then the bigger value
   lines.sort((a,b)=>a.pri-b.pri||(b.lost>=1)-(a.lost>=1)||b.qty*(b.it.rrp||1)-a.qty*(a.it.rrp||1)||a.it.rank-b.it.rank);
   const budget=+opt.budget||0;let cum=0;lines.forEach(o=>{if(!o.qty)return;cum+=o.cost;o.cum=cum;o.cut=budget>0&&cum>budget});
@@ -279,7 +297,7 @@ function plan(data,opt){
   // window index per category (how busy the selling window is against a normal month)
   const winIdx={};for(const c in catIdx){let t=0,w=0;for(let m=new Date(Date.UTC(A.getUTCFullYear(),A.getUTCMonth(),1));m<N;m=addM(m,1)){const e=addM(m,1),ov=(Math.min(+e,+N)-Math.max(+m,+A))/(+e-+m);if(ov>0){t+=ov*idx(c,mk(m));w+=ov}}winIdx[c]=w?t/w:1}
   const seasonKnown=last12.length>=9;
-  return {today,D,A,N,far:D>addD(today,45),lead,cover,lines,events,catIdx,winIdx,growth,H,last12,seasonKnown,budget,
+  return {today,D,A,N,fill,far:D>addD(today,45),lead,cover,lines,events,catIdx,winIdx,growth,H,last12,seasonKnown,budget,
     tot:{pcs:lines.reduce((a,o)=>a+o.qty,0),n:lines.filter(o=>o.qty).length,cost:lines.reduce((a,o)=>a+(o.cut?0:o.cost),0),costAll:cum,retail:lines.reduce((a,o)=>a+o.retail,0),
       risk:lines.filter(o=>o.lost>=1&&o.it.cls==='A').length,lostEGP:lines.reduce((a,o)=>a+(o.it.cls!=='C'?o.lost*o.it.rrp:0),0),cutN:lines.filter(o=>o.cut).length}};
 }
@@ -335,9 +353,12 @@ function head(){
     nx.map(e=>`<div class="sea next"><span class="dot"></span><div><b>Next: ${esc(e.name)}, ${dshort(e.date)} ${e.date.getUTCFullYear()}</b><small>Place that order by ${dd(e.orderBy)}.</small></div></div>`).join('');
   const t=p.tot;
   $('kpis').innerHTML=`<div class="kpi"><small>Pieces to order</small><b>${fmt(t.pcs)}</b><i>${fmt(t.n)} items</i></div>
-   <div class="kpi"><small>Cost of the order</small><b>$${fmt(t.costAll)}</b><i>${p.budget?(t.cutN?fmt(t.cutN)+' items do not fit $'+fmt(p.budget):'fits the budget'):'no budget set'}</i></div>
+   <div class="kpi"><small>Cost of the order</small><b>$${fmt(t.costAll)}</b><i>${p.budget?(p.fill?fmt(t.costAll/p.budget*100)+'% of the $'+fmt(p.budget)+' budget':t.cutN?fmt(t.cutN)+' items do not fit $'+fmt(p.budget):'fits the budget'):'no budget set'}</i></div>
    <div class="kpi"><small>Worth in the stores</small><b>EGP ${fmt(t.retail)}</b><i>at the selling price</i></div>
    <div class="kpi"><small>Best sellers that run out before it arrives</small><b class="${t.risk?'bad':''}" style="${t.risk?'color:var(--bad)':''}">${fmt(t.risk)}</b><i>about EGP ${fmt(t.lostEGP)} of sales at risk</i></div>`;
+  const F=p.fill,fe=$('fill');fe.hidden=!F;
+  if(F)fe.innerHTML=F.capped?`<b>Your budget of $${fmt(F.budget)} is more than the best sellers can use.</b> Even 12 extra months of stock for the best sellers only reaches $${fmt(F.spent)}, so $${fmt(F.budget-F.spent)} is left unspent. Raise "Must last" or lower the budget.`
+    :`<b>Filled to your budget of $${fmt(F.budget)}.</b> The sales alone need $${fmt(F.base)}, so the other $${fmt(F.spent-F.base)} buys more of the best sellers: about ${f1(F.e)} extra months of stock for class A, ${f1(F.e*.6)} for class B and ${f1(F.e*.3)} for class C (${fmt(F.pcs)} more pieces on ${fmt(F.n)} items). Items that cannot be ordered, slow moving items and one-season items are not increased.`;
   // calendar
   $('cal').innerHTML=p.events.filter(e=>e.st!=='past'||e.orderBy>=p.today).slice(0,9).map(e=>{const past=e.orderBy<p.today;const w=e.st==='good'||e.st==='mid'?'<span class="tag t-good">this order</span>':e.st==='late'?'<span class="tag t-bad">this order is too late</span>':past?'<span class="tag t-warn">order date passed</span>':'';
     return `<div class="cal"><div><b>${esc(e.name)}</b> ${w}<small><br>${dd(e.date)} · shopping starts ${dshort(e.start)}</small></div><div class="when">${e.st==='late'?'':'order by '+dd(e.orderBy)}</div></div>`}).join('');
@@ -404,7 +425,7 @@ function explain(sku){
     <span>Will sell before the order arrives (${dshort(p.today)} to ${dshort(p.A)})</span><b>− ${f1(o.pre)}</b>
     <span>Left when it arrives</span><b>${f1(o.left)}</b>
     <span>${it.theme&&it.theme.hard&&o.season?'Will sell in the season after it arrives':'Will sell while it is on sale ('+dshort(p.A)+' to '+dshort(p.N)+')'}</span><b>${f1(o.win)}</b>
-    ${o.safe>=.05?`<span>Extra safety for a best seller</span><b>+ ${f1(o.safe)}</b>`:''}
+    ${o.safe>=.05?`<span>Extra safety for a best seller</span><b>+ ${f1(o.safe)}</b>`:''}${o.extra>=1?`<span>Extra bought to use the budget</span><b>+ ${fmt(o.extra)}</b>`:''}
     <span class="tot">Order</span><b class="tot">${fmt(o.qty)}${o.want!==o.qty?' <small>(would be '+fmt(o.want)+')</small>':''}</b></div>
    <h3>Sold each month, then what is expected (striped)</h3><div class="hist">${bars}</div>
    ${it.wh.length?`<h3>Where it is in stock today</h3><div class="chips">${it.wh.sort((a,b)=>b[1]-a[1]).map(w=>`<span class="chip" style="cursor:default">${esc(w[0])} <b>${fmt(w[1])}</b></span>`).join('')}</div>`:''}
@@ -426,8 +447,8 @@ async function excel(){
   try{
     if(!window.XLSX)await new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=ok;s.onerror=no;document.head.appendChild(s)});
     const p=P,L=view().length&&$('fShow').value==='order'?view():p.lines.filter(o=>o.qty);
-    const r1=[['Priority','Category','Rank in category','Class','SKU','Item','Sells / month','In stock','Coming','Left on arrival','Will sell','Extra safety','ORDER','FOB $','Cost $','Selling price EGP','Season / notes','Over budget']].concat(
-      L.map(o=>[o.pri,o.it.cat,o.it.rank,o.it.cls,o.it.sku,o.it.name,+f1(o.it.avg3).replace(/,/g,''),o.it.soh,o.it.pipe,Math.round(o.left),Math.round(o.win*10)/10,Math.round(o.safe*10)/10,o.qty,o.it.fob,Math.round(o.cost*100)/100,o.it.rrp,o.tags.map(t=>t[1]).join('; '),o.cut?'yes':'']));
+    const r1=[['Priority','Category','Rank in category','Class','SKU','Item','Sells / month','In stock','Coming','Left on arrival','Will sell','Extra safety','ORDER','FOB $','Cost $','Selling price EGP','Season / notes','Over budget','Extra for the budget']].concat(
+      L.map(o=>[o.pri,o.it.cat,o.it.rank,o.it.cls,o.it.sku,o.it.name,+f1(o.it.avg3).replace(/,/g,''),o.it.soh,o.it.pipe,Math.round(o.left),Math.round(o.win*10)/10,Math.round(o.safe*10)/10,o.qty,o.it.fob,Math.round(o.cost*100)/100,o.it.rrp,o.tags.map(t=>t[1]).join('; '),o.cut?'yes':'',o.extra||0]));
     const r2=[['Season','Date','Shopping starts','Order by','This order']].concat(p.events.map(e=>[e.name,ReorderEngine.iso(e.date),ReorderEngine.iso(e.start),ReorderEngine.iso(e.orderBy),{good:'In time',mid:'Tight',late:'Too late',next:'Later order',past:'Before this order'}[e.st]]));
     const r3=[['SKU','Item','Category','Class','In stock + coming','Runs out about','Sales missed','EGP at risk']].concat(p.lines.filter(o=>o.lost>=1&&o.it.cls!=='C').map(o=>[o.it.sku,o.it.name,o.it.cat,o.it.cls,o.stock,o.out?ReorderEngine.iso(o.out):'',Math.round(o.lost),Math.round(o.lost*o.it.rrp)]));
     const r4=[['SKU','Item','Category','Rank','Would order']].concat(p.lines.filter(o=>!o.it.avail&&o.want&&o.it.cls!=='C').map(o=>[o.it.sku,o.it.name,o.it.cat,o.it.rank,o.want]));
