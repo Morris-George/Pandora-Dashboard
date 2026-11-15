@@ -49,7 +49,7 @@ a.btn{text-decoration:none;display:inline-block}
   <header class="top"><div><a class="crumb" href="/">&larr; Home</a><h1>All Uploads</h1><div class="sub">Every document in one place, listed under the part of the site it feeds. Saved documents stay until you remove them here.</div></div><div class="actions"></div></header>
   <div class="err" id="err" hidden></div>
   <section class="card grp" id="erp"><div class="top2"><div><h2>Sync from ERP</h2><div class="meta" style="margin:0">Pulls this month's sales and staff reports straight from ERPNext into Pandora Dashboards and Staff Performance. It also runs by itself every morning.</div></div><div class="actions"><input type="month" id="erpMonth" class="btn" style="padding:6px 10px"><button class="btn go" id="erpGo" type="button">Sync now</button></div></div><div class="st" id="erpSt"></div></section>
-  <section class="card grp" id="digest"><div class="top2"><div><h2>Daily WhatsApp digest</h2><div class="meta" style="margin:0">Every morning after the ERP sync: yesterday's sales, each store against the same day last week, the top item and the biggest drop, sent to your WhatsApp.</div></div><div class="actions"><button class="btn" id="dgPrev" type="button">Preview</button><button class="btn go" id="dgSend" type="button">Send now</button></div></div><div class="st" id="dgSt"></div><pre class="dgbox" id="dgBox" hidden></pre><div class="actions" id="dgActs" hidden><a class="btn" id="dgWa" target="_blank" rel="noopener">Open in WhatsApp</a><button class="btn" id="dgCopy" type="button">Copy</button></div></section>
+  <section class="card grp" id="digest"><div class="top2"><div><h2>Daily WhatsApp digest</h2><div class="meta" style="margin:0">Every morning after the ERP sync: yesterday's sales, each store against the same day last week, the top item and the biggest drop, sent to your Telegram (or WhatsApp).</div></div><div class="actions"><button class="btn" id="dgPrev" type="button">Preview</button><button class="btn go" id="dgSend" type="button">Send now</button></div></div><div class="st" id="dgSt"></div><pre class="dgbox" id="dgBox" hidden></pre><div class="actions" id="dgActs" hidden><a class="btn" id="dgWa" target="_blank" rel="noopener">Open in WhatsApp</a><button class="btn" id="dgCopy" type="button">Copy</button></div></section>
   <div id="groups"><div class="empty">Loading…</div></div>
 </div>
 <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" hidden>
@@ -124,14 +124,14 @@ $('erpMonth').value=new Date().toISOString().slice(0,7);
 $('erpGo').addEventListener('click',async()=>{const b=$('erpGo');b.disabled=true;$('erpSt').textContent='Syncing from ERP… this can take up to a minute.';try{await post('/api/erp?month='+encodeURIComponent($('erpMonth').value),'{}','application/json');await load();await erpStatus()}catch(e){$('erpSt').textContent='Sync failed: '+e.message}b.disabled=false});
 /* Daily WhatsApp digest: preview the message, send it now, or open it in WhatsApp by hand (api/_digest.js) */
 function dgLine(j){const s=j.status;
-  if(!j.configured)return 'Not connected yet: WHATSAPP_TO and CALLMEBOT_APIKEY are missing in Vercel. Preview and Open in WhatsApp already work.';
-  return 'Sends to '+j.to+' every morning. '+(!s?'Nothing sent yet.':s.ok?'Last sent '+when(s.at)+(s.by==='button'?' (Send now)':'')+'.':'Last try failed '+when(s.at)+': '+(s.error||'')+'.')}
+  if(!j.configured)return 'Not connected yet: TELEGRAM_BOT_TOKEN is missing in Vercel. Preview and Open in WhatsApp already work.';
+  return 'Sends to '+j.to+' every morning. '+(!s?'Nothing sent yet.':s.ok?'Last sent '+when(s.at)+(s.via?' on '+s.via:'')+(s.by==='button'?' (Send now)':'')+'.':'Last try failed '+when(s.at)+': '+(s.error||'')+'.')}
 function dgShow(t){const b=$('dgBox');b.hidden=!t;b.textContent=t||'';$('dgActs').hidden=!t;if(t)$('dgWa').href='https://wa.me/?text='+encodeURIComponent(t)}
 async function dgGet(show){try{const r=await fetch('/api/digest?preview=1',{credentials:'same-origin',cache:'no-store'});const j=await r.json();$('dgSt').textContent=(j.ok?'':(j.error||'Could not build the digest.')+' ')+(j.configured!==undefined?dgLine(j):'');if(show)dgShow(j.ok?j.text:'')}catch(_){$('dgSt').textContent='Could not load the digest.'}}
 $('dgPrev').addEventListener('click',async()=>{const b=$('dgPrev');b.disabled=true;await dgGet(true);b.disabled=false});
 $('dgSend').addEventListener('click',async()=>{const b=$('dgSend');b.disabled=true;$('dgSt').textContent='Sending…';
   try{const r=await fetch('/api/digest',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'});const j=await r.json().catch(()=>({}));
-    if(j.text)dgShow(j.text);$('dgSt').textContent=r.ok&&j.ok?'Sent to '+j.to+'. Check WhatsApp.':'Not sent: '+(j.error||('error '+r.status))}catch(_){$('dgSt').textContent='Not sent: check your connection.'}
+    if(j.text)dgShow(j.text);$('dgSt').textContent=r.ok&&j.ok?'Sent'+(j.status&&j.status.via?' on '+j.status.via:'')+'. Check your phone.':'Not sent: '+(j.error||('error '+r.status))}catch(_){$('dgSt').textContent='Not sent: check your connection.'}
   b.disabled=false});
 $('dgCopy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('dgBox').textContent);$('dgCopy').textContent='Copied';setTimeout(()=>$('dgCopy').textContent='Copy',1500)}catch(_){}});
 dgGet(false);

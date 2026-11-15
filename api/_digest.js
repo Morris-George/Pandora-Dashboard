@@ -3,7 +3,7 @@
 //   GET  /api/digest                 Vercel cron (Authorization: Bearer CRON_SECRET): send yesterday's digest, once per day
 //   GET  /api/digest?preview=1       super admin: the message as it would be sent now (&date=YYYY-MM-DD for another day), nothing is sent
 //   POST /api/digest                 super admin: send it now
-// Env vars: WHATSAPP_TO (the phone number with country code, e.g. +2011...), CALLMEBOT_APIKEY (the key CallMeBot sends to that number on WhatsApp).
+// Env vars: TELEGRAM_BOT_TOKEN (+ optional TELEGRAM_CHAT_ID) for Telegram; WHATSAPP_TO + CALLMEBOT_APIKEY for WhatsApp (CallMeBot). Either one, or both.
 // The numbers follow Pandora Dashboards: net sales (without VAT), an order = an invoice (per branch) with sales and pieces above zero.
 const store = require('./_store');
 const { whoami } = require('./_auth');
@@ -104,18 +104,63 @@ function build(rows, want, today) {
   return { ok: true, day, wanted: want, fallback: day !== want, text: L.join('\n'), sales: Math.round(a.net), orders: a.orders, today };
 }
 
+// ---- where it is sent: Telegram (free, instant) and/or WhatsApp (CallMeBot) -- whichever has its settings in Vercel ----
+// Telegram: TELEGRAM_BOT_TOKEN (from @BotFather). TELEGRAM_CHAT_ID is optional: when it is missing the chat is found from the
+// newest message sent to the bot (so the person only has to press Start once) and remembered in digest/tgchat.json.
+// WhatsApp: WHATSAPP_TO + CALLMEBOT_APIKEY.
 const phone = () => String(process.env.WHATSAPP_TO || '').replace(/[^\d+]/g, '');
-const configured = () => !!(phone() && process.env.CALLMEBOT_APIKEY);
-const masked = () => { const p = phone(); return p ? p.slice(0, 4) + '•••' + p.slice(-3) : ''; };
+const waOn = () => !!(phone() && process.env.CALLMEBOT_APIKEY);
+const tgOn = () => !!String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
+const configured = () => waOn() || tgOn();
+const where = () => [tgOn() ? 'Telegram' : '', waOn() ? 'WhatsApp ' + phone().slice(0, 4) + '•••' + phone().slice(-3) : ''].filter(Boolean).join(' + ');
+
+const escH = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// the message is written with WhatsApp marks (*bold*, _italic_); Telegram gets the same text as HTML
+const toHtml = text => escH(text).replace(/\*([^*\n]+)\*/g, '<b>$1</b>').replace(/(^|\n)_([^_\n]+)_(?=\n|$)/g, '$1<i>$2</i>');
+
+async function tgCall(method, body) {
+  const r = await fetch('https://api.telegram.org/bot' + String(process.env.TELEGRAM_BOT_TOKEN).trim() + '/' + method, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), signal: AbortSignal.timeout(20000)
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.ok) throw new Error(j.description ? 'Telegram said: ' + j.description : 'Telegram did not answer (' + r.status + ')');
+  return j.result;
+}
+async function tgChat() {
+  const fixed = String(process.env.TELEGRAM_CHAT_ID || '').trim();
+  if (fixed) return fixed;
+  const saved = await store.getJSON('digest/tgchat.json');
+  if (saved && saved.id) return String(saved.id);
+  const ups = await tgCall('getUpdates', { limit: 20, allowed_updates: ['message'] });
+  const m = ups.map(u => u.message).filter(m => m && m.chat && m.chat.type === 'private').pop();
+  if (!m) throw new Error('Telegram does not know you yet: open your bot in Telegram, press Start, then try again.');
+  await store.putJSON('digest/tgchat.json', { id: m.chat.id, name: [m.chat.first_name, m.chat.last_name].filter(Boolean).join(' ') });
+  return String(m.chat.id);
+}
+async function sendTelegram(text) {
+  const chat = await tgChat();
+  await tgCall('sendMessage', { chat_id: chat, text: toHtml(text), parse_mode: 'HTML', disable_web_page_preview: true });
+  return 'Telegram';
+}
 
 // CallMeBot: one GET with the number, the key it gave that number, and the text. It answers 200 with a short page; errors are written in it.
 async function sendWhatsApp(text) {
-  if (!configured()) throw new Error('WhatsApp is not set up yet: add WHATSAPP_TO and CALLMEBOT_APIKEY in Vercel.');
   const u = 'https://api.callmebot.com/whatsapp.php?source=pandora&phone=' + encodeURIComponent(phone()) + '&apikey=' + encodeURIComponent(process.env.CALLMEBOT_APIKEY) + '&text=' + encodeURIComponent(text);
   const r = await fetch(u, { signal: AbortSignal.timeout(25000) });
   const body = (await r.text().catch(() => '')).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   if (!r.ok || /apikey is invalid|invalid apikey|not (?:valid|allowed|found)|error/i.test(body) && !/queued|sent/i.test(body)) throw new Error('WhatsApp did not accept the message' + (body ? ': ' + body.slice(0, 200) : ' (' + r.status + ')'));
-  return body.slice(0, 200);
+  return 'WhatsApp';
+}
+// every channel that is set up; it counts as sent when at least one took it
+async function sendAll(text) {
+  if (!configured()) throw new Error('Nothing is connected yet: add TELEGRAM_BOT_TOKEN (Telegram) in Vercel.');
+  const jobs = [];
+  if (tgOn()) jobs.push(sendTelegram(text));
+  if (waOn()) jobs.push(sendWhatsApp(text));
+  const res = await Promise.allSettled(jobs);
+  const ok = res.filter(x => x.status === 'fulfilled').map(x => x.value), bad = res.filter(x => x.status === 'rejected').map(x => String(x.reason && x.reason.message || x.reason));
+  if (!ok.length) throw new Error(bad.join(' · ').slice(0, 280));
+  return { via: ok, problems: bad };
 }
 
 module.exports = async function handler(req, res) {
@@ -132,7 +177,7 @@ module.exports = async function handler(req, res) {
   const asked = url.searchParams.get('date');
   const want = ISO.test(asked || '') && asked < today ? asked : addD(today, -1);
   const status = await store.getJSON(STATUS);
-  const base = { configured: configured(), to: masked(), status: status || null };
+  const base = { configured: configured(), to: where(), status: status || null };
   let d;
   try { d = build(await dashRows(), want, today); } catch (e) { return send(res, 500, { ok: false, error: String(e && e.message || e).slice(0, 300), ...base }); }
 
@@ -142,8 +187,8 @@ module.exports = async function handler(req, res) {
   if (cron && status && status.ok && status.sentOn === today) return send(res, 200, { ok: true, skipped: 'already sent today', ...base });
   if (!d.ok) { await store.putJSON(STATUS, { ok: false, at: new Date().toISOString(), error: d.error }); return send(res, 404, { ...d, ...base }); }
   try {
-    await sendWhatsApp(d.text);
-    const st = { ok: true, at: new Date().toISOString(), sentOn: cron ? today : (status && status.sentOn) || '', day: d.day, by: cron ? 'schedule' : 'button' };
+    const sent = await sendAll(d.text);
+    const st = { ok: true, at: new Date().toISOString(), via: sent.via.join(' + '), problems: sent.problems.join(' · ').slice(0, 200), sentOn: cron ? today : (status && status.sentOn) || '', day: d.day, by: cron ? 'schedule' : 'button' };
     await store.putJSON(STATUS, st);
     return send(res, 200, { ok: true, day: d.day, text: d.text, ...base, status: st });
   } catch (e) {
@@ -153,3 +198,4 @@ module.exports = async function handler(req, res) {
   }
 };
 module.exports.build = build;
+module.exports.toHtml = toHtml;
