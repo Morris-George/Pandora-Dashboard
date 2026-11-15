@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head><link rel="icon" type="image/png" href="/favicon.png?v=2">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Smart Reorder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--bg:#FBF6F7;--surface:#FFFAF1;--ink:#2A1F24;--ink2:#6B5A61;--line:#EADCDF;--accent:#FF93A0;--soft:#FFE4E8;--good:#1F7A4D;--warn:#B7791F;--bad:#C2414F;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171013;--surface:#241A1E;--ink:#F3EADB;--ink2:#B9A5AC;--line:#3A2A30;--soft:#3A2229;--good:#5CC48E;--warn:#E0A84A;--bad:#FF8A96;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171013;--surface:#241A1E;--ink:#F3EADB;--ink2:#B9A5AC;--line:#3A2A30;--soft:#3A2229;--good:#5CC48E;--warn:#E0A84A;--bad:#FF8A96;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;padding:20px 16px 48px}
+.wrap{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}h2{margin:0 0 8px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}h2::before{content:"";width:4px;height:16px;border-radius:2px;background:var(--accent)}
+.sub,.note{color:var(--ink2);font-size:12.5px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0;box-shadow:0 1px 2px rgba(42,31,36,.04),0 4px 14px rgba(42,31,36,.04)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn,select,input{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.btn{cursor:pointer;font-weight:600}.btn.go{background:var(--accent);border-color:var(--accent);color:#2A1018}.btn:disabled{opacity:.5}
+.err{background:var(--accent);color:#2A1018;border-radius:10px;padding:10px 14px;font-weight:600}
+.fld{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:700;color:var(--ink2)}.fld input,.fld select{font-weight:700;font-size:14px;min-width:92px}.fld input[type=number]{width:92px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.kpi{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 10px 10px 14px}.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}.kpi small{display:block;color:var(--ink2);font-size:11.5px;font-weight:600}.kpi b{font-size:20px;font-variant-numeric:tabular-nums}.kpi i{display:block;font-style:normal;font-size:11.5px;color:var(--ink2)}
+.grid2{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+/* the three dates */
+.tl{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:8px;align-items:center;margin:4px 0 12px}.tl .st{background:var(--soft);border-radius:14px;padding:10px 12px}.tl .st small{display:block;font-size:11.5px;font-weight:700;color:var(--ink2)}.tl .st b{font-size:17px;font-weight:800}.tl .ar{color:var(--accent);font-weight:800;text-align:center;font-size:12px}.tl .ar svg{display:block;margin:0 auto}
+@media(max-width:640px){.tl{grid-template-columns:1fr}.tl .ar svg{transform:rotate(90deg)}}
+.sea{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:12px;margin-top:6px;border:1px solid var(--line)}.sea .dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex:none}.sea b{font-weight:800}.sea small{display:block;color:var(--ink2)}
+.sea.good{background:color-mix(in srgb,var(--good) 9%,transparent)}.sea.good .dot{background:var(--good)}.sea.mid .dot{background:var(--warn)}.sea.mid{background:color-mix(in srgb,var(--warn) 9%,transparent)}.sea.late .dot{background:var(--bad)}.sea.late{background:color-mix(in srgb,var(--bad) 8%,transparent)}.sea.next .dot{background:var(--ink2)}
+.tw{overflow:auto;max-height:72vh}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:6px 7px;border-top:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}th{position:sticky;top:0;background:var(--surface);color:var(--ink2);font-size:11.5px;z-index:1}
+th.l,td.l{text-align:left}td.name{max-width:250px;overflow:hidden;text-overflow:ellipsis;text-align:left}td.name small{display:block;color:var(--ink2);font-size:11px}
+tbody tr{cursor:pointer}tbody tr:hover>td{background:color-mix(in srgb,var(--accent) 7%,transparent)}tr.cut>td{opacity:.45}
+tr.cath>td{background:var(--soft);font-weight:800;text-align:left;cursor:default;font-size:13px}
+.img{width:38px;height:38px;border-radius:8px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;vertical-align:middle;font-size:9px;color:var(--ink2);line-height:1.1;text-align:center}.img img{width:100%;height:100%;object-fit:cover}.img.xl{width:120px;height:120px;border-radius:16px;flex:none}
+.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;margin:1px 3px 1px 0}.t-good{background:var(--good);color:#fff}.t-bad{background:var(--bad);color:#fff}.t-warn{background:var(--warn);color:#fff}.t-soft{background:var(--soft);color:var(--ink)}
+.cl{display:inline-flex;width:22px;height:22px;border-radius:50%;align-items:center;justify-content:center;font-weight:800;font-size:11.5px}.cl.A{background:var(--accent);color:#2A1018}.cl.B{background:var(--soft);color:var(--ink)}.cl.C{border:1px solid var(--line);color:var(--ink2)}
+.qty{font-size:15px;font-weight:800}.qty.z{color:var(--ink2);font-weight:600;font-size:12.5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);border-radius:99px;padding:5px 12px;font-size:12.5px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--ink)}.chip.on{background:var(--accent);border-color:var(--accent);color:#2A1018}.chip b{font-weight:500;opacity:.75}
+.bar{display:grid;grid-template-columns:150px 1fr 64px;gap:10px;align-items:center;padding:4px 0;font-size:12.5px}.bar .tr{height:10px;border-radius:99px;background:var(--soft);position:relative;overflow:hidden}.bar .tr i{position:absolute;top:0;bottom:0;left:0;border-radius:99px;background:var(--accent)}.bar b{text-align:right}
+.cal{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:7px 0;border-top:1px solid var(--line);align-items:center}.cal:first-child{border-top:0}.cal small{color:var(--ink2)}.cal .when{text-align:right;font-weight:800}
+#M{position:fixed;inset:0;z-index:50;background:rgba(23,16,19,.55);display:flex;align-items:center;justify-content:center;padding:14px}#MB{background:var(--surface);color:var(--ink);border-radius:20px;width:min(680px,100%);max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.mh{display:flex;gap:12px;align-items:center;padding:14px 16px;position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);z-index:2}.mc{padding:12px 16px 18px}.mc h3{margin:16px 0 8px;font-size:14px}
+.math{display:grid;grid-template-columns:1fr auto;gap:5px 14px;font-size:13.5px}.math b{text-align:right;font-variant-numeric:tabular-nums}.math .tot{border-top:2px solid var(--ink);padding-top:6px;font-weight:800;font-size:15px}
+.hist{display:flex;gap:3px;align-items:flex-end;height:90px}.hist div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;font-size:9.5px;color:var(--ink2);min-width:0}.hist i{display:block;width:100%;background:var(--accent);border-radius:4px 4px 0 0;min-height:1px}.hist i.f{background:repeating-linear-gradient(45deg,var(--accent),var(--accent) 3px,transparent 3px,transparent 6px);border:1px solid var(--accent)}
+.tip{background:var(--soft);border-radius:12px;padding:9px 12px;font-size:13px;margin-bottom:6px}
+.ic{width:1.1em;height:1.1em;vertical-align:-.2em;flex:none}
+@media print{.noprint{display:none!important}.tw{max-height:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div><h1>Smart Reorder</h1><div class="sub" id="sub">What to buy in the next order, best sellers of each category first, timed for the season it arrives in.</div></div>
+  <div class="row noprint"><button class="btn" id="bSync" hidden>Get more sales history</button><button class="btn go" id="bX">Download Excel</button></div>
+</header>
+<div class="err" id="err" hidden></div>
+<div id="load" class="card">Reading stock, pipeline and sales…</div>
+<div id="app" hidden style="display:flex;flex-direction:column;gap:14px">
+
+<div class="card">
+  <h2>When will you place the order?</h2>
+  <div class="row noprint" style="gap:12px;align-items:flex-end">
+    <label class="fld">Order date<input type="date" id="fDate"></label>
+    <label class="fld">Months to arrive<input type="number" id="fLead" min="0.5" max="8" step="0.5"></label>
+    <label class="fld">Must last (months until the order after it arrives)<input type="number" id="fCover" min="0.5" max="8" step="0.5"></label>
+    <label class="fld">Budget in $ (optional)<input type="number" id="fBud" min="0" step="1000" placeholder="no limit"></label>
+    <label class="fld">Extra safety for best sellers<select id="fSafe"><option value="0">None</option><option value="2">2 weeks</option><option value="4">4 weeks</option><option value="6">6 weeks</option></select></label>
+  </div>
+  <div class="tl" id="tl" style="margin-top:12px"></div>
+  <div id="seasons"></div>
+</div>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="grid2">
+  <div class="card"><h2>Ordering calendar</h2><div class="sub" style="margin-bottom:6px">The last day to order so the goods are in the stores before each season starts.</div><div id="cal"></div></div>
+  <div class="card"><h2>How busy each category is while this order is on sale</h2><div class="sub" id="idxNote" style="margin-bottom:6px"></div><div id="idx"></div></div>
+</div>
+
+<div class="card" id="alertCard" hidden><h2>Act now, before the order arrives</h2><div id="alerts"></div></div>
+
+<div class="card">
+  <h2>The order</h2>
+  <div class="row noprint" style="margin-bottom:8px;justify-content:space-between">
+    <div class="chips" id="cats"></div>
+    <div class="row"><select id="fShow"><option value="order">Items to order</option><option value="season">Seasonal items</option><option value="risk">Will run out before arrival</option><option value="na">Best sellers we cannot order</option><option value="all">Everything</option></select><input id="fQ" placeholder="Search item or SKU" style="width:170px"></div>
+  </div>
+  <div class="tw"><table><thead><tr><th class="l">#</th><th class="l"></th><th class="l">Item</th><th>Sells / month</th><th>In stock</th><th>Coming</th><th>Left on arrival</th><th>Will sell</th><th>Order</th><th>Cost $</th><th class="l">Why</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <div class="row noprint" style="margin-top:8px;justify-content:space-between"><span class="note" id="cnt"></span><button class="btn" id="more" hidden>Show more</button></div>
+</div>
+<div class="note" id="foot"></div>
+</div>
+</div>
+<div id="M" hidden><div id="MB"></div></div>
+
+<script src="/stockcount-pics-1.js" async></script><script src="/stockcount-pics-2.js" async></script><script src="/stockcount-pics-3.js" async></script><script src="/stockcount-pics-4.js" async></script>
+
+<script id="engine">
+/* The thinking part, with no page code in it (it is tested on its own).
+   plan(data, opt) -> { A, N, lines, events, catIdx, growth, histMonths ... }
+   data = /api/refill?smart=1 ; opt = { order:'YYYY-MM-DD', lead: months, cover: months, safeA: weeks, budget: $ } */
+var ReorderEngine=(function(){
+const DAY=864e5;
+const d0=s=>{const a=String(s).split('-').map(Number);return new Date(Date.UTC(a[0],a[1]-1,a[2]||1))};
+const iso=d=>d.toISOString().slice(0,10),mk=d=>d.toISOString().slice(0,7);
+const addD=(d,n)=>new Date(+d+n*DAY);
+function addM(d,n){const w=Math.trunc(n),fr=n-w,x=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+w,1)),last=new Date(Date.UTC(x.getUTCFullYear(),x.getUTCMonth()+1,0)).getUTCDate();x.setUTCDate(Math.min(d.getUTCDate(),last));return addD(x,Math.round(fr*30))}
+const clip=(v,a,b)=>Math.max(a,Math.min(b,v));
+const prevYear=k=>(+k.slice(0,4)-1)+k.slice(4);
+
+/* ---- the calendar of selling seasons in Egypt ---- */
+const HFALL={ram:['2026-02-18','2027-02-08','2028-01-28','2029-01-16','2030-01-05'],fitr:['2026-03-20','2027-03-10','2028-02-27','2029-02-14','2030-02-04'],adha:['2026-05-27','2027-05-16','2028-05-05','2029-04-24','2030-04-13']};
+function hijriDates(y0,y1){
+  const out={ram:[],fitr:[],adha:[]};
+  try{const f=new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn',{day:'numeric',month:'numeric',timeZone:'UTC'});
+    if(!/islamic/.test(f.resolvedOptions().calendar))throw 0;
+    for(let d=new Date(Date.UTC(y0,0,1));d.getUTCFullYear()<=y1;d=addD(d,1)){const p=f.formatToParts(d),m=+p.find(x=>x.type==='month').value,dd=+p.find(x=>x.type==='day').value;
+      if(m===9&&dd===1)out.ram.push(iso(d));else if(m===10&&dd===1)out.fitr.push(iso(d));else if(m===12&&dd===10)out.adha.push(iso(d))}
+    if(!out.ram.length||!out.fitr.length)throw 0;return out}catch(e){const r={};for(const k in HFALL)r[k]=HFALL[k].filter(s=>+s.slice(0,4)>=y0&&+s.slice(0,4)<=y1);return r}
+}
+// lead = days before the day when shoppers start buying for it (the goods should be in the stores by then); tail = days it keeps selling after
+function seasonEvents(y0,y1){
+  const E=[],add=(id,name,date,lead,theme,o)=>E.push(Object.assign({id,name,date:d0(date),lead,theme:theme||'',tail:0},o||{}));
+  for(let y=y0;y<=y1;y++){
+    add('val',"Valentine's Day",y+'-02-14',35,'love');
+    add('mom',"Mother's Day",y+'-03-21',35,'mum');
+    add('grad','Graduation season',y+'-06-25',30,'grad');
+    add('summer','Summer and Sahel season',y+'-08-01',45,'summer');
+    add('hall','Halloween',y+'-10-31',30,'hall',{hard:1,minor:1,tail:1});
+    add('egval','Egyptian Valentine (4 November)',y+'-11-04',21,'love');
+    let f=new Date(Date.UTC(y,10,1));while(f.getUTCDay()!==5)f=addD(f,1);add('wf','White Friday',iso(addD(f,21)),14,'');
+    add('xmas','Christmas and New Year',y+'-12-25',45,'xmas',{hard:1,tail:13});
+  }
+  const h=hijriDates(y0,y1);
+  h.ram.forEach(s=>add('ram','Ramadan starts',s,21,'moon',{moon:1}));h.fitr.forEach(s=>add('fitr','Eid al-Fitr',s,25,'',{moon:1}));h.adha.forEach(s=>add('adha','Eid al-Adha',s,21,'',{moon:1}));
+  return E.sort((a,b)=>a.date-b.date);
+}
+// item names that belong to a season. hard = sells almost only in its season (Christmas, Halloween)
+const THEMES=[
+  ['xmas','Christmas',/christmas|x-?mas|santa|snowman|snowflake|snow globe|\bsnow\b|reindeer|gingerbread|festive|candy cane|\bholly\b|mistletoe|nutcracker|wreath|sleigh|\belf\b|north pole|stocking|winter/i,1],
+  ['hall','Halloween',/halloween|pumpkin|ghost|skull|witch|spider|\bboo\b/i,1],
+  ['mum','Mother’s Day',/\bmum\b|\bmom\b|mother|mama|\bfamily\b|daughter|grandm|sister/i,0],
+  ['love','Valentine',/valentine|heart|\blove\b|\bkiss|cupid|\broses?\b|romanc|forever|xoxo|couple/i,0],
+  ['moon','Ramadan',/ramadan|\beid\b|crescent|\bmoon\b|lantern/i,0],
+  ['grad','Graduation',/graduat|diploma|class of/i,0],
+  ['summer','Summer',/summer|beach|ocean|\bsea\b|seashell|\bshell\b|\bpalm\b|tropical|starfish|turtle|dolphin|mermaid|flamingo|pineapple|seahorse|ice cream|watermelon|\bwave\b|\bsun\b/i,0]
+];
+const themeOf=name=>{for(const t of THEMES)if(t[2].test(name||''))return {id:t[0],label:t[1],hard:!!t[3]};return null};
+const CATFIX=c=>{c=String(c||'').trim();if(/^charm$/i.test(c))return 'Charms';return c};
+const catFromGroup=g=>{const l=String(g||'').toLowerCase();if(l.includes('earring'))return 'Earrings';if(l.includes(' ring')||/^rings?/.test(l))return 'Rings';if(l.includes('bracelet'))return 'Bracelets';if(l.includes('necklace')||l.includes('pendant'))return 'Necklaces & Pendants';if(['charm','clip','dangle','medallion','spacer'].some(x=>l.includes(x)))return 'Charms';return ''};
+
+function plan(data,opt){
+  const today=d0(data.today),curKey=data.today.slice(0,7);
+  const all=data.months||[],H=all.filter(k=>k<curKey),hi={};all.forEach((k,i)=>hi[k]=i);   // H = full months we have sales for
+  const known=new Set(H);
+  const D=d0(opt.order||data.today),lead=clip(+opt.lead||2,.5,8),cover=clip(+opt.cover||2,.5,8);
+  const A=addM(D,lead),N=addM(A,cover);          // A = arrives in the stores, N = the order after it arrives
+  const from=A>today?today:A;                    // stock is counted today
+  const EV=seasonEvents(today.getUTCFullYear()-1,N.getUTCFullYear()+2);
+
+  /* items */
+  const items=(data.items||[]).map(r=>{const cat=CATFIX(r[4])||catFromGroup(r[16])||'Other';
+    const s={};H.forEach(k=>s[k]=r[14][hi[k]]||0);
+    return {sku:r[0],avail:!!r[1],dv:r[2]||String(r[0]).split('-')[0],name:r[3]||'',cat,sub:r[5]||'',launch:r[6]||'',fob:+r[7]||0,rrp:+r[8]||0,soh:r[11]||0,pipe:r[12]||0,slow:!!r[13]||!!(r[18]&&r[18].length),slowIn:r[18]||[],s,bought:r[15]||[],wh:r[17]||[],theme:themeOf(r[3])}});
+
+  /* how busy each calendar month is, per category (1 = a normal month), from the last 12 full months */
+  const catS={};
+  if(data.allCats)for(const c in data.allCats){const m=catS[CATFIX(c)]||(catS[CATFIX(c)]={});H.forEach(k=>m[k]=(m[k]||0)+(data.allCats[c][2][hi[k]]||0))}
+  items.forEach(it=>{if(data.allCats&&catS[it.cat])return;const m=catS['~'+it.cat]||(catS['~'+it.cat]={});H.forEach(k=>m[k]=(m[k]||0)+it.s[k])});
+  for(const c in catS)if(c[0]==='~'){if(!catS[c.slice(1)])catS[c.slice(1)]=catS[c];delete catS[c]}
+  const last12=H.slice(-12),catIdx={};
+  for(const c in catS){const v=last12.map(k=>catS[c][k]||0),mean=v.reduce((a,b)=>a+b,0)/(v.length||1),ix={};
+    if(last12.length>=9&&mean>0)last12.forEach((k,i)=>{ix[+k.slice(5)]=clip(1+.8*(v[i]/mean-1),.6,2.2)});
+    catIdx[c]=ix}
+  const idx=(c,key)=>(catIdx[c]&&catIdx[c][+key.slice(5)])||1;
+  // is the business bigger than a year ago? (last 3 full months against the same 3 a year before)
+  let growth=1;{const r=H.slice(-3);if(r.length===3&&r.every(k=>known.has(prevYear(k)))){let a=0,b=0;for(const c in catS)r.forEach(k=>{a+=catS[c][k]||0;b+=catS[c][prevYear(k)]||0});if(b>0)growth=clip(a/b,.7,1.6)}}
+
+  /* best sellers per category, by design (all sizes of a ring count together): A = the designs that make 70% of the category's pieces, B the next 20%, C the rest */
+  const dvT={};items.forEach(it=>{const k=it.cat+'|'+it.dv;it.tot=last12.reduce((a,m)=>a+it.s[m],0);dvT[k]=(dvT[k]||0)+it.tot});
+  const byCat={};for(const k in dvT){const c=k.split('|')[0];(byCat[c]||(byCat[c]=[])).push([k,dvT[k]])}
+  const cls={},rank={};
+  for(const c in byCat){const l=byCat[c].sort((a,b)=>b[1]-a[1]),tot=l.reduce((a,x)=>a+x[1],0);let cum=0;
+    l.forEach((x,i)=>{rank[x[0]]=i+1;cls[x[0]]=!x[1]?'C':cum<tot*.7?'A':cum<tot*.9?'B':'C';cum+=x[1]})}
+
+  const softOn=(th,key)=>{const ms=d0(key+'-01'),me=addM(ms,1);return EV.some(e=>e.theme===th&&Math.min(+me,+addD(e.date,1))-Math.max(+ms,+addD(e.date,-e.lead))>=10*DAY)};
+  const dem=(it,a,b)=>{if(b<=a)return 0;let t=0;for(let m=new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth(),1));m<b;m=addM(m,1)){const e=addM(m,1),ov=(Math.min(+e,+b)-Math.max(+m,+a))/(+e-+m);if(ov>0)t+=ov*it.f(mk(m))}return t};
+
+  const lines=items.map(it=>{
+    const k=it.cat+'|'+it.dv;it.cls=cls[k]||'C';it.rank=rank[k]||999;
+    // months it was really on sale
+    const fs=H.find(m=>it.s[m]>0||(it.bought[hi[m]]||0)>0)||'',lm=it.launch?it.launch.slice(0,7):'';const first=lm&&fs?(lm<fs?lm:fs):(fs||lm);
+    const act=first?H.filter(m=>m>=first):[],rec=act.slice(-6);
+    let n=0,dn=0;rec.forEach((m,i)=>{const w=i>=rec.length-3?2:1;n+=w*it.s[m];dn+=w*idx(it.cat,m)});
+    it.base=dn?n/dn:0;it.months=act.length;it.avg3=act.slice(-3).reduce((a,m)=>a+it.s[m],0)/(Math.min(3,act.length)||1);
+    const th=it.theme;
+    // forecast for one calendar month
+    it.f=key=>{let ly=prevYear(key);for(let i=0;i<2&&!known.has(ly);i++)ly=prevYear(ly);const hasLY=known.has(ly)&&!!first&&ly>=first; // the same month in the newest year we have
+      if(th&&th.hard){if(hasLY)return it.s[ly]*growth;return it.base*idx(it.cat,key)*(softOn(th.id,key)?3:.3)}
+      let v=it.base*idx(it.cat,key);
+      if(th&&softOn(th.id,key)){v*=1.25;if(hasLY)v=(v+it.s[ly]*growth)/2}
+      return v};
+    const stock=Math.max(0,it.soh)+it.pipe,pre=dem(it,today,A),left=Math.max(0,stock-pre),lost=Math.max(0,pre-stock);
+    const win=dem(it,A,N);
+    const o={it,stock,pre,left,lost,win,safe:0,need:0,qty:0,tags:[],why:'',season:null};
+    if(lost>=1&&A>today){const days=(A-today)/DAY;o.out=addD(today,Math.floor(days*stock/pre))}
+    if(th&&th.hard){
+      // the next season this order could still serve
+      const e=EV.find(x=>x.theme===th.id&&x.date>=addD(D>today?D:today,-1));
+      if(e){const S=addD(e.date,-e.lead),end=addD(e.date,e.tail);o.season=e;
+        if(A>addD(e.date,-10)){o.verdict='late';o.tags.push(['bad','Too late for '+th.label+' '+e.date.getUTCFullYear()]);o.why='It would arrive '+(A>e.date?'after':'only days before')+' '+e.name+'. Skip it now; order it for next year.';o.win=0}
+        else if(A>=addD(S,-45)||N>addD(S,14)){o.verdict=A>S?'mid':A>=addD(S,-45)?'good':'last';
+          o.win=dem(it,A>S?A:S,end);o.need=o.win-o.left;
+          o.tags.push([o.verdict==='mid'?'warn':'good',o.verdict==='good'?'Perfect timing for '+th.label:o.verdict==='mid'?'Arrives mid-season':'Last order in time for '+th.label]);
+          o.why=o.verdict==='good'?(Math.round((S-A)/DAY)>=2?'Arrives '+Math.round((S-A)/DAY)+' days before':'Arrives just as')+' shoppers start buying for '+e.name+'.':o.verdict==='mid'?'The season will already be running when it arrives, so only the rest of the season is ordered.':'It arrives early, but the order after this one would be too late for '+e.name+'.'}
+        else{o.verdict='wait';o.tags.push(['soft',th.label+': wait for the next order']);o.why='Too early. The order after this one still arrives before '+e.name+' shopping starts.';o.win=0}
+      }
+    }else{
+      o.safe=it.cls==='A'?(+opt.safeA||0)/4.345*(win/cover):0;
+      o.need=win+o.safe-left;
+      if(th&&EV.some(e=>e.theme===th.id&&e.date>=addD(A,7)&&addD(e.date,-e.lead)<N)){const e=EV.find(e=>e.theme===th.id&&e.date>=addD(A,7)&&addD(e.date,-e.lead)<N);o.season=e;o.tags.push(['good','In season: '+e.name])}
+    }
+    let q=o.need>=(it.cls==='C'?1:.5)?Math.max(1,Math.round(o.need)):0;
+    o.want=q;
+    if(!it.avail){q=0;if(o.want)o.tags.push(['soft','Not available to order'])}
+    else if(it.slow&&!(th&&th.hard&&o.verdict&&o.verdict!=='late'&&o.verdict!=='wait')&&!(it.cls==='A'&&it.avg3>=3)){if(q)o.tags.push(['soft','Slow moving'+(it.slowIn.length?' in '+it.slowIn.slice(0,2).join(', '):'')+': move stock first']);q=0}
+    if(!it.months&&!it.soh){o.tags.push(['soft','No sales history yet'])}
+    if(o.lost>=1&&it.cls!=='C')o.tags.push(['bad','Runs out '+(o.out?'about '+o.out.getUTCDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][o.out.getUTCMonth()]:'before it arrives')]);
+    o.qty=q;o.cost=q*it.fob;o.retail=q*it.rrp;
+    o.pri=q?(it.cls==='A'?1:it.cls==='B'?2:3):9;
+    return o});
+
+  // order of importance: best sellers first, inside a class the ones losing sales first, then the bigger value
+  lines.sort((a,b)=>a.pri-b.pri||(b.lost>=1)-(a.lost>=1)||b.qty*(b.it.rrp||1)-a.qty*(a.it.rrp||1)||a.it.rank-b.it.rank);
+  const budget=+opt.budget||0;let cum=0;lines.forEach(o=>{if(!o.qty)return;cum+=o.cost;o.cum=cum;o.cut=budget>0&&cum>budget});
+
+  /* the seasons against this order */
+  const events=EV.filter(e=>!e.minor&&e.date>=today&&e.date<=addD(N,330)&&e.date<=addD(today,720)).map(e=>{const S=addD(e.date,-e.lead),orderBy=addM(S,-lead);
+    let st;if(e.date<D)st='past';else if(e.date<addD(A,10))st='late';else if(e.date<addD(N,14))st=A<=S?'good':'mid';else st='next';
+    return Object.assign({},e,{start:S,orderBy,st,days:Math.round((e.date-A)/DAY)})});
+  // window index per category (how busy the selling window is against a normal month)
+  const winIdx={};for(const c in catIdx){let t=0,w=0;for(let m=new Date(Date.UTC(A.getUTCFullYear(),A.getUTCMonth(),1));m<N;m=addM(m,1)){const e=addM(m,1),ov=(Math.min(+e,+N)-Math.max(+m,+A))/(+e-+m);if(ov>0){t+=ov*idx(c,mk(m));w+=ov}}winIdx[c]=w?t/w:1}
+  const seasonKnown=last12.length>=9;
+  return {today,D,A,N,far:D>addD(today,45),lead,cover,lines,events,catIdx,winIdx,growth,H,last12,seasonKnown,budget,
+    tot:{pcs:lines.reduce((a,o)=>a+o.qty,0),n:lines.filter(o=>o.qty).length,cost:lines.reduce((a,o)=>a+(o.cut?0:o.cost),0),costAll:cum,retail:lines.reduce((a,o)=>a+o.retail,0),
+      risk:lines.filter(o=>o.lost>=1&&o.it.cls==='A').length,lostEGP:lines.reduce((a,o)=>a+(o.it.cls!=='C'?o.lost*o.it.rrp:0),0),cutN:lines.filter(o=>o.cut).length}};
+}
+return {plan,seasonEvents,themeOf,addM,iso,d0};
+})();
+if(typeof module!=='undefined')module.exports=ReorderEngine;
+</script>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Math.round(n||0).toLocaleString('en-US'),f1=n=>(Math.round((n||0)*10)/10).toLocaleString('en-US');
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const dd=d=>d.getUTCDate()+' '+MON[d.getUTCMonth()]+' '+d.getUTCFullYear(),dshort=d=>d.getUTCDate()+' '+MON[d.getUTCMonth()];
+const PICS=(window.__PICS=window.__PICS||{});
+const pic=(dv,c)=>{const k=String(dv||'').toUpperCase(),v=PICS[k]||PICS[String(dv||'')];return `<span class="img ${c||''}" data-dv="${esc(k)}">${v?`<img src="data:image/jpeg;base64,${v}" alt="" loading="lazy">`:'no<br>image'}</span>`};
+const ARROW='<svg width="26" height="14" viewBox="0 0 26 14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h21M17 2l6 5-6 5"/></svg>';
+let DATA=null,P=null,CAT='',LIMIT=80;
+const S=(()=>{let s={};try{s=JSON.parse(localStorage.getItem('reorder.v1')||'{}')}catch(e){}return s})();
+const save=()=>{try{localStorage.setItem('reorder.v1',JSON.stringify(S))}catch(e){}};
+function fail(m){$('err').textContent=m;$('err').hidden=false;$('load').hidden=true}
+
+async function load(){
+  try{const r=await fetch('/api/refill?smart=1',{credentials:'same-origin'});const j=await r.json().catch(()=>null);
+    if(r.status===401){location.href='/login.html';return}
+    if(!r.ok||!j||!j.ok)return fail((j&&j.error)||'Could not read the data ('+r.status+').');
+    DATA=j;
+    if(!j.items||!j.items.length)return fail('No items yet. Open Refill Order first and add the "Available to Order" list, then press Sync from ERP there. This report reads the same stock, pipeline and sales.');
+    $('fDate').value=S.date&&S.date>=j.today?S.date:j.today;$('fLead').value=S.lead||2;$('fCover').value=S.cover||2;$('fBud').value=S.budget||'';$('fSafe').value=S.safe==null?2:S.safe;
+    $('load').hidden=true;$('app').hidden=false;
+    $('bSync').hidden=!(j.level==='manage'&&j.erpOn);
+    run();
+    // the pictures arrive after the page: draw them in when they do
+    let n=0;const t=setInterval(()=>{const c=Object.keys(PICS).length;if(c!==n){n=c;rows()}else if(c)clearInterval(t)},1500);setTimeout(()=>clearInterval(t),30000);
+  }catch(e){fail('Could not read the data. Check the connection and open the page again.')}
+}
+function run(){
+  S.date=$('fDate').value||DATA.today;S.lead=+$('fLead').value||2;S.cover=+$('fCover').value||2;S.budget=+$('fBud').value||0;S.safe=+$('fSafe').value;save();
+  P=ReorderEngine.plan(DATA,{order:S.date,lead:S.lead,cover:S.cover,budget:S.budget,safeA:S.safe});
+  LIMIT=80;head();rows();
+}
+function head(){
+  const p=P;
+  $('tl').innerHTML=`<div class="st"><small>You order</small><b>${dd(p.D)}</b></div><div class="ar">${ARROW}${f1(p.lead)} months</div><div class="st"><small>It reaches the stores</small><b>${dd(p.A)}</b></div><div class="ar">${ARROW}on sale</div><div class="st"><small>It must last until</small><b>${dd(p.N)}</b></div>`;
+  const g=p.events.filter(e=>e.st==='good'),m=p.events.filter(e=>e.st==='mid'),l=p.events.filter(e=>e.st==='late'),nx=p.events.filter(e=>e.st==='next').slice(0,2);
+  const moon=e=>e.moon?' (may move a day with the moon)':'';
+  $('seasons').innerHTML=
+    g.map(e=>`<div class="sea good"><span class="dot"></span><div><b>Good for ${esc(e.name)}, ${dshort(e.date)}</b><small>${Math.round((e.start-p.A)/864e5)>=2?'In the stores '+Math.round((e.start-p.A)/864e5)+' days before':'In the stores just as'} shoppers start buying for it${moon(e)}.</small></div></div>`).join('')+
+    m.map(e=>`<div class="sea mid"><span class="dot"></span><div><b>Tight for ${esc(e.name)}, ${dshort(e.date)}</b><small>Arrives ${e.days} days before the day, after shopping for it has started. Ordering by ${dd(e.orderBy)} would have been on time${moon(e)}.</small></div></div>`).join('')+
+    l.map(e=>`<div class="sea late"><span class="dot"></span><div><b>Too late for ${esc(e.name)}, ${dshort(e.date)}</b><small>${e.days<0?'This order arrives after it.':'This order arrives only '+e.days+' days before it.'} Sell it from the stock you have; items made only for it are left out of the order.</small></div></div>`).join('')+
+    (g.length+m.length?'':`<div class="sea next"><span class="dot"></span><div><b>No big season while this order is on sale</b><small>A normal period: the order follows the usual sales of each item.</small></div></div>`)+
+    (p.far?`<div class="sea next"><span class="dot"></span><div><b>This order date is far ahead</b><small>Stock is counted today and other orders will arrive before then, so use these quantities as a guide and look again closer to the date.</small></div></div>`:'')+
+    nx.map(e=>`<div class="sea next"><span class="dot"></span><div><b>Next: ${esc(e.name)}, ${dshort(e.date)} ${e.date.getUTCFullYear()}</b><small>Place that order by ${dd(e.orderBy)}.</small></div></div>`).join('');
+  const t=p.tot;
+  $('kpis').innerHTML=`<div class="kpi"><small>Pieces to order</small><b>${fmt(t.pcs)}</b><i>${fmt(t.n)} items</i></div>
+   <div class="kpi"><small>Cost of the order</small><b>$${fmt(t.costAll)}</b><i>${p.budget?(t.cutN?fmt(t.cutN)+' items do not fit $'+fmt(p.budget):'fits the budget'):'no budget set'}</i></div>
+   <div class="kpi"><small>Worth in the stores</small><b>EGP ${fmt(t.retail)}</b><i>at the selling price</i></div>
+   <div class="kpi"><small>Best sellers that run out before it arrives</small><b class="${t.risk?'bad':''}" style="${t.risk?'color:var(--bad)':''}">${fmt(t.risk)}</b><i>about EGP ${fmt(t.lostEGP)} of sales at risk</i></div>`;
+  // calendar
+  $('cal').innerHTML=p.events.filter(e=>e.st!=='past'||e.orderBy>=p.today).slice(0,9).map(e=>{const past=e.orderBy<p.today;const w=e.st==='good'||e.st==='mid'?'<span class="tag t-good">this order</span>':e.st==='late'?'<span class="tag t-bad">this order is too late</span>':past?'<span class="tag t-warn">order date passed</span>':'';
+    return `<div class="cal"><div><b>${esc(e.name)}</b> ${w}<small><br>${dd(e.date)} · shopping starts ${dshort(e.start)}</small></div><div class="when">${e.st==='late'?'':'order by '+dd(e.orderBy)}</div></div>`}).join('');
+  // category index
+  const cats=Object.keys(p.winIdx).filter(c=>p.lines.some(o=>o.it.cat===c)).sort((a,b)=>p.winIdx[b]-p.winIdx[a]);
+  $('idxNote').textContent=p.seasonKnown?'From your own sales in the same months last year. 100% is a normal month.':'Not enough history yet ('+p.H.length+' full months). With 12 months the report learns your seasons from your own sales; until then it uses the calendar and the item names.';
+  $('idx').innerHTML=p.seasonKnown?cats.map(c=>{const v=p.winIdx[c];return `<div class="bar"><span>${esc(c)}</span><div class="tr"><i style="width:${Math.min(100,v/2.2*100)}%;${v<.95?'background:var(--ink2)':''}"></i></div><b>${Math.round(v*100)}%</b></div>`}).join(''):'';
+  // alerts
+  const al=p.lines.filter(o=>o.lost>=1&&o.it.cls==='A').sort((a,b)=>b.lost*b.it.rrp-a.lost*a.it.rrp).slice(0,8);
+  $('alertCard').hidden=!al.length;
+  $('alerts').innerHTML=`<div class="sub" style="margin-bottom:6px">These best sellers will be finished before ${dd(p.A)}, and an order cannot fix that. Move pieces from the stores that sell them slowly, or ask for a faster shipment.</div>`+al.map(o=>`<div class="cal" data-sku="${esc(o.it.sku)}" style="cursor:pointer;grid-template-columns:auto 1fr auto">${pic(o.it.dv)}<div><b>${esc(o.it.name||o.it.sku)}</b><small><br>${esc(o.it.sku)} · ${fmt(o.stock)} in stock and coming · sells ${f1(o.it.avg3)} a month</small></div><div class="when" style="color:var(--bad)">${o.out?'out about '+dshort(o.out):''}<small><br>${fmt(o.lost)} sales missed</small></div></div>`).join('');
+  // chips
+  const cc={};p.lines.forEach(o=>{if(o.qty)cc[o.it.cat]=(cc[o.it.cat]||0)+o.qty});
+  const allc=[...new Set(p.lines.map(o=>o.it.cat))].sort((a,b)=>(cc[b]||0)-(cc[a]||0));
+  if(CAT&&!allc.includes(CAT))CAT='';
+  $('cats').innerHTML=`<button class="chip ${CAT?'':'on'}" data-c="">All categories <b>${fmt(p.tot.pcs)}</b></button>`+allc.map(c=>`<button class="chip ${CAT===c?'on':''}" data-c="${esc(c)}">${esc(c)} <b>${fmt(cc[c]||0)}</b></button>`).join('');
+  const hm=p.H.length?p.H[0]+' to '+p.H[p.H.length-1]:'none';
+  $('foot').textContent=`Stock counted ${DATA.sohDate||'?'} · sales history ${hm} (${p.H.length} full months) · sales against last year ×${f1(p.growth)} · A = the designs that make 70% of a category's pieces, B the next 20%, C the rest. Stock, pipeline and sales are the ones Refill Order uses.`;
+}
+function view(){
+  const show=$('fShow').value,q=$('fQ').value.trim().toLowerCase();
+  let l=P.lines.filter(o=>(!CAT||o.it.cat===CAT)&&(!q||o.it.sku.toLowerCase().includes(q)||o.it.name.toLowerCase().includes(q)));
+  if(show==='order')l=l.filter(o=>o.qty);
+  else if(show==='season')l=l.filter(o=>o.it.theme&&(o.season||o.verdict));
+  else if(show==='risk')l=l.filter(o=>o.lost>=1&&o.it.cls!=='C').sort((a,b)=>b.lost*b.it.rrp-a.lost*a.it.rrp);
+  else if(show==='na')l=l.filter(o=>!o.it.avail&&o.want&&o.it.cls!=='C').sort((a,b)=>a.it.rank-b.it.rank);
+  // grouped by category, best sellers of each category first
+  if(show==='order'||show==='all'){const tq={};l.forEach(o=>tq[o.it.cat]=(tq[o.it.cat]||0)+o.qty);
+    l=l.slice().sort((a,b)=>(tq[b.it.cat]-tq[a.it.cat])||a.it.cat.localeCompare(b.it.cat)||a.pri-b.pri||a.it.rank-b.it.rank||b.qty-a.qty)}
+  return l;
+}
+function rows(){
+  if(!P)return;const l=view(),grp=['order','all'].includes($('fShow').value);let last=null,h='';
+  l.slice(0,LIMIT).forEach(o=>{const it=o.it;
+    if(grp&&it.cat!==last){last=it.cat;const cl=l.filter(x=>x.it.cat===last);h+=`<tr class="cath"><td colspan="11">${esc(last)} · ${fmt(cl.reduce((a,x)=>a+x.qty,0))} pieces · $${fmt(cl.reduce((a,x)=>a+x.cost,0))}</td></tr>`}
+    h+=`<tr data-sku="${esc(it.sku)}" class="${o.cut?'cut':''}"><td class="l"><span class="cl ${it.cls}" title="Best seller class">${it.cls}</span> <small>#${it.rank}</small></td><td class="l">${pic(it.dv)}</td><td class="name"><b>${esc(it.name||it.sku)}</b><small>${esc(it.sku)}</small></td>
+     <td>${f1(it.avg3)}</td><td>${fmt(it.soh)}</td><td>${it.pipe?fmt(it.pipe):''}</td><td style="${o.left<1&&o.pre>=1?'color:var(--bad);font-weight:700':''}">${fmt(o.left)}</td><td>${f1(o.win)}</td>
+     <td><span class="qty ${o.qty?'':'z'}">${o.qty?fmt(o.qty):'0'}</span></td><td>${o.cost?fmt(o.cost):''}</td>
+     <td class="l">${o.tags.map(t=>`<span class="tag t-${t[0]}">${esc(t[1])}</span>`).join('')}${o.cut?'<span class="tag t-soft">over budget</span>':''}</td></tr>`});
+  $('rows').innerHTML=h||'<tr><td colspan="11" class="l" style="padding:18px">Nothing here for this choice.</td></tr>';
+  $('cnt').textContent=`Showing ${fmt(Math.min(LIMIT,l.length))} of ${fmt(l.length)} items. Touch an item to see how its number was worked out.`;
+  $('more').hidden=l.length<=LIMIT;
+}
+function explain(sku){
+  const o=P.lines.find(x=>x.it.sku===sku);if(!o)return;const it=o.it,p=P;
+  const hist=p.H.slice(-12),fut=[];for(let m=new Date(Date.UTC(p.today.getUTCFullYear(),p.today.getUTCMonth(),1));m<p.N;m=ReorderEngine.addM(m,1))fut.push(m.toISOString().slice(0,7));
+  const vals=hist.map(k=>it.s[k]).concat(fut.map(k=>it.f(k))),mx=Math.max(1,...vals);
+  const bars=hist.map(k=>`<div title="${k}: ${it.s[k]}"><span>${it.s[k]||''}</span><i style="height:${it.s[k]/mx*64}px"></i>${MON[+k.slice(5)-1]}</div>`).join('')+fut.map(k=>`<div title="${k}: expected ${f1(it.f(k))}"><span>${f1(it.f(k))}</span><i class="f" style="height:${it.f(k)/mx*64}px"></i>${MON[+k.slice(5)-1]}</div>`).join('');
+  const tips=[];
+  if(o.why)tips.push(o.why);
+  if(it.cls==='A')tips.push(`Best seller: number ${it.rank} in ${it.cat}. It gets ordered first${o.safe>=.5?' and carries '+S.safe+' weeks of extra stock':''}.`);
+  if(o.lost>=1)tips.push(`The stock finishes ${o.out?'about '+dd(o.out):'before the order arrives'}: around ${fmt(o.lost)} sales (EGP ${fmt(o.lost*it.rrp)}) would be missed. Move pieces between stores now.`);
+  if(o.season&&!(it.theme&&it.theme.hard))tips.push(`${o.season.name} (${dshort(o.season.date)}) falls while this order is on sale, so a little more is expected than usual.`);
+  if(!it.avail)tips.push('It is not on the Available to Order list, so it cannot be ordered now'+(o.want?' (the report would have asked for '+fmt(o.want)+').':'.'));
+  if(it.slow&&!o.qty&&o.want)tips.push('It is on the slow moving list'+(it.slowIn.length?' ('+it.slowIn.join(', ')+')':'')+'. Move that stock to the stores that sell it before buying more.');
+  if(it.months<3)tips.push('Less than 3 months of sales: check this number yourself.');
+  $('MB').innerHTML=`<div class="mh">${pic(it.dv,'xl')}<div style="flex:1;min-width:0"><b style="font-size:16px">${esc(it.name||it.sku)}</b><div class="sub">${esc(it.sku)} · ${esc(it.cat)}${it.sub?' · '+esc(it.sub):''}${it.rrp?' · EGP '+fmt(it.rrp):''}</div><div style="margin-top:4px">${o.tags.map(t=>`<span class="tag t-${t[0]}">${esc(t[1])}</span>`).join('')}</div></div><button class="btn" id="mX">Close</button></div>
+  <div class="mc">${tips.map(t=>`<div class="tip">${esc(t)}</div>`).join('')}
+   <h3>How the number was worked out</h3>
+   <div class="math"><span>In stock today${it.pipe?' + already coming ('+fmt(it.pipe)+')':''}</span><b>${fmt(o.stock)}</b>
+    <span>Will sell before the order arrives (${dshort(p.today)} to ${dshort(p.A)})</span><b>− ${f1(o.pre)}</b>
+    <span>Left when it arrives</span><b>${f1(o.left)}</b>
+    <span>${it.theme&&it.theme.hard&&o.season?'Will sell in the season after it arrives':'Will sell while it is on sale ('+dshort(p.A)+' to '+dshort(p.N)+')'}</span><b>${f1(o.win)}</b>
+    ${o.safe>=.05?`<span>Extra safety for a best seller</span><b>+ ${f1(o.safe)}</b>`:''}
+    <span class="tot">Order</span><b class="tot">${fmt(o.qty)}${o.want!==o.qty?' <small>(would be '+fmt(o.want)+')</small>':''}</b></div>
+   <h3>Sold each month, then what is expected (striped)</h3><div class="hist">${bars}</div>
+   ${it.wh.length?`<h3>Where it is in stock today</h3><div class="chips">${it.wh.sort((a,b)=>b[1]-a[1]).map(w=>`<span class="chip" style="cursor:default">${esc(w[0])} <b>${fmt(w[1])}</b></span>`).join('')}</div>`:''}
+  </div>`;
+  $('M').hidden=false;
+}
+async function excel(){
+  const b=$('bX');b.disabled=true;
+  try{
+    if(!window.XLSX)await new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=ok;s.onerror=no;document.head.appendChild(s)});
+    const p=P,L=view().length&&$('fShow').value==='order'?view():p.lines.filter(o=>o.qty);
+    const r1=[['Priority','Category','Rank in category','Class','SKU','Item','Sells / month','In stock','Coming','Left on arrival','Will sell','Extra safety','ORDER','FOB $','Cost $','Selling price EGP','Season / notes','Over budget']].concat(
+      L.map(o=>[o.pri,o.it.cat,o.it.rank,o.it.cls,o.it.sku,o.it.name,+f1(o.it.avg3).replace(/,/g,''),o.it.soh,o.it.pipe,Math.round(o.left),Math.round(o.win*10)/10,Math.round(o.safe*10)/10,o.qty,o.it.fob,Math.round(o.cost*100)/100,o.it.rrp,o.tags.map(t=>t[1]).join('; '),o.cut?'yes':'']));
+    const r2=[['Season','Date','Shopping starts','Order by','This order']].concat(p.events.map(e=>[e.name,ReorderEngine.iso(e.date),ReorderEngine.iso(e.start),ReorderEngine.iso(e.orderBy),{good:'In time',mid:'Tight',late:'Too late',next:'Later order',past:'Before this order'}[e.st]]));
+    const r3=[['SKU','Item','Category','Class','In stock + coming','Runs out about','Sales missed','EGP at risk']].concat(p.lines.filter(o=>o.lost>=1&&o.it.cls!=='C').map(o=>[o.it.sku,o.it.name,o.it.cat,o.it.cls,o.stock,o.out?ReorderEngine.iso(o.out):'',Math.round(o.lost),Math.round(o.lost*o.it.rrp)]));
+    const r4=[['SKU','Item','Category','Rank','Would order']].concat(p.lines.filter(o=>!o.it.avail&&o.want&&o.it.cls!=='C').map(o=>[o.it.sku,o.it.name,o.it.cat,o.it.rank,o.want]));
+    const r0=[['Smart Reorder'],['Order date',ReorderEngine.iso(p.D)],['Reaches the stores',ReorderEngine.iso(p.A)],['Must last until',ReorderEngine.iso(p.N)],['Pieces',p.tot.pcs],['Items',p.tot.n],['Cost $',Math.round(p.tot.costAll)],['Budget $',p.budget||'none'],['Stock counted',DATA.sohDate||''],['Sales history',p.H.length+' full months']];
+    const wb=XLSX.utils.book_new();[['Summary',r0],['Order',r1],['Seasons',r2],['Runs out before arrival',r3],['Cannot order',r4]].forEach(([n,r])=>XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r),n));
+    XLSX.writeFile(wb,'Smart reorder '+ReorderEngine.iso(p.D)+'.xlsx');
+  }catch(e){$('err').textContent='Could not make the Excel file. Check the connection and try again.';$('err').hidden=false}
+  b.disabled=false;
+}
+async function sync(){
+  const b=$('bSync');if(!confirm('Read the last 14 months of sales and today’s stock from ERP? It takes a few minutes; keep this page open.'))return;
+  b.disabled=true;const have=new Set(DATA.months||[]),t=ReorderEngine.d0(DATA.today),want=[];
+  for(let i=0;i<=14;i++){const k=ReorderEngine.addM(new Date(Date.UTC(t.getUTCFullYear(),t.getUTCMonth(),1)),-i).toISOString().slice(0,7);if(i<2||!have.has(k))want.push(k)}
+  const post=x=>fetch('/api/refill?op=sync',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(x)}).then(r=>r.json());
+  let bad=0;
+  try{b.textContent='Stock…';const j=await post({what:'soh'});if(!j.ok)bad++;
+    for(let i=0;i<want.length;i++){b.textContent='Sales '+want[i]+' ('+(i+1)+'/'+want.length+')…';const j2=await post({what:'sales',month:want[i]}).catch(()=>({}));if(!j2.ok)bad++}
+  }catch(e){bad++}
+  b.disabled=false;b.textContent='Get more sales history';
+  if(bad){$('err').textContent=bad+' part(s) could not be read from ERP. The rest was saved; try again later.';$('err').hidden=false}
+  load();
+}
+['fDate','fLead','fCover','fBud','fSafe'].forEach(i=>$(i).addEventListener('change',run));
+$('fShow').addEventListener('change',()=>{LIMIT=80;rows()});$('fQ').addEventListener('input',()=>{LIMIT=80;rows()});
+$('more').addEventListener('click',()=>{LIMIT+=150;rows()});
+$('cats').addEventListener('click',e=>{const c=e.target.closest('[data-c]');if(!c)return;CAT=c.dataset.c;LIMIT=80;head();rows()});
+document.addEventListener('click',e=>{const r=e.target.closest('[data-sku]');if(r&&!$('M').contains(r))explain(r.dataset.sku);else if(e.target.id==='mX'||e.target.id==='M')$('M').hidden=true});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('M').hidden=true});
+$('bX').addEventListener('click',excel);$('bSync').addEventListener('click',sync);
+load();
+</script>
+</body>
+</html>

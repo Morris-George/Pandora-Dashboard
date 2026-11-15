@@ -305,7 +305,7 @@ async function canView(who) {
 const PAGES = {
   '/': 'Home', '/dashboards': 'Pandora Dashboards', '/staff': 'Staff Performance', '/staff/person': 'A sales person page', '/staff/me': 'My sales', '/staff/accounts': 'Staff Approvals / New Users',
   '/uploads': 'All Uploads', '/film': 'Launch Film', '/daily': 'Daily Store Report', '/schedule': 'Weekly Schedule', '/vm': 'VM Report', '/vm/zones': 'VM Zones', '/vm/stock': 'Zone Stock', '/stock': 'Stock balance',
-  '/stockcount': 'Stock Count', '/stockchecker': 'Stock Checker', '/refill': 'Refill Order', '/slow': 'Slow Moving', '/slow2': 'Slowmoving 2.0', '/overview': 'Store Overview', '/distribution': 'Orders Distribution', '/activity': 'Activity', '/access': 'User Access Privileges',
+  '/stockcount': 'Stock Count', '/stockchecker': 'Stock Checker', '/refill': 'Refill Order', '/reorder': 'Smart Reorder', '/slow': 'Slow Moving', '/slow2': 'Slowmoving 2.0', '/overview': 'Store Overview', '/distribution': 'Orders Distribution', '/activity': 'Activity', '/access': 'User Access Privileges',
   '/insights': 'Sales Intelligence', '/transfer': 'Transfer', '/receiving': 'Shipment Receiving', '/maintenance': 'Maintenance'
 };
 // one name per page: "/schedule/", "/schedule.html" and "/schedule" are the same page. Older log lines can carry "/api/site",

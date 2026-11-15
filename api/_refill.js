@@ -292,6 +292,11 @@ module.exports = async function handler(req, res) {
     res.setHeader('Cache-Control', 'private, max-age=3600');
     return res.status(200).json({ ok: true, map: out });
   }
+  if (req.method === 'GET' && url.searchParams.get('smart')) {
+    // Smart Reorder (/reorder): the same join as an order, with no order needed; the page works out the season-aware order itself
+    const erp0 = (await store.getJSON(ERP)) || { at: {} };
+    return send(res, 200, { ok: true, level: lvl, today: cairoToday(), erpOn: !!(process.env.ERP_URL && process.env.ERP_API_KEY && process.env.ERP_API_SECRET), sohAt: (erp0.at || {}).soh || '', ...(await joined()) });
+  }
   if (req.method === 'GET') {
     const id = url.searchParams.get('order');
     if (id) {

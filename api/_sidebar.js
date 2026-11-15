@@ -5,7 +5,7 @@
 const BASE = [
   ['Sales', ['overview', 'dashboards', 'staff', 'mysales', 'mysales2', 'storeteam', 'daily', 'film']],
   ['Stock', ['stock', 'stockcount', 'stockchecker', 'slow2', 'transfer']],
-  ['Ordering', ['refill', 'dist', 'recv']],
+  ['Ordering', ['reorder', 'refill', 'dist', 'recv']],
   ['Visual Merchandising', ['vmzones', 'zonestock', 'vm']],
   ['Team & Access', ['schedule', 'approvals', 'access', 'activity', 'uploads']],
   ['Maintenance', ['maintenance']]
@@ -106,6 +106,7 @@ const ICONS = {
   slow: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   slow2: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M17.5 3.5l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z"/>',
   transfer: '<path d="M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4"/>',
+  reorder: '<path d="M3 5h2l2.2 10h10.3l2-7H7"/><circle cx="9.5" cy="19" r="1.4"/><circle cx="17" cy="19" r="1.4"/><path d="M16 1.8l.8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8z"/>',
   refill: '<path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5"/>',
   dist: '<path d="M12 3v7M12 10l-7 6M12 10l7 6M5 16v4M19 16v4M12 10v10"/>',
   recv: '<path d="M3 8l9-5 9 5v9l-9 5-9-5z"/><path d="M8 12l3 3 5-6"/>',

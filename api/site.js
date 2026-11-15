@@ -245,6 +245,7 @@ module.exports = async function handler(req, res) {
     else if (P === '/stockcount' || P === '/stockcount.html') id = 'stockcount';
     else if (P === '/stockchecker' || P === '/stockchecker.html') id = 'stockchecker';
     else if (P === '/refill' || P === '/refill.html') id = 'refill';
+    else if (P === '/reorder' || P === '/reorder.html') id = 'reorder';
     else if (P === '/slow' || P === '/slow.html') id = 'slow';
     else if (P === '/slow2' || P === '/slow2.html') id = 'slow2';
     else if (P === '/transfer' || P === '/transfer.html') id = 'transfer';
@@ -422,6 +423,10 @@ module.exports = async function handler(req, res) {
   if (requestedPath === '/slow2' || requestedPath === '/slow2/' || requestedPath === '/slow2.html') {
     if ((!facts.refill || facts.refill === 'none') && !(facts.staff && facts.staff.role === 'store') && !facts.vm && !(facts.staff && !['admin', 'staff', 'store'].includes(facts.staff.role))) return toHome(); // area managers and the VM: no numbers (api/_slow.js, ?v=2)
     return sendFile(res, 'slow2.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
+  }
+  if (requestedPath === '/reorder' || requestedPath === '/reorder/' || requestedPath === '/reorder.html') {
+    if (!facts.refill || facts.refill === 'none') return toHome();
+    return sendFile(res, 'reorder.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   if (requestedPath === '/transfer' || requestedPath === '/transfer/' || requestedPath === '/transfer.html') {
     if (!(facts.staff && facts.staff.role === 'admin')) return toHome();
