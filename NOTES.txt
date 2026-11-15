@@ -229,4 +229,4 @@ SMART REORDER (/reorder, private/reorder.html; data from GET /api/refill?smart=1
   Not available -> 0 (listed under "Best sellers we cannot order"); slow moving -> 0 unless a class A item still selling 3+ a month.
 - "Get more sales history": calls the existing op=sync for stock and the last 14 months of sales.
 - Tests: scratchpad only (engine checks in Node with made-up data, and a headless-browser run). Not yet checked against the real data.
-- Pictures: every item picture (table, Act now list, item window) opens a large popup on click (same sharp full-size pictures as the other reports through /api/pic; Esc or a click closes it). Clicking the rest of the row still opens the calculation window.
+- Pictures: every item picture (table, Act now list, item window) opens a large popup on click (same sharp full-size pictures as the other reports through /api/pic; Esc or a click closes it). Clicking the rest of the row still opens the calculation window.- Cost: every category chip shows pieces and $ cost; a line above the table shows the cost, pieces, items and shop value of the whole order (All categories) or of the whole chosen category.
