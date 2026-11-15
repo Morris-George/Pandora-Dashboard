@@ -121,7 +121,7 @@ async function describe(who, key, ovr) {
       on: (allowed || given) && !off,
       note: given && !off ? 'given: every store' : allowed && !off ? noteFor(a, f, who) : '',
       locked: locked || (!allowed && !canAdd),
-      why: locked ? 'The super admin always keeps everything.' : (!allowed && !canAdd) ? 'Accounts and passwords: the super admin only.' : ''
+      why: locked ? 'The super admin always keeps everything.' : (!allowed && !canAdd) ? (a.id === 'reorder' ? 'Smart Reorder: the super admin and the overseers only.' : 'Accounts and passwords: the super admin only.') : ''
     });
   }
   return { scope: scopeOf(who), apps: list };
@@ -190,7 +190,7 @@ async function setOne(key, app, on) {
         await level('recv', /finance|account/i.test(team + ' ' + title) ? 'accounts' : /warehouse/i.test(team + ' ' + title) || who.kind === 'sc' ? 'warehouse' : 'view');
       }
       else if (!NEVER.includes(app.id)) ad.add(app.id); // opened as an Overseer would see it (api/_auth.js)
-      else return app.id === 'reorder' ? 'Smart Reorder stays with the super admin only.' : 'Accounts and passwords stay with the super admin only.';
+      else return app.id === 'reorder' ? 'Smart Reorder is for the super admin and the overseers only.' : 'Accounts and passwords stay with the super admin only.';
     }
   } else {
     if (app.id === 'refill') await level('refill', 'none');       // Slow Moving follows Refill Order access

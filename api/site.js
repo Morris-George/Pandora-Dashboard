@@ -425,7 +425,7 @@ module.exports = async function handler(req, res) {
     return sendFile(res, 'slow2.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   if (requestedPath === '/reorder' || requestedPath === '/reorder/' || requestedPath === '/reorder.html') {
-    if (!(facts.staff && facts.staff.role === 'admin' && !facts.staff.overseer)) return toHome(); // super admins only
+    if (!(facts.staff && facts.staff.role === 'admin')) return toHome(); // the super admin and the overseers (the super admin can switch it off for one person on User Access Privileges)
     return sendFile(res, 'reorder.html', 'text/html; charset=utf-8', chromeFor(facts.vm ? 'vm' : 'staff', multi));
   }
   if (requestedPath === '/transfer' || requestedPath === '/transfer/' || requestedPath === '/transfer.html') {

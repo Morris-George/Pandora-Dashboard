@@ -48,6 +48,7 @@ function keyOf(who) {
   if (who.kind === 'env') return 'env:' + String(who.account.user || '').toLowerCase();
   return who.user ? 'u:' + who.user.username : '';
 }
+const canSmart = who => !!who && who.kind === 'env' && who.info.role === 'admin'; // Smart Reorder: the super admin and the overseers (read only)
 const isAdmin = who => !!who && who.kind === 'env' && who.info.role === 'admin' && !who.info.overseer;
 async function levelFor(who) {
   if (!who) return 'none';
@@ -228,7 +229,7 @@ module.exports = async function handler(req, res) {
   const lvl = await levelFor(who);
   const url = new URL(req.url, 'https://x.invalid');
   const picReq = req.method === 'GET' && (url.searchParams.get('img') || url.searchParams.get('pics'));
-  if (lvl === 'none' && !(picReq && (who.kind === 'vm' || (who.kind === 'staff' && who.info && who.info.role !== 'staff') || who.kind === 'env' || await require('./_dist').levelFor(who) !== 'none' || await require('./_recv').levelFor(who) !== 'none'))) return send(res, 403, { ok: false, error: 'No access to Refill Order. Ask the super admin.' });
+  if (lvl === 'none' && !(req.method === 'GET' && url.searchParams.get('smart') && canSmart(who)) && !(picReq && (who.kind === 'vm' || (who.kind === 'staff' && who.info && who.info.role !== 'staff') || who.kind === 'env' || await require('./_dist').levelFor(who) !== 'none' || await require('./_recv').levelFor(who) !== 'none'))) return send(res, 403, { ok: false, error: 'No access to Refill Order. Ask the super admin.' });
   const by = nameOf(who);
 
   if (req.method === 'GET' && url.searchParams.get('img')) {
@@ -294,7 +295,7 @@ module.exports = async function handler(req, res) {
   }
   if (req.method === 'GET' && url.searchParams.get('smart')) {
     // Smart Reorder (/reorder): the same join as an order, with no order needed; the page works out the season-aware order itself
-    if (!isAdmin(who)) return send(res, 403, { ok: false, error: 'Smart Reorder is for the super admin only.' });
+    if (!canSmart(who)) return send(res, 403, { ok: false, error: 'Smart Reorder is for the super admin and the overseers.' });
     const erp0 = (await store.getJSON(ERP)) || { at: {} };
     return send(res, 200, { ok: true, level: lvl, today: cairoToday(), erpOn: !!(process.env.ERP_URL && process.env.ERP_API_KEY && process.env.ERP_API_SECRET), sohAt: (erp0.at || {}).soh || '', ...(await joined()) });
   }

@@ -217,7 +217,7 @@ STORE CARDS (Nov 15, Pandora Dashboards > Branch performance, private/index.html
 - "Card" on each branch row opens a picture (1080 px wide PNG, drawn on a canvas in the browser, nothing uploaded) of that store for the dates, category and basis on the page: sales and change vs the comparison, orders, average order, units per order, units, target and conversion when the Daily Store Report has them, rank, price per piece, sales by day (2 to 62 days), top 3 products, top categories. Download, or Share on phones and tablets. "All store cards" downloads one per store.
 
 SMART REORDER (/reorder, private/reorder.html; data from GET /api/refill?smart=1 in api/_refill.js, no new function)
-- Who: super admins only (not the Overseer, and it cannot be given on Report access): api/_apps.js, the /reorder route in api/site.js and the smart GET in api/_refill.js all check it. Home + sidebar: first in "Ordering".
+- Who: the super admin and the Overseers (read only: the Sync / ERP buttons need Refill Order Manage), and it cannot be given to anyone else on Report access; the super admin can switch it off for one overseer there: api/_apps.js, the /reorder route in api/site.js and the smart GET in api/_refill.js all check it. Home + sidebar: first in "Ordering".
 - Reads what Refill Order already keeps (Available to Order, Master, Pipeline, Slow Moving, ERP stock + monthly sales in rf/erp.json). Nothing is saved; settings stay in the browser (reorder.v1).
 - The person types the order date, months to arrive (2), months it must last (2), optional budget in $ and extra safety for best sellers.
 - All the thinking is in the <script id="engine"> block (ReorderEngine.plan), pure and testable in Node:
