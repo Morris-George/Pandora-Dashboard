@@ -17,6 +17,8 @@
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
 svg{display:block}
 .fab{position:fixed;left:0;top:0;width:78px;height:82px;padding:0;border-radius:0;background:none;color:#2A1018;display:block;transition:transform 4s cubic-bezier(.45,0,.2,1),opacity .2s;will-change:transform;touch-action:manipulation}
+.fab{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;cursor:grab}.fab:focus{outline:none}.fab svg,.fab .mc{pointer-events:none;-webkit-user-drag:none}.fab.drag{cursor:grabbing}.fab.drag .mc{transform:scale(1.1) rotate(var(--lean,0deg))}
+@keyframes pk{0%,100%{transform:translateX(0) rotate(-12deg)}35%,60%{transform:translateX(-18px) rotate(-3deg)}}.fab.pk .mc{animation:pk .9s ease}
 .fab .mc{display:block;width:100%;height:100%;transition:transform .5s ease;transform:rotate(var(--lean,0deg));filter:drop-shadow(0 8px 10px rgba(200,80,110,.28))}
 .fab .mc{perspective:420px}
 .fab .mc svg{width:100%;height:100%;overflow:visible;transform-style:preserve-3d;animation:mcturn 6s ease-in-out infinite}
@@ -51,7 +53,11 @@ svg{display:block}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 
 .fab:focus-visible,.ib:focus-visible,.send:focus-visible,.chip:focus-visible,.link:focus-visible{outline:2px solid var(--pinkd);outline-offset:2px}
-.w.open .fab{opacity:0;pointer-events:none}
+.w.open .fab,.w.open .qw{opacity:0;pointer-events:none}
+@keyframes qwin{from{opacity:0;transform-origin:100% 50%;scale:.6 1}to{opacity:1;scale:1 1}}
+.qw{position:fixed;left:0;top:0;display:flex;align-items:center;gap:6px;width:min(290px,calc(100vw - 110px));background:var(--glassb);border:1px solid rgba(255,255,255,.95);border-radius:28px;padding:5px 5px 5px 18px;box-shadow:0 18px 34px -16px rgba(224,112,138,.7);transform-origin:100% 50%;animation:qwin .24s ease both}.qw[hidden]{display:none}
+.qw input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);font:inherit;font-size:14.5px;padding:10px 0}.qw input::placeholder{color:var(--muted)}
+.qs{width:42px;height:42px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;flex:none}.qs svg{width:17px;height:17px}.w.dark .qs{background:var(--pink);color:#2A1018}
 .win{position:fixed;right:20px;bottom:20px;width:430px;max-width:calc(100vw - 24px);height:min(660px,calc(100vh - 40px));height:min(660px,calc(100dvh - 40px));background:radial-gradient(280px 260px at 0 0,rgba(255,194,203,.85),transparent 72%),radial-gradient(300px 300px at 100% 80%,rgba(255,217,201,.85),transparent 72%),linear-gradient(160deg,#FFF1F3,#FFE8EC 55%,#FFF5F2);border:1px solid rgba(255,255,255,.9);border-radius:30px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;opacity:0;transform:translateY(14px) scale(.97);transform-origin:100% 100%;pointer-events:none;visibility:hidden;transition:opacity .18s ease,transform .22s cubic-bezier(.2,.9,.3,1),width .22s ease,height .22s ease,visibility 0s .22s}
 .w.open .win{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .18s ease,transform .22s cubic-bezier(.2,.9,.3,1),width .22s ease,height .22s ease}
 .w.dark .win{background:radial-gradient(280px 260px at 0 0,rgba(255,147,160,.18),transparent 72%),linear-gradient(160deg,#241a1e,#181213);border-color:rgba(255,255,255,.08)}
@@ -196,7 +202,7 @@ textarea::placeholder{color:var(--muted)}
       '<div class="log" aria-live="polite"></div>' +
       '<footer class="ft"><div class="box"><textarea rows="1" maxlength="800" dir="auto" placeholder="Ask about sales or stock" aria-label="Your question"></textarea><button class="send" type="button" aria-label="Send" disabled>' + IC.send + '</button></div>' +
       '<div class="fine">Figures come straight from the saved sales and stock. Net of VAT unless you ask.</div></footer>' +
-    '</section></div>';
+    '</section><div class="qw" hidden><input type="text" maxlength="300" dir="auto" placeholder="Write to Fawzi" aria-label="Write to Fawzi" enterkeyhint="send"><button class="qs" type="button" aria-label="Send">' + IC.send + '</button></div></div>';
   document.body.appendChild(host);
   var $ = function (q) { return root.querySelector(q); };
   var W = $('.w'), LOG = $('.log'), TA = $('textarea'), SEND = $('.send'), WIN = $('.win');
@@ -454,23 +460,32 @@ textarea::placeholder{color:var(--muted)}
     else { try { $('.fab').focus({ preventScroll: true }); } catch (e) {} }
   }
 
-  $('.fab').addEventListener('click', function () { toggle(true); });
+  $('.fab').addEventListener('click', function () { if (dragMoved) { dragMoved = false; return; } closeQw(true); goHome(0); toggle(true); });
 
   // ---- the mascot: he roams the page, reacts, and says funny things (double-click him to make him stay put) ----
   var FAB = $('.fab'), BUB = $('.bub');
   var REDUCE = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   var ROAMKEY = 'pandora-assist.roam', pos = { x: 0, y: 0 }, tmr = 0, bubT = 0, said = 0, hover = false, ready = false;
   var roamOn = true; try { roamOn = localStorage.getItem(ROAMKEY) !== '0'; } catch (e) {}
+  // where he lives: his usual corner, a spot the owner dropped him on, or tucked half out of sight at the right edge
+  var SPOTKEY = 'pandora-assist.spot', mode = 'home', fx = 1, fy = 1, qwOpen = false, qwT = 0, dragMoved = false, drag = null, pkT = 0;
+  try { var sp = JSON.parse(localStorage.getItem(SPOTKEY) || 'null'); if (sp && /^(dock|free)$/.test(sp.mode)) { mode = sp.mode; fx = +sp.fx || 0; fy = Math.max(0, Math.min(1, +sp.fy || 0)); } } catch (e) {}
+  function saveSpot() { try { localStorage.setItem(SPOTKEY, JSON.stringify({ mode: mode, fx: fx, fy: fy })); } catch (e) {} }
   var QUIPS = ['Psst... ask me what sold yesterday.', 'I run on EGP and good vibes.', 'Stock is my cardio.', 'I counted every charm. Twice.', 'Who sold the most? I know. Ask me.', 'Slow stock? I will find it.', 'Just stretching my legs. Carry on.', 'My crown is a ring. Very on brand.', 'Double-click me and I will stay quiet.', 'Numbers look shiny today.'];
   var size = function () { return window.innerWidth <= 640 ? 60 : 78; };
-  function home() { var s = size(); return { x: window.innerWidth - s - 16, y: window.innerHeight - s * 1.05 - 16 }; }
-  function put(x, y, ms) {
+  function home() {
+    var s = size(), vw = window.innerWidth, vh = window.innerHeight, h = s * 1.05, cy = function (v) { return Math.max(8, Math.min(vh - h - 8, v)); };
+    if (mode === 'dock') return { x: vw - s * 0.5, y: cy(fy * (vh - h)) };
+    if (mode === 'free') return { x: Math.max(8, Math.min(vw - s - 8, fx * (vw - s))), y: cy(fy * (vh - h)) };
+    return { x: vw - s - 16, y: vh - h - 16 };
+  }
+  function put(x, y, ms, off) {
     var s = size(); FAB.style.width = s + 'px'; FAB.style.height = Math.round(s * 1.05) + 'px';
-    x = Math.max(8, Math.min(window.innerWidth - s - 8, x)); y = Math.max(8, Math.min(window.innerHeight - s * 1.05 - 8, y));
+    x = Math.max(8, Math.min(off ? window.innerWidth - s * 0.46 : window.innerWidth - s - 8, x)); y = Math.max(8, Math.min(window.innerHeight - s * 1.05 - 8, y));
     var dx = x - pos.x; pos = { x: x, y: y };
     FAB.style.transitionDuration = (ms || 0) + 'ms,.2s';
     FAB.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)';
-    if (ms) { FAB.style.setProperty('--lean', (dx > 8 ? 9 : dx < -8 ? -9 : 0) + 'deg'); FAB.classList.add('going'); clearTimeout(put.t); put.t = setTimeout(function () { FAB.classList.remove('going'); FAB.style.setProperty('--lean', '0deg'); }, ms); }
+    if (ms) { FAB.style.setProperty('--lean', (dx > 8 ? 9 : dx < -8 ? -9 : 0) + 'deg'); FAB.classList.add('going'); clearTimeout(put.t); put.t = setTimeout(function () { FAB.classList.remove('going'); FAB.style.setProperty('--lean', mode === 'dock' && !qwOpen ? '-12deg' : '0deg'); }, ms); }
   }
   function say(t, ms) {
     if (!t) return; BUB.textContent = t;
@@ -478,7 +493,7 @@ textarea::placeholder{color:var(--muted)}
     BUB.classList.add('on'); clearTimeout(bubT); bubT = setTimeout(function () { BUB.classList.remove('on'); }, ms || 4200);
   }
   function jump() { FAB.classList.remove('jump'); void FAB.offsetWidth; FAB.classList.add('jump'); }
-  function busyNow() { return S.open || document.hidden || hover || !roamOn || REDUCE; }
+  function busyNow() { return S.open || document.hidden || hover || !roamOn || REDUCE || mode === 'dock' || qwOpen; }
   var seq = [];
   function later(f, ms) { seq.push(setTimeout(f, ms)); }
   function cancel() { seq.forEach(clearTimeout); seq = []; clearTimeout(tmr); }
@@ -499,7 +514,10 @@ textarea::placeholder{color:var(--muted)}
     later(function () { put(h.x, h.y, 800); }, total + 300);
     tmr = setTimeout(step, total + 1200 + 16000 + Math.random() * 14000);
   }
-  function goHome(ms) { var h = home(); put(h.x, h.y, ms || 0); }
+  function goHome(ms) {
+    var h = home(), tucked = mode === 'dock' && !qwOpen; put(h.x, h.y, ms || 0, tucked);
+    FAB.classList.toggle('peek', tucked); FAB.style.setProperty('--lean', tucked ? '-12deg' : '0deg');
+  }
   goHome(0);
   FAB.addEventListener('mouseenter', function () {
     hover = true; if (!ready) return; cancel(); BUB.classList.remove('on');
@@ -511,6 +529,58 @@ textarea::placeholder{color:var(--muted)}
     roamOn = !roamOn; try { localStorage.setItem(ROAMKEY, roamOn ? '1' : '0'); } catch (x) {}
     if (roamOn) { say('Back to my tricks!'); cancel(); tmr = setTimeout(step, 6000); } else { cancel(); goHome(600); say('Okay, I will stay quiet.'); }
   });
+  var QW = $('.qw'), QI = QW.querySelector('input');
+  function placeQw(tx, ty) { QW.hidden = false; var w = QW.offsetWidth; QW.style.transform = 'translate3d(' + Math.max(8, tx - w - 8) + 'px,' + Math.max(8, ty + size() * 0.525 - 27) + 'px,0)'; }
+  function openQw() {
+    if (S.open) return; cancel(); BUB.classList.remove('on'); qwOpen = true;
+    var s = size(), tx = window.innerWidth - s - 16, ty = pos.y; put(tx, ty, 380, false); FAB.classList.remove('peek'); FAB.style.setProperty('--lean', '0deg');
+    placeQw(tx, ty); setTimeout(jump, 300); setTimeout(function () { try { QI.focus({ preventScroll: true }); } catch (e) {} }, 120);
+    clearTimeout(qwT); qwT = setTimeout(function () { closeQw(); }, 15000);
+  }
+  function closeQw(keep) {
+    if (!qwOpen) return; qwOpen = false; clearTimeout(qwT); QW.hidden = true; QI.value = ''; try { QI.blur(); } catch (e) {}
+    if (!keep) { goHome(550); clearTimeout(tmr); tmr = setTimeout(step, 6000); }
+  }
+  function sendQw() { var v = QI.value.trim(); if (!v) return; closeQw(true); goHome(0); toggle(true); ask(v); }
+  QW.querySelector('.qs').addEventListener('click', sendQw);
+  QI.addEventListener('keydown', function (e) { e.stopPropagation(); if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); sendQw(); } else if (e.key === 'Escape') closeQw(); else { clearTimeout(qwT); qwT = setTimeout(function () { closeQw(); }, 15000); } });
+  document.addEventListener('pointerdown', function (e) { if (qwOpen && e.target !== host) closeQw(); });
+  // a long press must not open the browser's own menu or paint a square over him
+  FAB.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  FAB.addEventListener('dragstart', function (e) { e.preventDefault(); });
+  FAB.addEventListener('pointerdown', function (e) {
+    if (e.button > 0 || S.open) return;
+    drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: pos.x, oy: pos.y, t: Date.now() }; dragMoved = false;
+    try { FAB.setPointerCapture(e.pointerId); } catch (x) {}
+  });
+  FAB.addEventListener('pointermove', function (e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    var dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+    if (!dragMoved && Math.hypot(dx, dy) > 9) { dragMoved = true; cancel(); BUB.classList.remove('on'); closeQw(true); FAB.classList.add('drag'); FAB.classList.remove('peek', 'going'); FAB.style.setProperty('--lean', '0deg'); }
+    if (!dragMoved) return;
+    var s = size(), vw = window.innerWidth, vh = window.innerHeight;
+    var x = Math.max(8, Math.min(vw - s * 0.46, drag.ox + dx)), y = Math.max(8, Math.min(vh - s * 1.05 - 8, drag.oy + dy));
+    pos = { x: x, y: y }; FAB.style.transitionDuration = '0ms,.2s'; FAB.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)';
+  });
+  function endDrag(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    var d = drag; drag = null; FAB.classList.remove('drag'); try { FAB.releasePointerCapture(e.pointerId); } catch (x) {}
+    if (!dragMoved) return;
+    var s = size(), vw = window.innerWidth, vh = window.innerHeight, dx = pos.x - d.ox, dy = pos.y - d.oy;
+    // a quick flick to the left: he comes out and a box opens right beside him to write in
+    if (e.type === 'pointerup' && dx < -34 && dx > -170 && Math.abs(dx) > Math.abs(dy) * 1.3 && Date.now() - d.t < 450) { goHome(0); put(d.ox, d.oy, 0, mode === 'dock'); openQw(); return; }
+    fy = Math.max(0, Math.min(1, pos.y / Math.max(1, vh - s * 1.05)));
+    if (pos.x > vw - s * 0.9) {
+      var first = mode !== 'dock'; mode = 'dock'; saveSpot(); goHome(420);
+      var told = false; try { told = localStorage.getItem('pandora-assist.tip') === '1'; localStorage.setItem('pandora-assist.tip', '1'); } catch (x) {}
+      if (first && !told) setTimeout(function () { say('Shh, I am hiding. Flick me left to write to me.', 5200); }, 600);
+    } else if (Math.abs(pos.x - (vw - s - 16)) < 24 && pos.y > vh - s * 1.05 - 40) { mode = 'home'; try { localStorage.removeItem(SPOTKEY); } catch (x) {} goHome(420); }
+    else { mode = 'free'; fx = Math.max(0, Math.min(1, pos.x / Math.max(1, vw - s))); saveSpot(); goHome(420); }
+    clearTimeout(tmr); tmr = setTimeout(step, 9000);
+  }
+  FAB.addEventListener('pointerup', endDrag); FAB.addEventListener('pointercancel', endDrag);
+  // while tucked away he pokes his head out now and then
+  (function peekLoop() { clearTimeout(pkT); pkT = setTimeout(function () { if (mode === 'dock' && !S.open && !qwOpen && !document.hidden && !REDUCE && roamOn && !drag) { FAB.classList.remove('pk'); void FAB.offsetWidth; FAB.classList.add('pk'); } peekLoop(); }, 9000 + Math.random() * 7000); })();
   window.addEventListener('resize', function () { cancel(); goHome(0); if (!S.open && roamOn) tmr = setTimeout(step, 8000); });
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { clearTimeout(tmr); tmr = setTimeout(step, 1500); } });
   setTimeout(function () {

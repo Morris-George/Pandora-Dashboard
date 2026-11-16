@@ -264,3 +264,4 @@ PANDORA ASSISTANT (Nov 16; the chat button on every page: api/_assistant.js + ap
 - The assistant window uses the "Pearl" look: frosted pink window, large mascot centred in the header, serif figures, glass panels and store tiles, pill composer. All of it is CSS and header markup in private/assistant-widget.js.
 - The chatbot is named Fawzi (header, labels and the Claude-mode persona).
 - Say "sync" (or "sync october", "when was the last sync") to Fawzi: he shows a Sync now button that calls POST /api/erp (super admin only, same as the All Uploads sync). Nothing runs until the button is tapped.
+- Fawzi can be dragged: drop him at the right edge and he tucks in half out of sight (peeking now and then); flick him left and a Write to Fawzi box opens beside him (Enter sends it to the chat). The spot is remembered in this browser (localStorage pandora-assist.spot). Long press no longer opens the browser menu or shows a square.
