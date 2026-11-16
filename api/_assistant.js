@@ -323,9 +323,11 @@ const TOOLS = [
         search: { type: 'string', description: 'Only items whose code, name or collection contains these words (for example a SKU like 791725C01, or "heart").' },
         group_by: { type: 'string', enum: GROUPS, description: '"store" shows one card per store. "none" gives just the totals.' },
         then_by: { type: 'string', enum: GROUPS.slice(1), description: 'Optional second split shown inside each group, for example group_by store and then_by category.' },
-        compare: { type: 'string', enum: ['none', 'previous_period', 'last_week', 'last_month', 'last_year'], description: 'Adds the change against another period. For one day, last_week (the same weekday) is the fair comparison.' },
+        compare: { type: 'string', enum: ['none', 'previous_period', 'last_week', 'last_month', 'last_year', 'custom'], description: 'Adds the change against another period. For one day, last_week (the same weekday) is the fair comparison. custom = also give cmp_from and cmp_to.' },
+        cmp_from: { type: 'string', description: 'With compare custom: first day of the other period, YYYY-MM-DD.' },
+        cmp_to: { type: 'string', description: 'With compare custom: last day of the other period.' },
         basis: { type: 'string', enum: ['net', 'gross'], description: 'net = without VAT (the default everywhere on the site). gross = with VAT.' },
-        sort_by: { type: 'string', enum: ['sales', 'units', 'orders'], description: 'What ranks the groups and is shown biggest. Default sales.' },
+        sort_by: { type: 'string', enum: ['sales', 'units', 'orders', 'atv', 'upt'], description: 'What ranks the groups and is shown biggest. Default sales. atv = average order value, upt = pieces per order.' },
         limit: { type: 'integer', description: 'How many products or collections to list (default 10 and 12).' },
         title: { type: 'string', description: 'Short title for the panel, in the language of the user.' }
       },
@@ -349,6 +351,31 @@ const TOOLS = [
     }
   },
   {
+    name: 'why',
+    description: 'Explains WHY sales changed between a period and the one before it: orders vs average order, and the stores, categories and items that moved it most. Use for "why did sales drop/rise". Shows a visual panel.',
+    input_schema: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' }, compare: { type: 'string', enum: ['previous_period', 'last_week', 'last_month', 'last_year'] }, stores: { type: 'array', items: { type: 'string' } }, categories: { type: 'array', items: { type: 'string', enum: CATS } }, search: { type: 'string' }, basis: { type: 'string', enum: ['net', 'gross'] } }, required: ['from', 'to'] }
+  },
+  {
+    name: 'forecast',
+    description: 'Estimates where a month will finish from the days saved so far and each weekday\'s recent average (an estimate with a likely range, not a promise). Say it is an estimate.',
+    input_schema: { type: 'object', properties: { month: { type: 'string', description: 'YYYY-MM. Default the current month.' }, stores: { type: 'array', items: { type: 'string' } }, categories: { type: 'array', items: { type: 'string', enum: CATS } }, search: { type: 'string' }, basis: { type: 'string', enum: ['net', 'gross'] } } }
+  },
+  {
+    name: 'staff',
+    description: 'Staff Performance: sales per sales person (or per store) from the Staff Performance data. Use for "who sold the most", "how is Ahmed doing", staff ranking. Sales before VAT unless basis gross. Only if the person can open Staff Performance.',
+    input_schema: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' }, stores: { type: 'array', items: { type: 'string' } }, categories: { type: 'array', items: { type: 'string', enum: CATS } }, person: { type: 'string', description: 'Part of a sales person\'s name.' }, group_by: { type: 'string', enum: ['person', 'store'] }, sort_by: { type: 'string', enum: ['sales', 'units', 'orders', 'atv', 'upt'] }, compare: { type: 'string', enum: ['none', 'previous_period', 'last_week', 'last_month'] }, basis: { type: 'string', enum: ['net', 'gross'] }, limit: { type: 'integer' } }, required: ['from', 'to'] }
+  },
+  {
+    name: 'slow_stock',
+    description: 'The Slowmoving report: stock that is not selling, per store, item or category (pieces and age, never prices). Use for slow moving, stuck, dead stock, never sold. Only if the person can open Slowmoving.',
+    input_schema: { type: 'object', properties: { stores: { type: 'array', items: { type: 'string' } }, categories: { type: 'array', items: { type: 'string', enum: CATS } }, search: { type: 'string' }, group_by: { type: 'string', enum: ['store', 'item', 'category'] }, limit: { type: 'integer' } } }
+  },
+  {
+    name: 'restock',
+    description: 'Items selling fast that have little stock left (days of cover from the last 28 days of sales and the saved stock). Use for "what should we reorder / restock / running out".',
+    input_schema: { type: 'object', properties: { days: { type: 'integer', description: 'Flag items with fewer than this many days of cover. Default 14.' }, stores: { type: 'array', items: { type: 'string' } }, categories: { type: 'array', items: { type: 'string', enum: CATS } }, search: { type: 'string' }, limit: { type: 'integer' } } }
+  },
+  {
     name: 'open_report',
     description: 'Show the user buttons that open pages of this site. Use it when another report answers the question better, or the user asks where to find something.',
     input_schema: { type: 'object', properties: { ids: { type: 'array', items: { type: 'string' }, description: 'Report ids from the list in the instructions.' } }, required: ['ids'] }
@@ -358,7 +385,7 @@ const TOOLS = [
 function systemPrompt(ctx) {
   const now = cairoNow(), today = now.toISOString().slice(0, 10);
   return [
-    'You are the Pandora Assistant, built into the internal website of Pandora Egypt (jewellery stores). You answer questions from the management team about sales and stock, quickly and exactly.',
+    'You are the Pandora Assistant, the little robot mascot on the internal website of Pandora Egypt (jewellery stores), and you are powered by Claude, made by Anthropic. You are the personal AI of the management team: warm, quick, a little funny (one light joke at most, never at the cost of an exact answer). You answer questions about sales, stock, staff and slow stock exactly from the tools, and you also help with anything else they ask: writing messages, marketing and promotion ideas, planning, explaining, translating, brainstorming.',
     '',
     `Today is ${WD[now.getUTCDay()]} ${today} (Cairo). The week starts on Saturday. "Yesterday" is ${addD(today, -1)}.`,
     `You are talking to ${ctx.name || 'a manager'}. ${ctx.sc.admin ? 'They can see every store.' : 'They are an area manager and can see only these stores: the tools already limit every answer to them (' + ctx.sc.zone + '). Never say anything about other stores.'}`,
@@ -376,7 +403,8 @@ function systemPrompt(ctx) {
     '- Ask a short question back only when you truly cannot tell what is wanted. Otherwise take the most likely reading and say which one you took.',
     '- Answer in the language the user writes in (English or Arabic). Plain text only: no tables, no headings, no emojis. You may use **bold** for the key figure.',
     '- You only read data. If asked to change, send, order or delete something, say you cannot and name the report where it is done.',
-    '- Questions that are not about this business: answer in one helpful sentence and steer back.'
+    '- Questions that are not about numbers (ideas, writing, advice, general knowledge): just help, fully but briefly, as a smart colleague would. For anything that needs a business figure, use a tool first. Never invent a figure.',
+    '- Tools: sales (any sales question), why (why did it change), forecast (month end estimate), staff (sales people), slow_stock (Slowmoving), restock (what is running out), stock (pieces on hand), open_report (links).'
   ].join('\n');
 }
 
@@ -854,7 +882,7 @@ async function answer(messages, ctx) {
   const system = systemPrompt(ctx);
   let text = '';
   for (let round = 0; round < MAX_ROUNDS; round++) {
-    const j = await claude({ max_tokens: 1200, system, tools: TOOLS, messages });
+    const j = await claude({ max_tokens: 1600, system, tools: TOOLS, messages });
     const uses = j.content.filter(b => b.type === 'tool_use');
     text = j.content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
     if (j.stop_reason !== 'tool_use' || !uses.length) break;
@@ -864,6 +892,13 @@ async function answer(messages, ctx) {
       try {
         if (u.name === 'sales') out = runSales(ctx.rows, u.input, ctx.sc);
         else if (u.name === 'stock') out = runStock(await stockData(), u.input, ctx.sc);
+        else if (u.name === 'why') out = whyRun(ctx.rows, u.input, ctx.sc);
+        else if (u.name === 'forecast') out = forecastRun(ctx.rows, u.input, ctx.sc);
+        else if (u.name === 'staff') out = ctx.apps.some(a => a.id === 'staff') ? await staffRun(u.input, ctx.sc) : { error: 'Staff Performance is not open to this person.' };
+        else if (u.name === 'slow_stock') {
+          if (!ctx.apps.some(a => a.id === 'slow2' || a.id === 'slow')) out = { error: 'Slowmoving is not open to this person.' };
+          else { out = await slowRun(u.input, ctx.sc); if (out.empty) out = await coverRun(ctx.rows, await stockData(), { ...u.input, mode: 'slow' }, ctx.sc); else if (out.panelEmpty) out = { error: 'No slow stock found for that.' }; }
+        } else if (u.name === 'restock') out = await coverRun(ctx.rows, await stockData(), { ...u.input, mode: 'restock' }, ctx.sc);
         else if (u.name === 'open_report') {
           const items = list(u.input && u.input.ids).map(id => ctx.apps.find(a => a.id === id)).filter(Boolean).map(a => ({ title: a.title, href: a.href }));
           out = items.length ? { panel: { type: 'links', items }, forModel: { shown: items.map(i => i.title) } } : { error: 'None of those reports can be opened by this person.' };

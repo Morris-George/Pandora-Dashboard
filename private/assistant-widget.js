@@ -16,13 +16,41 @@
 .w.dark{--bg:#181514;--surface:#221e1c;--soft:#33202a;--text:#f3eadb;--muted:#b3a9a1;--line:#38322f;--ink:#f3eadb;--up:#5fd3a1;--upbg:#173528;--down:#ff8fa3;--downbg:#3f1c26;--bar:#5a2d38;--shadow:0 22px 60px rgba(0,0,0,.6),0 2px 8px rgba(0,0,0,.4)}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
 svg{display:block}
-.fab{position:fixed;right:20px;bottom:20px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#FFA9B3,#FF93A0 55%,#f7798b);color:#2A1018;display:grid;place-items:center;box-shadow:0 10px 26px rgba(255,147,160,.55),0 2px 6px rgba(42,16,24,.18);transition:transform .25s cubic-bezier(.3,1.6,.5,1),box-shadow .2s}
-.fab:hover{transform:translateY(-3px) scale(1.04)}.fab:active{transform:scale(.94)}
+.fab{position:fixed;left:0;top:0;width:78px;height:82px;padding:0;border-radius:0;background:none;color:#2A1018;display:block;transition:transform 4s cubic-bezier(.45,0,.2,1),opacity .2s;will-change:transform;touch-action:manipulation}
+.fab .mc{display:block;width:100%;height:100%;transition:transform .5s ease;transform:rotate(var(--lean,0deg));filter:drop-shadow(0 8px 10px rgba(200,80,110,.28))}
+.fab .mc{perspective:420px}
+.fab .mc svg{width:100%;height:100%;overflow:visible;transform-style:preserve-3d;animation:mcturn 6s ease-in-out infinite}
+@keyframes mcturn{0%,100%{transform:rotateY(-12deg) rotateX(3deg)}50%{transform:rotateY(12deg) rotateX(-3deg)}}
+.fab:hover .mc{transform:scale(1.1) rotate(-4deg)}.fab:active .mc{transform:scale(.92)}
+.fab.going .mc svg{animation:mchop .55s ease-in-out infinite}
+.fab.jump .mc svg{animation:mcjump .6s cubic-bezier(.3,1.6,.5,1)}
+@keyframes mchop{0%,100%{transform:translateY(0) rotateY(-24deg)}50%{transform:translateY(-7px) rotateY(24deg)}}
+@keyframes mcjump{0%{transform:translateY(0) scale(1,1) rotateY(0)}25%{transform:translateY(0) scale(1.1,.88) rotateY(0)}55%{transform:translateY(-22px) scale(.95,1.08) rotateY(200deg)}100%{transform:translateY(0) scale(1,1) rotateY(360deg)}}
+.fab .bub{position:absolute;bottom:92%;right:6px;width:max-content;max-width:210px;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:14px 14px 4px 14px;padding:8px 12px;font-size:12.5px;font-weight:650;line-height:1.35;text-align:start;box-shadow:0 8px 22px rgba(42,16,24,.16);opacity:0;transform:translateY(6px) scale(.94);transform-origin:100% 100%;pointer-events:none;transition:opacity .2s,transform .25s cubic-bezier(.3,1.5,.5,1)}
+.fab .bub.on{opacity:1;transform:none}.fab .bub.l{right:auto;left:6px;border-radius:14px 14px 14px 4px;transform-origin:0 100%}.fab .bub.dn{bottom:auto;top:92%;transform-origin:100% 0}
+.badge svg{width:30px;height:32px;overflow:visible}.still *{animation:none!important}
+
+.mc-float{animation:mc-float 3.2s ease-in-out infinite;transform-origin:120px 140px}
+.mc-shadow{animation:mc-shadow 3.2s ease-in-out infinite;transform-origin:120px 236px}
+.mc-eye{transform-origin:152px 138px;animation:mc-blink 5s infinite}
+.mc-wink{animation:mc-wink 7s infinite;transform-origin:108px 138px}
+.mc-spark1{transform-origin:206px 60px;animation:mc-tw 2.6s ease-in-out infinite}
+.mc-spark2{transform-origin:40px 204px;animation:mc-tw 3.1s ease-in-out .8s infinite}
+.mc-ticks{animation:mc-tick 3.2s ease-in-out infinite;transform-origin:44px 70px}
+.mc-ring{transform-origin:120px 80px;animation:mc-ring 3.2s ease-in-out infinite}
+.mc-cupR{transform-origin:200px 136px;animation:mc-cup 1.6s ease-in-out infinite}
+@keyframes mc-float{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-9px) rotate(2deg)}}
+@keyframes mc-shadow{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(.8);opacity:.35}}
+@keyframes mc-blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.08)}}
+@keyframes mc-wink{0%,40%,100%{transform:scaleY(1)}44%{transform:scaleY(.2)}48%{transform:scaleY(1)}}
+@keyframes mc-tw{0%,100%{transform:scale(.7) rotate(0);opacity:.55}50%{transform:scale(1.15) rotate(20deg);opacity:1}}
+@keyframes mc-tick{0%,70%,100%{opacity:0;transform:translate(3px,3px)}78%,92%{opacity:1;transform:none}}
+@keyframes mc-ring{0%,100%{transform:rotate(0)}50%{transform:rotate(4deg)}}
+@keyframes mc-cup{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.94)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
 .fab:focus-visible,.ib:focus-visible,.send:focus-visible,.chip:focus-visible,.link:focus-visible{outline:2px solid var(--pinkd);outline-offset:2px}
-.fab svg{width:26px;height:26px}
-.fab .ring{position:absolute;inset:0;border-radius:50%;border:2px solid #FF93A0;animation:ring 2.4s ease-out 3}
-@keyframes ring{from{transform:scale(1);opacity:.8}to{transform:scale(1.55);opacity:0}}
-.w.open .fab{transform:scale(.86);opacity:.0;pointer-events:none}
+.w.open .fab{opacity:0;pointer-events:none}
 .win{position:fixed;right:20px;bottom:20px;width:430px;max-width:calc(100vw - 24px);height:min(660px,calc(100vh - 40px));height:min(660px,calc(100dvh - 40px));background:var(--bg);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;opacity:0;transform:translateY(14px) scale(.97);transform-origin:100% 100%;pointer-events:none;visibility:hidden;transition:opacity .18s ease,transform .22s cubic-bezier(.2,.9,.3,1),width .22s ease,height .22s ease,visibility 0s .22s}
 .w.open .win{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .18s ease,transform .22s cubic-bezier(.2,.9,.3,1),width .22s ease,height .22s ease}
 .w.wide .win{width:min(900px,calc(100vw - 40px));height:min(860px,calc(100vh - 40px));height:min(860px,calc(100dvh - 40px))}
@@ -92,7 +120,6 @@ textarea::placeholder{color:var(--muted)}
 .lb{position:fixed;inset:0;background:rgba(20,10,14,.78);display:grid;place-items:center;z-index:5;cursor:zoom-out;padding:20px}.lb img{max-width:min(92vw,720px);max-height:86vh;border-radius:16px;background:#fff}
 @media (max-width:640px){
   .win,.w.wide .win{right:0;bottom:0;left:0;top:0;width:auto;max-width:none;height:auto;border-radius:0;border:0}
-  .fab{right:14px;bottom:14px;width:52px;height:52px}
   .ib.wd{display:none}
   .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
   .cd .v{font-size:17px}
@@ -101,6 +128,7 @@ textarea::placeholder{color:var(--muted)}
 @media print{.w{display:none}}
 `;
 
+  var MASCOT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 250" aria-hidden="true" focusable="false"><defs><radialGradient id="mcShell" cx=".28" cy=".22" r="1"><stop offset="0" stop-color="#FFF6F8"/><stop offset=".42" stop-color="#F9BDC8"/><stop offset="1" stop-color="#D9788E"/></radialGradient><linearGradient id="mcBand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#FFE2E8"/><stop offset="1" stop-color="#F6AEBB"/></linearGradient><radialGradient id="mcCup" cx=".3" cy=".25" r=".95"><stop offset="0" stop-color="#FFF3F5"/><stop offset=".5" stop-color="#F6B0BD"/><stop offset="1" stop-color="#D2748A"/></radialGradient><linearGradient id="mcTorus" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF4F6"/><stop offset=".5" stop-color="#F5A9B8"/><stop offset="1" stop-color="#CF6C84"/></linearGradient><radialGradient id="mcScreen" cx=".3" cy=".25" r="1"><stop offset="0" stop-color="#3A1520"/><stop offset=".6" stop-color="#12060A"/><stop offset="1" stop-color="#050203"/></radialGradient><linearGradient id="mcGlass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".34"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><filter id="mcBlur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter><filter id="mcBlur2" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.4"/></filter></defs><ellipse class="mc-shadow" cx="120" cy="238" rx="54" ry="8" fill="#B8566E" filter="url(#mcBlur)"/><g class="mc-float"><!-- ring and crown, a little torus --><g class="mc-ring"><circle cx="124" cy="70" r="21" fill="none" stroke="#B9566E" stroke-width="12" opacity=".55"/><circle cx="120" cy="64" r="21" fill="none" stroke="#7B2D40" stroke-width="14"/><circle cx="120" cy="64" r="21" fill="none" stroke="url(#mcTorus)" stroke-width="9"/><path d="M104 52 A19 19 0 0 1 124 44" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".9"/><path d="M138 78 A19 19 0 0 1 120 85" fill="none" stroke="#9E4056" stroke-width="2.4" stroke-linecap="round" opacity=".7"/><path d="M102 36 L105 20 L113 31 L120 15 L127 31 L135 20 L138 36 Z" fill="url(#mcTorus)" stroke="#7B2D40" stroke-width="3" stroke-linejoin="round"/><path d="M120 15 L127 31 L135 20 L138 36 L120 36 Z" fill="#CF6C84" opacity=".45"/><path d="M106 32 L107 24" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/></g><!-- left ear cup: a cylinder --><ellipse cx="55" cy="150" rx="17" ry="26" fill="#C9677E" stroke="#7B2D40" stroke-width="3"/><ellipse cx="62" cy="144" rx="17" ry="26" fill="url(#mcCup)" stroke="#7B2D40" stroke-width="3"/><ellipse cx="68" cy="144" rx="8" ry="18" fill="#E896A6" opacity=".9"/><path d="M52 128 Q54 120 60 118" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".85"/><!-- head: extrusion first, then the face of the shell --><path d="M64 100 Q62 80 84 78 L166 84 Q192 88 192 112 L190 152 Q188 182 158 188 L104 194 Q70 192 66 164 Z" transform="translate(6 9)" fill="#C2627A" stroke="#7B2D40" stroke-width="3" stroke-linejoin="round"/><path d="M64 100 Q62 80 84 78 L166 84 Q192 88 192 112 L190 152 Q188 182 158 188 L104 194 Q70 192 66 164 Z" fill="url(#mcShell)" stroke="#7B2D40" stroke-width="3.2" stroke-linejoin="round"/><path d="M64 100 Q62 80 84 78 L166 84 Q190 88 191 108 Q150 100 112 104 Q82 108 70 128 Z" fill="url(#mcBand)"/><path d="M64 100 Q62 80 84 78 L166 84 Q192 88 192 112" fill="none" stroke="#7B2D40" stroke-width="3.2" stroke-linecap="round"/><path d="M76 90 Q80 83 96 83" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".95"/><path d="M72 168 Q78 184 104 187 L150 183" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".4"/><path d="M186 150 Q184 176 158 182" fill="none" stroke="#B3566E" stroke-width="3" stroke-linecap="round" opacity=".55"/><!-- glass screen --><path d="M78 122 Q82 104 106 106 Q142 108 176 120 Q186 140 180 158 Q172 178 142 178 L104 178 Q82 172 78 148 Z" fill="url(#mcScreen)" stroke="#4E1A28" stroke-width="2.4"/><path d="M80 126 Q86 110 106 110 Q130 111 160 118 Q120 118 100 130 Q86 140 82 160 Q78 148 80 126 Z" fill="url(#mcGlass)"/><path d="M176 126 Q182 146 174 162" fill="none" stroke="#F7A0B0" stroke-width="2" stroke-linecap="round" opacity=".28"/><!-- face with a soft glow --><g filter="url(#mcBlur2)" opacity=".75"><path d="M97 142 Q108 126 121 140" fill="none" stroke="#FFB8C4" stroke-width="7" stroke-linecap="round"/><ellipse cx="152" cy="138" rx="12" ry="16" fill="#FFB8C4"/></g><path class="mc-wink" d="M97 142 Q108 126 121 140" fill="none" stroke="#FFE9ED" stroke-width="5" stroke-linecap="round"/><g class="mc-eye"><ellipse cx="152" cy="138" rx="12" ry="16" fill="#FFE9ED"/><ellipse cx="152" cy="145" rx="9" ry="8" fill="#FFC9D3" opacity=".7"/><circle cx="158" cy="130" r="3.6" fill="#fff"/><circle cx="147" cy="146" r="1.8" fill="#fff" opacity=".85"/></g><path d="M126 156 Q135 170 145 156 Q135 159 126 156 Z" fill="#FF93A0" stroke="#FF93A0" stroke-width="2" stroke-linejoin="round"/><g stroke="#FF93A0" stroke-width="3.4" stroke-linecap="round"><path d="M92 156 L95 150"/><path d="M99 158 L102 152"/><path d="M162 160 L165 154"/><path d="M169 158 L172 152"/></g><!-- right ear cup with the raised P plate --><g class="mc-cupR"><ellipse cx="205" cy="146" rx="15" ry="29" fill="#C2627A" stroke="#7B2D40" stroke-width="3"/><ellipse cx="198" cy="138" rx="15" ry="29" fill="url(#mcCup)" stroke="#7B2D40" stroke-width="3"/><circle cx="211" cy="145" r="21" fill="#C2627A" stroke="#7B2D40" stroke-width="3"/><circle cx="207" cy="138" r="21" fill="url(#mcCup)" stroke="#7B2D40" stroke-width="3"/><circle cx="207" cy="138" r="16.5" fill="#FDD3DA" stroke="#E896A6" stroke-width="1.5"/><path d="M194 126 A17 17 0 0 1 208 121" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".95"/><text x="208" y="148.5" text-anchor="middle" font-family="Georgia,\'Times New Roman\',serif" font-weight="700" font-size="28" fill="#fff" opacity=".9">P</text><text x="207" y="147.5" text-anchor="middle" font-family="Georgia,\'Times New Roman\',serif" font-weight="700" font-size="28" fill="#4A1522">P</text></g></g><g class="mc-spark1"><path d="M206 38 Q208 58 226 60 Q208 62 206 82 Q204 62 186 60 Q204 58 206 38 Z" fill="#FFE9ED" stroke="#E58FA1" stroke-width="2.2" stroke-linejoin="round"/></g><g class="mc-spark2"><path d="M40 186 Q42 202 56 204 Q42 206 40 222 Q38 206 24 204 Q38 202 40 186 Z" fill="#FFE9ED" stroke="#E58FA1" stroke-width="2.2" stroke-linejoin="round"/></g><g class="mc-ticks" stroke="#E0708A" stroke-width="6" stroke-linecap="round"><path d="M30 78 L38 58"/><path d="M58 70 L64 52"/></g></svg>';
   var IC = {
     spark: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.2 3.6c.3-1 1.7-1 2 0l1.2 4.1c.4 1.300 1.400 2.300 2.700 2.700l4.100 1.200c1 .3 1 1.700 0 2l-4.100 1.200a4 4 0 0 0-2.700 2.700l-1.200 4.100c-.3 1-1.700 1-2 0L9 17.500a4 4 0 0 0-2.700-2.700l-4.100-1.200c-1-.3-1-1.700 0-2l4.100-1.200A4 4 0 0 0 9 7.700z"/><circle cx="19.500" cy="4.500" r="1.800"/></svg>',
     x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
@@ -148,9 +176,9 @@ textarea::placeholder{color:var(--muted)}
   host.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;z-index:2147482000';
   var root = host.attachShadow({ mode: 'open' });
   root.innerHTML = '<style>' + CSS + '</style><div class="w" part="w">' +
-    '<button class="fab" type="button" aria-label="Open the Pandora Assistant" title="Ask the Pandora Assistant"><span class="ring"></span>' + IC.spark + '</button>' +
+    '<button class="fab" type="button" aria-label="Open the Pandora Assistant" title="Ask me. Double-click to make me quiet or lively."><span class="bub" role="status" aria-live="polite"></span><span class="mc">' + MASCOT + '</span></button>' +
     '<section class="win" role="dialog" aria-label="Pandora Assistant" aria-hidden="true">' +
-      '<header class="hd"><span class="badge"><img src="/pandora-logo.png" alt=""></span><div class="ht"><b>Pandora Assistant</b><span>Sales and stock, from your live data</span></div>' +
+      '<header class="hd"><span class="badge still">' + MASCOT + '</span><div class="ht"><b>Pandora Assistant</b><span>Sales and stock, from your live data</span></div>' +
         '<button class="ib nw" type="button" title="New chat" aria-label="Start a new chat">' + IC.fresh + '</button>' +
         '<button class="ib wd" type="button" title="Bigger or smaller" aria-label="Make the window bigger or smaller">' + IC.wide + '</button>' +
         '<button class="ib cl" type="button" title="Close" aria-label="Close the assistant">' + IC.x + '</button></header>' +
@@ -390,11 +418,78 @@ textarea::placeholder{color:var(--muted)}
     S.open = v == null ? !S.open : !!v;
     W.classList.toggle('open', S.open); WIN.setAttribute('aria-hidden', S.open ? 'false' : 'true');
     save();
+    if (S.open) { try { cancel(); goHome(0); BUB.classList.remove('on'); } catch (e) {} }
+    else { try { clearTimeout(tmr); tmr = setTimeout(step, 3500); } catch (e) {} }
     if (S.open) { draw(); LOG.scrollTop = LOG.scrollHeight; if (window.innerWidth > 640) setTimeout(function () { try { TA.focus({ preventScroll: true }); } catch (e) {} }, 60); }
     else { try { $('.fab').focus({ preventScroll: true }); } catch (e) {} }
   }
 
   $('.fab').addEventListener('click', function () { toggle(true); });
+
+  // ---- the mascot: he roams the page, reacts, and says funny things (double-click him to make him stay put) ----
+  var FAB = $('.fab'), BUB = $('.bub');
+  var REDUCE = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var ROAMKEY = 'pandora-assist.roam', pos = { x: 0, y: 0 }, tmr = 0, bubT = 0, said = 0, hover = false, ready = false;
+  var roamOn = true; try { roamOn = localStorage.getItem(ROAMKEY) !== '0'; } catch (e) {}
+  var QUIPS = ['Psst... ask me what sold yesterday.', 'I run on EGP and good vibes.', 'Stock is my cardio.', 'I counted every charm. Twice.', 'Who sold the most? I know. Ask me.', 'Slow stock? I will find it.', 'Just stretching my legs. Carry on.', 'My crown is a ring. Very on brand.', 'Double-click me and I will stay quiet.', 'Numbers look shiny today.'];
+  var size = function () { return window.innerWidth <= 640 ? 60 : 78; };
+  function home() { var s = size(); return { x: window.innerWidth - s - 16, y: window.innerHeight - s * 1.05 - 16 }; }
+  function put(x, y, ms) {
+    var s = size(); FAB.style.width = s + 'px'; FAB.style.height = Math.round(s * 1.05) + 'px';
+    x = Math.max(8, Math.min(window.innerWidth - s - 8, x)); y = Math.max(8, Math.min(window.innerHeight - s * 1.05 - 8, y));
+    var dx = x - pos.x; pos = { x: x, y: y };
+    FAB.style.transitionDuration = (ms || 0) + 'ms,.2s';
+    FAB.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)';
+    if (ms) { FAB.style.setProperty('--lean', (dx > 8 ? 9 : dx < -8 ? -9 : 0) + 'deg'); FAB.classList.add('going'); clearTimeout(put.t); put.t = setTimeout(function () { FAB.classList.remove('going'); FAB.style.setProperty('--lean', '0deg'); }, ms); }
+  }
+  function say(t, ms) {
+    if (!t) return; BUB.textContent = t;
+    BUB.classList.toggle('l', pos.x < window.innerWidth / 2 - 40); BUB.classList.toggle('dn', pos.y < 120);
+    BUB.classList.add('on'); clearTimeout(bubT); bubT = setTimeout(function () { BUB.classList.remove('on'); }, ms || 4200);
+  }
+  function jump() { FAB.classList.remove('jump'); void FAB.offsetWidth; FAB.classList.add('jump'); }
+  function busyNow() { return S.open || document.hidden || hover || !roamOn || REDUCE; }
+  var seq = [];
+  function later(f, ms) { seq.push(setTimeout(f, ms)); }
+  function cancel() { seq.forEach(clearTimeout); seq = []; clearTimeout(tmr); }
+  function type(t, done) {
+    BUB.textContent = ''; BUB.classList.toggle('l', false); BUB.classList.add('on'); clearTimeout(bubT);
+    var i = 0; (function k() { if (busyNow() && S.open) return; BUB.textContent = t.slice(0, ++i); if (i < t.length) seq.push(setTimeout(k, 34)); else if (done) done(); })();
+  }
+  // every so often: slide about 2 cm to the left, jump, write a funny line, then slide back (always along the bottom)
+  function step() {
+    cancel();
+    if (busyNow()) { tmr = setTimeout(step, 5000); return; }
+    var h = home(), dx = size() === 60 ? 46 : 76, t = QUIPS[Math.floor(Math.random() * QUIPS.length)];
+    put(h.x - dx, h.y, 700);
+    later(jump, 800);
+    later(function () { type(t, function () { jump(); }); }, 1100);
+    var total = 1100 + t.length * 34 + 3600;
+    later(function () { BUB.classList.remove('on'); }, total);
+    later(function () { put(h.x, h.y, 800); }, total + 300);
+    tmr = setTimeout(step, total + 1200 + 16000 + Math.random() * 14000);
+  }
+  function goHome(ms) { var h = home(); put(h.x, h.y, ms || 0); }
+  goHome(0);
+  FAB.addEventListener('mouseenter', function () {
+    hover = true; if (!ready) return; cancel(); BUB.classList.remove('on');
+    var r = FAB.getBoundingClientRect(); pos = { x: r.left, y: r.top }; FAB.style.transitionDuration = '0ms,.2s'; FAB.style.transform = 'translate3d(' + r.left + 'px,' + r.top + 'px,0)'; FAB.classList.remove('going'); jump();
+  });
+  FAB.addEventListener('mouseleave', function () { hover = false; clearTimeout(tmr); tmr = setTimeout(step, 1600); });
+  FAB.addEventListener('dblclick', function (e) {
+    e.preventDefault(); toggle(false);
+    roamOn = !roamOn; try { localStorage.setItem(ROAMKEY, roamOn ? '1' : '0'); } catch (x) {}
+    if (roamOn) { say('Back to my tricks!'); cancel(); tmr = setTimeout(step, 6000); } else { cancel(); goHome(600); say('Okay, I will stay quiet.'); }
+  });
+  window.addEventListener('resize', function () { cancel(); goHome(0); if (!S.open && roamOn) tmr = setTimeout(step, 8000); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { clearTimeout(tmr); tmr = setTimeout(step, 1500); } });
+  setTimeout(function () {
+    ready = true;
+    var seen = false; try { seen = sessionStorage.getItem('pandora-assist.hi') === '1'; sessionStorage.setItem('pandora-assist.hi', '1'); } catch (e) {}
+    if (!S.open) { jump(); if (!seen) say('Hi! Need any numbers?', 4500); }
+    if (roamOn && !REDUCE) tmr = setTimeout(step, seen ? 7000 : 9000);
+  }, 1200);
+
   $('.cl').addEventListener('click', function () { toggle(false); });
   $('.wd').addEventListener('click', function () { setWide(!S.wide); });
   $('.nw').addEventListener('click', function () { if (busy) return; S.msgs = []; save(); draw(); try { TA.focus(); } catch (e) {} });
