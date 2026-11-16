@@ -38,10 +38,10 @@ function body(req) {
   return b && typeof b === 'object' ? b : null;
 }
 
-// ---- who may use it (the same test decides whether api/site.js puts the button on the page) ----
+// ---- who may use it: the super admin only (the same test decides whether api/site.js puts the button on the page) ----
 function canUse(f) {
   const w = f && f.staff && f.staff.who;
-  return !!(f && f.dash && !f.viewAs && !(f.hidden || []).includes('dashboards') && w && w.kind === 'env' && w.info && (w.info.role === 'admin' || w.info.allow));
+  return !!(f && f.dash && !f.viewAs && !(f.hidden || []).includes('dashboards') && w && w.kind === 'env' && w.info && w.info.role === 'admin' && !w.info.overseer); // super admin only
 }
 function scopeOf(who) {
   const admin = who.info.role === 'admin';
