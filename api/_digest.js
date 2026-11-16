@@ -123,9 +123,46 @@ function tableData(rows, day, note) {
     note: note || ''
   };
 }
+// The table in the order of the ERP "Pandora Sales / POS" report. A store with no sales that day still shows (its month to date is still real).
+const { storeKey } = require('./_storekey');
+const ERP_ORDER = [['cfc', 'Pandora CFC'], ['point90', 'Pandora Point 90'], ['moe', 'Pandora Mall of Egypt'], ['citystars', 'Pandora City Stars'], ['almaza', 'Pandora CC Almaza'], ['moa', 'Pandora Mall of Arabia'], ['alex', 'Pandora Alex'], ['online', 'Pandora Online']];
+function tableErp(rows, day, note) {
+  const m0 = day.slice(0, 8) + '01', cur = rows.filter(r => r[0] === day), mtd = rows.filter(r => r[0] >= m0 && r[0] <= day);
+  const nameOf = b => { const k = storeKey(b); const hit = ERP_ORDER.find(x => x[0] === k); return { k: hit ? hit[0] : 'x:' + String(b || 'Unspecified'), name: hit ? hit[1] : String(b || 'Unspecified').replace(/\s+-\s+[A-Za-z]{1,5}\s*$/, '') }; };
+  const map = new Map(); ERP_ORDER.forEach(([k, name]) => map.set(k, { name, c: [], m: [] }));
+  const put = (list, f) => { for (const r of list) { const { k, name } = nameOf(r[7]); let o = map.get(k); if (!o) map.set(k, o = { name, c: [], m: [] }); o[f].push(r); } };
+  put(cur, 'c'); put(mtd, 'm');
+  const sum = (list, i) => list.reduce((x, r) => x + (Number(r[i]) || 0), 0), d0 = new Date(t(day)).getUTCDay();
+  const out = [...map.values()].filter(o => o.c.length || o.m.length || ERP_ORDER.some(x => x[1] === o.name && x[0] !== 'online'))
+    .map(o => ({ name: o.name, orders: agg(o.c).orders, gross: sum(o.c, 4), net: sum(o.c, 3), mtd: sum(o.m, 3) }));
+  return { weekday: WDL[d0], date: `${day.slice(8)}-${day.slice(5, 7)}-${day.slice(0, 4)}`, rows: out, note: note || '' };
+}
+// 1 USD in EGP, as ERPNext knows it for that day (its Currency Exchange records). USD_RATE in Vercel overrides it. 0 = unknown, the picture then leaves the USD column empty.
+let rateMemo = { day: '', v: 0, at: 0 };
+async function usdRate(day) {
+  const fixed = Number(process.env.USD_RATE); if (fixed > 0) return fixed;
+  if (rateMemo.day === day && Date.now() - rateMemo.at < 6 * 3600 * 1000) return rateMemo.v;
+  const base = String(process.env.ERP_URL || '').replace(/\/+$/, ''), auth = { Authorization: `token ${process.env.ERP_API_KEY}:${process.env.ERP_API_SECRET}`, Accept: 'application/json' };
+  let v = 0;
+  try {
+    const r = await fetch(base + '/api/method/erpnext.setup.utils.get_exchange_rate?from_currency=USD&to_currency=EGP&transaction_date=' + day, { headers: auth, signal: AbortSignal.timeout(15000) });
+    if (r.ok) v = Number((await r.json()).message) || 0;
+  } catch (_) { /* try the list below */ }
+  if (!(v > 0)) {
+    try {
+      const q = 'fields=' + encodeURIComponent('["exchange_rate","date"]') + '&filters=' + encodeURIComponent(JSON.stringify([['from_currency', '=', 'USD'], ['to_currency', '=', 'EGP'], ['date', '<=', day]])) + '&order_by=' + encodeURIComponent('date desc') + '&limit_page_length=1';
+      const r = await fetch(base + '/api/resource/Currency%20Exchange?' + q, { headers: auth, signal: AbortSignal.timeout(15000) });
+      if (r.ok) v = Number((((await r.json()).data || [])[0] || {}).exchange_rate) || 0;
+    } catch (_) { v = 0; }
+  }
+  v = v > 0 ? Math.round(v * 1e4) / 1e4 : 0;
+  rateMemo = { day, v, at: Date.now() };
+  return v;
+}
 async function picture(rows, day, fallback, want) {
-  const tbl = tableData(rows, day, fallback ? 'latest day with sales (none saved for ' + fDay(want) + ')' : '');
-  if (!tbl.rows.length) throw new Error('no store has sales on ' + day);
+  const tbl = tableErp(rows, day, fallback ? 'latest day with sales (none saved for ' + fDay(want) + ')' : '');
+  if (!tbl.rows.some(r => r.orders || Math.round(r.net))) throw new Error('no store has sales on ' + day);
+  tbl.rate = await usdRate(day);
   return require('./_digestimg').render(tbl);
 }
 
@@ -247,3 +284,4 @@ module.exports = async function handler(req, res) {
 module.exports.build = build;
 module.exports.toHtml = toHtml;
 module.exports.tableData = tableData;
+module.exports.tableErp = tableErp;
