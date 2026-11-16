@@ -125,6 +125,19 @@ function tableData(rows, day, note) {
 }
 // The table in the order of the ERP "Pandora Sales / POS" report. A store with no sales that day still shows (its month to date is still real).
 const { storeKey } = require('./_storekey');
+// Pieces are counted for jewellery only: the five categories plus Accessories (the same names as the Pandora Dashboards "Category explorer", where an item
+// with no category is placed by its name and what is left is Accessories). Services never count, and only priced lines count: a line sold at 0 (a gift) or a return is not a piece sold.
+function qtyCat(c, name) {
+  const n = String(name || '').toLowerCase(); c = String(c || '');
+  if (c === 'Services') return '';
+  if (c === 'Necklaces') return 'Necklace and Pendant';
+  if (c && c !== 'Other' && c !== 'Unspecified') return c;
+  if (/safety/.test(n)) return 'Charms'; if (/bracelet|bangle/.test(n)) return 'Bracelets'; if (/pendant|necklace|collier/.test(n)) return 'Necklace and Pendant';
+  if (/charm|clip|dangle|spacer|medallion|murano/.test(n)) return 'Charms'; if (/earring|stud|hoop|huggie/.test(n)) return 'Earrings'; if (/\bring/.test(n)) return 'Rings';
+  return 'Accessories';
+}
+const QTY_CATS = new Set(['Charms', 'Bracelets', 'Necklace and Pendant', 'Rings', 'Earrings', 'Accessories']);
+const piecesOf = list => list.reduce((x, r) => x + ((Number(r[3]) > 0 && Number(r[2]) > 0 && QTY_CATS.has(qtyCat(r[8], r[6]))) ? Number(r[2]) : 0), 0);
 const ERP_ORDER = [['cfc', 'Pandora CFC'], ['point90', 'Pandora Point 90'], ['moe', 'Pandora Mall of Egypt'], ['citystars', 'Pandora City Stars'], ['almaza', 'Pandora CC Almaza'], ['moa', 'Pandora Mall of Arabia'], ['alex', 'Pandora Alex'], ['online', 'Pandora Online']];
 function tableErp(rows, day, note) {
   const m0 = day.slice(0, 8) + '01', cur = rows.filter(r => r[0] === day), mtd = rows.filter(r => r[0] >= m0 && r[0] <= day);
@@ -134,7 +147,7 @@ function tableErp(rows, day, note) {
   put(cur, 'c'); put(mtd, 'm');
   const sum = (list, i) => list.reduce((x, r) => x + (Number(r[i]) || 0), 0), d0 = new Date(t(day)).getUTCDay();
   const out = [...map.values()].filter(o => o.c.length || o.m.length || ERP_ORDER.some(x => x[1] === o.name && x[0] !== 'online'))
-    .map(o => ({ name: o.name, orders: agg(o.c).orders, gross: sum(o.c, 4), net: sum(o.c, 3), mtd: sum(o.m, 3) }));
+    .map(o => ({ name: o.name, orders: agg(o.c).orders, qty: piecesOf(o.c), gross: sum(o.c, 4), net: sum(o.c, 3), mtd: sum(o.m, 3), mtdQty: piecesOf(o.m) }));
   return { weekday: WDL[d0], date: `${day.slice(8)}-${day.slice(5, 7)}-${day.slice(0, 4)}`, rows: out, note: note || '' };
 }
 // 1 USD in EGP for the SAME day as the report, read by itself from ERPNext (its Currency Exchange records, the newest one on or before that day).
@@ -293,3 +306,4 @@ module.exports.build = build;
 module.exports.toHtml = toHtml;
 module.exports.tableData = tableData;
 module.exports.tableErp = tableErp;
+module.exports.qtyCat = qtyCat;
