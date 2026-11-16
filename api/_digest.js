@@ -137,11 +137,14 @@ function tableErp(rows, day, note) {
     .map(o => ({ name: o.name, orders: agg(o.c).orders, gross: sum(o.c, 4), net: sum(o.c, 3), mtd: sum(o.m, 3) }));
   return { weekday: WDL[d0], date: `${day.slice(8)}-${day.slice(5, 7)}-${day.slice(0, 4)}`, rows: out, note: note || '' };
 }
-// 1 USD in EGP, as ERPNext knows it for that day (its Currency Exchange records). USD_RATE in Vercel overrides it. 0 = unknown, the picture then leaves the USD column empty.
+// 1 USD in EGP for the SAME day as the report, read by itself from ERPNext (its Currency Exchange records, the newest one on or before that day).
+// Every rate found is saved per day, so if ERP does not answer one morning the last saved rate is used and the picture says whose day it is.
+// USD_RATE in Vercel forces one fixed rate. { v: 0 } = unknown: the picture then leaves the USD column empty.
+const RATES = 'digest/usd.json';
 let rateMemo = { day: '', v: 0, at: 0 };
 async function usdRate(day) {
-  const fixed = Number(process.env.USD_RATE); if (fixed > 0) return fixed;
-  if (rateMemo.day === day && Date.now() - rateMemo.at < 6 * 3600 * 1000) return rateMemo.v;
+  const fixed = Number(process.env.USD_RATE); if (fixed > 0) return { v: fixed, of: '' };
+  if (rateMemo.v > 0 && rateMemo.day === day && Date.now() - rateMemo.at < 6 * 3600 * 1000) return { v: rateMemo.v, of: rateMemo.of || '' };
   const base = String(process.env.ERP_URL || '').replace(/\/+$/, ''), auth = { Authorization: `token ${process.env.ERP_API_KEY}:${process.env.ERP_API_SECRET}`, Accept: 'application/json' };
   let v = 0;
   try {
@@ -155,14 +158,19 @@ async function usdRate(day) {
       if (r.ok) v = Number((((await r.json()).data || [])[0] || {}).exchange_rate) || 0;
     } catch (_) { v = 0; }
   }
-  v = v > 0 ? Math.round(v * 1e4) / 1e4 : 0;
-  rateMemo = { day, v, at: Date.now() };
-  return v;
+  let saved = {}; try { saved = (await store.getJSON(RATES)) || {}; } catch (_) { saved = {}; }
+  if (v > 0) {
+    v = Math.round(v * 1e4) / 1e4; rateMemo = { day, v, at: Date.now(), of: '' };
+    if (saved[day] !== v) { saved[day] = v; const keep = Object.keys(saved).sort().slice(-60); try { await store.putJSON(RATES, Object.fromEntries(keep.map(k => [k, saved[k]]))); } catch (_) { /* the rate is still used today */ } }
+    return { v, of: '' };
+  }
+  const last = Object.keys(saved).filter(k => k <= day && saved[k] > 0).sort().pop();
+  return last ? { v: saved[last], of: last } : { v: 0, of: '' };
 }
 async function picture(rows, day, fallback, want) {
   const tbl = tableErp(rows, day, fallback ? 'latest day with sales (none saved for ' + fDay(want) + ')' : '');
   if (!tbl.rows.some(r => r.orders || Math.round(r.net))) throw new Error('no store has sales on ' + day);
-  tbl.rate = await usdRate(day);
+  const rt = await usdRate(day); tbl.rate = rt.v; if (rt.of) tbl.rateNote = 'rate of ' + rt.of.slice(8) + '-' + rt.of.slice(5, 7) + '-' + rt.of.slice(0, 4) + ' (ERP did not answer)';
   return require('./_digestimg').render(tbl);
 }
 

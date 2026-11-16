@@ -52,7 +52,7 @@ function svg(t) {
   const ty = rowsTop + n * RH + 8, tc = ty + RH / 2 + 6;
   s += `<rect x="${PAD + 14}" y="${ty}" width="${W - PAD * 2 - 28}" height="${RH - 4}" rx="18" fill="${INK}"/>
 <g font-size="24" font-weight="800" fill="#fff" text-anchor="end"><text x="${X.name}" y="${tc}" font-size="25" text-anchor="start">Total</text><text x="${X.inv}" y="${tc}">${tot.o}</text><text x="${X.gross}" y="${tc}">${f2(tot.g)}</text><text x="${X.net}" y="${tc}" fill="${PINK}">${f2(tot.n)}</text><text x="${X.usd}" y="${tc}" fill="#7FD8EE">${usd(tot.n)}</text><text x="${X.mtd}" y="${tc}">${f2(t.mtdTotal != null ? t.mtdTotal : tot.m)}</text></g>
-<text x="${PAD + 6}" y="${ty + RH + 52}" font-size="19" fill="${MUTED}">${rate ? 'Exchange rate: 1 USD = ' + rate + ' EGP  ·  ' : 'USD rate not available today  ·  '}Net = without VAT  ·  MTD = month to date${t.note ? '  ·  ' + esc(t.note) : ''}</text></svg>`;
+<text x="${PAD + 6}" y="${ty + RH + 52}" font-size="19" fill="${MUTED}">${rate ? 'Exchange rate: 1 USD = ' + rate + ' EGP' + (t.rateNote ? ' (' + esc(t.rateNote) + ')' : '') + '  ·  ' : 'USD rate not available today  ·  '}Net = without VAT  ·  MTD = month to date${t.note ? '  ·  ' + esc(t.note) : ''}</text></svg>`;
   return s;
 }
 
