@@ -242,3 +242,5 @@ STORE NAMES AND CAIRO TIME (Nov 16)
 - api/_storekey.js is the one place that says whether two store names are the same store (sameStore, storeKey). The same store is spelled differently per source: "CC Almaza" (accounts), "City Center Almaza" (stock warehouse), "Almaza" (refill / slow moving code). Never compare store names with === or includes across sources; use sameStore. /api/stock?op=item also returns each store's code.
 - api/_cairo.js is the one clock (cairoNow, cairoToday, monthsAgo). Egypt is UTC+2 in winter and +3 in summer; never add a fixed number of hours. Pages use the small cairoMs() helper.
 - Excel dates read with cellDates are local midnight: take the local day (after +15 min), never toISOString.
+
+- Nov 16: the WhatsApp (CallMeBot) sender was removed from api/_digest.js at the owner's request; the digest goes to Telegram only. Env vars WHATSAPP_TO / CALLMEBOT_APIKEY are no longer read (can be deleted in Vercel).

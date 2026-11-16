@@ -3,7 +3,7 @@
 //   GET  /api/digest                 Vercel cron (Authorization: Bearer CRON_SECRET): send yesterday's digest, once per day
 //   GET  /api/digest?preview=1       super admin: the message as it would be sent now (&date=YYYY-MM-DD for another day), nothing is sent
 //   POST /api/digest                 super admin: send it now
-// Env vars: TELEGRAM_BOT_TOKEN (+ optional TELEGRAM_CHAT_ID) for Telegram; WHATSAPP_TO + CALLMEBOT_APIKEY for WhatsApp (CallMeBot). Either one, or both.
+// Env vars: TELEGRAM_BOT_TOKEN (+ optional TELEGRAM_CHAT_ID) for Telegram.
 // The numbers follow Pandora Dashboards: net sales (without VAT), an order = an invoice (per branch) with sales and pieces above zero.
 const store = require('./_store');
 const { whoami } = require('./_auth');
@@ -187,15 +187,12 @@ async function picture(rows, day, fallback, want) {
   return require('./_digestimg').render(tbl);
 }
 
-// ---- where it is sent: Telegram (free, instant) and/or WhatsApp (CallMeBot) -- whichever has its settings in Vercel ----
+// ---- where it is sent: Telegram only (the WhatsApp/CallMeBot sender was removed at the owner's request, Nov 16) ----
 // Telegram: TELEGRAM_BOT_TOKEN (from @BotFather). TELEGRAM_CHAT_ID is optional: when it is missing the chat is found from the
 // newest message sent to the bot (so the person only has to press Start once) and remembered in digest/tgchat.json.
-// WhatsApp: WHATSAPP_TO + CALLMEBOT_APIKEY.
-const phone = () => String(process.env.WHATSAPP_TO || '').replace(/[^\d+]/g, '');
-const waOn = () => phone().replace(/\D/g, '').length >= 10 && /^[\w-]{3,}$/.test(String(process.env.CALLMEBOT_APIKEY || '').trim()) && !/edit|x{3,}/i.test(String(process.env.CALLMEBOT_APIKEY)); // placeholders such as +20XXXXXXXXXX / EDIT_ME keep WhatsApp off until real values are typed
 const tgOn = () => !!String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
-const configured = () => waOn() || tgOn();
-const where = () => [tgOn() ? 'Telegram' : '', waOn() ? 'WhatsApp ' + phone().slice(0, 4) + '•••' + phone().slice(-3) : ''].filter(Boolean).join(' + ');
+const configured = () => tgOn();
+const where = () => (tgOn() ? 'Telegram' : '');
 
 const escH = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 // the message is written with WhatsApp marks (*bold*, _italic_); Telegram gets the same text as HTML
@@ -238,14 +235,6 @@ async function sendTelegramPhoto(png, caption) {
   return 'Telegram (picture)';
 }
 
-// CallMeBot: one GET with the number, the key it gave that number, and the text. It answers 200 with a short page; errors are written in it.
-async function sendWhatsApp(text) {
-  const u = 'https://api.callmebot.com/whatsapp.php?source=pandora&phone=' + encodeURIComponent(phone()) + '&apikey=' + encodeURIComponent(process.env.CALLMEBOT_APIKEY) + '&text=' + encodeURIComponent(text);
-  const r = await fetch(u, { signal: AbortSignal.timeout(25000) });
-  const body = (await r.text().catch(() => '')).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  if (!r.ok || /apikey is invalid|invalid apikey|not (?:valid|allowed|found)|error/i.test(body) && !/queued|sent/i.test(body)) throw new Error('WhatsApp did not accept the message' + (body ? ': ' + body.slice(0, 200) : ' (' + r.status + ')'));
-  return 'WhatsApp';
-}
 // every channel that is set up; it counts as sent when at least one took it
 // The picture goes to Telegram instead of the text. If the picture cannot be made or sent, the text goes instead, so a day is never missed.
 async function sendAll(text, png, caption) {
@@ -253,7 +242,6 @@ async function sendAll(text, png, caption) {
   const jobs = [];
   const prob = [];
   if (tgOn()) jobs.push(png ? sendTelegramPhoto(png, caption).catch(e => { prob.push('Picture not sent (' + String(e && e.message || e).slice(0, 120) + '), sent the text instead.'); return sendTelegram(text); }) : sendTelegram(text));
-  if (waOn()) jobs.push(sendWhatsApp(text));
   const res = await Promise.allSettled(jobs);
   const ok = res.filter(x => x.status === 'fulfilled').map(x => x.value), bad = res.filter(x => x.status === 'rejected').map(x => String(x.reason && x.reason.message || x.reason));
   if (!ok.length) throw new Error(bad.join(' · ').slice(0, 280));

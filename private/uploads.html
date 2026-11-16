@@ -127,7 +127,7 @@ function dgYest(){const d=new Date(Date.now()+2*36e5-864e5).toISOString().slice(
 function dgQ(){const v=$('dgDate').value;return /^\d{4}-\d{2}-\d{2}$/.test(v)?'&date='+v:''}
 $('dgDate').value=dgYest();$('dgYest').addEventListener('click',()=>{$('dgDate').value=dgYest()});$('dgDate').addEventListener('change',()=>{$('dgImg').hidden=true});
 function dgLine(j){const s=j.status;
-  if(!j.configured)return 'Not connected yet: TELEGRAM_BOT_TOKEN is missing in Vercel. Preview and Open in WhatsApp already work.';
+  if(!j.configured)return 'Not connected yet: TELEGRAM_BOT_TOKEN is missing in Vercel. Preview already works.';
   return 'Sends to '+j.to+' every morning. '+(!s?'Nothing sent yet.':s.ok?'Last sent '+when(s.at)+(s.via?' on '+s.via:'')+(s.by==='button'?' (Send now)':'')+'.':'Last try failed '+when(s.at)+': '+(s.error||'')+'.')}
 function dgShow(){}
 async function dgImg(){try{const r=await fetch('/api/digest?preview=1&image=1'+dgQ(),{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw 0;const u=URL.createObjectURL(await r.blob()),i=$('dgImg');if(i.dataset.u)URL.revokeObjectURL(i.dataset.u);i.dataset.u=u;i.src=u;i.hidden=false}catch(_){$('dgImg').hidden=true}}
