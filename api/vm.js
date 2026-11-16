@@ -184,7 +184,6 @@ module.exports = activity.wrap('vm', async function handler(req, res) {
   if (new URL(req.url, 'https://x.invalid').searchParams.get('checker')) return require('./_checker')(req, res); // Stock Checker scans, one store at a time
   if (new URL(req.url, 'https://x.invalid').searchParams.get('checkerpair')) return require('./_checkerpair')(req, res); // Stock Checker phone link
   if (new URL(req.url, 'https://x.invalid').searchParams.get('daily')) return require('./_daily')(req, res);
-  if (new URL(req.url, 'https://x.invalid').searchParams.get('askclaude')) return require('./_askclaude')(req, res);
   if (new URL(req.url, 'https://x.invalid').searchParams.get('assistant')) return require('./_assistant')(req, res); // Pandora Assistant (the chat on every page)
   if (new URL(req.url, 'https://x.invalid').searchParams.get('campaigns')) return require('./_campaigns')(req, res); // Campaign uplift on Pandora Dashboards
   if (new URL(req.url, 'https://x.invalid').searchParams.get('schedule')) return require('./_schedule')(req, res); // Weekly Schedule (managers)

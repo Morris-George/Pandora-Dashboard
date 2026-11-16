@@ -9,11 +9,6 @@ const SIDEBAR = require('./_sidebar');
 const ASSISTANT = require('./_assistant');
 // a short fingerprint of the assistant's script, so browsers fetch it again only when it changes
 let ASSIST_V = '';
-let OWNER_V = '';
-function ownerVersion() {
-  if (!OWNER_V) { try { OWNER_V = require('crypto').createHash('md5').update(fs.readFileSync(path.join(PRIVATE_DIR, 'assistant-owner.js'))).digest('hex').slice(0, 10); } catch (_) { OWNER_V = '0'; } }
-  return OWNER_V;
-}
 function assistVersion() {
   if (!ASSIST_V) { try { ASSIST_V = require('crypto').createHash('md5').update(fs.readFileSync(path.join(PRIVATE_DIR, 'assistant-widget.js'))).digest('hex').slice(0, 10); } catch (_) { ASSIST_V = '0'; } }
   return ASSIST_V;
@@ -234,16 +229,8 @@ module.exports = async function handler(req, res) {
   const sideData = await SIDEBAR.dataFor(facts); // null when this person can open only one report
   // Pandora Assistant (api/_assistant.js): the chat button on every page, for the people who can open Pandora Dashboards. Free: no key needed.
   const assistOk = ASSISTANT.canUse(facts);
-  const ownerOk = assistOk && !facts.viewAs && require('./_askclaude').isOwner(facts.staff && facts.staff.who);
-  const assist = assistOk ? '<script>window.__PZAI=' + JSON.stringify({ name: greetName(facts) }).replace(/</g, '\\u003c') + ';</script><script defer src="/assistant-widget.js?v=' + assistVersion() + '"></script>' + (ownerOk ? '<script defer src="/assistant-owner.js?v=' + ownerVersion() + '"></script>' : '') : '';
+  const assist = assistOk ? '<script>window.__PZAI=' + JSON.stringify({ name: greetName(facts) }).replace(/</g, '\\u003c') + ';</script><script defer src="/assistant-widget.js?v=' + assistVersion() + '"></script>' : '';
   const chromeFor = (kind, m) => withChrome(kind, m, sideData && Object.assign({}, sideData, { path: requestedPath }), facts.viewAs ? viewBanner(facts.viewAs) : '', assist);
-  if (requestedPath === '/assistant-owner.js') { // owner only: everyone else gets a plain 404, as if the file were not there
-    if (!ASSISTANT.canUse(facts) || facts.viewAs || !require('./_askclaude').isOwner(facts.staff && facts.staff.who)) return res.status(404).end();
-    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-    res.setHeader('Cache-Control', 'private, no-store');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    try { return res.status(200).send(fs.readFileSync(path.join(PRIVATE_DIR, 'assistant-owner.js'))); } catch (_) { return res.status(404).end(); }
-  }
   if (requestedPath === '/assistant-widget.js') {
     if (!ASSISTANT.canUse(facts)) return res.status(404).end();
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
