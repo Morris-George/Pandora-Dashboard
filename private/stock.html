@@ -215,7 +215,7 @@ window.PPic=(function(){
   function close(){open.t=null;modal().hidden=true}
   document.addEventListener('click',e=>{const b=e.target.closest('.pthumb');if(b){e.preventDefault();open(b);return}if(e.target.id==='pModal'||e.target.id==='pClose')close()});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal().hidden)close()});
-  return {thumb,fill};
+  return {thumb,fill,seed:(s,u)=>{if(u){cache[base(s)]=u;save()}},has:s=>!!builtin(s)};
 })();
 </script>
 <script>
@@ -309,13 +309,22 @@ function rowWords(r){return r._w||(r._w=[...new Set(toks(r[C]+' '+r[N]+' '+(r[D]
 function searchScore(r,q){let sc=0,hit=0;const words=rowWords(r);for(const w of q){const h=wordHit(w,words);if(h){hit++;sc+=h}}return{hit,sc}}
 function visibleRows(skipCat){
   const q=toks(S.q),bn=brandNow();
-  if(!skipCat)S.exact=false;
+  if(!skipCat){S.exact=false;S.zero=''}
   const base=S.rows.filter(r=>(bn==='ALL'||isPandora(r))&&(S.loc==='ALL'||r[W]===S.loc)&&(skipCat||S.cat==='ALL'||keyOf(r)===S.cat));
   if(!q.length)return base;
-  /* a full code typed in (item code, barcode or design code) shows only that item, not everything that looks similar */
+  /* a SKU (starts with digits, no spaces): never guess. A full code shows only that item, a part of a code shows every item that starts with it,
+     and a full code nobody holds shows 0 in every store (the store and category chips are ignored, so the item is never wrongly shown as 0) */
   const nk=x=>String(x||'').toUpperCase().replace(/[^A-Z0-9]/g,''),qk=nk(S.q);
-  if(qk.length>=5){const ex=base.filter(r=>nk(r[C])===qk||nk(r[N])===qk||nk(String(r[N]).split('-')[0])===qk||nk(String(r[C]).split('-')[0])===qk);
-    if(ex.length){if(!skipCat)S.exact=true;return ex}}
+  if(/^\d{3,}[A-Za-z0-9-]*$/.test(S.q.trim())){
+    const keys=r=>[r[C],r[N],String(r[N]).split('-')[0],String(r[C]).split('-')[0]].map(nk);
+    const brandRows=S.rows.filter(r=>bn==='ALL'||isPandora(r));
+    const ex=qk.length>=5?brandRows.filter(r=>keys(r).includes(qk)):[];
+    if(ex.length){if(!skipCat)S.exact=true;return ex}
+    const pre=base.filter(r=>keys(r).some(k=>k.startsWith(qk)));
+    if(pre.length)return pre.sort((a,b)=>String(a[C]).localeCompare(String(b[C])));
+    if(!brandRows.some(r=>keys(r).some(k=>k.startsWith(qk)))&&qk.length>=6&&!skipCat)S.zero=qk;
+    return [];
+  }
   const sc=base.map(r=>[r,searchScore(r,q)]);
   let out=sc.filter(x=>x[1].hit===q.length);
   if(!out.length&&q.length>1){const need=Math.ceil(q.length/2);out=sc.filter(x=>x[1].hit>=need)}/* nothing has every word: show the closest matches */
@@ -345,6 +354,7 @@ function render(){
 
   $('items').hidden=true;
   const rows=visibleRows(),list=agg(rows);
+  if(S.zero&&!rows.length){$('kpis').hidden=true;$('catCard').hidden=true;$('detail').hidden=true;zeroCard(S.zero);return}
   if(S.exact&&rows.length){$('kpis').hidden=true;$('catCard').hidden=true;$('detail').hidden=true;hitCard(rows);return}
   $('hit').hidden=true;
   const hasMove=S.rows.some(r=>r[O]||r[I]||r[U]), showVal=false; /* value is not shown on this page */
@@ -387,15 +397,28 @@ function itemBlock(i){
     const have=allLocs.map(l=>[l,i.w.get(l)||0]).filter(x=>x[1]!==0).sort((a,b)=>b[1]-a[1]),none=allLocs.filter(l=>!i.w.get(l));
     const mx=Math.max(1,...have.map(x=>Math.abs(x[1])));
     return `<div class="hit">
-      ${PPic.thumb({sku:picSku(i),name:i.name||i.code},pcs(i.b)+' pieces').replace('class="pthumb"','class="pthumb big"')}
+      ${i.nopic?'<div class="pthumb big" style="cursor:default;pointer-events:none" aria-hidden="true">◇</div>':PPic.thumb({sku:picSku(i),name:i.name||i.code},pcs(i.b)+' pieces').replace('class="pthumb"','class="pthumb big"')}
       <div class="hbody">
         <div class="hname">${esc(i.desc||i.name||i.code)}</div>
-        <div class="hmeta"><span class="hchip">${esc(i.cat)}</span>${i.desc?`<span>${esc(i.name)}</span>`:''}<span>Code ${esc(i.code)}</span>${priceOf(i.code)?`<span class="hchip">${egp(priceOf(i.code))} each</span>`:''}</div>
+        <div class="hmeta">${i.cat?`<span class="hchip">${esc(i.cat)}</span>`:''}${i.desc?`<span>${esc(i.name)}</span>`:''}<span>Code ${esc(i.code)}</span>${priceOf(i.code)?`<span class="hchip">${egp(priceOf(i.code))} each</span>`:''}</div>
         <div class="htotal"><b>${pcs(i.b)}</b><span>pieces in stock${have.length?' · in '+have.length+' store'+(have.length===1?'':'s'):''}</span></div>
-        <div class="hlocs">${have.map(x=>`<div class="hloc"><span class="hn" title="${esc(x[0])}">${esc(shortWh(x[0]).replace(/^Pandora\s+/i,""))}</span><span class="htrack"><i class="${x[1]<0?'neg':''}" style="width:${Math.max(3,Math.abs(x[1])/mx*100)}%"></i></span><b${x[1]<0?' class="neg"':''}>${pcs(x[1])}</b></div>`).join('')||'<div class="hnone">Not in stock anywhere.</div>'}</div>
+        <div class="hlocs">${(have.length?have:allLocs.map(l=>[l,0])).map(x=>`<div class="hloc"><span class="hn" title="${esc(x[0])}">${esc(shortWh(x[0]).replace(/^Pandora\s+/i,""))}</span><span class="htrack"><i class="${x[1]<0?'neg':''}" style="width:${Math.max(3,Math.abs(x[1])/mx*100)}%"></i></span><b${x[1]<0?' class="neg"':''}>${pcs(x[1])}</b></div>`).join('')||'<div class="hnone">Not in stock anywhere.</div>'}</div>
         ${none.length&&have.length?`<div class="hzero">No stock: ${none.map(l=>esc(shortWh(l).replace(/^Pandora\s+/i,""))).join(', ')}</div>`:''}
       </div></div>`}
 
+/* a full code that no store holds: 0 pieces and 0 in every store, with the picture and name from the website when it has them */
+const ZC=new Map();
+function zeroCard(code){
+  const card=$('hit');card.hidden=false;
+  const head='<div class="cardhead"><h2>Not in stock</h2><span class="meta"><button type="button" class="btn" id="hitClear">Clear search</button></span></div>';
+  const draw=inf=>{if(S.zero!==code)return;
+    const known=PPic.has(code)||!!(inf&&inf.url);if(inf&&inf.url)PPic.seed(code,inf.url);
+    card.innerHTML=head+itemBlock({code,name:(inf&&inf.title)||code,desc:'',cat:'',b:0,w:new Map(),nopic:!known})+(inf&&!inf.url&&!inf.title?'<div class="hzero">The website has no product with this code either, so please check the code.</div>':'');
+    if(known)PPic.fill(card)};
+  if(ZC.has(code)){draw(ZC.get(code));return}
+  draw(null);
+  fetch('/api/pic?sku='+encodeURIComponent(code)+'&strict=1',{credentials:'same-origin'}).then(r=>r.json()).then(j=>{if(!j||j.ok===false)return;const v={url:j.url||'',title:j.title||''};ZC.set(code,v);draw(v)}).catch(()=>{});
+}
 /* exact search result: the item as a card with a big picture, its total and every store's quantity */
 function hitCard(rows){
   const m=new Map();

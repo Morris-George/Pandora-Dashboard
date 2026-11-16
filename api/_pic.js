@@ -12,25 +12,30 @@ function send(res, code, obj) {
   return res.status(code).json(obj);
 }
 
-async function find(base) {
-  const hit = memo.get(base);
-  if (hit && Date.now() - hit.at < DAY) return hit.url;
-  let url = '';
+// strict = only a product whose address really contains the code (no "closest" guess): used for codes that may not exist
+async function lookup(base, strict) {
+  const mk = strict ? base + '|s' : base;
+  const hit = memo.get(mk);
+  if (hit && Date.now() - hit.at < DAY) return hit;
+  let url = '', title = '';
   try {
     const r = await fetch('https://pandoraeg.com/search/suggest.json?q=' + encodeURIComponent(base) + '&resources[type]=product&resources[limit]=4', { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(8000) });
     if (r.ok) {
       const j = await r.json();
       const list = (j.resources && j.resources.results && j.resources.results.products) || [];
       const b = base.toLowerCase();
-      const p = list.find(x => String(x.handle || x.url || '').toLowerCase().includes(b)) || list[0];
+      const p = list.find(x => String(x.handle || x.url || '').toLowerCase().includes(b)) || (strict ? null : list[0]);
       const u = p && (p.image || (p.featured_image && p.featured_image.url));
+      if (p && strict) title = String(p.title || '').slice(0, 160);
       if (u && /^https?:\/\/[^/]*(shopify|pandoraeg)[^/]*\//i.test(u)) url = String(u).replace(/^http:/, 'https:');
     }
   } catch (_) { /* leave empty: the page keeps its small picture */ }
   if (memo.size > 3000) memo.clear();
-  memo.set(base, { url, at: Date.now() });
-  return url;
+  const out = { url, title, at: Date.now() };
+  memo.set(mk, out);
+  return out;
 }
+async function find(base) { return (await lookup(base, false)).url; }
 
 module.exports = async function pic(req, res) {
   if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
@@ -38,6 +43,7 @@ module.exports = async function pic(req, res) {
   const u = new URL(req.url, 'https://x.invalid');
   const base = String(u.searchParams.get('sku') || '').trim().toUpperCase().split('-')[0];
   if (!/^[A-Z0-9]{4,20}$/.test(base)) return send(res, 200, { ok: true, url: '' });
+  if (u.searchParams.get('strict') === '1') { const f = await lookup(base, true); return send(res, 200, { ok: true, url: f.url, title: f.title }); }
   return send(res, 200, { ok: true, url: await find(base) });
 };
 module.exports.find = find; // also used by Stock Checker (api/_checker.js), which serves a QR-paired phone that has no sign-in
