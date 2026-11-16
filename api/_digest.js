@@ -160,7 +160,15 @@ async function usdRate(day) {
   if (rateMemo.v > 0 && rateMemo.day === day && Date.now() - rateMemo.at < 6 * 3600 * 1000) return { v: rateMemo.v, of: rateMemo.of || '' };
   const base = String(process.env.ERP_URL || '').replace(/\/+$/, ''), auth = { Authorization: `token ${process.env.ERP_API_KEY}:${process.env.ERP_API_SECRET}`, Accept: 'application/json' };
   let v = 0;
-  try {
+  // 1) the market rate of that exact day from a free public daily feed (no key); the ERP here holds no daily rates
+  for (const u of ['https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@' + day + '/v1/currencies/usd.json', 'https://' + day + '.currency-api.pages.dev/v1/currencies/usd.json']) {
+    try {
+      const r = await fetch(u, { signal: AbortSignal.timeout(12000) });
+      if (r.ok) { const j = await r.json(); const x = Number(j && j.usd && j.usd.egp); if (x > 20 && x < 200 && (!j.date || String(j.date) === day)) { v = x; break; } }
+    } catch (_) { /* next source */ }
+  }
+  // 2) the ERP, if the public feed did not answer
+  if (!(v > 0)) try {
     const r = await fetch(base + '/api/method/erpnext.setup.utils.get_exchange_rate?from_currency=USD&to_currency=EGP&transaction_date=' + day, { headers: auth, signal: AbortSignal.timeout(15000) });
     if (r.ok) v = Number((await r.json()).message) || 0;
   } catch (_) { /* try the list below */ }
@@ -183,7 +191,7 @@ async function usdRate(day) {
 async function picture(rows, day, fallback, want) {
   const tbl = tableErp(rows, day, fallback ? 'latest day with sales (none saved for ' + fDay(want) + ')' : '');
   if (!tbl.rows.some(r => r.orders || Math.round(r.net))) throw new Error('no store has sales on ' + day);
-  const rt = await usdRate(day); tbl.rate = rt.v; if (rt.of) tbl.rateNote = 'rate of ' + rt.of.slice(8) + '-' + rt.of.slice(5, 7) + '-' + rt.of.slice(0, 4) + ' (ERP did not answer)';
+  const rt = await usdRate(day); tbl.rate = rt.v; if (rt.of) tbl.rateNote = 'rate of ' + rt.of.slice(8) + '-' + rt.of.slice(5, 7) + '-' + rt.of.slice(0, 4) + ' (no source answered)';
   return require('./_digestimg').render(tbl);
 }
 

@@ -244,3 +244,4 @@ STORE NAMES AND CAIRO TIME (Nov 16)
 - Excel dates read with cellDates are local midnight: take the local day (after +15 min), never toISOString.
 
 - Nov 16: the WhatsApp (CallMeBot) sender was removed from api/_digest.js at the owner's request; the digest goes to Telegram only. Env vars WHATSAPP_TO / CALLMEBOT_APIKEY are no longer read (can be deleted in Vercel).
+- Nov 16: USD rate now comes first from the free public daily feed fawazahmed0 currency-api (jsdelivr, then pages.dev; exact day, no key), then ERP, then the last saved rate; USD_RATE env still overrides. ERP holds no daily rates.
