@@ -89,7 +89,9 @@ function salesRows() {
         out.push({ d, inv: String(a[1]), q: Number(a[2]) || 0, net: Number(a[3]) || 0, gross: Number(a[4]) || 0, sku: String(a[5] || '').trim(), name, br: String(a[7] || '').trim() || 'Unspecified', cat: recat(a[8], name), pay: payOf(a[9]), col: String(a[10] || '').trim() });
       }
       out.sort((x, y) => (x.d < y.d ? -1 : x.d > y.d ? 1 : 0));
-      salesMemo = { at: Date.now(), rows: out, pr: null };
+      const vocab = new Set();
+      for (const r of out) for (const w of (r.name + ' ' + r.col).toLowerCase().split(/[^a-z]+/)) if (w.length >= 3 && w.length <= 14) vocab.add(w);
+      salesMemo = { at: Date.now(), rows: out, pr: null, vocab };
       return out;
     }, e => { salesMemo.pr = null; throw e; });
   }
@@ -158,7 +160,7 @@ function runSales(all, a, sc) {
   const val = basis === 'gross' ? r => r.gross : r => r.net;
   const by = DIMS[a.group_by] ? a.group_by : 'none';
   const then = DIMS[a.then_by] && a.then_by !== by && by !== 'none' ? a.then_by : '';
-  const metric = ['units', 'orders'].includes(a.sort_by) ? a.sort_by : 'sales';
+  const metric = ['units', 'orders', 'atv', 'upt'].includes(a.sort_by) ? a.sort_by : 'sales';
   const known = [...new Set(mine.map(r => r.br))];
   const st = pickStores(list(a.stores), known), ct = pickCats(list(a.categories));
   if (st.bad.length) return { error: 'Unknown store: ' + st.bad.join(', ') + '. The stores are: ' + liveStores(mine).join(', ') + '.' };
@@ -176,6 +178,7 @@ function runSales(all, a, sc) {
   else if (a.compare === 'last_week') cmp = { f: addD(from, -7), e: addD(to, -7), text: days === 1 ? 'the same day last week' : 'a week earlier' };
   else if (a.compare === 'last_month') cmp = { f: addM(from, -1), e: addM(to, -1), text: 'the same dates last month' };
   else if (a.compare === 'last_year') cmp = { f: addM(from, -12), e: addM(to, -12), text: 'the same dates last year' };
+  else if (a.compare === 'custom' && validDay(a.cmp_from) && validDay(a.cmp_to)) { const f = a.cmp_from <= a.cmp_to ? a.cmp_from : a.cmp_to, e = a.cmp_from <= a.cmp_to ? a.cmp_to : a.cmp_from; cmp = { f, e, text: fRange(f, e) }; }
   const prev = cmp ? cut(cmp.f, cmp.e) : null;
   if (cmp && !prev.length) cmp.empty = true;
 
@@ -216,13 +219,13 @@ function runSales(all, a, sc) {
   if (cmp && cmp.empty) notes.push('Nothing saved for ' + cmp.text + ', so there is no comparison.');
   if (more) notes.push(more + ' more not shown.');
 
-  const auto = [ct.hit.length === 1 ? ct.hit[0] : ct.hit.length ? ct.hit.length + ' categories' : 'Sales', DIM_LABEL[by]].filter(Boolean).join(' · ');
+  const auto = [q.length ? String(a.search).trim().slice(0, 30) + ' sales' : ct.hit.length === 1 ? ct.hit[0] : ct.hit.length ? ct.hit.length + ' categories' : 'Sales', DIM_LABEL[by]].filter(Boolean).join(' · ');
   const hash = new URLSearchParams(); hash.set('from', from); hash.set('to', to); if (ct.hit.length === 1) hash.set('cat', ct.hit[0]); if (basis === 'gross') hash.set('basis', 'gross');
   const panel = {
     type: 'sales', by, then, metric, title: String(a.title || auto).slice(0, 70), range: fRange(from, to), filters: filt.join(' · '), basis,
     cmp: cmp && !cmp.empty ? cmp.text : '', note: notes.join(' '), href: '/dashboards#' + hash.toString(),
-    total: { sales: r2(total.sales), units: r2(total.units), orders: total.orders, atv: r2(total.atv), upt: r2(total.upt), prev: totalP ? r2(totalP.sales) : null, d: totalP ? chg(total.sales, totalP.sales) : null },
-    groups: groups.map(g => ({ name: String(g.name).slice(0, 90), key: by === 'day' ? g.key : undefined, sku: g.sku || undefined, cat: g.cat || undefined, sales: r2(g.sales), units: r2(g.units), orders: g.orders, atv: r2(g.atv), share: Math.round(g.share * 1000) / 1000, d: g.d === undefined ? undefined : g.d, prev: g.prev === undefined ? undefined : r2(g.prev), sub: g.sub ? g.sub.map(s => ({ name: String(s.name).slice(0, 70), sku: s.sku, sales: r2(s.sales), units: r2(s.units) })) : undefined }))
+    total: { sales: r2(total.sales), units: r2(total.units), orders: total.orders, atv: r2(total.atv), upt: r2(total.upt), prev: totalP ? r2(totalP.sales) : null, d: totalP ? chg(total.sales, totalP.sales) : null, pOrders: totalP ? totalP.orders : null, pAtv: totalP ? r2(totalP.atv) : null, pUpt: totalP ? r2(totalP.upt) : null, pUnits: totalP ? r2(totalP.units) : null },
+    groups: groups.map(g => ({ name: String(g.name).slice(0, 90), key: by === 'day' ? g.key : undefined, sku: g.sku || undefined, cat: g.cat || undefined, sales: r2(g.sales), units: r2(g.units), orders: g.orders, atv: r2(g.atv), upt: r2(g.upt), share: Math.round(g.share * 1000) / 1000, d: g.d === undefined ? undefined : g.d, prev: g.prev === undefined ? undefined : r2(g.prev), sub: g.sub ? g.sub.map(s => ({ name: String(s.name).slice(0, 70), sku: s.sku, sales: r2(s.sales), units: r2(s.units) })) : undefined }))
   };
   // what Claude reads back: the same figures, rounded, short
   const forModel = {
@@ -386,6 +389,155 @@ function chgText(T, cmp, ar) {
   if (T.d == null || !cmp) return '';
   return ar ? `, ${dirWord(T.d, true)} ${Math.abs(T.d)}% عن الفترة المقارنة` : `, ${dirWord(T.d)} ${Math.abs(T.d)}% vs ${cmp}`;
 }
+
+// ================== smarter, still free: why / forecast / restock & slow / briefing ==================
+const baseSku = v => String(v || '').trim().toUpperCase().split('-')[0];
+const stockSku = r => { const c = baseSku(r.code); if (/^\d{5,6}[A-Z0-9]*$/.test(c)) return c; const m = /^\s*([0-9]{5,6}[A-Z0-9]{0,6})/i.exec(r.design || r.name || ''); return m ? m[1].toUpperCase() : c; };
+const sd = xs => { if (xs.length < 2) return 0; const m = xs.reduce((a, b) => a + b, 0) / xs.length; return Math.sqrt(xs.reduce((a, b) => a + (b - m) * (b - m), 0) / (xs.length - 1)); };
+
+// why did the numbers change: orders x average order, then the stores, categories and items that moved most
+function whyRun(all, a, sc) {
+  a = { ...a, compare: a.compare && a.compare !== 'none' ? a.compare : 'previous_period' };
+  const one = (g, extra) => runSales(all, { ...a, group_by: g, then_by: undefined, sort_by: 'sales', limit: 50, ...extra }, sc);
+  const T0 = one('none'); if (T0.error) return T0;
+  const T = T0.panel.total;
+  if (T.prev == null) return { error: 'There are no saved sales for ' + (T0.panel.cmp || 'the period before') + ', so there is nothing to compare with.' };
+  const pick = (res, dim) => {
+    const gs = (res.panel && res.panel.groups || []).filter(g => g.prev != null);
+    const rows = gs.map(g => ({ name: g.name, sku: g.sku, diff: r0(g.sales - g.prev), d: g.d, cur: r0(g.sales), prev: r0(g.prev) })).filter(g => g.diff !== 0);
+    const up = rows.filter(g => g.diff > 0).sort((x, y) => y.diff - x.diff).slice(0, 3), down = rows.filter(g => g.diff < 0).sort((x, y) => x.diff - y.diff).slice(0, 3);
+    return { dim, up, down };
+  };
+  const movers = [pick(one('store'), 'Stores'), pick(one('category'), 'Categories'), pick(one('product'), 'Items')].filter(m => m.up.length || m.down.length);
+  const drivers = [
+    { name: 'Orders', cur: T.orders, prev: T.pOrders, d: chg(T.orders, T.pOrders), f: 'n' },
+    { name: 'Average order', cur: T.atv, prev: T.pAtv, d: chg(T.atv, T.pAtv), f: 'egp' },
+    { name: 'Pieces per order', cur: T.upt, prev: T.pUpt, d: chg(T.upt, T.pUpt), f: 'x' },
+    { name: 'Pieces sold', cur: T.units, prev: T.pUnits, d: chg(T.units, T.pUnits), f: 'n' }
+  ];
+  const panel = { type: 'why', title: 'What moved sales', range: T0.panel.range, cmp: T0.panel.cmp, filters: T0.panel.filters, basis: T0.panel.basis, note: T0.panel.note, href: T0.panel.href,
+    total: { sales: T.sales, prev: T.prev, d: T.d, diff: r0(T.sales - T.prev) }, drivers, movers };
+  return { panel, forModel: { total: T, drivers, movers } };
+}
+
+// where the month is heading: what is saved so far + each remaining day at its weekday's recent average (a guide, not a promise)
+function forecastRun(all, a, sc) {
+  const mine = inScope(all, sc); if (!mine.length) return { error: 'No sales are saved yet.' };
+  const m = /^\d{4}-\d{2}$/.test(a.month || '') ? a.month : cairoToday().slice(0, 7);
+  const ms = m + '-01', me = addD(addM(ms, 1), -1), saved = mine[mine.length - 1].d, today = cairoToday();
+  const through = [me, saved, addD(today, -1)].sort()[0]; // today is still open: only whole days count
+  if (through < ms) return { error: 'No whole day is saved yet for ' + monthName(m) + '.' };
+  const base = { stores: a.stores, categories: a.categories, search: a.search, basis: a.basis, compare: 'none', group_by: 'day' };
+  const cur = runSales(all, { ...base, from: ms, to: through }, sc); if (cur.error) return cur;
+  const hist = runSales(all, { ...base, from: addD(through, -55), to: through }, sc);
+  const soFar = cur.panel.total.sales, days = cur.panel.groups;
+  const doneDays = diffD(ms, through) + 1, left = diffD(through, me);
+  const wdv = [[], [], [], [], [], [], []];
+  const first = mine[0].d;
+  for (const g of hist.panel.groups) if (g.key >= first) wdv[new Date(t(g.key)).getUTCDay()].push(g.sales);
+  const avgAll = hist.panel.groups.length ? hist.panel.groups.reduce((x, g) => x + g.sales, 0) / hist.panel.groups.length : 0;
+  const avg = wdv.map(v => (v.length >= 3 ? v.reduce((x, y) => x + y, 0) / v.length : avgAll));
+  const resid = []; for (const g of hist.panel.groups) { if (g.key >= first) resid.push(g.sales - avg[new Date(t(g.key)).getUTCDay()]); }
+  const daily = days.map(g => ({ d: g.key, v: r0(g.sales) })); let est = 0;
+  for (let d = addD(through, 1); d <= me; d = addD(d, 1)) { const v = avg[new Date(t(d)).getUTCDay()]; est += v; daily.push({ d, v: r0(v), est: true }); }
+  const spread = Math.sqrt(left) * sd(resid), proj = soFar + est;
+  const pm = addM(ms, -1), pe = addD(ms, -1);
+  const last = runSales(all, { ...base, group_by: 'none', from: pm, to: pe }, sc), lastTD = runSales(all, { ...base, group_by: 'none', from: pm, to: addM(through, -1) < pe ? addM(through, -1) : pe }, sc);
+  const lm = !last.error && last.panel.total.sales > 0 ? last.panel.total.sales : null, ltd = !lastTD.error && lastTD.panel.total.sales > 0 ? lastTD.panel.total.sales : null;
+  const done = left === 0;
+  const panel = { type: 'forecast', title: (done ? '' : 'Month-end estimate · ') + monthName(m), month: monthName(m), through: fDay(through), filters: cur.panel.filters, basis: cur.panel.basis, done,
+    soFar: r0(soFar), projected: r0(proj), low: r0(Math.max(soFar, proj - spread)), high: r0(proj + spread), daysDone: doneDays, daysLeft: left, lastMonth: lm ? r0(lm) : null, lastMonthSoFar: ltd ? r0(ltd) : null,
+    paceVsLast: ltd ? chg(soFar, ltd) : null, vsLastMonth: lm && !done ? chg(proj, lm) : (lm && done ? chg(soFar, lm) : null), daily,
+    note: done ? '' : 'An estimate: it assumes each remaining day sells like the recent average for that weekday. Promotions, holidays and stock can change it.', href: '/dashboards' };
+  return { panel, forModel: { ...panel, daily: undefined } };
+}
+
+// restock (selling fast, little left) and slow items (stock that does not sell): sales joined to the saved stock balance by item code
+async function coverRun(all, data, a, sc) {
+  if (!data) return { error: 'No stock balance is saved yet. Open the Stock balance page once so it reads ERP.' };
+  const mine = inScope(all, sc); if (!mine.length) return { error: 'No sales are saved yet.' };
+  const slow = a.mode === 'slow', threshold = Math.min(365, Math.max(1, Number(a.days) || (slow ? 60 : 14))), win = slow ? threshold : 28;
+  const L = mine[mine.length - 1].d, from = addD(L, -(win - 1));
+  const knownSt = [...new Set(data.rows.map(r => r.wh))], knownBr = [...new Set(mine.map(r => r.br))];
+  const sw = pickStores(list(a.stores), knownSt), sb = pickStores(list(a.stores), knownBr), ct = pickCats(list(a.categories));
+  if (sw.bad.length) return { error: 'Unknown store: ' + sw.bad.join(', ') + '.' };
+  const okSt = r => !a.stores || !a.stores.length || sw.hit.includes(r.wh);
+  const stock = (sc.rx ? data.rows.filter(r => sc.rx.some(x => x.test(r.wh))) : data.rows).filter(r => okSt(r) && (!ct.hit.length || ct.hit.includes(r.cat)) && r.qty > 0);
+  const q = words(a.search);
+  const sold = new Map(), seen = new Set(mine.map(r => baseSku(r.sku)));
+  for (const r of mine) { if (r.d < from || (sb.hit.length && !sb.hit.includes(r.br)) || (ct.hit.length && !ct.hit.includes(r.cat))) continue; const k = baseSku(r.sku); sold.set(k, (sold.get(k) || 0) + r.q); }
+  const items = new Map();
+  for (const r of stock) {
+    const k = stockSku(r); if (!k) continue;
+    if (q.length && !q.every(w => (k + ' ' + r.design + ' ' + r.name).toLowerCase().includes(w))) continue;
+    let it = items.get(k); if (!it) items.set(k, it = { sku: k, name: r.name || r.design || k, cat: r.cat, qty: 0, wh: new Map() });
+    it.qty += r.qty; it.wh.set(r.wh, (it.wh.get(r.wh) || 0) + r.qty);
+  }
+  let matched = 0; for (const k of items.keys()) if (seen.has(k)) matched++;
+  if (!items.size) return { error: 'Nothing is in stock for that.' };
+  if (!matched) return { error: 'I could not match the item codes in sales to the stock balance, so I cannot work out cover. Open Smart reorder or Slow moving from the menu for this.' };
+  const days = Math.max(1, diffD(from > mine[0].d ? from : mine[0].d, L) + 1);
+  const rows = [];
+  for (const it of items.values()) {
+    const s = sold.get(it.sku) || 0, perDay = s / days;
+    const row = { name: String(it.name).slice(0, 80), sku: it.sku, cat: it.cat, qty: r2(it.qty), sold: r0(s), perDay: r2(perDay), days: perDay > 0 ? Math.round(it.qty / perDay) : null, where: [...it.wh.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([n, v]) => ({ name: n, units: r2(v) })) };
+    if (slow ? (s === 0 && it.qty >= 3) : (s >= 2 && row.days != null && row.days <= threshold)) rows.push(row);
+  }
+  if (slow) rows.sort((x, y) => y.qty - x.qty); else rows.sort((x, y) => x.days - y.days || y.sold - x.sold);
+  const lim = Math.min(30, Math.max(1, Number(a.limit) || 12)), more = Math.max(0, rows.length - lim);
+  const asOf = data.at ? (isNaN(Date.parse(data.at)) ? data.at : 'read ' + fDay(cairoNow(Date.parse(data.at)).toISOString().slice(0, 10))) : '';
+  const notes = []; if (more) notes.push(more + ' more not shown.'); if (slow && from < mine[0].d) notes.push('Sales are saved from ' + fDay(mine[0].d) + ', so older sales are not seen.');
+  const filt = [sw.hit.length ? sw.hit.join(', ') : (sc.admin ? 'All stores and warehouses' : sc.zone), ct.hit.length ? ct.hit.join(', ') : 'All categories'];
+  const panel = { type: 'cover', mode: slow ? 'slow' : 'restock', title: slow ? 'Slow stock · no sales in ' + threshold + ' days' : 'Restock · under ' + threshold + ' days of cover', range: 'Sales ' + fRange(from, L) + (asOf ? ' · stock ' + asOf : ''), filters: filt.join(' · '), note: notes.join(' '),
+    href: '/stock', total: { items: rows.length, qty: r0(rows.reduce((x, y) => x + y.qty, 0)) }, rows: rows.slice(0, lim) };
+  return { panel, forModel: { mode: panel.mode, items: rows.length, rows: panel.rows } };
+}
+
+// "worth a look": what jumped or fell the most in a by-store / by-category answer
+function worthLook(p, ar) {
+  if (ar || !p || p.type !== 'sales' || !['store', 'category', 'collection'].includes(p.by)) return '';
+  const g = (p.groups || []).filter(x => x.prev != null && x.prev > 0 && x.d != null && Math.abs(x.sales - x.prev) >= 500);
+  if (g.length < 2) return '';
+  const dn = g.slice().sort((x, y) => x.d - y.d)[0], up = g.slice().sort((x, y) => y.d - x.d)[0], bits = [];
+  if (dn.d <= -20) bits.push(mark(dn.name) + ' is down ' + Math.abs(dn.d) + '% (' + egp(dn.sales - dn.prev).replace('EGP -', '-EGP ') + ')');
+  if (up.d >= 20 && up.name !== dn.name) bits.push(mark(up.name) + ' is up ' + up.d + '%');
+  return bits.length ? 'Worth a look: ' + bits.join('; ') + '.' : '';
+}
+const fmtDiff = n => (n >= 0 ? '+' : '-') + egp(Math.abs(n));
+function describeWhy(p) {
+  const T = p.total, out = [];
+  out.push(`Sales ${p.range} were ${mark(egp(T.sales))}, ${T.diff >= 0 ? 'up' : 'down'} ${mark(egp(Math.abs(T.diff)))}${T.d != null ? ' (' + (T.d >= 0 ? '+' : '') + T.d + '%)' : ''} vs ${p.cmp}.`);
+  const o = p.drivers[0], v = p.drivers[1];
+  if (o.d != null && v.d != null) {
+    const big = Math.abs(o.d) >= Math.abs(v.d) ? o : v, small = big === o ? v : o;
+    const w = x => (x.d >= 0 ? 'up ' : 'down ') + Math.abs(x.d) + '%';
+    out.push(`It is mostly ${big === o ? 'the number of orders' : 'the size of each order'} (${big === o ? 'orders are' : 'the average order is'} ${w(big)}); ${small === o ? 'orders are' : 'the average order is'} ${Math.abs(small.d) < 3 ? 'about flat' : w(small)}.`);
+  }
+  const st = p.movers.find(m => m.dim === 'Stores'), dir = T.diff >= 0 ? 'up' : 'down', other = dir === 'up' ? 'down' : 'up';
+  if (st && st[dir].length) out.push(`Biggest ${dir === 'up' ? 'gain' : 'drop'}: ${st[dir].slice(0, 2).map(x => mark(x.name) + ' ' + fmtDiff(x.diff)).join(', ')}.`);
+  const ct = p.movers.find(m => m.dim === 'Categories'); if (ct && ct[dir].length) out.push(`By category: ${ct[dir].slice(0, 2).map(x => x.name + ' ' + fmtDiff(x.diff)).join(', ')}.`);
+  const it = p.movers.find(m => m.dim === 'Items'); if (it && it[dir].length) out.push(`Item moving it most: ${mark(it[dir][0].name)} ${fmtDiff(it[dir][0].diff)}.`);
+  if (st && st[other].length && st[other][0] && Math.abs(st[other][0].diff) >= Math.abs(T.diff) * 0.3) out.push(`Going the other way: ${st[other][0].name} ${fmtDiff(st[other][0].diff)}.`);
+  return out.join('\n');
+}
+function describeForecast(p) {
+  const out = [];
+  if (p.done) out.push(`${mark(p.month)} closed at ${mark(egp(p.soFar))}${p.vsLastMonth != null ? ', ' + (p.vsLastMonth >= 0 ? 'up ' : 'down ') + Math.abs(p.vsLastMonth) + '% vs last month' : ''}.`);
+  else {
+    out.push(`${mark(p.month)} is heading for about ${mark(egp(p.projected))} (likely ${egp(p.low)} to ${egp(p.high)}). So far: ${egp(p.soFar)} in ${p.daysDone} days, ${p.daysLeft} to go.`);
+    if (p.paceVsLast != null) out.push(`Pace vs the same days last month: ${p.paceVsLast >= 0 ? 'up ' : 'down '}${Math.abs(p.paceVsLast)}%.${p.lastMonth ? ' Last month finished at ' + egp(p.lastMonth) + '.' : ''}`);
+    out.push('This is an estimate from each weekday’s recent average, not a promise.');
+  }
+  return out.join('\n');
+}
+function describeCover(p) {
+  const R = p.rows;
+  if (!R.length) return p.mode === 'slow' ? 'No stock with zero sales found for that. Good news.' : 'Nothing is close to running out for that.';
+  if (p.mode === 'slow') return `${mark(p.total.items + ' items')} with stock but no sales in the period (${nn(p.total.qty)} pcs sitting). Most stock: ${mark(R[0].name)} (${nn(R[0].qty)} pcs${R[0].where[0] ? ', mostly ' + R[0].where[0].name : ''}).`;
+  const out0 = R.filter(r => r.days <= 3);
+  return `${mark(p.total.items + ' items')} may run out soon. Most urgent: ${mark(R[0].name)} – ${R[0].qty} pcs left, selling about ${R[0].perDay}/day (${R[0].days} ${R[0].days === 1 ? 'day' : 'days'}).${out0.length > 1 ? ' ' + out0.length + ' have 3 days or less.' : ''}`;
+}
+
 function describe(res, q) {
   const p = res.panel, a = q.args, ar = q.ar, T = p.total || {}, G = p.groups || [];
   const out = [];
@@ -403,14 +555,15 @@ function describe(res, q) {
     return out.join('\n');
   }
   // sales
-  const metric = p.metric, key = metric === 'units' ? 'units' : metric === 'orders' ? 'orders' : 'sales';
-  const fmt = g => key === 'units' ? nn(g.units) + (ar ? ' قطعة' : ' pcs') : key === 'orders' ? nn(g.orders) + (ar ? ' طلب' : ' orders') : egp(g.sales);
+  const metric = p.metric, key = ['units', 'orders', 'atv', 'upt'].includes(metric) ? metric : 'sales';
+  const fmt = g => key === 'atv' ? egp(g.atv) + (ar ? ' للطلب' : '/order') : key === 'upt' ? (Number(g.upt) || 0).toFixed(2) + (ar ? ' قطعة للطلب' : ' pcs/order') : key === 'units' ? nn(g.units) + (ar ? ' قطعة' : ' pcs') : key === 'orders' ? nn(g.orders) + (ar ? ' طلب' : ' orders') : egp(g.sales);
   const scope0 = (p.filters || '').split(' · ')[0] || 'All stores';
   const scope = scope0 === 'All stores' ? (ar ? 'كل الفروع' : 'all stores') : scope0;
   const cats = (a.categories || []).join(' and ');
   if (!T.sales && !T.units && !T.orders) return (ar ? 'لا توجد مبيعات مطابقة ل' : 'No sales found for ') + p.range + (p.note ? '. ' + p.note : '.');
   const head = ar ? `المبيعات${cats ? ' - ' + cats : ''} (${scope}) ${p.range}:` : `${cats ? cats + ' sales' : 'Sales'} (${scope}${p.basis === 'gross' ? ', with VAT' : ''}), ${p.range}:`;
-  out.push(`${head} ${mark(fmt(T))}${chgText(T, p.cmp, ar)}.`);
+  out.push(`${head} ${mark(key === 'atv' || key === 'upt' ? fmt(T) : fmt(T))}${key === 'sales' || key === 'units' || key === 'orders' ? chgText(T, p.cmp, ar) : ''}.`);
+  if (q.rank && !ar) { const lv = G.filter(g => g[key] > 0); if (lv.length >= 2 && ['store', 'category', 'day', 'month', 'weekday', 'collection', 'product'].includes(p.by)) { const pick = q.rank.dir === 'bottom' ? lv.reduce((x, y) => (y[key] < x[key] ? y : x)) : lv.reduce((x, y) => (y[key] > x[key] ? y : x)); out.unshift((q.rank.dir === 'bottom' ? 'Lowest' : 'Highest') + ' ' + (p.by === 'product' ? 'item' : p.by) + ': ' + mark(pick.name) + ' (' + fmt(pick) + ').'); } }
   const live = G.filter(g => g[key] > 0);
   if (p.by === 'store' && live.length >= 2) {
     const lo = live[live.length - 1], none = G.filter(g => !(g[key] > 0)).map(g => g.name);
@@ -426,24 +579,56 @@ function describe(res, q) {
   } else if (p.by === 'none') {
     out.push(ar ? `${nn(T.orders)} طلب، متوسط الطلب ${egp(T.atv)}.` : `${nn(T.orders)} orders, average order ${egp(T.atv)}, ${(Number(T.upt) || 0).toFixed(2)} pieces per order.`);
   }
-  if (q.notes.includes('nodate')) out.push(ar ? 'لم تحدد تاريخا، فاستخدمت أمس.' : 'You did not give a date, so I used yesterday.');
+  { const w = p.metric === 'sales' ? worthLook(p, ar) : ''; if (w && !q.rank) out.push(w); }
+  if (q.rank && !ar && out[0] && /^(Highest|Lowest) /.test(out[0])) { for (let i = out.length - 1; i > 1; i--) if (/^(Best|Top item|Top (payment|category|collection)|Best day|Best weekday|Best month)/.test(out[i])) out.splice(i, 1); }
+  if (q.notes.includes('samedates')) out.push(ar ? 'بنفس التواريخ السابقة.' : 'Same dates as before.');
+  if (q.notes.includes('nodate') && q.kind !== 'brief') out.push(ar ? 'لم تحدد تاريخا، فاستخدمت أمس.' : 'You did not give a date, so I used yesterday.');
   return out.join('\n');
 }
 function helpText(sc, ar) {
   if (ar) return 'أستطيع الإجابة عن **المبيعات** و**المخزون** بالأرقام الحقيقية. جرّب:\n- مبيعات التشارم في كل فرع أمس\n- أعلى 10 منتجات هذا الشهر\n- مخزون الأساور في كل فرع\nاذكر التاريخ والفرع والفئة وطريقة التقسيم (كل فرع، يوم بيوم، أعلى المنتجات).';
   return 'I answer questions about **sales** and **stock** with the real figures. Try:\n- Sales of charms in every store for 15 November 2026\n- Top 10 products this month\n- Sales day by day, this month vs last month\n- Compare Point 90 this month vs last month\n- Stock of 791725C01 in every store\n- How many rings do we have in City Stars?\nSay a date (yesterday, last week, 15 Nov), a store, a category, and how to split it (every store, day by day, top products).';
 }
+function followChips(q, res) {
+  if (q.ar) return [];
+  const p = res && res.panel, k = q.kind, st = (q.args.stores || []).length, out = [];
+  if (k === 'sales' && p && p.type === 'sales') {
+    if (p.cmp) out.push('Why did it change?');
+    if (p.by !== 'product') out.push('Top products');
+    if (p.by !== 'store' && !st) out.push('By store'); else if (p.by === 'store') out.push('By category');
+    out.push('Stock for this');
+  } else if (k === 'why') { out.push('Top products', 'Day by day', 'What should we restock?'); }
+  else if (k === 'brief') { out.push('Why did it change?', 'Forecast this month', 'What should we restock?'); }
+  else if (k === 'forecast') { out.push('Day by day this month', 'By store this month', 'Why vs last month?'); }
+  else if (k === 'cover') { out.push(q.args.mode === 'slow' ? 'What should we restock?' : 'Slow moving items', 'Top products this month'); }
+  else if (k === 'stock') { out.push('What should we restock?', 'Slow moving items'); }
+  return out.slice(0, 4);
+}
 async function freeAnswer(turn, ctx) {
   const P = require('./_askparse');
-  const q = P.parse(turn.text, { today: cairoToday(), prev: P.readCtx(turn.prev), apps: ctx.apps });
-  if (q.kind === 'help') return { text: helpText(ctx.sc, q.ar), panels: [], ctx: '' };
+  const q = P.parse(turn.text, { today: cairoToday(), prev: P.readCtx(turn.prev), apps: ctx.apps, vocab: ctx.vocab });
+  if (q.kind === 'help') return { text: helpText(ctx.sc, q.ar), panels: [], ctx: '', follow: q.ar ? [] : ['How are we doing?', 'Top products this month', 'What should we restock?', 'Forecast this month'] };
   if (q.kind === 'links') {
     const items = q.args.ids.map(id => ctx.apps.find(a => a.id === id)).filter(Boolean).map(a => ({ title: a.title, href: a.href }));
     return items.length ? { text: q.ar ? 'تفضل.' : 'Here you go.', panels: [{ type: 'links', items }], ctx: '' } : { text: 'You cannot open that report.', panels: [], ctx: '' };
   }
-  const res = q.kind === 'stock' ? runStock(await stockData(), q.args, ctx.sc) : runSales(ctx.rows, q.args, ctx.sc);
-  if (res.error) return { text: res.error, panels: [], ctx: '' };
-  return { text: describe(res, q).slice(0, 2000), panels: [res.panel], ctx: JSON.stringify({ k: q.kind, a: q.args }).slice(0, 900) };
+  const keep = r => JSON.stringify({ k: q.kind, a: q.args }).slice(0, 900);
+  const done = (res, text, panels) => res.error ? { text: res.error, panels: [], ctx: '' } : { text: String(text).slice(0, 2000), panels: panels || [res.panel], ctx: keep(), follow: followChips(q, res) };
+  if (q.kind === 'stock') { const res = runStock(await stockData(), q.args, ctx.sc); return done(res, res.error ? '' : describe(res, q)); }
+  if (q.kind === 'cover') { const res = await coverRun(ctx.rows, await stockData(), q.args, ctx.sc); return done(res, res.error ? '' : describeCover(res.panel)); }
+  if (q.kind === 'forecast') { const res = forecastRun(ctx.rows, q.args, ctx.sc); return done(res, res.error ? '' : describeForecast(res.panel)); }
+  if (q.kind === 'why') { const res = whyRun(ctx.rows, q.args, ctx.sc); return done(res, res.error ? '' : describeWhy(res.panel)); }
+  if (q.kind === 'brief') {
+    const a = q.args, by = runSales(ctx.rows, { ...a, group_by: 'store' }, ctx.sc);
+    if (by.error) return done(by, '');
+    const top = runSales(ctx.rows, { ...a, group_by: 'product', limit: 5, compare: 'none' }, ctx.sc);
+    const panels = [by.panel]; if (!top.error && top.panel.groups.length) panels.push(top.panel);
+    let text = describe(by, { ...q, args: a, rank: null }); const tp = top.error ? null : top.panel.groups[0];
+    if (tp) text += '\nTop item: ' + mark(tp.name) + ' (' + egp(tp.sales) + ').';
+    return done(by, text, panels);
+  }
+  const res = runSales(ctx.rows, q.args, ctx.sc);
+  return done(res, res.error ? '' : describe(res, q));
 }
 // the last question, and what the answer before it used (for "and for Point 90?")
 function lastTurn(msgs) {
@@ -548,7 +733,7 @@ module.exports = async function handler(req, res) {
   try {
     const rows = await salesRows(), mine = inScope(rows, sc);
     const apps = appsFor(facts).filter(a => a.id !== 'maintenance');
-    const ctx = { rows, sc, name: greetName(facts), stores: liveStores(mine), first: mine.length ? mine[0].d : '', last: mine.length ? mine[mine.length - 1].d : '', apps };
+    const ctx = { rows, vocab: salesMemo.vocab, sc, name: greetName(facts), stores: liveStores(mine), first: mine.length ? mine[0].d : '', last: mine.length ? mine[mine.length - 1].d : '', apps };
     let out = null;
     if (useAI) { try { out = await answer(toMessages(b && b.messages), ctx); } catch (_) { out = null; } } // no credit, busy, bad key: the free engine answers instead
     if (!out) out = await freeAnswer(turn, ctx);

@@ -35,6 +35,11 @@ svg{display:block}
 .hello{margin:auto 0;padding:10px 6px 4px;text-align:center}
 .hello h2{margin:0 0 4px;font-size:19px;font-weight:800}.hello p{margin:0 auto 16px;max-width:300px;color:var(--muted);font-size:13px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.gu{color:var(--up)}.gd{color:var(--down)}
+.dr{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:10px 0 4px}.dr>div{background:var(--soft);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:1px;min-width:0}.dr span{font-size:11px;color:var(--muted);font-weight:650}.dr b{font-size:15px;font-weight:800}.dr small{font-size:11px;color:var(--muted)}
+.mh{margin:12px 0 4px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.mvs{display:grid;gap:3px}.mv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 9px;border-radius:9px;background:var(--surface);border:1px solid var(--line)}.mv span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.mv b{white-space:nowrap}
+.fc{display:flex;align-items:flex-end;gap:2px;height:84px;margin:12px 0 4px}.fc i{flex:1;min-width:2px;background:var(--pink);border-radius:3px 3px 0 0}.fc i.es{background:repeating-linear-gradient(135deg,var(--bar,#ffd3d8),var(--bar,#ffd3d8) 3px,transparent 3px,transparent 6px);outline:1px dashed var(--pink);outline-offset:-1px}
+.fu{display:flex;flex-wrap:wrap;gap:7px;margin:2px 2px 0}.fu .chip{padding:6px 11px;font-size:12px}
 .chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 13px;font-size:12.5px;font-weight:650;text-align:start;transition:border-color .15s,transform .15s}.chip:hover{border-color:var(--pink);transform:translateY(-1px)}
 .me{align-self:flex-end;max-width:86%;background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:18px 18px 5px 18px;font-weight:550;white-space:pre-wrap;overflow-wrap:anywhere}
 .w.dark .me{background:#FF93A0;color:#2A1018}
@@ -191,7 +196,7 @@ textarea::placeholder{color:var(--muted)}
   }
   function foot(p) {
     return (p.note ? '<div class="note">' + esc(p.note) + '</div>' : '') +
-      (p.href ? '<div class="pf"><a class="link" href="' + esc(p.href) + '">' + (p.type === 'stock' ? 'Open Stock balance' : 'Open in Pandora Dashboards') + IC.go + '</a></div>' : '');
+      (p.href ? '<div class="pf"><a class="link" href="' + esc(p.href) + '">' + (p.type === 'stock' || p.type === 'cover' ? 'Open Stock balance' : 'Open in Pandora Dashboards') + IC.go + '</a></div>' : '');
   }
   function subRows(g, by, short) {
     if (!g.sub || !g.sub.length) return '';
@@ -211,8 +216,8 @@ textarea::placeholder{color:var(--muted)}
   }
   function salesPanel(p) {
     var T = p.total || {}, G = p.groups || [], m = p.metric === 'units' ? 'units' : p.metric === 'orders' ? 'orders' : 'sales';
-    var val = function (g) { return m === 'units' ? '<small>PCS</small>' + num(g.units) : m === 'orders' ? '<small>ORDERS</small>' + num(g.orders) : money(g.sales); };
-    var h = head(p) + '<div class="tot"><span class="big">' + money(T.sales) + '</span>' + delta(T.d, T.prev) + (p.cmp ? '<span class="meta" style="width:auto">vs ' + esc(p.cmp) + '</span>' : '') +
+    var val = function (g) { return p.metric === 'atv' ? '<small>AVG ORDER</small>' + money(g.atv) : p.metric === 'upt' ? '<small>PCS / ORDER</small>' + (Number(g.upt) || 0).toFixed(2) : m === 'units' ? '<small>PCS</small>' + num(g.units) : m === 'orders' ? '<small>ORDERS</small>' + num(g.orders) : money(g.sales); };
+    var h = head(p) + '<div class="tot"><span class="big">' + (p.metric === 'atv' ? money(T.atv) : p.metric === 'upt' ? (Number(T.upt) || 0).toFixed(2) + ' <small>PCS / ORDER</small>' : money(T.sales)) + '</span>' + (p.metric === 'atv' || p.metric === 'upt' ? '' : delta(T.d, T.prev)) + (p.cmp ? '<span class="meta" style="width:auto">vs ' + esc(p.cmp) + '</span>' : '') +
       '<span class="meta">' + num(T.units) + ' ' + unitWord(T.units) + ' · ' + num(T.orders) + (T.orders === 1 ? ' order' : ' orders') + (T.orders ? ' · avg order ' + moneyT(T.atv) + ' · ' + (Number(T.upt) || 0).toFixed(2) + ' pcs per order' : '') + '</span></div>';
     if (p.by === 'store') {
       var mx = Math.max.apply(null, G.map(function (g) { return g[m]; }).concat(1));
@@ -256,11 +261,47 @@ textarea::placeholder{color:var(--muted)}
     }
     return h + foot(p);
   }
+
+  // ---- smarter panels: why / forecast / restock & slow ----
+  function sgn(n) { return (n >= 0 ? '+' : '−') + moneyT(Math.abs(n)); }
+  function whyPanel(p) {
+    var T = p.total || {};
+    var h = head(p) + '<div class="tot"><span class="big ' + (T.diff >= 0 ? 'gu' : 'gd') + '">' + sgn(T.diff) + '</span>' + delta(T.d, T.prev) + '<span class="meta" style="width:auto">vs ' + esc(p.cmp || 'before') + '</span><span class="meta">' + moneyT(T.sales) + ' now · ' + moneyT(T.prev) + ' before</span></div>';
+    h += '<div class="dr">' + (p.drivers || []).map(function (d) {
+      var f = d.f === 'egp' ? moneyT : d.f === 'x' ? function (v) { return (Number(v) || 0).toFixed(2); } : num;
+      return '<div><span>' + esc(d.name) + '</span><b>' + f(d.cur) + '</b><small>was ' + f(d.prev) + '</small>' + delta(d.d, d.prev) + '</div>';
+    }).join('') + '</div>';
+    (p.movers || []).forEach(function (m) {
+      var row = function (x, up) { return '<div class="mv"><span title="' + esc(x.name) + '">' + esc(x.name) + '</span><b class="' + (up ? 'gu' : 'gd') + '">' + sgn(x.diff) + '</b></div>'; };
+      h += '<div class="mh">' + esc(m.dim) + '</div><div class="mvs">' + m.up.map(function (x) { return row(x, 1); }).join('') + m.down.map(function (x) { return row(x, 0); }).join('') + '</div>';
+    });
+    return h + foot(p);
+  }
+  function forecastPanel(p) {
+    var mx = Math.max.apply(null, (p.daily || []).map(function (d) { return d.v; }).concat(1)), n = (p.daily || []).length || 1;
+    var h = head(p) + '<div class="tot"><span class="big">' + money(p.done ? p.soFar : p.projected) + '</span>' + (p.vsLastMonth != null ? delta(p.vsLastMonth, 1) + '<span class="meta" style="width:auto">vs last month</span>' : '') + '<span class="meta" style="width:auto">' + (p.done ? 'final' : 'likely ' + moneyT(p.low) + ' – ' + moneyT(p.high)) + '</span>' +
+      '<span class="meta">So far ' + moneyT(p.soFar) + ' in ' + p.daysDone + ' days' + (p.done ? '' : ' · ' + p.daysLeft + ' to go') + ' (to ' + esc(p.through) + ')</span></div>';
+    h += '<div class="fc" role="img" aria-label="Daily sales, with the estimated days lighter">' + (p.daily || []).map(function (d) { return '<i class="' + (d.est ? 'es' : '') + '" style="height:' + Math.max(2, d.v / mx * 100).toFixed(1) + '%" title="' + esc(d.d) + ': ' + moneyT(d.v) + (d.est ? ' (estimate)' : '') + '"></i>'; }).join('') + '</div>';
+    h += '<div class="dr">' + [['Last month, full', p.lastMonth], ['Last month, same days', p.lastMonthSoFar]].filter(function (x) { return x[1] != null; }).map(function (x) { return '<div><span>' + x[0] + '</span><b>' + moneyT(x[1]) + '</b></div>'; }).join('') +
+      (p.paceVsLast != null ? '<div><span>Pace vs same days</span><b>' + (p.paceVsLast >= 0 ? '+' : '−') + Math.abs(p.paceVsLast) + '%</b></div>' : '') + '</div>';
+    return h + foot(p);
+  }
+  function coverPanel(p) {
+    var T = p.total || {}, R = p.rows || [];
+    var h = head(p) + '<div class="tot"><span class="big">' + num(T.items) + ' <small>' + (p.mode === 'slow' ? 'SLOW ITEMS' : 'TO RESTOCK') + '</small></span><span class="meta">' + num(T.qty) + ' pcs in stock across them</span></div>';
+    if (!R.length) return h + '<div class="note">' + (p.mode === 'slow' ? 'No stock without sales. Good.' : 'Nothing is close to running out.') + '</div>' + foot(p);
+    h += '<div class="rows">' + R.map(function (g) {
+      var urgent = p.mode !== 'slow' && g.days != null && g.days <= 3;
+      return '<div class="rw"><span class="pic" data-sku="' + esc(g.sku || '') + '">' + IC.gem + '</span><div class="n"><b title="' + esc(g.name) + '">' + esc(g.name) + '</b><small>' + esc([g.sku, g.cat].filter(Boolean).join(' · ')) + (g.where && g.where[0] ? ' · most in ' + esc(g.where[0].name) : '') + '</small></div>' +
+        '<div class="r"><b>' + num(g.qty) + ' ' + unitWord(g.qty) + '</b><small>' + (p.mode === 'slow' ? 'none sold' : (urgent ? '<span class="gd">' + g.days + (g.days === 1 ? ' day left' : ' days left') + '</span>' : g.days + ' days left') + ' · ' + g.perDay + '/day') + '</small></div></div>';
+    }).join('') + '</div>';
+    return h + foot(p);
+  }
   function panelEl(p) {
     var d = document.createElement('div'); d.className = 'pn';
     try {
       if (p.type === 'links') { d.innerHTML = '<div class="links">' + (p.items || []).map(function (i) { return '<a class="link" href="' + esc(/^\/[^/\\]/.test(i.href) ? i.href : '/') + '">' + esc(i.title) + IC.go + '</a>'; }).join('') + '</div>'; return d; }
-      d.innerHTML = p.type === 'stock' ? stockPanel(p) : salesPanel(p);
+      d.innerHTML = p.type === 'stock' ? stockPanel(p) : p.type === 'why' ? whyPanel(p) : p.type === 'forecast' ? forecastPanel(p) : p.type === 'cover' ? coverPanel(p) : salesPanel(p);
     } catch (e) { d.innerHTML = '<div class="note">This panel could not be drawn.</div>'; return d; }
     Array.prototype.forEach.call(d.querySelectorAll('.pic[data-sku]'), function (el) { picFor(el.dataset.sku, el); });
     var ch = d.querySelector('.chart');
@@ -300,6 +341,7 @@ textarea::placeholder{color:var(--muted)}
         var k = 0, wt = a.querySelector('.wt'); waitTimer = setInterval(function () { k = Math.min(k + 1, WAITS.length - 1); wt.textContent = WAITS[k]; }, 2600);
       } else {
         (m.panels || []).forEach(function (p) { a.appendChild(panelEl(p)); });
+        if (idx === S.msgs.length - 1 && m.follow && m.follow.length && !m.err) { var fu = document.createElement('div'); fu.className = 'fu'; m.follow.forEach(function (c) { var b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = c; fu.appendChild(b); }); a.appendChild(fu); }
         if (m.text) { var t = document.createElement('div'); t.className = 'tx' + (m.err ? ' err' : ''); t.innerHTML = rich(m.text) + (m.err && idx === S.msgs.length - 1 ? '<button class="retry" type="button">Try again</button>' : ''); a.insertBefore(t, m.err ? null : a.firstChild); }
       }
       LOG.appendChild(a);
@@ -323,7 +365,7 @@ textarea::placeholder{color:var(--muted)}
       .then(function (x) {
         S.msgs.pop();
         if (x.j && x.j.ok) {
-          S.msgs.push({ role: 'assistant', text: x.j.text || '', panels: x.j.panels || [], ctx: x.j.ctx || '' });
+          S.msgs.push({ role: 'assistant', text: x.j.text || '', panels: x.j.panels || [], ctx: x.j.ctx || '', follow: x.j.follow || [] });
           // an answer with store cards or a chart reads better in the bigger window (computers only; the person can make it small again)
           if (!S.wide && window.innerWidth >= 900 && (x.j.panels || []).some(function (p) { return (p.by === 'store' && (p.groups || []).length > 2) || ((p.by === 'day' || p.by === 'month') && (p.groups || []).length > 8); })) setWide(true);
         } else S.msgs.push({ role: 'assistant', err: true, text: x.status === 401 ? 'You were signed out. Sign in again, then ask once more.' : (x.j && x.j.error) || 'Something went wrong while answering. Try again.' });
