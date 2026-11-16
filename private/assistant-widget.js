@@ -67,6 +67,7 @@ svg{display:block}
 .ib{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--glass);color:var(--text);transition:background .15s,transform .15s;position:relative;z-index:1}.ib:hover{background:var(--glassb);transform:scale(1.06)}.ib svg{width:17px;height:17px}
 .log{position:relative;flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;padding:12px 18px 8px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin}
 .hello{margin:auto 0 0;padding:0 4px 6px;text-align:center}
+.hello .hi{display:block;margin-bottom:4px;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--pinkd)}
 .hello h2{margin:0 0 6px;font:500 24px/1.15 var(--serif);letter-spacing:-.01em}.hello p{margin:0 auto 16px;max-width:320px;color:var(--muted);font-size:13px;line-height:1.55}
 .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 .gu{color:var(--up)}.gd{color:var(--down)}
@@ -376,7 +377,7 @@ textarea::placeholder{color:var(--muted)}
     LOG.textContent = '';
     if (!S.msgs.length) {
       var h = document.createElement('div'); h.className = 'hello';
-      h.innerHTML = '<h2>' + esc(CFG.name ? 'Hello ' + CFG.name : 'Hello') + '</h2><p>Ask about sales, stock, staff or slow stock: say a date, a store, a category and how to split it. I answer with the real figures.</p><div class="chips">' + CHIPS.map(function (c) { return '<button class="chip" type="button">' + esc(c) + '</button>'; }).join('') + '</div>';
+      h.innerHTML = '<small class="hi">' + esc(CFG.name ? 'Hello ' + CFG.name : 'Hello') + '</small><h2>Fawzi at your service</h2><p>Ask about sales, stock, staff or slow stock: say a date, a store, a category and how to split it. I answer with the real figures.</p><div class="chips">' + CHIPS.map(function (c) { return '<button class="chip" type="button">' + esc(c) + '</button>'; }).join('') + '</div>';
       LOG.appendChild(h);
       return;
     }
