@@ -134,7 +134,7 @@ async function picture(rows, day, fallback, want) {
 // newest message sent to the bot (so the person only has to press Start once) and remembered in digest/tgchat.json.
 // WhatsApp: WHATSAPP_TO + CALLMEBOT_APIKEY.
 const phone = () => String(process.env.WHATSAPP_TO || '').replace(/[^\d+]/g, '');
-const waOn = () => !!(phone() && process.env.CALLMEBOT_APIKEY);
+const waOn = () => phone().replace(/\D/g, '').length >= 10 && /^[\w-]{3,}$/.test(String(process.env.CALLMEBOT_APIKEY || '').trim()) && !/edit|x{3,}/i.test(String(process.env.CALLMEBOT_APIKEY)); // placeholders such as +20XXXXXXXXXX / EDIT_ME keep WhatsApp off until real values are typed
 const tgOn = () => !!String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
 const configured = () => waOn() || tgOn();
 const where = () => [tgOn() ? 'Telegram' : '', waOn() ? 'WhatsApp ' + phone().slice(0, 4) + '•••' + phone().slice(-3) : ''].filter(Boolean).join(' + ');
