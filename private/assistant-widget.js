@@ -183,13 +183,13 @@ textarea::placeholder{color:var(--muted)}
   host.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;z-index:2147482000';
   var root = host.attachShadow({ mode: 'open' });
   root.innerHTML = '<style>' + CSS + '</style><div class="w" part="w">' +
-    '<button class="fab" type="button" aria-label="Open the Pandora Assistant" title="Ask me. Double-click to make me quiet or lively."><span class="bub" role="status" aria-live="polite"></span><span class="mc">' + MASCOT + '</span></button>' +
-    '<section class="win" role="dialog" aria-label="Pandora Assistant" aria-hidden="true">' +
+    '<button class="fab" type="button" aria-label="Open Fawzi" title="Ask me. Double-click to make me quiet or lively."><span class="bub" role="status" aria-live="polite"></span><span class="mc">' + MASCOT + '</span></button>' +
+    '<section class="win" role="dialog" aria-label="Fawzi" aria-hidden="true">' +
       '<header class="hd">' +
         '<button class="ib nw" type="button" title="New chat" aria-label="Start a new chat">' + IC.fresh + '</button>' +
-        '<div class="hc"><span class="badge">' + MASCOT + '</span><div class="ht"><b>Pandora Assistant</b><span><i class="live"></i>Live sales, stock and staff</span></div></div>' +
+        '<div class="hc"><span class="badge">' + MASCOT + '</span><div class="ht"><b>Fawzi</b><span><i class="live"></i>Live sales, stock and staff</span></div></div>' +
         '<div class="hr"><button class="ib wd" type="button" title="Bigger or smaller" aria-label="Make the window bigger or smaller">' + IC.wide + '</button>' +
-        '<button class="ib cl" type="button" title="Close" aria-label="Close the assistant">' + IC.x + '</button></div></header>' +
+        '<button class="ib cl" type="button" title="Close" aria-label="Close Fawzi">' + IC.x + '</button></div></header>' +
       '<div class="log" aria-live="polite"></div>' +
       '<footer class="ft"><div class="box"><textarea rows="1" maxlength="800" dir="auto" placeholder="Ask about sales or stock" aria-label="Your question"></textarea><button class="send" type="button" aria-label="Send" disabled>' + IC.send + '</button></div>' +
       '<div class="fine">Figures come straight from the saved sales and stock. Net of VAT unless you ask.</div></footer>' +
