@@ -538,6 +538,157 @@ function describeCover(p) {
   return `${mark(p.total.items + ' items')} may run out soon. Most urgent: ${mark(R[0].name)} – ${R[0].qty} pcs left, selling about ${R[0].perDay}/day (${R[0].days} ${R[0].days === 1 ? 'day' : 'days'}).${out0.length > 1 ? ' ' + out0.length + ' have 3 days or less.' : ''}`;
 }
 
+// ================== staff performance + the Slowmoving report ==================
+const VAT = 1.14;
+let staffMemo = { at: 0, cur: null };
+async function staffCur() {
+  if (staffMemo.cur && Date.now() - staffMemo.at < 180000) return staffMemo.cur;
+  const cur = await store.getJSON('data/current.json').catch(() => null);
+  staffMemo = { at: Date.now(), cur };
+  return cur;
+}
+async function staffVocab() {
+  const cur = await staffCur(), v = new Set();
+  if (cur && Array.isArray(cur.people)) for (const p of cur.people) for (const w of String(p[0] || '').toLowerCase().split(/[^a-z]+/)) if (w.length >= 3) v.add(w);
+  return v;
+}
+// per sales person (or per store) from the Staff Performance data: [person, group, invoice, qty, amount before VAT, day, item]
+async function staffRun(a, sc) {
+  a = a || {};
+  if (!validDay(a.from) || !validDay(a.to)) return { error: 'Give the dates as YYYY-MM-DD.' };
+  const D = require('./data'), cur = await staffCur();
+  if (!cur) return { error: 'No Staff Performance data is saved yet. Sync it from All Uploads first.' };
+  const load = (f, e) => D.loadData(new URLSearchParams({ from: f, to: e }), cur);
+  const basis = a.basis === 'gross' ? 'gross' : 'net', mul = basis === 'gross' ? VAT : 1;
+  const by = a.group_by === 'store' ? 'store' : 'person';
+  const words_ = words(a.person), ct = pickCats(list(a.categories));
+  const wantSt = list(a.stores);
+  const calc = d => {
+    const exs = new Set((d.ex || []).map(g => d.groups.indexOf(g)).filter(i => i >= 0));
+    const known = d.stores.filter(n => !sc.rx || sc.rx.some(x => x.test(n)));
+    const st = pickStores(wantSt, known);
+    const out = new Map(), tot = { inv: new Map(), sales: 0, units: 0 };
+    const bad = st.bad;
+    for (const r of d.rows) {
+      if (exs.has(r[1])) continue;
+      const p = d.people[r[0]]; if (!p) continue;
+      const sn = d.stores[p[1]]; if (!known.includes(sn)) continue;
+      if (st.hit.length && !st.hit.includes(sn)) continue;
+      if (ct.hit.length && !ct.hit.includes(stockCat(d.groups[r[1]], ''))) continue;
+      if (words_.length && !words_.every(w => String(p[0]).toLowerCase().includes(w))) continue;
+      const key = by === 'store' ? sn : p[0] + '|' + sn, v = r[4] * mul;
+      let g = out.get(key); if (!g) out.set(key, g = { name: by === 'store' ? sn : p[0], store: sn, sales: 0, units: 0, inv: new Map() });
+      g.sales += v; g.units += r[3]; const o = g.inv.get(r[2]) || { v: 0, q: 0 }; o.v += v; o.q += r[3]; g.inv.set(r[2], o);
+      tot.sales += v; tot.units += r[3]; const t = tot.inv.get(key.split('|')[0] + '#' + sn + '#' + r[2]) || { v: 0, q: 0 }; t.v += v; t.q += r[3]; tot.inv.set(key.split('|')[0] + '#' + sn + '#' + r[2], t);
+    }
+    const fin = g => { let n = 0, ov = 0, oq = 0; for (const o of g.inv.values()) if (o.v > 0 && o.q > 0) { n++; ov += o.v; oq += o.q; } g.orders = n; g.atv = n ? ov / n : 0; g.upt = n ? oq / n : 0; return g; };
+    const groups = [...out.values()].map(fin);
+    const T = fin({ inv: tot.inv, sales: tot.sales, units: tot.units });
+    return { groups, T, bad, hit: st.hit, known };
+  };
+  const d = await load(a.from, a.to); if (!d) return { error: 'No Staff Performance data is saved for those dates.' };
+  const C = calc(d);
+  if (C.bad.length) return { error: 'Unknown store: ' + C.bad.join(', ') + '. The stores are: ' + C.known.join(', ') + '.' };
+  // compare
+  const days = diffD(a.from, a.to) + 1; let cmp = null, prev = null;
+  if (a.compare === 'previous_period') cmp = { f: addD(a.from, -days), e: addD(a.from, -1), text: days === 1 ? 'the day before' : 'the ' + days + ' days before' };
+  else if (a.compare === 'last_week') cmp = { f: addD(a.from, -7), e: addD(a.to, -7), text: days === 1 ? 'the same day last week' : 'a week earlier' };
+  else if (a.compare === 'last_month') cmp = { f: addM(a.from, -1), e: addM(a.to, -1), text: 'the same dates last month' };
+  if (cmp) { const dp = await load(cmp.f, cmp.e); if (dp) prev = calc(dp); }
+  const pm = new Map(prev ? prev.groups.map(g => [by === 'store' ? g.name : g.name + '|' + g.store, g]) : []);
+  const metric = ['units', 'orders', 'atv', 'upt'].includes(a.sort_by) ? a.sort_by : 'sales';
+  let groups = C.groups.filter(g => g.sales !== 0 || g.units !== 0).sort((x, y) => y[metric] - x[metric] || y.sales - x.sales);
+  const lim = Math.min(40, Math.max(1, Number(a.limit) || 10)), more = Math.max(0, groups.length - lim);
+  groups = groups.slice(0, lim);
+  const notes = [];
+  if (!C.groups.length) notes.push('No staff sales match for these dates.');
+  if (d.dayMax && a.to > d.dayMax) notes.push('Staff data is saved up to ' + fDay(d.dayMax) + '.');
+  if (d.dayMin && a.from < d.dayMin) notes.push('Staff data is saved from ' + fDay(d.dayMin) + '.');
+  if (more) notes.push(more + ' more not shown.');
+  const T = C.T, TP = prev ? prev.T : null;
+  const filt = [C.hit.length ? C.hit.join(', ') : (sc.admin ? 'All stores' : sc.zone), ct.hit.length ? ct.hit.join(', ') : 'All categories'];
+  if (words_.length) filt.push('person: ' + String(a.person).slice(0, 30));
+  const panel = { type: 'staff', by, metric, title: by === 'store' ? 'Staff sales · by store' : words_.length ? 'Sales person · ' + String(a.person).slice(0, 24) : 'Sales people · top ' + groups.length, range: fRange(a.from, a.to), filters: filt.join(' · '), basis,
+    cmp: cmp && prev ? cmp.text : '', note: notes.join(' '), href: '/staff?from=' + a.from + '&to=' + a.to,
+    total: { sales: r2(T.sales), units: r2(T.units), orders: T.orders, atv: r2(T.atv), upt: r2(T.upt), prev: TP ? r2(TP.sales) : null, d: TP ? chg(T.sales, TP.sales) : null, people: by === 'person' ? C.groups.filter(g => g.sales > 0).length : undefined },
+    groups: groups.map(g => { const p = pm.get(by === 'store' ? g.name : g.name + '|' + g.store); return { name: g.name, store: by === 'person' ? g.store : undefined, sales: r2(g.sales), units: r2(g.units), orders: g.orders, atv: r2(g.atv), upt: r2(g.upt), share: T.sales > 0 ? Math.round(g.sales / T.sales * 1000) / 1000 : 0, ...(prev ? { prev: p ? r2(p.sales) : 0, d: p ? chg(g.sales, p.sales) : null } : {}) }; }) };
+  return { panel, forModel: { period: panel.range, filters: panel.filters, total: panel.total, groups: panel.groups.slice(0, 30) } };
+}
+const describeStaff = (res, q) => {
+  const p = res.panel, T = p.total, G = p.groups, out = [];
+  if (!G.length) return 'No staff sales found for ' + p.range + (p.note ? '. ' + p.note : '.');
+  const key = ['units', 'orders'].includes(p.metric) ? p.metric : 'sales';
+  const fmt = g => key === 'units' ? nn(g.units) + ' pcs' : key === 'orders' ? nn(g.orders) + ' orders' : egp(g.sales);
+  const one = p.by === 'person' && /^Sales person/.test(p.title);
+  if (one) {
+    out.push(`${mark(G[0].name)}${G[0].store ? ' (' + G[0].store + ')' : ''}, ${p.range}: ${mark(egp(G[0].sales))}${G[0].d != null && p.cmp ? ', ' + (G[0].d >= 0 ? 'up ' : 'down ') + Math.abs(G[0].d) + '% vs ' + p.cmp : ''}.`);
+    out.push(`${nn(G[0].orders)} orders, ${nn(G[0].units)} pcs, average order ${egp(G[0].atv)}, ${(G[0].upt || 0).toFixed(2)} pcs per order.`);
+    if (G.length > 1) out.push('Several people match that name: ' + G.slice(0, 4).map(g => g.name + (g.store ? ' (' + g.store + ')' : '')).join(', ') + '.');
+  } else {
+    out.push(`${p.by === 'store' ? 'Staff sales by store' : 'Top sales people'}${p.filters && p.filters.split(' · ')[0] !== 'All stores' ? ' (' + p.filters.split(' · ')[0] + ')' : ''}, ${p.range}: total ${mark(egp(T.sales))}${chgText(T, p.cmp)}.`);
+    out.push(`${q.rank && q.rank.dir === 'bottom' ? 'Lowest' : 'Top'}: ${mark((q.rank && q.rank.dir === 'bottom' ? G[G.length - 1] : G[0]).name)}${p.by === 'person' && G[0].store ? ' (' + (q.rank && q.rank.dir === 'bottom' ? G[G.length - 1] : G[0]).store + ')' : ''} – ${fmt(q.rank && q.rank.dir === 'bottom' ? G[G.length - 1] : G[0])}.`);
+    if (p.by === 'person' && T.people) out.push(`${T.people} people sold in this period.`);
+  }
+  if (q.notes.includes('nodatemonth')) out.push('You did not give a date, so I used this month so far.');
+  return out.join('\n');
+};
+
+// The Slowmoving report: ERP's saved slow items per store (api/_slow.js snapshots). Pieces and ages only, never prices.
+async function slowRun(a, sc) {
+  a = a || {};
+  const idx = await store.getJSON('slow/index.json').catch(() => null);
+  const ents = idx ? Object.entries(idx) : [];
+  if (!ents.length) return { empty: true };
+  const known = ents.map(e => e[0]).filter(w => !sc.rx || sc.rx.some(x => x.test(w)));
+  const st = pickStores(list(a.stores), known), ct = pickCats(list(a.categories));
+  if (st.bad.length) return { error: 'Unknown store: ' + st.bad.join(', ') + '. The slow report covers: ' + known.join(', ') + '.' };
+  const q = words(a.search), items = [];
+  let at = '', months = 0;
+  for (const [wh, v] of ents) {
+    if (!known.includes(wh) || (st.hit.length && !st.hit.includes(wh))) continue;
+    const snap = await store.getJSON('slow/w/' + v.k + '.json').catch(() => null); if (!snap || !Array.isArray(snap.rows)) continue;
+    at = at && at > String(snap.at) ? at : String(snap.at || ''); months = Math.max(months, Number(snap.months) || 0);
+    const cols = snap.cols || [], ci = rx => cols.findIndex(c => rx.test(String(c.fieldname || '') + ' ' + String(c.label || '')));
+    let iS = ci(/(^|\s)_?sku\b/i), iN = ci(/item[_ ]?name/i), iQ = ci(/bal|qty/i), iL = ci(/last.*(sale|sold)/i), iI = ci(/idle|age/i), iC = ci(/categ|item[_ ]?group|group/i);
+    if (iS < 0) iS = 0; if (iN < 0) iN = 3; if (iQ < 0) iQ = 6; if (iL < 0) iL = 7; if (iI < 0) iI = 8; if (iC < 0) iC = 5;
+    for (const r of snap.rows) {
+      const name = String(r[iN] || ''), cat = stockCat(r[iC], name), qty = Number(r[iQ]) || 0; if (!(qty > 0)) continue;
+      if (ct.hit.length && !ct.hit.includes(cat)) continue;
+      const sku = String(r[iS] || '').toUpperCase();
+      if (q.length && !q.every(w => (sku + ' ' + name).toLowerCase().includes(w))) continue;
+      const idle = String(r[iI] || ''), never = /never/i.test(idle) || !r[iL], months_ = never ? 99 : Number(String(idle).replace(/[^\d]/g, '')) || 0;
+      items.push({ wh, sku, name, cat, qty, never, months: months_, last: String(r[iL] || '') });
+    }
+  }
+  if (!items.length) return { panelEmpty: true, filt: [st.hit.join(', ') || 'All stores', ct.hit.join(', ') || 'All categories'] };
+  const by = ['store', 'item', 'category'].includes(a.group_by) ? a.group_by : 'store';
+  const m = new Map();
+  for (const it of items) {
+    const k = by === 'store' ? it.wh : by === 'category' ? it.cat : it.sku;
+    let g = m.get(k); if (!g) m.set(k, g = { name: by === 'item' ? it.name : k, sku: by === 'item' ? it.sku : undefined, cat: by === 'item' ? it.cat : undefined, qty: 0, lines: 0, never: 0, oldest: 0, wh: new Map() });
+    g.qty += it.qty; g.lines++; if (it.never) g.never++; g.oldest = Math.max(g.oldest, it.months); g.wh.set(it.wh, (g.wh.get(it.wh) || 0) + it.qty);
+  }
+  let groups = [...m.values()].sort((x, y) => y.qty - x.qty || String(x.name).localeCompare(String(y.name)));
+  const lim = by === 'item' ? Math.min(40, Math.max(1, Number(a.limit) || 12)) : 40, more = Math.max(0, groups.length - lim);
+  groups = groups.slice(0, lim);
+  const tot = items.reduce((x, y) => x + y.qty, 0), never = items.filter(i => i.never).length;
+  const atTxt = at && !isNaN(Date.parse(at)) ? 'saved ' + fDay(cairoNow(Date.parse(at)).toISOString().slice(0, 10)) : '';
+  const filt = [st.hit.length ? st.hit.join(', ') : (sc.admin ? 'All stores' : sc.zone), ct.hit.length ? ct.hit.join(', ') : 'All categories'];
+  const panel = { type: 'slow', by, title: by === 'store' ? 'Slow items · by store' : by === 'category' ? 'Slow items · by category' : 'Slowest stock · items', range: [atTxt, months ? 'no sale in ' + months + '+ months' : ''].filter(Boolean).join(' · '), filters: filt.join(' · '), note: more ? more + ' more not shown.' : '', href: '/slow2',
+    total: { lines: items.length, qty: r0(tot), never, skus: new Set(items.map(i => i.sku)).size },
+    groups: groups.map(g => ({ name: String(g.name).slice(0, 90), sku: g.sku, cat: g.cat, qty: r0(g.qty), lines: g.lines, never: g.never, oldest: g.oldest, share: tot > 0 ? Math.round(g.qty / tot * 1000) / 1000 : 0, sub: by === 'item' ? [...g.wh.entries()].sort((x, y) => y[1] - x[1]).slice(0, 6).map(([n, v]) => ({ name: n, units: r0(v) })) : undefined })) };
+  return { panel, forModel: { total: panel.total, groups: panel.groups.slice(0, 30) } };
+}
+const describeSlow = (res, q) => {
+  const p = res.panel, T = p.total, G = p.groups, out = [];
+  out.push(`${mark(nn(T.qty) + ' pcs')} of slow stock across ${nn(T.lines)} item lines (${nn(T.skus)} different items)${T.never ? ', ' + nn(T.never) + ' never sold' : ''}.`);
+  if (p.by === 'store' && G.length > 1) out.push(`Most stuck: ${mark(G[0].name)} (${nn(G[0].qty)} pcs, ${G[0].lines} lines).`);
+  else if (p.by === 'item') out.push(`Biggest pile: ${mark(G[0].name)}${G[0].sku ? ' (' + G[0].sku + ')' : ''} – ${nn(G[0].qty)} pcs${G[0].sub && G[0].sub[0] ? ', most in ' + G[0].sub[0].name : ''}.`);
+  else if (G.length > 1) out.push(`Most: ${mark(G[0].name)} (${nn(G[0].qty)} pcs).`);
+  out.push('Open Slowmoving 2.0 for what to do with each item.');
+  return out.join('\n');
+};
+
 function describe(res, q) {
   const p = res.panel, a = q.args, ar = q.ar, T = p.total || {}, G = p.groups || [];
   const out = [];
@@ -587,7 +738,7 @@ function describe(res, q) {
 }
 function helpText(sc, ar) {
   if (ar) return 'أستطيع الإجابة عن **المبيعات** و**المخزون** بالأرقام الحقيقية. جرّب:\n- مبيعات التشارم في كل فرع أمس\n- أعلى 10 منتجات هذا الشهر\n- مخزون الأساور في كل فرع\nاذكر التاريخ والفرع والفئة وطريقة التقسيم (كل فرع، يوم بيوم، أعلى المنتجات).';
-  return 'I answer questions about **sales** and **stock** with the real figures. Try:\n- Sales of charms in every store for 15 November 2026\n- Top 10 products this month\n- Sales day by day, this month vs last month\n- Compare Point 90 this month vs last month\n- Stock of 791725C01 in every store\n- How many rings do we have in City Stars?\nSay a date (yesterday, last week, 15 Nov), a store, a category, and how to split it (every store, day by day, top products).';
+  return 'I answer questions about **sales**, **stock**, **staff** and **slow-moving** stock with the real figures. Try:\n- Sales of charms in every store for 15 November 2026\n- Who sold the most this month? / How is Ahmed doing?\n- Slow moving items in CFC\n- What should we restock?\n- Why did sales change yesterday?\n- Forecast this month\n- Where do I plan the shifts? (I open the right report)';
 }
 function followChips(q, res) {
   if (q.ar) return [];
@@ -600,13 +751,15 @@ function followChips(q, res) {
   } else if (k === 'why') { out.push('Top products', 'Day by day', 'What should we restock?'); }
   else if (k === 'brief') { out.push('Why did it change?', 'Forecast this month', 'What should we restock?'); }
   else if (k === 'forecast') { out.push('Day by day this month', 'By store this month', 'Why vs last month?'); }
+  else if (k === 'staff') { out.push(q.args.group_by === 'store' ? 'Top sales people' : 'By store', 'Slow moving items', 'Sales by store'); }
+  else if (k === 'slow') { out.push(q.args.group_by === 'item' ? 'By store' : 'Top 10 slow items', 'What should we restock?'); }
   else if (k === 'cover') { out.push(q.args.mode === 'slow' ? 'What should we restock?' : 'Slow moving items', 'Top products this month'); }
   else if (k === 'stock') { out.push('What should we restock?', 'Slow moving items'); }
   return out.slice(0, 4);
 }
 async function freeAnswer(turn, ctx) {
   const P = require('./_askparse');
-  const q = P.parse(turn.text, { today: cairoToday(), prev: P.readCtx(turn.prev), apps: ctx.apps, vocab: ctx.vocab });
+  const q = P.parse(turn.text, { today: cairoToday(), prev: P.readCtx(turn.prev), apps: ctx.apps, vocab: ctx.vocab, people: ctx.people });
   if (q.kind === 'help') return { text: helpText(ctx.sc, q.ar), panels: [], ctx: '', follow: q.ar ? [] : ['How are we doing?', 'Top products this month', 'What should we restock?', 'Forecast this month'] };
   if (q.kind === 'links') {
     const items = q.args.ids.map(id => ctx.apps.find(a => a.id === id)).filter(Boolean).map(a => ({ title: a.title, href: a.href }));
@@ -615,6 +768,18 @@ async function freeAnswer(turn, ctx) {
   const keep = r => JSON.stringify({ k: q.kind, a: q.args }).slice(0, 900);
   const done = (res, text, panels) => res.error ? { text: res.error, panels: [], ctx: '' } : { text: String(text).slice(0, 2000), panels: panels || [res.panel], ctx: keep(), follow: followChips(q, res) };
   if (q.kind === 'stock') { const res = runStock(await stockData(), q.args, ctx.sc); return done(res, res.error ? '' : describe(res, q)); }
+  const hasApp = id => ctx.apps.some(x => x.id === id);
+  if (q.kind === 'staff') {
+    if (!hasApp('staff')) return { text: 'Staff Performance is not open to this account, so I cannot read it.', panels: [], ctx: '' };
+    const res = await staffRun(q.rank && q.rank.dir === 'bottom' ? { ...q.args, limit: 40 } : q.args, ctx.sc); return done(res, res.error ? '' : describeStaff(res, q));
+  }
+  if (q.kind === 'slow') {
+    if (!hasApp('slow2') && !hasApp('slow')) return { text: 'Slowmoving is not open to this account, so I cannot read it.', panels: [], ctx: '' };
+    const res = await slowRun(q.args, ctx.sc);
+    if (res.empty) { const r2_ = await coverRun(ctx.rows, await stockData(), { ...q.args, mode: 'slow' }, ctx.sc); return done(r2_, r2_.error ? '' : 'The Slowmoving report has not been run yet, so this is worked out from stock and sales instead.\n' + describeCover(r2_.panel)); }
+    if (res.panelEmpty) return { text: 'No slow stock found for ' + res.filt.join(' · ') + '. Good news.', panels: [], ctx: keep() };
+    return done(res, res.error ? '' : describeSlow(res, q));
+  }
   if (q.kind === 'cover') { const res = await coverRun(ctx.rows, await stockData(), q.args, ctx.sc); return done(res, res.error ? '' : describeCover(res.panel)); }
   if (q.kind === 'forecast') { const res = forecastRun(ctx.rows, q.args, ctx.sc); return done(res, res.error ? '' : describeForecast(res.panel)); }
   if (q.kind === 'why') { const res = whyRun(ctx.rows, q.args, ctx.sc); return done(res, res.error ? '' : describeWhy(res.panel)); }
@@ -733,7 +898,7 @@ module.exports = async function handler(req, res) {
   try {
     const rows = await salesRows(), mine = inScope(rows, sc);
     const apps = appsFor(facts).filter(a => a.id !== 'maintenance');
-    const ctx = { rows, vocab: salesMemo.vocab, sc, name: greetName(facts), stores: liveStores(mine), first: mine.length ? mine[0].d : '', last: mine.length ? mine[mine.length - 1].d : '', apps };
+    const ctx = { rows, vocab: salesMemo.vocab, people: appsFor(facts).some(a => a.id === 'staff') ? await staffVocab().catch(() => null) : null, sc, name: greetName(facts), stores: liveStores(mine), first: mine.length ? mine[0].d : '', last: mine.length ? mine[mine.length - 1].d : '', apps };
     let out = null;
     if (useAI) { try { out = await answer(toMessages(b && b.messages), ctx); } catch (_) { out = null; } } // no credit, busy, bad key: the free engine answers instead
     if (!out) out = await freeAnswer(turn, ctx);

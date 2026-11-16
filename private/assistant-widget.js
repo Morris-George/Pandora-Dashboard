@@ -191,12 +191,12 @@ textarea::placeholder{color:var(--muted)}
   // ---- panels ----
   var unitWord = function (n) { return Math.round(n) === 1 ? 'pc' : 'pcs'; };
   function head(p) {
-    var sub = [p.range, p.filters, p.type === 'sales' ? (p.basis === 'gross' ? 'with VAT' : 'net of VAT') : ''].filter(Boolean).join(' · ');
+    var sub = [p.range, p.filters, p.type === 'sales' || p.type === 'staff' ? (p.basis === 'gross' ? 'with VAT' : 'net of VAT') : ''].filter(Boolean).join(' · ');
     return '<div class="ph"><div><h3 dir="auto">' + esc(p.title) + '</h3><small>' + esc(sub) + '</small></div></div>';
   }
   function foot(p) {
     return (p.note ? '<div class="note">' + esc(p.note) + '</div>' : '') +
-      (p.href ? '<div class="pf"><a class="link" href="' + esc(p.href) + '">' + (p.type === 'stock' || p.type === 'cover' ? 'Open Stock balance' : 'Open in Pandora Dashboards') + IC.go + '</a></div>' : '');
+      (p.href ? '<div class="pf"><a class="link" href="' + esc(p.href) + '">' + (p.type === 'stock' || p.type === 'cover' ? 'Open Stock balance' : p.type === 'staff' ? 'Open Staff Performance' : p.type === 'slow' ? 'Open Slowmoving 2.0' : 'Open in Pandora Dashboards') + IC.go + '</a></div>' : '');
   }
   function subRows(g, by, short) {
     if (!g.sub || !g.sub.length) return '';
@@ -242,7 +242,7 @@ textarea::placeholder{color:var(--muted)}
       var main = m === 'units' ? num(g.units) + ' ' + unitWord(g.units) : m === 'orders' ? num(g.orders) + ' orders' : moneyT(g.sales);
       var second = (m === 'sales' ? num(g.units) + ' ' + unitWord(g.units) : moneyT(g.sales)) + (p.by !== 'day' && p.by !== 'month' ? ' · ' + pct(g.share) : '');
       return '<div class="rw">' + (pics ? '<span class="pic" data-sku="' + esc(g.sku || '') + '">' + IC.gem + '</span>' : '<span class="k">' + (p.by === 'day' || p.by === 'month' || p.by === 'weekday' ? '' : i + 1) + '</span>') +
-        '<div class="n"><b title="' + esc(g.name) + '">' + esc(g.name) + '</b>' + (pics ? '<small>' + esc([g.sku, g.cat].filter(Boolean).join(' · ')) + '</small>' : '') + '<div class="bar"><i style="width:' + (Math.max(0, g[m]) / mx * 100).toFixed(1) + '%"></i></div>' + subRows(g, m) + '</div>' +
+        '<div class="n"><b title="' + esc(g.name) + '">' + esc(g.name) + '</b>' + (pics ? '<small>' + esc([g.sku, g.cat].filter(Boolean).join(' · ')) + '</small>' : g.store ? '<small>' + esc(g.store) + '</small>' : '') + '<div class="bar"><i style="width:' + (Math.max(0, g[m]) / mx * 100).toFixed(1) + '%"></i></div>' + subRows(g, m) + '</div>' +
         '<div class="r"><b>' + main + '</b><small>' + second + '</small>' + (g.d != null ? delta(g.d, g.prev) : '') + '</div></div>';
     }).join('') + '</div>';
   }
@@ -297,11 +297,22 @@ textarea::placeholder{color:var(--muted)}
     }).join('') + '</div>';
     return h + foot(p);
   }
+  function slowPanel(p) {
+    var T = p.total || {}, G = p.groups || [], mx = Math.max.apply(null, G.map(function (g) { return g.qty; }).concat(1));
+    var h = head(p) + '<div class="tot"><span class="big"><small>PCS</small>' + num(T.qty) + '</span><span class="meta">' + num(T.skus) + ' different items \u00b7 ' + num(T.lines) + ' item lines' + (T.never ? ' \u00b7 ' + num(T.never) + ' never sold' : '') + '</span></div>';
+    h += '<div class="rows">' + G.map(function (g, i) {
+      var item = p.by === 'item';
+      var where = item && g.sub && g.sub[0] ? ' \u00b7 most in ' + esc(g.sub[0].name) : '';
+      return '<div class="rw">' + (item ? '<span class="pic" data-sku="' + esc(g.sku || '') + '">' + IC.gem + '</span>' : '<span class="k">' + (i + 1) + '</span>') + '<div class="n"><b title="' + esc(g.name) + '">' + esc(g.name) + '</b><small>' + (item ? esc([g.sku, g.cat].filter(Boolean).join(' \u00b7 ')) + where : num(g.lines) + ' item lines' + (g.never ? ' \u00b7 ' + num(g.never) + ' never sold' : '')) + '</small><div class="bar"><i style="width:' + Math.max(2, g.qty / mx * 100).toFixed(1) + '%"></i></div></div>' +
+        '<div class="r"><b>' + num(g.qty) + ' ' + unitWord(g.qty) + '</b><small>' + (!item ? num(Math.round(g.share * 100)) + '%' : g.oldest && g.oldest < 99 ? g.oldest + '+ months idle' : g.never ? 'never sold' : '') + '</small></div></div>';
+    }).join('') + '</div>';
+    return h + foot(p);
+  }
   function panelEl(p) {
     var d = document.createElement('div'); d.className = 'pn';
     try {
       if (p.type === 'links') { d.innerHTML = '<div class="links">' + (p.items || []).map(function (i) { return '<a class="link" href="' + esc(/^\/[^/\\]/.test(i.href) ? i.href : '/') + '">' + esc(i.title) + IC.go + '</a>'; }).join('') + '</div>'; return d; }
-      d.innerHTML = p.type === 'stock' ? stockPanel(p) : p.type === 'why' ? whyPanel(p) : p.type === 'forecast' ? forecastPanel(p) : p.type === 'cover' ? coverPanel(p) : salesPanel(p);
+      d.innerHTML = p.type === 'slow' ? slowPanel(p) : p.type === 'stock' ? stockPanel(p) : p.type === 'why' ? whyPanel(p) : p.type === 'forecast' ? forecastPanel(p) : p.type === 'cover' ? coverPanel(p) : salesPanel(p);
     } catch (e) { d.innerHTML = '<div class="note">This panel could not be drawn.</div>'; return d; }
     Array.prototype.forEach.call(d.querySelectorAll('.pic[data-sku]'), function (el) { picFor(el.dataset.sku, el); });
     var ch = d.querySelector('.chart');
@@ -329,7 +340,7 @@ textarea::placeholder{color:var(--muted)}
     LOG.textContent = '';
     if (!S.msgs.length) {
       var h = document.createElement('div'); h.className = 'hello';
-      h.innerHTML = '<h2>' + esc(CFG.name ? 'Hello ' + CFG.name : 'Hello') + '</h2><p>Ask about sales or stock: say a date, a store, a category and how to split it. I answer with the real figures.</p><div class="chips">' + CHIPS.map(function (c) { return '<button class="chip" type="button">' + esc(c) + '</button>'; }).join('') + '</div>';
+      h.innerHTML = '<h2>' + esc(CFG.name ? 'Hello ' + CFG.name : 'Hello') + '</h2><p>Ask about sales, stock, staff or slow stock: say a date, a store, a category and how to split it. I answer with the real figures.</p><div class="chips">' + CHIPS.map(function (c) { return '<button class="chip" type="button">' + esc(c) + '</button>'; }).join('') + '</div>';
       LOG.appendChild(h);
       return;
     }

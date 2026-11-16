@@ -31,7 +31,7 @@ const VOC = ['yesterday', 'today', 'sales', 'stock', 'inventory', 'store', 'stor
   'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'gross', 'highest', 'lowest', 'weakest', 'strongest', 'biggest', 'worst', 'between', 'during', 'month', 'months', 'previous', 'current', 'running',
   'moving', 'overstock', 'invoices', 'transactions', 'performance', 'warehouse', 'total', 'sold', 'weeks', 'where', 'which', 'explain', 'happened'];
 const VOCSET = new Set(VOC);
-const COMMON = new Set(['chart', 'charts', 'charge', 'change', 'changed', 'share', 'shares', 'order', 'stocks', 'there', 'three', 'these', 'those', 'while', 'whole', 'whose', 'their', 'other', 'about', 'after', 'again', 'being', 'below', 'could',
+const COMMON = new Set(['stuck', 'chart', 'charts', 'charge', 'change', 'changed', 'share', 'shares', 'order', 'stocks', 'there', 'three', 'these', 'those', 'while', 'whole', 'whose', 'their', 'other', 'about', 'after', 'again', 'being', 'below', 'could',
   'first', 'found', 'great', 'large', 'least', 'might', 'never', 'often', 'right', 'since', 'small', 'still', 'think', 'under', 'until', 'using', 'value', 'values', 'would', 'years', 'price', 'prices', 'count', 'level', 'money', 'sizes',
   'night', 'weekly', 'hours', 'times', 'brand', 'brands', 'point', 'cairo', 'color', 'colour', 'gold', 'silver', 'heart', 'hearts', 'shine', 'stone', 'stones', 'crown', 'tennis', 'snake', 'chain', 'chains', 'beads', 'bead', 'sparkling', 'timeless', 'moments']);
 function osa(a, b) {
@@ -153,13 +153,34 @@ const STOP = new Set(('a an the of in on at to for and or is are was were be bee
   'net gross vat egp money revenue income turnover amount value orders order invoice invoices up down drop dropped fall fell rise rose increase decrease change changed happened going doing done did tell me us them they he she him her his hers ' +
   'stock inventory available left remaining having us name names code codes sku skus design designs').split(' '));
 
+const REPORT_KEYS = [
+  ['daily', /\b(?:daily (?:store )?report|daily sheet|targets?|visitors?|footfall|conversion|traffic)\b/],
+  ['refill', /\b(?:refill|pipeline|sell[\s-]*out|budget)\b/],
+  ['reorder', /\b(?:smart re-?order|what to buy|next order|season order)\b/],
+  ['transfer', /\b(?:transfers?|move items|move stock)\b/],
+  ['dist', /\b(?:distribution|distribute|split (?:a |the )?shipment)\b/],
+  ['recv', /\b(?:receiving|commercial invoice|receive (?:a |the )?shipment)\b/],
+  ['stockcount', /\bstock[\s-]*count(?:ing)?\b|\bcount (?:a |the )?store\b/],
+  ['stockchecker', /\bstock[\s-]*checker\b|\bscan(?:ning)? barcodes?\b/],
+  ['schedule', /\b(?:schedules?|shifts?|roster|rota|who works)\b/],
+  ['vmzones', /\bvm zones?\b|\bzones?\b/],
+  ['zonestock', /\bzone stock\b/],
+  ['vm', /\b(?:vm report|visual merchandis\w*|\bvm\b)/],
+  ['overview', /\b(?:store overview|overview page)\b/],
+  ['activity', /\b(?:activity|who signed in|who logged in|login history)\b/],
+  ['uploads', /\b(?:uploads?|upload a file|all uploads)\b/],
+  ['access', /\b(?:access|privileges|permissions)\b/],
+  ['approvals', /\b(?:approvals?|new users?|reset (?:a )?password|sign[\s-]*ups?)\b/],
+  ['maintenance', /\b(?:maintenance|repairs?|faults?)\b/]
+];
+
 function readCtx(s) {
   s = String(s || ''); const i = s.indexOf('{'), j = s.lastIndexOf('}');
   if (i < 0 || j < i) return null;
   try { const o = JSON.parse(s.slice(i, j + 1)); if (o && o.a && typeof o.a === 'object') return { kind: o.k, args: o.a }; } catch (_) { /* not ours */ }
   return null;
 }
-const slotKind = k => (k === 'stock' || k === 'cover') ? 'stock' : 'sales'; // sales, why, brief, forecast share the same filters; stock and cover share theirs
+const slotKind = k => (k === 'stock' || k === 'cover') ? 'stock' : (k === 'staff' || k === 'slow') ? k : 'sales'; // sales, why, brief, forecast share the same filters; stock and cover share theirs
 
 // "A vs B" where both sides are dates: october vs november, 15 nov vs 8 nov
 function twoPeriods(S, today) {
@@ -207,6 +228,9 @@ function parse(text, o) {
     restock: /\b(?:re-?stock|re-?order|running (?:out|low)|run(?:ning)? out|low stock|low on stock|out of stock|sold out|stock[\s-]?outs?|about to run out|need(?:s)? (?:to )?(?:order|reorder|restock|buy|refill)|what (?:should|do) (?:i|we) (?:order|reorder|restock|buy|refill)|refill|replenish\w*)\b/.test(w0),
     brief: /\bhow\s+(?:are|were|is|was|did)\s+(?:we|sales|business|things|it|the (?:day|week|month)|yesterday|today|this (?:week|month)|last (?:week|month))\b|\b(?:summary|briefing|overview|snapshot|recap|digest|update me|status)\b/.test(w0)
   };
+  const nameHit = !!(o.people && o.people.size) && (w0.match(/\b[a-z]{3,}\b/g) || []).some(t => !STOP.has(t) && !VOCSET.has(t) && o.people.has(t));
+  const staffIntent = (nameHit || /\b(?:staff|sales[\s-]*(?:person|people|persons|man|men|woman|women|associates?|reps?|team|advisors?|assistants?)|employees?|cashiers?|consultants?|advisors?|performers?)\b|\bwho (?:sold|sells|is selling|are selling|did (?:the )?best|is (?:the )?best|is top|performed)\b|\b(?:leaderboard|commission)\b/.test(w0) || /(?:^|\s)(?:موظف|موظفين|موظفه|البائع|البائعين|الفريق|اداء الفريق)(?=\s|$)/.test(w0)) && !/\bbest[\s-]*sellers?\b/.test(w0);
+  const slowWord = /\b(?:slow[\s-]*moving|slowmoving|stuck|slow movers?|dead[\s-]*stock|stuck|not selling|(?:is|are)n'?t selling|never sold|over[\s-]*stock(?:ed)?|excess stock|not moving|slow)\b/.test(w0) && (/\b(?:slow[\s-]*moving|slowmoving|stuck|dead[\s-]*stock|over[\s-]*stock|not selling|(?:is|are)n'?t selling|never sold|not moving|excess)\b/.test(w0) || /\b(?:items?|stock|products?|skus?|designs?|movers?|moving)\b/.test(w0));
   const stockIntent = /\b(?:stock|inventory|on hand|soh|available|availability|remaining|do we have|have we got|where (?:is|are|can i find)|who has|which (?:stores?|branch(?:es)?) (?:has|have)|how many (?:\w+\s+){0,3}(?:do )?(?:we|i) (?:have|got))\b/.test(w0) || /(?:^|\s)(?:مخزون|ستوك|المتاح|الموجود|متاح)(?=\s|$)/.test(w0);
   const salesIntent = /\b(?:sales?|sold|sell(?:ing)?|revenue|turnover|income)\b/.test(w0) || /(?:^|\s)(?:مبيعات|بيع|ايراد)(?=\s|$)/.test(w0);
 
@@ -320,14 +344,20 @@ function parse(text, o) {
   // ---- what kind of question ----
   let kind = '', mode = '';
   if (I.why) kind = 'why';
+  else if (slowWord && !salesIntent) { kind = 'slow'; }
+  else if (staffIntent && !I.forecast) kind = 'staff';
   else if (I.forecast) kind = 'forecast';
-  else if (I.slow && !salesIntent) { kind = 'cover'; mode = 'slow'; }
   else if (I.restock && !salesIntent) { kind = 'cover'; mode = 'restock'; }
   else if (I.brief && !stockIntent && !product && !gKeys.length) kind = 'brief';
   else if (salesIntent) kind = 'sales';
   else if (stockIntent) kind = 'stock';
   else if (softIntent || dt || stores.length || cats.length || search || compare) kind = 'sales';
 
+  // a question about a report itself ("where do I plan the shifts", "open the transfer page"): open it
+  if (!kind || (kind === 'sales' && !salesIntent && !product && !gKeys.length && !search && !rank)) {
+    const rk = Array.isArray(o.apps) ? REPORT_KEYS.filter(([id, rx]) => rx.test(w0) && o.apps.some(a => a.id === id)).map(x => x[0]) : [];
+    if (rk.length && !stockIntent && !I.restock && !I.forecast) { out.kind = 'links'; out.args = { ids: rk.slice(0, 3) }; return out; }
+  }
   // a short follow-up ("and for point 90?", "why?", "top products") keeps what the last answer used
   const prev = o.prev && o.prev.args ? o.prev : null;
   const cue = /^(?:and|also|what about|how about|same|now|then|ok(?:ay)?|for)\b/.test(first) || /^(?:و|طب|وبالنسبه|ماشي)(?:\s|$)/.test(first);
@@ -377,6 +407,30 @@ function parse(text, o) {
       const sameMonth = args.from.slice(0, 7) === args.to.slice(0, 7) && args.from.slice(8) === '01';
       args.compare = args.from === args.to ? 'last_week' : sameMonth ? 'last_month' : 'previous_period';
     }
+  } else if (kind === 'staff') {
+    const mstart = today.slice(0, 7) + '-01';
+    if (dt) { args.from = dt.from; args.to = dt.to; } else if (P.from) { args.from = P.from; args.to = P.to; out.notes.push('samedates'); } else { args.from = mstart; args.to = today; out.notes.push('nodatemonth'); }
+    args.stores = pickStores(); args.categories = pickCats(); args.basis = basis || P.basis || 'net';
+    if (!given.stores && !P.stores && !allStores) { /* all stores */ }
+    // a name: words that are the start of a sales person's name
+    let person = '';
+    if (o.people && o.people.size) {
+      const hit = [];
+      for (const t of (S.w.match(/\b[a-z]{3,}\b/g) || [])) { if (STOP.has(t) || VOCSET.has(t) || /^(?:staff|person|people|performance|team|employees?|cashiers?|associates?)$/.test(t)) continue; if (o.people.has(t) && !hit.includes(t)) hit.push(t); }
+      if (hit.length) person = hit.join(' ');
+    }
+    if (person) args.person = person; else if (P.person && !given.stores && !allStores && wordsN <= 4) args.person = P.person;
+    args.group_by = person ? 'person' : (g.store || (rank && rank.dim === 'store')) ? 'store' : (args.stores.length === 1 || !given.stores) && !g.store ? 'person' : 'person';
+    if (g.store && !given.stores) args.group_by = 'store';
+    args.limit = limit || 10;
+    args.sort_by = sortBy || 'sales';
+    if (compare && compare !== 'custom') args.compare = compare; else if (P.compare && !dt && P.from) args.compare = P.compare;
+  } else if (kind === 'slow') {
+    args.stores = pickStores(); args.categories = pickCats();
+    if (search) args.search = search; else if (P.search && !allCats) args.search = P.search;
+    args.group_by = g.store || (rank && rank.dim === 'store') ? 'store' : (args.search || items || product) ? 'item' : (g.category ? 'category' : 'store');
+    if (args.stores.length === 1 && !g.store && !g.category) args.group_by = 'item';
+    args.limit = limit || 12;
   } else if (kind === 'forecast') {
     const d = dt ? dt.to : today;
     args.month = d.slice(0, 7);
@@ -394,7 +448,7 @@ function parse(text, o) {
       if (limit) args.limit = limit;
     } else { args.mode = mode; if (spanDays) args.days = spanDays; if (limit) args.limit = limit; }
   }
-  out.kind = kind; out.args = args; out.rank = rank; out.focus = focus;
+  out.kind = kind; out.args = args; out.rank = rank; out.focus = focus; out.mode = mode;
   out.vs = stores.length === 2 && /\b(?:vs\.?|versus|compare|compared|against|or)\b/.test(w0);
   return out;
 }
