@@ -145,7 +145,7 @@ header .row>*{animation:hdrpop .55s cubic-bezier(.3,1.5,.5,1) both}header .row>:
 }
 #ov .ovs div.hl{background:var(--accent);border-color:var(--accent)}#ov .ovs div.hl b{font-size:26px}#ov .ovq .btn.go{font-size:18px;padding:14px 22px;border-radius:14px}#ov .ovs div.hl small{color:#2A1018}#ov .ovs div.bad b{color:var(--bad)}
 #ov .ovs.sx b{font-size:20px}
-#ov .ovtot{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px;text-align:left}#ov .ovtot div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 10px;display:flex;flex-direction:column}#ov .ovtot div:first-child{background:var(--accent);border-color:var(--accent);color:#2A1018}#ov .ovtot small{font-size:11px;font-weight:700;color:var(--ink2)}#ov .ovtot div:first-child small,#ov .ovtot div:first-child span{color:#2A1018}#ov .ovtot b{font-size:20px;font-weight:800}#ov .ovtot span{font-size:11.5px;color:var(--ink2)}#ov .ovtot em{font-style:normal;color:var(--bad);font-weight:700}
+#ov .ovtot{margin-top:16px;text-align:left}#ov .ovtot div{border-radius:14px;padding:8px 16px;display:inline-flex;align-items:baseline;gap:8px}#ov .ovtot div:first-child{background:var(--accent);border-color:var(--accent);color:#2A1018}#ov .ovtot small{font-size:15px;font-weight:700}#ov .ovtot div:first-child small,#ov .ovtot div:first-child span{color:#2A1018}#ov .ovtot b{font-size:30px;font-weight:800}#ov .ovtot span{font-size:11.5px;color:var(--ink2)}#ov .ovtot em{font-style:normal;color:var(--bad);font-weight:700}
 
 </style>
 </head>
@@ -735,8 +735,8 @@ function ovDraw(msg){
 }
 // Running order value: the cost (FOB, USD) of every quantity the team has typed so far, plus the whole order incl. untouched suggestions
 function ovTotal(){
-  const typed=items.filter(i=>i.fb!=null),a=totals(typed),w=totals(items),bg=bgVal()||0;
-  return `<div class="ovtot"><div><small>Order value so far (typed)</small><b>${usd(a.f)}</b><span>${fmt(a.q)} pcs · ${fmt(typed.filter(i=>i.fin>0).length)} items</span></div><div><small>Whole order incl. suggestions</small><b>${usd(w.f)}</b><span>${fmt(w.q)} pcs${bg?` · ${w.f>bg?'<em>over budget by '+usd(w.f-bg)+'</em>':usd(bg-w.f)+' left of budget'}`:''}</span></div></div>`;
+  const a=totals(items.filter(i=>i.fb!=null));
+  return `<div class="ovtot"><div><b>$${fmt(a.f)}</b><small>so far</small></div></div>`;
 }
 function ovSave0(){const inp=$('ov').querySelector('input[data-s]');if(inp&&!inp.disabled)ovSave(inp)}
 $('ovBtn').onclick=ovOpen;
