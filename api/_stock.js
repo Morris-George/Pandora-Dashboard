@@ -242,7 +242,10 @@ async function itemStock(req, res, who) {
     if (sc.store && !sameStore(w, sc.store)) continue;
     if (!/warehouse|samples?\b|\bmain\b|\btest/i.test(w)) known.add(w); // the main warehouse and the samples warehouse are not selling stores
   }
-  const stores = [...by.entries()].map(([s, q]) => ({ store: s, qty: Math.round(q * 1000) / 1000 })).sort((a, b) => b.qty - a.qty || a.store.localeCompare(b.store));
+  // the store code Slow Moving / Transfer use for the same warehouse (so pages can match sales to stock)
+  let sOf = () => '';
+  try { const { storeOf, settings } = require('./_dist'), st = await settings(); sOf = w => storeOf(w, st.stores) || ''; } catch (_) { /* no codes: pages fall back to the names */ }
+  const stores = [...by.entries()].map(([s, q]) => ({ store: s, code: sOf(s), qty: Math.round(q * 1000) / 1000 })).sort((a, b) => b.qty - a.qty || a.store.localeCompare(b.store));
   return send(res, 200, { ok: true, code, stores, all: [...known].sort(), total: stores.reduce((t, x) => t + x.qty, 0), scope: sc.all ? 'all' : sc.rx ? 'zone' : 'store', zone: sc.zone || undefined, asOf: at, source: at && snap && rows === snap.rows ? 'excel' : 'erp', cachedOnly: url.searchParams.get('cached') === '1' || undefined });
 }
 
