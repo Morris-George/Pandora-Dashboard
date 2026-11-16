@@ -208,6 +208,18 @@ function parse(text, o) {
   // greetings and "what can you do"
   if (wordsN <= 6 && /^(?:help|hi|hello|hey|thanks?|thank you|good (?:morning|evening)|what can you do|how (?:do|does) (?:you|this) work|مرحبا|اهلا|السلام عليكم|ازيك|شكرا|مساعده)(?:\s|$|[!.?])/.test(first) && !/\b(?:sales?|stock)\b|مبيعات|مخزون/.test(first)) { out.kind = 'help'; return out; }
 
+  // sync from ERP: "sync", "sync october", "when was the last sync" (the assistant only shows a button; the super admin taps it)
+  if (wordsN <= 9 && (/(?:^|\s)(?:sync|synch|synchronize|synchronise|resync|refresh data|update data|refresh the data|update the data|pull from erp|erp sync)(?=\s|$)/.test(first) || /مزامن|سينك|حدث الداتا|حدث البيانات/.test(raw))) {
+    out.kind = 'sync';
+    out.args = { mode: /\b(?:when|status|latest|did)\b|\blast (?:sync|time)\b/.test(first) ? 'status' : 'run' };
+    const MN = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+    const t = today || new Date().toISOString().slice(0, 10), ty = +t.slice(0, 4), tm = +t.slice(5, 7);
+    const mi = MN.findIndex(m => new RegExp('(?:^|\\s)' + m.slice(0, 3) + '(?:' + m.slice(3) + ')?(?=\\s|$)').test(first));
+    if (/\blast month\b/.test(first)) { const y = tm === 1 ? ty - 1 : ty, m = tm === 1 ? 12 : tm - 1; out.args.month = y + '-' + String(m).padStart(2, '0'); }
+    else if (mi >= 0) { const y = mi + 1 > tm ? ty - 1 : ty; out.args.month = y + '-' + String(mi + 1).padStart(2, '0'); }
+    return out;
+  }
+
   // links: "open stock balance"
   if (/\b(?:open|go to|take me to|link to|where (?:can|do) i find|show me the)\b|(?:^|\s)(?:افتح|وديني)(?=\s|$)/.test(first) && Array.isArray(o.apps)) {
     const ids = [];

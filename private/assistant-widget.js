@@ -116,6 +116,8 @@ svg{display:block}
 .w.dark .tip{background:#FF93A0;color:#2A1018}
 .note{margin-top:10px;font-size:11.5px;font-weight:600;color:var(--muted);background:var(--soft);border-radius:10px;padding:7px 10px}
 .pf{margin-top:10px;display:flex;justify-content:flex-end}
+.go{background:var(--ink);color:#fff;border-radius:999px;padding:11px 20px;min-height:44px;font-weight:750;font-size:13px;transition:transform .15s,opacity .15s}.go:disabled{opacity:.5;cursor:default}.go:not(:disabled):hover{transform:translateY(-1px)}.w.dark .go{background:var(--pink);color:#2A1018}
+.sres{font-size:12px;font-weight:600;color:var(--muted);min-width:0}.sres.ok{color:var(--up)}.sres.bad{color:var(--down)}
 .link{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:750;color:var(--text);text-decoration:none;background:var(--bg);transition:border-color .15s}.link:hover{border-color:var(--pink)}.link svg{width:13px;height:13px}
 .links{display:flex;flex-wrap:wrap;gap:8px}
 .ft{flex:0 0 auto;padding:6px 16px 14px;border-top:0;background:none}
@@ -345,10 +347,28 @@ textarea::placeholder{color:var(--muted)}
     }).join('') + '</div>';
     return h + foot(p);
   }
+  function syncPanel(p, d) {
+    d.innerHTML = '<div class="ph"><div><h3>' + esc(p.title) + '</h3><small>' + esc(p.label || 'this month') + '</small></div></div>' +
+      (p.last ? '<div class="note">Last sync ' + esc(p.last.at) + ' · ' + esc(p.last.month) + ' · ' + num(p.last.sales) + ' sales lines · ' + num(p.last.staff) + ' staff lines</div>' : '<div class="note">No sync has run yet.</div>') +
+      '<div class="pf" style="justify-content:flex-start;align-items:center;gap:10px"><button class="go" type="button"' + (p.canRun ? '' : ' disabled') + '>Sync now</button><span class="sres" role="status" aria-live="polite"></span></div>';
+    var btn = d.querySelector('.go'), res = d.querySelector('.sres');
+    btn.addEventListener('click', function () {
+      btn.disabled = true; btn.textContent = 'Syncing…'; res.className = 'sres'; res.textContent = 'Pulling from the ERP. This can take up to a minute.';
+      fetch('/api/erp' + (p.month ? '?month=' + encodeURIComponent(p.month) : ''), { method: 'POST', credentials: 'same-origin' })
+        .then(function (r) { return r.json().catch(function () { return {}; }); })
+        .then(function (j) {
+          if (j && j.ok) { btn.textContent = 'Synced'; res.className = 'sres ok'; res.textContent = j.month + ' · ' + num(j.sales) + ' sales lines · ' + num(j.staff) + ' staff lines · ' + j.seconds + ' s. Reload a report to see it.'; }
+          else { btn.disabled = false; btn.textContent = 'Try again'; res.className = 'sres bad'; res.textContent = (j && j.error) || 'The sync did not finish.'; }
+        })
+        .catch(function () { btn.disabled = false; btn.textContent = 'Try again'; res.className = 'sres bad'; res.textContent = 'No connection. Try again.'; });
+    });
+    return d;
+  }
   function panelEl(p) {
     var d = document.createElement('div'); d.className = 'pn';
     try {
       if (p.type === 'links') { d.innerHTML = '<div class="links">' + (p.items || []).map(function (i) { return '<a class="link" href="' + esc(/^\/[^/\\]/.test(i.href) ? i.href : '/') + '">' + esc(i.title) + IC.go + '</a>'; }).join('') + '</div>'; return d; }
+      if (p.type === 'sync') { return syncPanel(p, d); }
       d.innerHTML = p.type === 'slow' ? slowPanel(p) : p.type === 'stock' ? stockPanel(p) : p.type === 'why' ? whyPanel(p) : p.type === 'forecast' ? forecastPanel(p) : p.type === 'cover' ? coverPanel(p) : salesPanel(p);
     } catch (e) { d.innerHTML = '<div class="note">This panel could not be drawn.</div>'; return d; }
     Array.prototype.forEach.call(d.querySelectorAll('.pic[data-sku]'), function (el) { picFor(el.dataset.sku, el); });

@@ -793,6 +793,18 @@ async function freeAnswer(turn, ctx) {
     const items = q.args.ids.map(id => ctx.apps.find(a => a.id === id)).filter(Boolean).map(a => ({ title: a.title, href: a.href }));
     return items.length ? { text: q.ar ? 'تفضل.' : 'Here you go.', panels: [{ type: 'links', items }], ctx: '' } : { text: 'You cannot open that report.', panels: [], ctx: '' };
   }
+  if (q.kind === 'sync') {
+    if (!ctx.sc.admin) return { text: 'Only the super admin can sync from ERP.', panels: [], ctx: '' };
+    const st = await store.getJSON('erp/status.json').catch(() => null);
+    const cfg = !!(process.env.ERP_URL && process.env.ERP_API_KEY && process.env.ERP_API_SECRET);
+    const when = st && st.at ? new Date(st.at).toLocaleString('en-GB', { timeZone: 'Africa/Cairo', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    const last = st && st.at ? { at: when, month: st.month || '', sales: st.sales || 0, staff: st.staff || 0 } : null;
+    const lab = q.args.month || 'this month';
+    const text = (last ? 'Last sync: ' + when + ' Cairo time, for ' + last.month + ' (' + last.sales + ' sales lines, ' + last.staff + ' staff lines).' : '') +
+      (q.args.mode === 'run' ? (last ? '\n' : '') + 'Tap Sync now to pull ' + lab + ' from the ERP. It replaces the saved sales and staff data for that month.' : '') +
+      (cfg ? '' : '\nThe ERP connection is not set up in Vercel yet, so a sync cannot run.');
+    return { text, panels: [{ type: 'sync', title: 'Sync from ERP', month: q.args.month || '', label: lab, last, canRun: cfg }], ctx: '', follow: ['Sales of every store yesterday'] };
+  }
   const keep = r => JSON.stringify({ k: q.kind, a: q.args }).slice(0, 900);
   const done = (res, text, panels) => res.error ? { text: res.error, panels: [], ctx: '' } : { text: String(text).slice(0, 2000), panels: panels || [res.panel], ctx: keep(), follow: followChips(q, res) };
   if (q.kind === 'stock') { const res = runStock(await stockData(), q.args, ctx.sc); return done(res, res.error ? '' : describe(res, q)); }
@@ -935,7 +947,8 @@ module.exports = async function handler(req, res) {
     const apps = appsFor(facts).filter(a => a.id !== 'maintenance');
     const ctx = { rows, vocab: salesMemo.vocab, people: appsFor(facts).some(a => a.id === 'staff') ? await staffVocab().catch(() => null) : null, sc, name: greetName(facts), stores: liveStores(mine), first: mine.length ? mine[0].d : '', last: mine.length ? mine[mine.length - 1].d : '', apps };
     let out = null;
-    if (useAI) { try { out = await answer(toMessages(b && b.messages), ctx); } catch (_) { out = null; } } // no credit, busy, bad key: the free engine answers instead
+    const syncQ = useAI && require('./_askparse').parse(turn.text, { today: cairoToday(), apps: ctx.apps }).kind === 'sync';
+    if (useAI && !syncQ) { try { out = await answer(toMessages(b && b.messages), ctx); } catch (_) { out = null; } } // no credit, busy, bad key: the free engine answers instead
     if (!out) out = await freeAnswer(turn, ctx);
     return send(res, 200, { ok: true, ...out });
   } catch (e) {
