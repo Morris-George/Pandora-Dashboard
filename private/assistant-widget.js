@@ -455,7 +455,7 @@ textarea::placeholder{color:var(--muted)}
     W.classList.toggle('open', S.open); WIN.setAttribute('aria-hidden', S.open ? 'false' : 'true');
     save();
     if (S.open) { try { cancel(); goHome(0); BUB.classList.remove('on'); } catch (e) {} }
-    else { try { clearTimeout(tmr); tmr = setTimeout(step, 3500); } catch (e) {} }
+    else { try { clearTimeout(tmr); tmr = setTimeout(step, 3500); if (ready && roamOn && !REDUCE && v === false) setTimeout(function () { if (!S.open && !qwOpen) say(SIGNOFF[Math.floor(Math.random() * SIGNOFF.length)], 3200); }, 700); } catch (e) {} }
     if (S.open) { draw(); LOG.scrollTop = LOG.scrollHeight; if (window.innerWidth > 640) setTimeout(function () { try { TA.focus({ preventScroll: true }); } catch (e) {} }, 60); }
     else { try { $('.fab').focus({ preventScroll: true }); } catch (e) {} }
   }
@@ -471,7 +471,13 @@ textarea::placeholder{color:var(--muted)}
   var SPOTKEY = 'pandora-assist.spot', mode = 'home', fx = 1, fy = 1, qwOpen = false, qwT = 0, dragMoved = false, drag = null, pkT = 0;
   try { var sp = JSON.parse(localStorage.getItem(SPOTKEY) || 'null'); if (sp && /^(dock|free)$/.test(sp.mode)) { mode = sp.mode; fx = +sp.fx || 0; fy = Math.max(0, Math.min(1, +sp.fy || 0)); } } catch (e) {}
   function saveSpot() { try { localStorage.setItem(SPOTKEY, JSON.stringify({ mode: mode, fx: fx, fy: fy })); } catch (e) {} }
-  var QUIPS = ['Psst... ask me what sold yesterday.', 'I run on EGP and good vibes.', 'Stock is my cardio.', 'I counted every charm. Twice.', 'Who sold the most? I know. Ask me.', 'Slow stock? I will find it.', 'Just stretching my legs. Carry on.', 'My crown is a ring. Very on brand.', 'Double-click me and I will stay quiet.', 'Numbers look shiny today.'];
+  var QUIPS = ['Psst... ask me what sold yesterday.', 'I run on EGP and good vibes.', 'Stock is my cardio.', 'I counted every charm. Twice.', 'Who sold the most? I know. Ask me.', 'Slow stock? I will find it.', 'Just stretching my legs. Carry on.', 'My crown is a ring. Very on brand.', 'Double-click me and I will stay quiet.', 'Numbers look shiny today.',
+    'Fawzi at your service. Tips accepted in charms.', 'I never sleep. I just idle at 3 percent.', 'Ask me anything. Except my age. I am a robot.', 'I have a ring on my head and a P on my ear. Iconic.', 'Bracelets are just hugs for wrists.', 'I do not take sick days. I take sync days.', 'Somewhere a charm is selling. I can feel it.', 'Rumor says City Stars loves me.', 'I read the whole ERP before breakfast.', 'Ask me about slow stock. I love a challenge.',
+    'I am 100 percent free. Best employee ever.', 'Stock count? Stock count? More like stock amount.', 'I would dance, but I am mostly head.', 'Pssst. Sales are a mood. Let me check yours.', 'I wink because the numbers are good. Or because I am cool.', 'Flick me to the right and I hide. Flick me left and we chat.', 'Coffee for you. Electricity for me.', 'Never trust a store that has no charms.', 'I am not slow-moving. I am very fast-moving.', 'If it sells, I know. If it does not, I know that too.'];
+  var bag = [];
+  function quip() { if (!bag.length) { bag = QUIPS.map(function (_, i) { return i; }); for (var i = bag.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = bag[i]; bag[i] = bag[j]; bag[j] = t; } } return QUIPS[bag.pop()]; }
+  function greet() { var h = new Date().getHours(); return h < 5 ? 'Still up? Same. Need numbers?' : h < 12 ? 'Good morning! Coffee for you, numbers for me.' : h < 18 ? 'Hi! Need any numbers?' : 'Good evening! Want the day in numbers?'; }
+  var SIGNOFF = ['See you soon!', 'I will be here. Not like I can go anywhere.', 'Call me when the numbers get exciting.', 'Back to guarding the charms.'];
   var size = function () { return window.innerWidth <= 640 ? 60 : 78; };
   function home() {
     var s = size(), vw = window.innerWidth, vh = window.innerHeight, h = s * 1.05, cy = function (v) { return Math.max(8, Math.min(vh - h - 8, v)); };
@@ -505,14 +511,14 @@ textarea::placeholder{color:var(--muted)}
   function step() {
     cancel();
     if (busyNow()) { tmr = setTimeout(step, 5000); return; }
-    var h = home(), dx = size() === 60 ? 46 : 76, t = QUIPS[Math.floor(Math.random() * QUIPS.length)];
+    var h = home(), dx = size() === 60 ? 46 : 76, t = quip();
     put(h.x - dx, h.y, 700);
     later(jump, 800);
     later(function () { type(t, function () { jump(); }); }, 1100);
     var total = 1100 + t.length * 34 + 3600;
     later(function () { BUB.classList.remove('on'); }, total);
     later(function () { put(h.x, h.y, 800); }, total + 300);
-    tmr = setTimeout(step, total + 1200 + 16000 + Math.random() * 14000);
+    tmr = setTimeout(step, total + 1200 + 8000 + Math.random() * 9000);
   }
   function goHome(ms) {
     var h = home(), tucked = mode === 'dock' && !qwOpen; put(h.x, h.y, ms || 0, tucked);
@@ -580,13 +586,13 @@ textarea::placeholder{color:var(--muted)}
   }
   FAB.addEventListener('pointerup', endDrag); FAB.addEventListener('pointercancel', endDrag);
   // while tucked away he pokes his head out now and then
-  (function peekLoop() { clearTimeout(pkT); pkT = setTimeout(function () { if (mode === 'dock' && !S.open && !qwOpen && !document.hidden && !REDUCE && roamOn && !drag) { FAB.classList.remove('pk'); void FAB.offsetWidth; FAB.classList.add('pk'); } peekLoop(); }, 9000 + Math.random() * 7000); })();
+  (function peekLoop() { clearTimeout(pkT); pkT = setTimeout(function () { if (mode === 'dock' && !S.open && !qwOpen && !document.hidden && !REDUCE && roamOn && !drag) { FAB.classList.remove('pk'); void FAB.offsetWidth; FAB.classList.add('pk'); setTimeout(function () { if (mode === 'dock' && !S.open && !qwOpen && !drag) say(quip(), 3600); }, 350); } peekLoop(); }, 8000 + Math.random() * 6000); })();
   window.addEventListener('resize', function () { cancel(); goHome(0); if (!S.open && roamOn) tmr = setTimeout(step, 8000); });
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { clearTimeout(tmr); tmr = setTimeout(step, 1500); } });
   setTimeout(function () {
     ready = true;
     var seen = false; try { seen = sessionStorage.getItem('pandora-assist.hi') === '1'; sessionStorage.setItem('pandora-assist.hi', '1'); } catch (e) {}
-    if (!S.open) { jump(); if (!seen) say('Hi! Need any numbers?', 4500); }
+    if (!S.open) { jump(); if (!seen) say(greet(), 4500); }
     if (roamOn && !REDUCE) tmr = setTimeout(step, seen ? 7000 : 9000);
   }, 1200);
 

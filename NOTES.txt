@@ -265,3 +265,4 @@ PANDORA ASSISTANT (Nov 16; the chat button on every page: api/_assistant.js + ap
 - The chatbot is named Fawzi (header, labels and the Claude-mode persona).
 - Say "sync" (or "sync october", "when was the last sync") to Fawzi: he shows a Sync now button that calls POST /api/erp (super admin only, same as the All Uploads sync). Nothing runs until the button is tapped.
 - Fawzi can be dragged: drop him at the right edge and he tucks in half out of sight (peeking now and then); flick him left and a Write to Fawzi box opens beside him (Enter sends it to the chat). The spot is remembered in this browser (localStorage pandora-assist.spot). Long press no longer opens the browser menu or shows a square.
+- Fawzi says a funny line every 10 to 20 seconds when the chat is closed (30 lines, shuffled so none repeats), also when he peeks from the edge, with a time-of-day hello and a sign-off. Double-click him to make him quiet.
