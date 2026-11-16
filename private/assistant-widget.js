@@ -202,7 +202,7 @@ textarea::placeholder{color:var(--muted)}
       '<div class="log" aria-live="polite"></div>' +
       '<footer class="ft"><div class="box"><textarea rows="1" maxlength="800" dir="auto" placeholder="Ask about sales or stock" aria-label="Your question"></textarea><button class="send" type="button" aria-label="Send" disabled>' + IC.send + '</button></div>' +
       '<div class="fine">Figures come straight from the saved sales and stock. Net of VAT unless you ask.</div></footer>' +
-    '</section><div class="qw" hidden><input type="text" maxlength="300" dir="auto" placeholder="Write to Fawzi" aria-label="Write to Fawzi" enterkeyhint="send"><button class="qs" type="button" aria-label="Send">' + IC.send + '</button></div></div>';
+    '</section><div class="qw" hidden><input type="text" maxlength="300" dir="auto" placeholder="Write something to Fawzi" aria-label="Write something to Fawzi" enterkeyhint="send"><button class="qs" type="button" aria-label="Send">' + IC.send + '</button></div></div>';
   document.body.appendChild(host);
   var $ = function (q) { return root.querySelector(q); };
   var W = $('.w'), LOG = $('.log'), TA = $('textarea'), SEND = $('.send'), WIN = $('.win');
@@ -460,7 +460,8 @@ textarea::placeholder{color:var(--muted)}
     else { try { $('.fab').focus({ preventScroll: true }); } catch (e) {} }
   }
 
-  $('.fab').addEventListener('click', function () { if (dragMoved) { dragMoved = false; return; } closeQw(true); goHome(0); toggle(true); });
+  // a tap opens the small "Write something to Fawzi" banner; the big chat opens when something is sent (tap him again to open it empty)
+  $('.fab').addEventListener('click', function () { if (dragMoved) { dragMoved = false; return; } if (qwOpen) { closeQw(true); goHome(0); toggle(true); } else openQw(); });
 
   // ---- the mascot: he roams the page, reacts, and says funny things (double-click him to make him stay put) ----
   var FAB = $('.fab'), BUB = $('.bub');
