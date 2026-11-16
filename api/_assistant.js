@@ -1,14 +1,15 @@
 // Pandora Assistant: the chat helper shown on every page (reached at /api/assistant, rewritten to api/vm.js: the plan limits the number of functions).
-//   GET  /api/assistant   -> { ok, ready }  (ready = the AI key is set in Vercel)
+//   GET  /api/assistant   -> { ok, ready, mode }
 //   POST /api/assistant   { messages: [{ role: 'user' | 'assistant', text, ctx? }] }  -> { ok, text, panels, ctx }
 //
-// How it works: the question goes to Claude (Anthropic API, key in ANTHROPIC_API_KEY) together with a few tools. Claude never sees the raw
-// sales lines and never works figures out by itself: it only chooses WHAT to look up (dates, stores, categories, grouping). The lookups
-// below run here, on the same saved sales lines as Pandora Dashboards and the same stock as Stock balance, and every figure in the visual
-// panels comes straight from them. So a number on a panel is always a real number; the text beside it is Claude's short reading of it.
+// FREE by default: the question is understood on the server by api/_askparse.js (dates, stores, categories, item code, what to split by),
+// with no AI service, no key and no cost, and nothing leaves the server. The two lookups below (runSales, runStock) then work on the same
+// saved sales lines as Pandora Dashboards and the same stock as Stock balance, and the answer is built from their figures.
+// Optional: if ANTHROPIC_API_KEY is set in Vercel, Claude reads the question instead (it understands freer wording) and only chooses the
+// same lookups; it never sees raw sales lines or works out a figure. If it fails (no credit, busy) the free engine answers. ASSISTANT_MODE=free forces the free engine.
 //
 // Who: the people who can open Pandora Dashboards (super admins, overseers, area managers). Area managers only ever get the stores of
-// their zone, enforced here, whatever is asked. Nobody else gets the assistant, and it never changes anything (read only).
+// their zone, enforced in the lookups, whatever is asked. Nobody else gets the assistant, and it never changes anything (read only).
 const store = require('./_store');
 const { whoami } = require('./_auth');
 const { dashRows } = require('./_sales');
@@ -376,6 +377,83 @@ function systemPrompt(ctx) {
   ].join('\n');
 }
 
+// ---- the free engine: question -> lookup -> sentence ----
+const egp = n => 'EGP ' + Math.round(n || 0).toLocaleString('en-US');
+const nn = n => Math.round(n || 0).toLocaleString('en-US');
+const dirWord = (d, ar) => (ar ? (d >= 0 ? 'ارتفاع' : 'انخفاض') : (d >= 0 ? 'up' : 'down'));
+const mark = s => '**' + s + '**';
+function chgText(T, cmp, ar) {
+  if (T.d == null || !cmp) return '';
+  return ar ? `, ${dirWord(T.d, true)} ${Math.abs(T.d)}% عن الفترة المقارنة` : `, ${dirWord(T.d)} ${Math.abs(T.d)}% vs ${cmp}`;
+}
+function describe(res, q) {
+  const p = res.panel, a = q.args, ar = q.ar, T = p.total || {}, G = p.groups || [];
+  const out = [];
+  if (p.type === 'stock') {
+    const scope = (p.filters || '').split(' · ')[0] || '';
+    const cats = (a.categories || []).join(' and ');
+    if (!G.length || (!T.qty && !T.items)) return ar ? 'لا يوجد مخزون مطابق.' : 'Nothing in stock matches that.';
+    out.push(ar ? `${mark(nn(T.qty) + ' قطعة')} في المخزون${cats ? ' (' + cats + ')' : ''}.` : `${mark(nn(T.qty) + ' pcs')} in stock${cats ? ' (' + cats + ')' : ''} · ${scope}.`);
+    if (p.by === 'item') {
+      const top = G[0]; out.push(ar ? `${G.length} صنف. الأكثر: ${mark(top.name)} (${nn(top.qty)}).` : `${G.length} ${G.length === 1 ? 'item' : 'items'} found. ${mark(top.name)}${top.sku ? ' (' + top.sku + ')' : ''}: ${nn(top.qty)} pcs${top.sub && top.sub[0] ? ', most in ' + top.sub[0].name + ' (' + nn(top.sub[0].units) + ')' : ''}.`);
+    } else if (G.length > 1 && G[0].qty > 0) {
+      const none = G.filter(g => g.qty <= 0).map(g => g.name);
+      out.push((ar ? `الأعلى: ${mark(G[0].name)} (${nn(G[0].qty)}).` : `Most: ${mark(G[0].name)} (${nn(G[0].qty)} pcs).`) + (none.length ? (ar ? ' بدون مخزون: ' : ' None in: ') + none.slice(0, 6).join(', ') + '.' : ''));
+    }
+    return out.join('\n');
+  }
+  // sales
+  const metric = p.metric, key = metric === 'units' ? 'units' : metric === 'orders' ? 'orders' : 'sales';
+  const fmt = g => key === 'units' ? nn(g.units) + (ar ? ' قطعة' : ' pcs') : key === 'orders' ? nn(g.orders) + (ar ? ' طلب' : ' orders') : egp(g.sales);
+  const scope0 = (p.filters || '').split(' · ')[0] || 'All stores';
+  const scope = scope0 === 'All stores' ? (ar ? 'كل الفروع' : 'all stores') : scope0;
+  const cats = (a.categories || []).join(' and ');
+  if (!T.sales && !T.units && !T.orders) return (ar ? 'لا توجد مبيعات مطابقة ل' : 'No sales found for ') + p.range + (p.note ? '. ' + p.note : '.');
+  const head = ar ? `المبيعات${cats ? ' - ' + cats : ''} (${scope}) ${p.range}:` : `${cats ? cats + ' sales' : 'Sales'} (${scope}${p.basis === 'gross' ? ', with VAT' : ''}), ${p.range}:`;
+  out.push(`${head} ${mark(fmt(T))}${chgText(T, p.cmp, ar)}.`);
+  const live = G.filter(g => g[key] > 0);
+  if (p.by === 'store' && live.length >= 2) {
+    const lo = live[live.length - 1], none = G.filter(g => !(g[key] > 0)).map(g => g.name);
+    out.push((ar ? `الأعلى: ${mark(live[0].name)} (${fmt(live[0])}). الأقل: ${lo.name} (${fmt(lo)}).` : `Best: ${mark(live[0].name)} (${fmt(live[0])}, ${Math.round(live[0].share * 100)}%). Lowest: ${lo.name} (${fmt(lo)}).`) + (none.length ? (ar ? ' بدون مبيعات: ' : ' No sales: ') + none.join(', ') + '.' : ''));
+  } else if (p.by === 'product' && G.length) {
+    out.push(ar ? `الأعلى: ${mark(G[0].name)} (${fmt(G[0])}).` : `Top item: ${mark(G[0].name)}${G[0].sku ? ' (' + G[0].sku + ')' : ''}, ${fmt(G[0])}.`);
+  } else if (['category', 'collection', 'payment'].includes(p.by) && live.length && !(p.by === 'category' && (a.categories || []).length === 1)) {
+    out.push(ar ? `الأعلى: ${mark(live[0].name)} (${fmt(live[0])}).` : `Top ${p.by === 'payment' ? 'payment' : p.by}: ${mark(live[0].name)} (${fmt(live[0])}, ${Math.round(live[0].share * 100)}%).`);
+  } else if (['day', 'month', 'weekday'].includes(p.by) && live.length >= 2) {
+    const hi = live.reduce((x, y) => (y[key] > x[key] ? y : x)), lo = live.reduce((x, y) => (y[key] < x[key] ? y : x));
+    const w = p.by === 'day' ? (ar ? 'يوم' : 'day') : p.by === 'month' ? (ar ? 'شهر' : 'month') : (ar ? 'يوم' : 'weekday');
+    out.push(ar ? `الأعلى: ${mark(hi.name)} (${fmt(hi)}). الأقل: ${lo.name} (${fmt(lo)}).` : `Best ${w}: ${mark(hi.name)} (${fmt(hi)}). Lowest: ${lo.name} (${fmt(lo)}).`);
+  } else if (p.by === 'none') {
+    out.push(ar ? `${nn(T.orders)} طلب، متوسط الطلب ${egp(T.atv)}.` : `${nn(T.orders)} orders, average order ${egp(T.atv)}, ${(Number(T.upt) || 0).toFixed(2)} pieces per order.`);
+  }
+  if (q.notes.includes('nodate')) out.push(ar ? 'لم تحدد تاريخا، فاستخدمت أمس.' : 'You did not give a date, so I used yesterday.');
+  return out.join('\n');
+}
+function helpText(sc, ar) {
+  if (ar) return 'أستطيع الإجابة عن **المبيعات** و**المخزون** بالأرقام الحقيقية. جرّب:\n- مبيعات التشارم في كل فرع أمس\n- أعلى 10 منتجات هذا الشهر\n- مخزون الأساور في كل فرع\nاذكر التاريخ والفرع والفئة وطريقة التقسيم (كل فرع، يوم بيوم، أعلى المنتجات).';
+  return 'I answer questions about **sales** and **stock** with the real figures. Try:\n- Sales of charms in every store for 15 November 2026\n- Top 10 products this month\n- Sales day by day, this month vs last month\n- Compare Point 90 this month vs last month\n- Stock of 791725C01 in every store\n- How many rings do we have in City Stars?\nSay a date (yesterday, last week, 15 Nov), a store, a category, and how to split it (every store, day by day, top products).';
+}
+async function freeAnswer(turn, ctx) {
+  const P = require('./_askparse');
+  const q = P.parse(turn.text, { today: cairoToday(), prev: P.readCtx(turn.prev), apps: ctx.apps });
+  if (q.kind === 'help') return { text: helpText(ctx.sc, q.ar), panels: [], ctx: '' };
+  if (q.kind === 'links') {
+    const items = q.args.ids.map(id => ctx.apps.find(a => a.id === id)).filter(Boolean).map(a => ({ title: a.title, href: a.href }));
+    return items.length ? { text: q.ar ? 'تفضل.' : 'Here you go.', panels: [{ type: 'links', items }], ctx: '' } : { text: 'You cannot open that report.', panels: [], ctx: '' };
+  }
+  const res = q.kind === 'stock' ? runStock(await stockData(), q.args, ctx.sc) : runSales(ctx.rows, q.args, ctx.sc);
+  if (res.error) return { text: res.error, panels: [], ctx: '' };
+  return { text: describe(res, q).slice(0, 2000), panels: [res.panel], ctx: JSON.stringify({ k: q.kind, a: q.args }).slice(0, 900) };
+}
+// the last question, and what the answer before it used (for "and for Point 90?")
+function lastTurn(msgs) {
+  msgs = Array.isArray(msgs) ? msgs : [];
+  let i = msgs.length - 1; while (i >= 0 && !(msgs[i] && msgs[i].role === 'user' && String(msgs[i].text == null ? '' : msgs[i].text).trim())) i--;
+  if (i < 0) return null;
+  let prev = ''; for (let j = i - 1; j >= 0; j--) if (msgs[j] && msgs[j].role === 'assistant') { prev = String(msgs[j].ctx || ''); break; }
+  return { text: String(msgs[i].text).replace(/\u0000/g, '').trim().slice(0, 800), prev };
+}
+
 // ---- Claude ----
 let modelMemo = '';
 async function claude(payload) {
@@ -458,29 +536,26 @@ module.exports = async function handler(req, res) {
   const who = await whoami(req);
   if (!who) return send(res, 401, { ok: false, error: 'Please sign in again.' });
   if (!canUse(facts) || who.kind !== 'env') return send(res, 403, { ok: false, error: 'The assistant is not available for this account.' });
-  const ready = !!process.env.ANTHROPIC_API_KEY;
-  if (req.method === 'GET') return send(res, 200, { ok: true, ready });
+  const useAI = !!process.env.ANTHROPIC_API_KEY && String(process.env.ASSISTANT_MODE || '').toLowerCase() !== 'free';
+  if (req.method === 'GET') return send(res, 200, { ok: true, ready: true, mode: useAI ? 'ai' : 'free' });
   if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); return send(res, 405, { ok: false, error: 'Method not allowed' }); }
   const sc = scopeOf(who);
-  if (!ready) return send(res, 503, { ok: false, error: sc.admin ? 'The assistant is not switched on yet. Add ANTHROPIC_API_KEY in Vercel (Settings, Environment Variables) and redeploy.' : 'The assistant is not switched on yet.' });
   if (!store.configured()) return send(res, 503, { ok: false, error: 'Storage is not connected.' });
   const b = body(req);
-  const messages = toMessages(b && b.messages);
-  if (!messages.length) return send(res, 400, { ok: false, error: 'Type a question first.' });
+  const turn = lastTurn(b && b.messages);
+  if (!turn) return send(res, 400, { ok: false, error: 'Type a question first.' });
   try { if (await tooMany(req, 'assistant', 150)) return send(res, 429, { ok: false, error: 'Too many questions in one hour. Try again a little later.' }); } catch (_) { /* the limit is a safety net: never block an answer because it could not be read */ }
   try {
     const rows = await salesRows(), mine = inScope(rows, sc);
     const apps = appsFor(facts).filter(a => a.id !== 'maintenance');
-    const out = await answer(messages, { rows, sc, name: greetName(facts), stores: liveStores(mine), first: mine.length ? mine[0].d : '', last: mine.length ? mine[mine.length - 1].d : '', apps });
+    const ctx = { rows, sc, name: greetName(facts), stores: liveStores(mine), first: mine.length ? mine[0].d : '', last: mine.length ? mine[mine.length - 1].d : '', apps };
+    let out = null;
+    if (useAI) { try { out = await answer(toMessages(b && b.messages), ctx); } catch (_) { out = null; } } // no credit, busy, bad key: the free engine answers instead
+    if (!out) out = await freeAnswer(turn, ctx);
     return send(res, 200, { ok: true, ...out });
   } catch (e) {
-    const kind = e && e.kind;
-    const msg = kind === 'key' ? (sc.admin ? 'The AI key was not accepted. Check ANTHROPIC_API_KEY in Vercel.' : 'The assistant is not available right now.')
-      : kind === 'credit' ? (sc.admin ? 'The AI account has no credit left. Add credit at console.anthropic.com (Billing).' : 'The assistant is not available right now.')
-      : kind === 'busy' ? 'The assistant is busy right now. Try again in a moment.'
-      : 'Something went wrong while answering. Try again.';
-    return send(res, kind === 'busy' ? 503 : 500, { ok: false, error: msg, detail: sc.admin ? String((e && e.message) || e).slice(0, 200) : undefined });
+    return send(res, 500, { ok: false, error: 'Something went wrong while answering. Try again.', detail: sc.admin ? String((e && e.message) || e).slice(0, 200) : undefined });
   }
 };
 module.exports.canUse = canUse;
-module.exports._test = { runSales, runStock, toMessages, systemPrompt, recat, fRange, addM };
+module.exports._test = { runSales, runStock, toMessages, systemPrompt, recat, fRange, addM, describe, freeAnswer, lastTurn };

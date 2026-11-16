@@ -227,9 +227,8 @@ module.exports = async function handler(req, res) {
   const signedIn = facts.dash || facts.staff || facts.hr;
   const multi = appsFor(facts).length > 1;
   const sideData = await SIDEBAR.dataFor(facts); // null when this person can open only one report
-  // Pandora Assistant (api/_assistant.js): the chat button on every page, for the people who can open Pandora Dashboards.
-  // Until the AI key is set in Vercel only the super admin sees it (it then says what is missing).
-  const assistOk = ASSISTANT.canUse(facts) && (!!process.env.ANTHROPIC_API_KEY || (facts.staff.role === 'admin' && !facts.staff.overseer));
+  // Pandora Assistant (api/_assistant.js): the chat button on every page, for the people who can open Pandora Dashboards. Free: no key needed.
+  const assistOk = ASSISTANT.canUse(facts);
   const assist = assistOk ? '<script>window.__PZAI=' + JSON.stringify({ name: greetName(facts) }).replace(/</g, '\\u003c') + ';</script><script defer src="/assistant-widget.js?v=' + assistVersion() + '"></script>' : '';
   const chromeFor = (kind, m) => withChrome(kind, m, sideData && Object.assign({}, sideData, { path: requestedPath }), facts.viewAs ? viewBanner(facts.viewAs) : '', assist);
   if (requestedPath === '/assistant-widget.js') {

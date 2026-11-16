@@ -288,7 +288,7 @@ textarea::placeholder{color:var(--muted)}
     LOG.textContent = '';
     if (!S.msgs.length) {
       var h = document.createElement('div'); h.className = 'hello';
-      h.innerHTML = '<h2>' + esc(CFG.name ? 'Hello ' + CFG.name : 'Hello') + '</h2><p>Ask me anything about sales or stock. I answer with the real figures, store by store.</p><div class="chips">' + CHIPS.map(function (c) { return '<button class="chip" type="button">' + esc(c) + '</button>'; }).join('') + '</div>';
+      h.innerHTML = '<h2>' + esc(CFG.name ? 'Hello ' + CFG.name : 'Hello') + '</h2><p>Ask about sales or stock: say a date, a store, a category and how to split it. I answer with the real figures.</p><div class="chips">' + CHIPS.map(function (c) { return '<button class="chip" type="button">' + esc(c) + '</button>'; }).join('') + '</div>';
       LOG.appendChild(h);
       return;
     }
