@@ -943,4 +943,13 @@ module.exports = async function handler(req, res) {
   }
 };
 module.exports.canUse = canUse;
+// Used by api/_askclaude.js (the owner-only inbox): the same lookups, run for the super admin, with no chat around them.
+module.exports.lookup = async function (text) {
+  const turn = lastTurn([{ role: 'user', text: String(text || '').slice(0, 800) }]);
+  if (!turn) return { text: 'Empty question.', panels: [], ctx: '' };
+  const rows = await salesRows(), sc = { admin: true, rx: null, zone: '' }, mine = inScope(rows, sc);
+  const apps = ['staff', 'slow2', 'slow'].map(id => ({ id }));
+  const ctx = { rows, vocab: salesMemo.vocab, people: await staffVocab().catch(() => null), sc, name: 'Morris', stores: liveStores(mine), first: mine.length ? mine[0].d : '', last: mine.length ? mine[mine.length - 1].d : '', apps };
+  return freeAnswer(turn, ctx);
+};
 module.exports._test = { runSales, runStock, toMessages, systemPrompt, recat, fRange, addM, describe, freeAnswer, lastTurn };
