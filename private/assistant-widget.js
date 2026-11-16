@@ -369,6 +369,7 @@ textarea::placeholder{color:var(--muted)}
     try {
       if (p.type === 'links') { d.innerHTML = '<div class="links">' + (p.items || []).map(function (i) { return '<a class="link" href="' + esc(/^\/[^/\\]/.test(i.href) ? i.href : '/') + '">' + esc(i.title) + IC.go + '</a>'; }).join('') + '</div>'; return d; }
       if (p.type === 'sync') { return syncPanel(p, d); }
+      if (['sales', 'staff', 'slow', 'stock', 'why', 'forecast', 'cover'].indexOf(p.type) < 0) { d.innerHTML = '<div class="note">This answer needs the newest version of the page. Reload the page and ask again.</div>'; return d; }
       d.innerHTML = p.type === 'slow' ? slowPanel(p) : p.type === 'stock' ? stockPanel(p) : p.type === 'why' ? whyPanel(p) : p.type === 'forecast' ? forecastPanel(p) : p.type === 'cover' ? coverPanel(p) : salesPanel(p);
     } catch (e) { d.innerHTML = '<div class="note">This panel could not be drawn.</div>'; return d; }
     Array.prototype.forEach.call(d.querySelectorAll('.pic[data-sku]'), function (el) { picFor(el.dataset.sku, el); });
