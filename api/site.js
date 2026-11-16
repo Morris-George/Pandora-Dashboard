@@ -6,6 +6,13 @@ const pair = require('./_pair');
 const MOTION = require('./_motion');
 const HEADER = require('./_header');
 const SIDEBAR = require('./_sidebar');
+const ASSISTANT = require('./_assistant');
+// a short fingerprint of the assistant's script, so browsers fetch it again only when it changes
+let ASSIST_V = '';
+function assistVersion() {
+  if (!ASSIST_V) { try { ASSIST_V = require('crypto').createHash('md5').update(fs.readFileSync(path.join(PRIVATE_DIR, 'assistant-widget.js'))).digest('hex').slice(0, 10); } catch (_) { ASSIST_V = '0'; } }
+  return ASSIST_V;
+}
 
 const PRIVATE_DIR = path.join(process.cwd(), 'private');
 
@@ -77,7 +84,7 @@ function viewBanner(v) {
     'b.onclick=function(){b.disabled=true;fetch("/api/logout?viewas=1",{method:"POST",credentials:"same-origin"}).then(function(){location.replace("/staff/accounts")}).catch(function(){b.disabled=false})};' +
     'd.appendChild(s);d.appendChild(b);document.body.appendChild(d)})();</script>';
 }
-function withChrome(kind, multi, side, banner) {
+function withChrome(kind, multi, side, banner, extra) {
   return function (buf) {
     let html = buf.toString('utf8');
     const h = html.search(/<\/head>/i);
@@ -86,7 +93,7 @@ function withChrome(kind, multi, side, banner) {
     if (showSide) html = html.replace(/<body[^>]*>/i, m => m + SIDEBAR.parts.body(side, side.path));
     const i = html.lastIndexOf('</body>');
     const at = i === -1 ? html.length : i;
-    html = html.slice(0, at) + chromeScript(kind, multi) + (kind === 'login' ? '' : BEACON) + HEADER + (showSide ? SIDEBAR.parts.tail() : '') + (banner || '') + html.slice(at);
+    html = html.slice(0, at) + chromeScript(kind, multi) + (kind === 'login' ? '' : BEACON) + HEADER + (showSide ? SIDEBAR.parts.tail() : '') + (banner || '') + (kind === 'login' ? '' : (extra || '')) + html.slice(at);
     return Buffer.from(html, 'utf8');
   };
 }
@@ -220,7 +227,18 @@ module.exports = async function handler(req, res) {
   const signedIn = facts.dash || facts.staff || facts.hr;
   const multi = appsFor(facts).length > 1;
   const sideData = await SIDEBAR.dataFor(facts); // null when this person can open only one report
-  const chromeFor = (kind, m) => withChrome(kind, m, sideData && Object.assign({}, sideData, { path: requestedPath }), facts.viewAs ? viewBanner(facts.viewAs) : '');
+  // Pandora Assistant (api/_assistant.js): the chat button on every page, for the people who can open Pandora Dashboards.
+  // Until the AI key is set in Vercel only the super admin sees it (it then says what is missing).
+  const assistOk = ASSISTANT.canUse(facts) && (!!process.env.ANTHROPIC_API_KEY || (facts.staff.role === 'admin' && !facts.staff.overseer));
+  const assist = assistOk ? '<script>window.__PZAI=' + JSON.stringify({ name: greetName(facts) }).replace(/</g, '\\u003c') + ';</script><script defer src="/assistant-widget.js?v=' + assistVersion() + '"></script>' : '';
+  const chromeFor = (kind, m) => withChrome(kind, m, sideData && Object.assign({}, sideData, { path: requestedPath }), facts.viewAs ? viewBanner(facts.viewAs) : '', assist);
+  if (requestedPath === '/assistant-widget.js') {
+    if (!ASSISTANT.canUse(facts)) return res.status(404).end();
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    try { return res.status(200).send(fs.readFileSync(path.join(PRIVATE_DIR, 'assistant-widget.js'))); } catch (_) { return res.status(404).end(); }
+  }
   const toLogin = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/login.html'); return res.status(302).end(); };
   const toHome = () => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('Location', '/'); return res.status(302).end(); };
   if (!signedIn && !facts.vm && !facts.sc) return toLogin();

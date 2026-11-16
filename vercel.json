@@ -9,6 +9,7 @@
       "includeFiles": "api/_fonts/**"
     },
     "api/vm.js": {
+      "maxDuration": 60,
       "includeFiles": "private/stockcount-pics-*.js"
     }
   },
@@ -73,6 +74,10 @@
     {
       "source": "/api/digest",
       "destination": "/api/erp?digest=1"
+    },
+    {
+      "source": "/api/assistant",
+      "destination": "/api/vm?assistant=1"
     },
     {
       "source": "/api/campaigns",
