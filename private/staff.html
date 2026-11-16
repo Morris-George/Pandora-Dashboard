@@ -709,7 +709,7 @@ function exportXlsx(){
 
 /* ---- loading a query file ---- */
 function showErr(t){const e=$('err');e.hidden=!t;e.textContent=t||''}
-function parseDate(v){if(v instanceof Date)return v; const d=new Date(v);return isNaN(d)?null:d}
+function parseDate(v){if(v instanceof Date)return new Date(v.getTime()+9e5); /* Excel can give 23:55 of the day before */ const d=new Date(v);return isNaN(d)?null:d}
 function fmtPeriod(a,b){if(!a||!b)return'';const o={day:'numeric',month:'short'};
   return `${a.toLocaleDateString('en-GB',o)} – ${b.toLocaleDateString('en-GB',{...o,year:'numeric'})}`}
 async function loadFile(file){

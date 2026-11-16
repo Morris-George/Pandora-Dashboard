@@ -37,7 +37,7 @@ async function access(req) {
 }
 // a store manager's store name may be written a little differently from the ERP branch name
 function ownBranch(own, branches) {
-  return branches.find(b => b === own) || branches.find(b => norm(b) === norm(own)) || own;
+  return branches.find(b => b === own) || branches.find(b => norm(b) === norm(own)) || branches.find(b => require('./_storekey').sameStore(b, own)) || own;
 }
 
 function cleanLines(lines, allowZero) {

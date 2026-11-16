@@ -1,3 +1,4 @@
+const { cairoNow } = require('./_cairo');
 // Stock balance (reached at /api/stock, rewritten to api/erp.js: the Hobby plan allows 12 functions, so this is a helper).
 //   GET  /api/stock?from=YYYY-MM-DD&to=YYYY-MM-DD   super admin, area managers (their zone's warehouses) and the VM (pieces only, never any value)
 //        With ERP connected it asks ERPNext's "Stock Balance" report for those dates (cached 30 minutes, or a day for past dates),
@@ -25,7 +26,7 @@ function send(res, code, obj) {
 }
 const num = v => { const n = Number(String(v == null ? 0 : v).replace(/,/g, '')); return isFinite(n) ? Math.round(n * 1000) / 1000 : 0; };
 const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, n);
-const cairoToday = () => new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+const cairoToday = () => cairoNow().toISOString().slice(0, 10);
 
 // "Pandora Almaza - AN" -> "Almaza" (same cleaning idea as the sales branches)
 function cleanWarehouse(w) {
@@ -144,7 +145,7 @@ async function shelfPrices(anyAge) {
   const c = await store.getJSON(PRICES);
   if (c && c.p && (anyAge || Date.now() - Date.parse(c.at) < 6 * 3600 * 1000)) return c.p;
   if (anyAge) return {};
-  const now = new Date(Date.now() + 3 * 3600 * 1000), p = {}, pd = {};
+  const now = cairoNow(), p = {}, pd = {};
   const put = (k, d, v) => { if (k && d >= (pd[k] || '')) { pd[k] = d; p[k] = v; } };
   for (let k = 0; k < 13; k++) {
     const m = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1)).toISOString().slice(0, 7);
@@ -190,7 +191,7 @@ async function readBody(req) {
 // Anyone else (HR, Stock Count only) gets nothing. A person who was only lifted onto this report by Report access
 // keeps their own limits when they are a store manager or a sales person.
 const nrmStore = s => String(s || '').toLowerCase().replace(/^pandora\s+/, '').replace(/[^a-z0-9]+/g, '');
-const sameStore = (a, b) => { const x = nrmStore(a), y = nrmStore(b); return !!x && !!y && (x === y || (Math.min(x.length, y.length) >= 3 && (x.includes(y) || y.includes(x)))); };
+const { sameStore } = require('./_storekey'); // "CC Almaza" (account) = "City Center Almaza" (warehouse)
 function itemScope(who) {
   let w = who;
   if (w && w.lifted && w.user) { const own = whoFromRec(w.user); if (own && own.kind === 'staff') w = own; }

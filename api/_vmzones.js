@@ -1,3 +1,4 @@
+const { cairoNow } = require('./_cairo');
 // VM Zones (reached at /api/vmzones, rewritten to api/vm.js): which collection is merchandised in which zone of each store, and what it did to sales.
 // The super admin and the VM account both use it (place collections, draw zones, add floor plans / photos).
 //   GET  /api/vmzones                          stores that have sales, plus the caller's role
@@ -40,7 +41,7 @@ const key = st => 'vmz/' + slug(st) + '.json';
 const CAT_OPTIONS = ['Earrings', 'Rings']; // product categories offered next to the collections when placing
 const isDay = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
 const pad = n => String(n).padStart(2, '0');
-const today = () => { const d = new Date(Date.now() + 2 * 3600 * 1000); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+const today = () => { const d = cairoNow(); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
 const addDay = (d, n) => { const x = new Date(d + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
 const r2 = v => Math.round(v * 100) / 100;
 const newId = () => crypto.randomBytes(6).toString('hex');

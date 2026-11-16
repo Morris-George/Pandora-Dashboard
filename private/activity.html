@@ -222,7 +222,8 @@ const fmtW=new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',weekday:'long'});
 const when=iso=>iso?fmtT.format(new Date(iso)):'';
 const addDays=(d,n)=>new Date(Date.parse(d+'T12:00:00Z')+n*ONE).toISOString().slice(0,10);
 const span=(a,b)=>{const o=[];for(let d=a;d<=b&&o.length<400;d=addDays(d,1))o.push(d);return o};
-const dayOf=iso=>new Date(Date.parse(iso)+3*3600000).toISOString().slice(0,10);
+function cairoMs(ms){ms=ms===undefined?Date.now():ms;try{const p={};(cairoMs.f||(cairoMs.f=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Cairo',hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}))).formatToParts(new Date(ms)).forEach(x=>p[x.type]=+x.value);return Date.UTC(p.year,p.month-1,p.day,p.hour%24,p.minute,p.second)}catch(_){return ms+2*3600e3}} /* Cairo's real clock: +2 in winter, +3 in summer */
+const dayOf=iso=>new Date(cairoMs(Date.parse(iso))).toISOString().slice(0,10);
 const fmtHr=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',hour12:false});
 const hourOf=iso=>Number(fmtHr.format(new Date(iso)))%24; // the real Cairo hour, summer and winter
 const wdOf=d=>(new Date(d+'T12:00:00Z').getUTCDay()+6)%7; // Monday = 0
@@ -764,7 +765,7 @@ function renderDaily(){
 // ---- downloads (open in Excel) ----
 function csv(rows){return '﻿'+rows.map(r=>r.map(v=>{let s=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(s))s="'"+s;return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}).join(',')).join('\r\n')}
 function download(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
-const stamp=iso=>iso?new Date(Date.parse(iso)+3*3600000).toISOString().slice(0,16).replace('T',' '):'';
+const stamp=iso=>iso?new Date(cairoMs(Date.parse(iso))).toISOString().slice(0,16).replace('T',' '):'';
 $('expPeople').addEventListener('click',()=>{
   const rows=[['Name','Role','Store','Username','Last seen (Cairo)','Sign-ins','Pages opened','Changes','Time in use (minutes)','Active days','Most used page','Last device','First seen (Cairo)','Wrong passwords','Period']];
   peopleRows().forEach(({p,a})=>rows.push([p.name,p.label,p.store||'',p.username||'',stamp(p.lastSeen),a.logins,a.views,a.actions,Math.round(a.secs/60),a.activeDays,topPage(a),p.device||'',stamp(p.firstSeen),a.failed,P.from+' to '+P.to]));

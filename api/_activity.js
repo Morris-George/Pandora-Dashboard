@@ -1,3 +1,4 @@
+const { cairoNow } = require('./_cairo');
 // Activity tracking: who signed in, which pages they opened, and every change they made. Super admin only (see canView).
 //
 // How it records (nothing here can be switched off by a user, and no password or sales figure is ever written):
@@ -27,7 +28,7 @@ const SETTINGS = 'act/settings.json';
 
 const off = () => process.env.ACTIVITY_OFF === '1' || !store.configured();
 const iso = ms => new Date(ms).toISOString();
-const cairoDay = ms => new Date((ms === undefined ? Date.now() : ms) + 3 * 3600 * 1000).toISOString().slice(0, 10); // same clock as the rest of the site
+const cairoDay = ms => cairoNow(ms).toISOString().slice(0, 10); // same clock as the rest of the site
 const hourFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', hour: '2-digit', hour12: false });
 const cairoHour = ms => { try { return Number(hourFmt.format(new Date(ms))) % 24; } catch (_) { return new Date(ms + 2 * 3600 * 1000).getUTCHours(); } };
 const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);

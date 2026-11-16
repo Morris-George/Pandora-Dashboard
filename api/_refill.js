@@ -1,3 +1,4 @@
+const { cairoNow } = require('./_cairo');
 // Refill Order: suggests the next order to Pandora from the Available to Order list, the master data, the pipeline,
 // the slow moving list and ERP (stock on hand, sell out, purchases). Reached at /api/refill (rewritten to api/erp.js:
 // the Hobby plan allows 12 functions).
@@ -39,7 +40,7 @@ async function readJSON(req) {
 const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, n);
 const num = v => { const n = Number(String(v == null ? 0 : v).replace(/,/g, '')); return isFinite(n) ? Math.round(n * 100) / 100 : 0; };
 const skuOf = v => str(v, 40).toUpperCase().replace(/\.0$/, '');
-const cairoToday = () => new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+const cairoToday = () => cairoNow().toISOString().slice(0, 10);
 
 // the key a person is known by in the access list
 function keyOf(who) {

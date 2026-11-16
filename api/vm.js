@@ -1,3 +1,4 @@
+const { cairoNow } = require('./_cairo');
 // VM reports. The super admin feeds them; the VM account only views them.
 // Money never reaches storage: every upload is cleaned on the server, and only item/category/store/date/quantity columns are kept.
 //   GET  /api/vm            list of reports (super admin and VM account)
@@ -56,7 +57,7 @@ function describe(file) {
 
 // ---- live from ERP: the Custom Report for chosen dates, cleaned exactly like an upload (no money ever leaves) ----
 const LIVE_REPORT = () => process.env.VM_REPORT || 'Sales QTY and Volume by category-Jewelry';
-const cairoToday = () => new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+const cairoToday = () => cairoNow().toISOString().slice(0, 10);
 async function liveReport(from, to, fresh) {
   const key = 'vm/live/' + from + '_' + to + '.json';
   const ttl = to < cairoToday() ? 24 * 3600 * 1000 : 30 * 60 * 1000; // a past range does not change

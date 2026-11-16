@@ -1,3 +1,4 @@
+const { cairoNow, monthsAgo } = require('./_cairo');
 // Transfer: pick ANY items (not only slow ones) to move between stores. Reached at /api/transfer (rewritten to api/erp.js).
 //   GET /api/transfer   today's stock per SKU and store (ERP "Branches Stock Balance") + what each SKU sold in each store
 //                       over the last 3 months (the nightly ERP sales files), so the page can say where an item sells.
@@ -23,7 +24,7 @@ const num = v => { const n = Number(String(v == null ? 0 : v).replace(/,/g, ''))
 
 async function build() {
   const { runReport } = require('./erp'), { storeOf, settings } = require('./_dist'), st = await settings();
-  const d = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+  const d = cairoNow().toISOString().slice(0, 10);
   let list;
   try { list = await runReport('Branches Stock Balance', { company: process.env.ERP_COMPANY || 'All-Niche', from_date: d, to_date: d, item_group: 'Pandora', valuation_field_type: 'Currency' }); }
   catch (_) { list = await runReport('Branches Stock Balance', { from_date: d, to_date: d }); }
@@ -36,9 +37,9 @@ async function build() {
     a.q += q;
   }
   // what each SKU sold per store in the last MONTHS months, and the last sale date (dash/f/erp-YYYY-MM.json rows: [date, invoice, qty, net, gross, sku, name, branch, ...])
-  const now = new Date(Date.now() + 3 * 3600 * 1000), keys = [];
+  const now = cairoNow(), keys = [];
   for (let k = 0; k <= Math.max(MONTHS, 12); k++) keys.push(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1)).toISOString().slice(0, 7));
-  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - MONTHS, now.getUTCDate())).toISOString().slice(0, 10);
+  const from = monthsAgo(MONTHS);
   const have = new Set(Object.values(agg).map(a => a.sk)), sold = {}, meta = {}, prices = {}, pdate = {};
   for (const m of keys) {
     const f = await store.getJSON('dash/f/erp-' + m + '.json'); if (!f || !Array.isArray(f.rows)) continue;

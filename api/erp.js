@@ -1,3 +1,4 @@
+const { cairoNow } = require('./_cairo');
 // Pulls the sales reports straight from ERPNext and saves them where the uploaded Excel files go,
 // so the pages read them exactly as if the file had been added on All Uploads.
 //   POST /api/erp?month=2026-10          super admin: sync that month now (default: this month)
@@ -26,7 +27,7 @@ const iso = v => String(v || '').slice(0, 10);
 const pad = n => String(n).padStart(2, '0');
 
 function monthRange(m) {
-  const now = new Date(Date.now() + 2 * 3600 * 1000); // Cairo time is close enough for picking the month
+  const now = cairoNow(); // Cairo time is close enough for picking the month
   const [y, mo] = /^\d{4}-\d{2}$/.test(m || '') ? m.split('-').map(Number) : [now.getUTCFullYear(), now.getUTCMonth() + 1];
   const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
   return { key: `${y}-${pad(mo)}`, from: `${y}-${pad(mo)}-01`, to: `${y}-${pad(mo)}-${pad(last)}` };
@@ -255,7 +256,7 @@ module.exports = activity.wrap('erp', async function handler(req, res) {
     let month = url.searchParams.get('month');
     // The morning run on the 1st would open the new, still empty month and never pick up the last day of the month before,
     // so on the 1st (Cairo) the schedule syncs last month instead; from the 2nd it syncs the running month as usual.
-    if (cron && !month) { const c = new Date(Date.now() + 2 * 3600 * 1000); if (c.getUTCDate() === 1) { const p = new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth(), 0)); month = `${p.getUTCFullYear()}-${pad(p.getUTCMonth() + 1)}`; } }
+    if (cron && !month) { const c = cairoNow(); if (c.getUTCDate() === 1) { const p = new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth(), 0)); month = `${p.getUTCFullYear()}-${pad(p.getUTCMonth() + 1)}`; } }
     return send(res, 200, { ok: true, ...(await sync(month)) });
   } catch (e) {
     return send(res, 502, { ok: false, error: String(e && e.message || e).slice(0, 300) });

@@ -1,3 +1,4 @@
+const { cairoNow, monthsAgo } = require('./_cairo');
 // Slow Moving: ERP's "Pandora Slow Moving" report, run store by store (its filters: warehouse, months), kept as snapshots
 // and joined with what each SKU sold in every store, so the page can say: slow in store Y, sells in store X, move it.
 //   GET  /api/slow                    the saved snapshots (one per warehouse) + per SKU: sold per store, stock, refill order
@@ -28,7 +29,7 @@ async function readJSON(req) {
 }
 const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, n);
 const skuOf = v => str(v, 40).toUpperCase().replace(/\.0$/, '');
-const cairo = () => new Date(Date.now() + 3 * 3600 * 1000);
+const cairo = () => cairoNow();
 const keyOfWh = w => crypto.createHash('sha1').update(w).digest('hex').slice(0, 12);
 const erpBase = () => String(process.env.ERP_URL || '').replace(/\/+$/, '');
 const erpAuth = () => ({ Authorization: `token ${process.env.ERP_API_KEY}:${process.env.ERP_API_SECRET}`, Accept: 'application/json' });
@@ -117,7 +118,7 @@ async function runOne(warehouse, months, pr) {
 async function buildFromData(months) {
   const { runReport } = require('./erp'), { storeOf, settings } = require('./_dist'), st = await settings();
   const num = v => { const n = Number(String(v == null ? 0 : v).replace(/,/g, '')); return isFinite(n) ? n : 0; };
-  const d = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+  const d = cairoNow().toISOString().slice(0, 10);
   let list;
   try { list = await runReport('Branches Stock Balance', { company: process.env.ERP_COMPANY || 'All-Niche', from_date: d, to_date: d, item_group: 'Pandora', valuation_field_type: 'Currency' }); }
   catch (_) { list = await runReport('Branches Stock Balance', { from_date: d, to_date: d }); }
@@ -134,7 +135,7 @@ async function buildFromData(months) {
       if (!meta[sk]) meta[sk] = { name: str(x[6], 140), cat: str(x[8], 60) };
     }
   }
-  const cut = new Date(Date.now() + 3 * 3600 * 1000); cut.setUTCMonth(cut.getUTCMonth() - months); const cutS = cut.toISOString().slice(0, 10);
+  const cutS = monthsAgo(months);
   const today = new Date(d + 'T00:00:00Z');
   const cols = [{ label: 'SKU', fieldname: '_sku', fieldtype: 'Data' }, { label: 'EAN', fieldname: '_ean', fieldtype: 'Data' }, { label: 'Item Code', fieldname: 'item_code', fieldtype: 'Data' }, { label: 'Item Name', fieldname: 'item_name', fieldtype: 'Data' }, { label: 'Warehouse', fieldname: 'warehouse', fieldtype: 'Data' }, { label: 'Category', fieldname: 'category', fieldtype: 'Data' }, { label: 'Qty On Hand', fieldname: 'qty_on_hand', fieldtype: 'Float' }, { label: 'Last Sale Date', fieldname: 'last_sale_date', fieldtype: 'Date' }, { label: 'Idle Since', fieldname: 'idle_since', fieldtype: 'Data' }, { label: 'Item Group', fieldname: 'item_group', fieldtype: 'Data' }];
   const agg = {};
@@ -187,7 +188,7 @@ async function enrich(skus, months) {
   // per store, by store code (dash/f/erp-YYYY-MM.json rows: [date, invoice, qty, net, gross, sku, name, branch, ...])
   const now = cairo(), keys = [];
   for (let k = 0; k <= Math.max(months, 12); k++) keys.push(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1)).toISOString().slice(0, 7));
-  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - months, now.getUTCDate())).toISOString().slice(0, 10);
+  const from = monthsAgo(months);
   for (const m of keys) {
     const f = await store.getJSON('dash/f/erp-' + m + '.json'); if (!f || !Array.isArray(f.rows)) continue;
     for (const r of f.rows) {
@@ -228,7 +229,7 @@ module.exports = async function handler(req, res) {
     for (const [w, v] of Object.entries(idx)) { if (/water\s*way/i.test(w)) continue; const s = await store.getJSON('slow/w/' + v.k + '.json'); if (s) snaps.push({ ...s, store: storeOf(w, st.stores) || w }); }
     if (mine) {
       const nrm = s => String(s || '').toLowerCase().replace(/^pandora\s+/, '').replace(/[^a-z0-9]+/g, '');
-      const same = (a, b) => { const x = nrm(a), y = nrm(b); return !!x && !!y && (x === y || (Math.min(x.length, y.length) >= 3 && (x.includes(y) || y.includes(x)))); };
+      const same = require('./_storekey').sameStore;
       const own = snaps.filter(s => same(s.warehouse, mine) || same(s.store, mine) || st.stores.some(e => e.code === s.store && same(e.name, mine)));
       snaps.length = 0; snaps.push(...own);
     }

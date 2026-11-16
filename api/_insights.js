@@ -30,7 +30,7 @@ const pretty = v => String(v || '').replace(/^\s*pandora\s+/i, '').replace(/\s+-
 const fmtE = n => 'EGP ' + r0(n).toLocaleString('en-US');
 const pct = (a, b) => (b ? (a / b - 1) * 100 : null);
 const isCode = v => /^[A-Z0-9]{5,16}$/.test(v) && /\d/.test(v);
-const sameStore = (a, b) => { const x = skey(a), y = skey(b); return !!x && !!y && (x === y || (x.length > 3 && y.length > 3 && (x.includes(y) || y.includes(x)))); };
+const { sameStore } = require('./_storekey');
 
 function catOfGroup(g, name) {
   const low = (String(g || '') + ' ').toLowerCase(), n = String(name || '').toLowerCase();

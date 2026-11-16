@@ -149,7 +149,8 @@ const dayLabel=d=>{const [y,m,dd]=d.split('-');return +dd+' '+MS[+m-1]};
 const wdOf=d=>{const [y,m,dd]=d.split('-').map(Number);return new Date(Date.UTC(y,m-1,dd)).getUTCDay()};
 const dimOf=mo=>{const [y,m]=mo.split('-').map(Number);return new Date(Date.UTC(y,m,0)).getUTCDate()};
 const monthName=mo=>MON[+mo.slice(5)-1]+' '+mo.slice(0,4);
-const cairoToday=()=>new Date(Date.now()+3*3600e3).toISOString().slice(0,10);
+function cairoMs(ms){ms=ms===undefined?Date.now():ms;try{const p={};(cairoMs.f||(cairoMs.f=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Cairo',hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}))).formatToParts(new Date(ms)).forEach(x=>p[x.type]=+x.value);return Date.UTC(p.year,p.month-1,p.day,p.hour%24,p.minute,p.second)}catch(_){return ms+2*3600e3}} /* Cairo's real clock: +2 in winter, +3 in summer */
+const cairoToday=()=>new Date(cairoMs()).toISOString().slice(0,10);
 
 /* ---------- reading the Excel sheet (in the browser) ---------- */
 function num(v){if(typeof v==='number')return isFinite(v)?v:0;const s=String(v==null?'':v).replace(/[,\sA-Za-z$]/g,'').replace(/%$/,'');const n=Number(s);return isFinite(n)?n:0}
@@ -320,7 +321,7 @@ function setupEntry(){
   if(!S.stores.some(s=>s.name===E.store))E.store=multi?(S.store!==ALL?S.store:''):S.stores[0].name;
   $('eStore').value=E.store;
   const t=cairoToday();
-  if(!E.date){E.date=t;E.shift=new Date(Date.now()+3*3600e3).getUTCHours()<16?'m':'n'}
+  if(!E.date){E.date=t;E.shift=new Date(cairoMs()).getUTCHours()<16?'m':'n'}
   $('eDate').value=E.date;$('eDate').max=t;
   paintShift();
 }

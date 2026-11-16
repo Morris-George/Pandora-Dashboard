@@ -15,7 +15,7 @@ async function dash(file){
   return normalizeRows(rows);
 }
 const fmtPeriod=(a,b)=>{if(!a||!b)return'';const o={day:'numeric',month:'short'};return `${a.toLocaleDateString('en-GB',o)} – ${b.toLocaleDateString('en-GB',{...o,year:'numeric'})}`};
-const sDate=v=>{if(v instanceof Date)return v;const d=new Date(v);return isNaN(d)?null:d};
+const sDate=v=>{if(v instanceof Date)return new Date(v.getTime()+9e5);const d=new Date(v);return isNaN(d)?null:d};
 async function staff(file){
     const buf=await file.arrayBuffer();
     const wb=XLSX.read(buf,{type:'array',cellDates:true});
@@ -68,7 +68,7 @@ async function stock(file){
 }
 async function vm(file){
   const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
-  const iso=v=>v instanceof Date?v.toISOString().slice(0,10):v;
+  const iso=v=>v instanceof Date?(d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'))(new Date(v.getTime()+9e5)):v; /* Excel dates are local midnight: the UTC day would be the day before in Cairo */
   const sheets=wb.SheetNames.map(n=>{const g=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null,blankrows:false});
     const cols=(g[0]||[]).map((c,i)=>c==null||c===''?'Column '+(i+1):String(c));
     return{name:n,columns:cols,rows:g.slice(1).map(r=>cols.map((_,i)=>iso(r[i]===undefined?null:r[i])))}}).filter(s=>s.columns.length);

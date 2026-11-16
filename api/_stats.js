@@ -35,6 +35,8 @@ function rankOf(P, idxs, me) {
 
 // what one sales person is allowed to receive
 function staffView(d, store, name) {
+  // the account's store may be spelled differently from the sales file ("CC Almaza" / "City Centre Almaza"): same store, same numbers
+  if (d.stores.indexOf(store) < 0) { const m = d.stores.filter(s => require('./_storekey').sameStore(s, store)); if (m.length === 1) store = m[0]; }
   const si = d.stores.indexOf(store);
   const pi = d.people.findIndex(p => p[0] === name && d.stores[p[1]] === store);
   const base = { file: d.file, period: d.period, groups: d.groups, ex: d.ex || [], self: { store, name }, dayMin: d.dayMin || null, dayMax: d.dayMax || null, from: d.from || null, to: d.to || null };

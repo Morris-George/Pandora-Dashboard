@@ -27,9 +27,10 @@ async function readBody(req) {
   return Buffer.concat(chunks);
 }
 
-function scopeByStores(d, allowRegexes) {
+function scopeByStores(d, allowRegexes, sameAs) {
   const rx = allowRegexes.map(s => new RegExp(s, 'i'));
-  const ok = n => rx.some(r => r.test(n));
+  let ok = n => rx.some(r => r.test(n));
+  if (sameAs && !d.stores.some(ok)) { const m = d.stores.filter(s => require('./_storekey').sameStore(s, sameAs)); if (m.length === 1) ok = n => n === m[0]; } // store manager whose store is spelled differently in the sales file
   const sMap = new Map(), stores = [];
   d.stores.forEach((s, i) => { if (ok(s)) { sMap.set(i, stores.length); stores.push(s); } });
   const pMap = new Map(), people = [];
@@ -145,7 +146,7 @@ module.exports = activity.wrap('data', async function handler(req, res) {
     if (!d) return send(res, 404, { ok: false, error: 'no-data' });
     const wantMe = q.get('me');
     if (who.kind === 'staff' && (wantMe || !who.info.storeManager)) return send(res, 200, staffView(d, who.user.store, who.user.name)); // own page only
-    if (who.info.allow) return send(res, 200, scopeByStores(d, who.info.allow)); // area managers: their zone; store managers: their own store
+    if (who.info.allow) return send(res, 200, scopeByStores(d, who.info.allow, who.info.storeManager ? who.user.store : '')); // area managers: their zone; store managers: their own store
     return send(res, 200, d);
   }
 

@@ -1,3 +1,4 @@
+const { cairoNow } = require('./_cairo');
 // Daily Store Report: each store's daily sheet (visitors, transactions, pieces, cash, visa, morning, night + the month's target).
 // Sales people, store managers, area managers and the super admin add the sheet; the page turns it into dashboards.
 //   GET  /api/daily                      what this person may open: stores, months per store, role
@@ -27,7 +28,7 @@ const CANON = [
 ];
 const canon = s => { const t = String(s || '').trim(); const c = CANON.find(c => c.rx.test(t)); return c ? c.name : t.replace(/\s+/g, ' ').slice(0, 60); };
 const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
-const cairoToday = () => new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+const cairoToday = () => cairoNow().toISOString().slice(0, 10);
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 

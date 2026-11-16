@@ -1,3 +1,4 @@
+const { cairoNow, monthsAgo } = require('./_cairo');
 // Orders Distribution: upload a shipment invoice, split it to the stores by stock on hand, sell out and store priority,
 // then the main warehouse scans each piece and sees how many go to each store.
 //   GET  /api/dist                       stores, settings, shipments
@@ -49,7 +50,7 @@ const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f<>
 const num = v => { const n = Number(String(v == null ? 0 : v).replace(/,/g, '')); return isFinite(n) ? n : 0; };
 const skuOf = v => str(v, 40).toUpperCase().replace(/\.0$/, '');
 const eanOf = v => str(v, 20).replace(/\.0$/, '').replace(/\D/g, '');
-const cairoToday = () => new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+const cairoToday = () => cairoNow().toISOString().slice(0, 10);
 const norm = s => String(s || '').toLowerCase().replace(/\s+-\s+[a-z]{1,5}$/, '').replace(/^pandora\s+/, '').replace(/\s+/g, ' ').trim();
 
 const { keyOf } = require('./_refill');
@@ -127,9 +128,9 @@ async function snapshot(skus, st) {
   }
   // sell out: the nightly ERP sales files (dash/f/erp-YYYY-MM.json), last full months plus this one
   const months = Math.max(1, st.months), keys = [];
-  const now = new Date(Date.now() + 3 * 3600 * 1000);
+  const now = cairoNow();
   for (let k = 0; k <= months; k++) { const t = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1)); keys.push('erp-' + t.toISOString().slice(0, 7)); }
-  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - months, now.getUTCDate())).toISOString().slice(0, 10);
+  const from = monthsAgo(months);
   const unknownBr = {};
   for (const id of keys) {
     const f = await store.getJSON('dash/f/' + id + '.json'); if (!f || !Array.isArray(f.rows)) continue;
