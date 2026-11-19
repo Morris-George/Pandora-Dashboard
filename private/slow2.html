@@ -433,13 +433,13 @@ function routeScreen(r){const l=[...r.l].sort((a,b)=>b.qty-a.qty);
 /* stock of the item in every store (the same server answer as the dashboard's item pop-up: each person only gets the stores they may see) */
 async function loadStk(box,cb){const sku=box.dataset.stk;let shown=false;
   const W=new Map(ITEMS.map(i=>[i.wh,i.store])),slow={};ITEMS.filter(x=>x.sku===sku).forEach(x=>slow[x.store]=(slow[x.store]||0)+x.qty);
-  const sold=((J.info||{})[sku]||{}).stores||{},nm=w=>String(w).replace(/^pandora\s*-?\s*/i,'').replace(/\s*-\s*[A-Z]{1,3}$/,''),lab=w=>W.get(w)||String(w).replace(/^pandora\s*-?\s*/i,'').replace(/\s*-\s*[A-Z]{1,3}$/,'');
+  const sold=((J.info||{})[sku]||{}).stores||{},lastS=((J.info||{})[sku]||{}).last||{},nm=w=>String(w).replace(/^pandora\s*-?\s*/i,'').replace(/\s*-\s*[A-Z]{1,3}$/,''),lab=w=>W.get(w)||String(w).replace(/^pandora\s*-?\s*/i,'').replace(/\s*-\s*[A-Z]{1,3}$/,'');
   const draw=(j,live)=>{if(!box.isConnected)return;shown=true;
     const cd=j.codes||{},held=(j.stores||[]).filter(s=>s.qty>0).map(s=>({n:nm(s.store),w:s.store,c:s.code||lab(s.store),q:s.qty})),have=new Set(held.map(r=>r.w)),
       zero=(j.all||[]).filter(w=>!have.has(w)).map(w=>({n:nm(w),w,c:cd[w]||lab(w),q:0})).sort((a,b)=>a.n.localeCompare(b.n)),rows=held.concat(zero),
       mx=Math.max(1,...held.map(r=>r.q)),tot=held.reduce((a,r)=>a+r.q,0);
     /* every store is listed with the pieces it holds today (0 included), then what it sold in the period */
-    box.innerHTML=rows.length?`<div class="note" style="margin-bottom:6px"><b>${fmt(tot)} pcs</b> in ${held.length} of ${rows.length} store${rows.length>1?'s':''}${live?'':' · updating…'}</div>`+rows.map(r=>{const s=slow[r.c]||0,so=sold[r.c]||0;return `<div class="br" style="cursor:default;grid-template-columns:minmax(110px,1.1fr) 1.4fr auto${r.q?'':';opacity:.62'}"><span><b>${esc(r.n)}</b><div class="note">${s?'slow here: '+fmt(s)+' · ':''}sold ${fmt(so)} in ${J.months} months</div></span>${r.q?bar(r.q,mx,s?'var(--warn)':'var(--good)'):'<div class="hb"></div>'}<span><b>${fmt(r.q)}</b> pcs</span></div>`}).join(''):'<div class="note">The stock of each store is not available right now.</div>';if(cb)cb(j,live)};
+    box.innerHTML=rows.length?`<div class="note" style="margin-bottom:6px"><b>${fmt(tot)} pcs</b> in ${held.length} of ${rows.length} store${rows.length>1?'s':''}${live?'':' · updating…'}</div>`+rows.map(r=>{const s=slow[r.c]||0,so=sold[r.c]||0;return `<div class="br" style="cursor:default;grid-template-columns:minmax(110px,1.1fr) 1.4fr auto${r.q?'':';opacity:.62'}"><span><b>${esc(r.n)}</b><div class="note">${s?'slow here: '+fmt(s)+' · ':''}sold ${fmt(so)} in ${J.months} months${lastS[r.c]?' · last sale '+agoTxt(lastS[r.c]):''}</div></span>${r.q?bar(r.q,mx,s?'var(--warn)':'var(--good)'):'<div class="hb"></div>'}<span><b>${fmt(r.q)}</b> pcs</span></div>`}).join(''):'<div class="note">The stock of each store is not available right now.</div>';if(cb)cb(j,live)};
   const get=async c=>{const r=await fetch('/api/stock?op=item&code='+encodeURIComponent(sku)+(c?'&cached=1':''),{credentials:'same-origin',cache:'no-store'});return r.json().catch(()=>({}))};
   try{const a=await get(true);if(a&&a.ok&&!a.miss)draw(a,false)}catch(_){}
   try{const j=await get(false);if(j&&j.ok)draw(j,true);else if(!shown&&box.isConnected)box.innerHTML='<div class="note">The stock of each store is not available right now.</div>'}catch(_){if(!shown&&box.isConnected)box.innerHTML='<div class="note">The stock of each store is not available right now.</div>'}}
@@ -642,31 +642,49 @@ function ckPaint(l,sel){CK.sku=sel;const others=l.filter(o=>o.sku!==sel),shown=o
   $('cres').innerHTML=(sel?slowAnswer(sel):'')+(others.length?`<div class="note" style="margin:14px 0 6px">${sel?`<b>${fmt(others.length)}</b> other slow SKU${others.length>1?'s':''} match.`:`<b>${fmt(l.length)}</b> slow SKUs match. Tap one to see the answer.`}</div>`+shown.map(o=>ckRow(o,sel)).join('')+(others.length>shown.length?`<div class="note" style="margin-top:6px">…and ${fmt(others.length-shown.length)} more. Type more of the code or name to narrow it.</div>`:''):'');
   const sb=$('cres').querySelector('[data-stk]');if(sb)loadStk(sb)}
 // an item that is NOT on the slow list: ask the server for its sales, then show stock per store and what to do
-function freeAnswer(code,inf,name){const m=J.months,st=Object.entries(inf.stores||{}).filter(x=>x[1]>0),sold=Math.max(R?0:(inf.sold||0),st.reduce((a,x)=>a+x[1],0)),good=sold>0,bm=inf.byMonth||[],bmx=Math.max(1,...bm),ms=J.salesMonths||[];
+const dAgo=d=>Math.max(0,Math.round((Date.now()-Date.parse(d+'T00:00:00Z'))/864e5)),dFmt=d=>new Date(d+'T00:00:00Z').toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}),
+  agoTxt=d=>{const n=dAgo(d);return n===0?'today':n===1?'yesterday':idle(n)+' ago'},sumO=o=>Object.values(o||{}).reduce((a,v)=>a+(Number(v)||0),0),
+  storeName=c=>((J.stores||[]).find(x=>x.code===c)||{}).name||c,lastOf=inf=>Object.entries(inf.last||{}).sort((a,b)=>b[1].localeCompare(a[1]))[0];
+const tile=(a,b,c,x)=>`<div class="hk${x?' late':''}"><small>${a}</small><b style="font-size:17px">${b}</b><span>${c}</span></div>`;
+// the answer for an item that is NOT slow: why it is fine (pace, last sale in every store, value), then stock per store and what to do
+function freeAnswer(code,inf,name){const m=J.months,st=Object.entries(inf.stores||{}).filter(x=>x[1]>0),sold=Math.max(R?0:(inf.sold||0),st.reduce((a,x)=>a+x[1],0)),good=sold>0,bm=inf.byMonth||[],bmx=Math.max(1,...bm),ms=J.salesMonths||[],
+    avg=Math.round(sold/m*10)/10,la=lastOf(inf),rev=sumO(inf.revS),q30=sumO(inf.m30),p30=sumO(inf.p30);
   const left=EX.st.length?`<div class="note" style="margin-top:8px">Not counted (switched off in Report settings): ${EX.st.map(esc).join(', ')}.</div>`:'';
-  return `<div class="ans"><div class="verdict" style="--c:${good?'var(--good)':'var(--ink2)'}"><span class="vi">${ic(good?'ok':'none')}</span><div><b>${good?'No, not slow moving':'Not on the slow list'}</b><div style="margin-top:2px">${good?`It is selling${N?'':`: ${pcs(sold)} sold in the last ${m} months`}${R?' in your store':''}. No store holds it for ${m} months without a sale.`:`No store holds it for ${m} months without a sale, and no sale was found in that time. If you expected it to be slow, check the code.`}</div>${left}</div></div>
+  const lastTxt=la?`Last sale ${agoTxt(la[1])} (${dFmt(la[1])}) at ${esc(storeName(la[0]))}.`:`No sale found in the last 13 months.`;
+  const why=good?`It is <b>selling</b>${N?'':`: <b>${pcs(sold)}</b> in the last ${m} months, about <b>${fmt1(avg)} a month</b>`}${R?' in your store':''}. ${lastTxt} No store holds it for ${m} months without a sale.`:`No store holds it for ${m} months without a sale, and no sale was found in that time. ${lastTxt} If you expected it to be slow, check the code.`;
+  const tr=p30>0?`${q30>=p30?'+':''}${Math.round((q30-p30)/p30*100)}% vs the 30 days before (${fmt(p30)})`:(q30>0?'no sales in the 30 days before':'no sales in the last 60 days');
+  return `<div class="ans"><div class="verdict" style="--c:${good?'var(--good)':'var(--ink2)'}"><span class="vi">${ic(good?'ok':'none')}</span><div><b>${good?'No, not slow moving':'Not on the slow list'}</b><div style="margin-top:2px">${why}</div>${left}</div></div>
   <div class="ansh"><b>${esc(name||code)}</b><div class="note">${name?esc(code):''}${inf.grp?(name?' · ':'')+esc(catOf(inf.grp,name)):''}</div></div>
   <div class="bigpic ovp" data-hd="${esc(dvOf(code))}">${pic(code).replace('class="img"','class="img xl"')}</div>`+
-  (N?'':`<div class="hero" style="margin-top:10px">${[inf.price?['Selling price',money(inf.price),'per piece, with VAT']:null,['Sold',pcs(sold),R?'in your store, last '+m+' months':'all stores, last '+m+' months']].filter(Boolean).map(k=>`<div class="hk"><small>${k[0]}</small><b style="font-size:17px">${k[1]}</b><span>${k[2]}</span></div>`).join('')}</div>
-  <h3 style="margin:16px 0 8px;font-size:14px">${ic('store')} Where it is in stock today</h3><div data-stk="${esc(code)}"><div class="note">Loading the stock of each store…</div></div><div id="cTips"></div>`+
+  (N?'':`<div class="hero" id="cK" style="margin-top:10px">${[tile('Average per month',fmt1(avg)+' pcs','over the last '+m+' months'),tile('Sold',pcs(sold),(R?'in your store':'all stores')+', last '+m+' months'),la?tile('Last sold',agoTxt(la[1]),dFmt(la[1])+' · '+esc(storeName(la[0]))):tile('Last sold','No sale found','in the last 13 months'),tile('Last 30 days',pcs(q30),tr),rev?tile('Sales value',money(rev),'with VAT, last '+m+' months'):'',inf.price?tile('Selling price',money(inf.price),'per piece, with VAT'):''].join('')}</div>
+  <h3 style="margin:16px 0 8px;font-size:14px">${ic('store')} Every store: stock, sales and last sale</h3><div data-stk="${esc(code)}"><div class="note">Loading the stock of each store…</div></div><div id="cTips"></div>`+
   (!R&&bm.some(v=>v>0)?`<h3 style="margin:16px 0 8px;font-size:14px">${ic('grid')} Sales by month, all stores</h3><div class="mcols">${bm.map((v,k)=>`<div><span>${fmt(v)}</span><i style="height:${Math.round(v/bmx*46)}px"></i><span>${ms[k]?new Date(ms[k]+'-01T00:00:00Z').toLocaleString('en',{month:'short',timeZone:'UTC'}):''}</span></div>`).join('')}</div>`:''))+
   (N&&st.length?`<h3 style="margin:16px 0 8px;font-size:14px">Who sells it</h3><div class="chips">${st.map(([k])=>`<span class="chip on" style="cursor:default">${esc(k)}</span>`).join('')}</div>`:'')+`</div>`}
-// once the stock per store is known: how to keep a selling item moving
+const fmt1=n=>(Math.round(n*10)/10).toLocaleString('en-US',{maximumFractionDigits:1});
+// once the stock per store is known: stock cover, who sells it best, trend, stores to watch, and what to do
 function freeTips(code,j){const box=$('cTips');if(!box||!box.isConnected)return;
-  const inf=(J.info||{})[code]||{},sold=Object.fromEntries(Object.entries(inf.stores||{}).filter(x=>x[1]>0)),nm=w=>String(w).replace(/^pandora\s*-?\s*/i,'').replace(/\s*-\s*[A-Z]{1,3}$/,''),
+  const inf=(J.info||{})[code]||{},sold=Object.fromEntries(Object.entries(inf.stores||{}).filter(x=>x[1]>0)),last=inf.last||{},nm=w=>String(w).replace(/^pandora\s*-?\s*/i,'').replace(/\s*-\s*[A-Z]{1,3}$/,''),
     held=(j.stores||[]).filter(s=>s.qty>0).map(s=>({n:nm(s.store),c:s.code||'',q:s.qty})),tot=held.reduce((a,r)=>a+r.q,0),
     scope=new Set(Object.values(j.codes||{}).filter(Boolean).concat(held.map(r=>r.c).filter(Boolean))),
     heldBy=new Map(held.filter(r=>r.c).map(r=>[r.c,r.q])),
-    dry=Object.entries(sold).filter(([c])=>scope.has(c)&&!(heldBy.get(c)>0)).sort((a,b)=>b[1]-a[1]),
-    nameOf=c=>((J.stores||[]).find(x=>x.code===c)||{}).name||c,T=[];
-  const any=Object.values(sold).some(v=>v>0)||(!R&&inf.sold>0);
-  if(!tot&&any)T.push(R?'It is <b>out of stock</b> in your store but it sells. Ask your area manager to send some.':'It is <b>out of stock</b> in every store you can see, but it sells. Put it on the next refill order.');
+    dry=Object.entries(sold).filter(([c])=>scope.has(c)&&!(heldBy.get(c)>0)).sort((a,b)=>b[1]-a[1]),T=[],m=J.months,
+    soldT=Object.values(sold).reduce((a,v)=>a+v,0),avg=(R?soldT:Math.max(inf.sold||0,soldT))/m,cover=avg>0?tot/avg:null,q30=sumO(inf.m30),p30=sumO(inf.p30);
+  const any=soldT>0||(!R&&inf.sold>0),cv=cover==null?'':(cover>=24?'over 2 years':fmt1(cover)+' months');
+  const bx=$('cK');if(bx){bx.querySelectorAll('.late').forEach(x=>x.remove());bx.insertAdjacentHTML('beforeend',tile('In stock today',pcs(tot),R?'your store':'stores you can see',1)+(cover!=null?tile('Stock lasts',cv,'at the average pace',1):''))}
+  if(!tot&&any)T.push(R?'It is <b>out of stock</b> in your store but it sells. Ask your area manager to send some.':'It is <b>out of stock</b> in every store you can see, but it sells'+(avg?` (about ${fmt1(avg)} a month)`:'')+'. Put it on the next refill order.');
   else if(!tot)T.push('No store you can see holds it, and it did not sell lately. Check the code.');
+  if(tot&&cover!=null){T.push(`<b>Stock cover:</b> ${pcs(tot)} at about ${fmt1(avg)} a month lasts ${cv}. `+(cover<1.5?(R?'That is low: ask for more soon.':'That is low: put it on the refill order soon.'):cover>9?'That is more than enough: do not reorder for now.':'That is about right.'))}
+  const top=Object.entries(sold).sort((a,b)=>b[1]-a[1]);
+  if(!R&&top.length>1)T.push(`<b>Best store:</b> ${esc(storeName(top[0][0]))} sells ${Math.round(top[0][1]/soldT*100)}% of it (${pcs(top[0][1])} of ${fmt(soldT)}).`);
+  if(p30>0&&q30<p30*0.6)T.push(`<b>Slowing down:</b> ${pcs(q30)} in the last 30 days against ${pcs(p30)} the 30 days before. Give it a better place and have the team offer it.`);
+  else if(p30>0&&q30>p30*1.4)T.push(`<b>Speeding up:</b> ${pcs(q30)} in the last 30 days against ${pcs(p30)} the 30 days before. Make sure there is enough stock.`);
+  const edge=Math.round(m*30/2),watch=held.filter(r=>r.c&&last[r.c]&&dAgo(last[r.c])>=edge).sort((a,b)=>dAgo(last[b.c])-dAgo(last[a.c]));
+  if(watch.length)T.push(`<b>Watch:</b> ${watch.slice(0,3).map(r=>`${esc(r.n)} holds ${fmt(r.q)}, last sale ${agoTxt(last[r.c])}`).join('; ')}. It turns slow at ${m} months: move it to a front tray or transfer some to a store that sells it.`);
   if(tot&&dry.length&&!R){const donor=[...held].sort((a,b)=>(b.q/(1+(sold[b.c]||0)))-(a.q/(1+(sold[a.c]||0))))[0];
-    T.push(`<b>${dry.slice(0,3).map(([c,v])=>esc(nameOf(c))+' (sold '+fmt(v)+')').join(', ')}</b> sell${dry.length===1?'s':''} it but ${dry.length===1?'holds':'hold'} none. Send pieces there${donor?`: <b>${esc(donor.n)}</b> has ${fmt(donor.q)} and sold ${fmt(sold[donor.c]||0)}`:''}.`)}
+    T.push(`<b>${dry.slice(0,3).map(([c,v])=>esc(storeName(c))+' (sold '+fmt(v)+')').join(', ')}</b> sell${dry.length===1?'s':''} it but ${dry.length===1?'holds':'hold'} none. Send pieces there${donor?`: <b>${esc(donor.n)}</b> has ${fmt(donor.q)} and sold ${fmt(sold[donor.c]||0)}`:''}.`)}
   else if(tot&&dry.length&&R)T.push('Your store sold it but holds none now. Ask your area manager for more.');
-  if(tot&&!dry.length)T.push('<b>Nothing to fix.</b> It is in stock where it sells. Keep an eye on it: a store that holds it and stops selling for '+J.months+' months will move it to the slow list.');
-  box.innerHTML=`<h3 style="margin:16px 0 8px;font-size:14px">${ic('bulb')} How to keep it moving</h3>`+T.map(t=>`<div class="tip">${t}</div>`).join('')}
+  if(tot&&!dry.length&&!watch.length&&any)T.push('<b>Nothing to fix.</b> It is in stock where it sells.');
+  box.innerHTML=`<h3 style="margin:16px 0 8px;font-size:14px">${ic('bulb')} Insights: how to keep it moving</h3>`+T.map(t=>`<div class="tip">${t}</div>`).join('')}
 async function ckFree(code,delay){const t=CK.t;
   $('cres').innerHTML=ckHint(`Checking the stock and sales of <b>${esc(code)}</b>…`);
   try{if(delay){await new Promise(r=>setTimeout(r,delay));if(t!==CK.t)return}

@@ -214,17 +214,20 @@ async function enrichOne(code, months) {
   const all = Object.keys(erp.sold || {}).sort(), cur = cairo().toISOString().slice(0, 7), lastN = all.filter(m => m < cur).slice(-Math.max(1, months));
   const sumOf = o => Object.entries(o || {}).reduce((a, [k, v]) => a + (hit(k) ? Number(v) || 0 : 0), 0);
   const gk = Object.keys(erp.grp || {}).find(hit);
-  const inf = { sold: Math.round(lastN.reduce((a, m) => a + sumOf((erp.sold || {})[m]), 0)), byMonth: lastN.map(m => Math.round(sumOf((erp.sold || {})[m]))), soh: Math.round(sumOf(erp.soh)), grp: gk ? erp.grp[gk] : '', stores: {}, order: 0 };
-  const now = cairo(), keys = [];
+  const inf = { sold: Math.round(lastN.reduce((a, m) => a + sumOf((erp.sold || {})[m]), 0)), byMonth: lastN.map(m => Math.round(sumOf((erp.sold || {})[m]))), soh: Math.round(sumOf(erp.soh)), grp: gk ? erp.grp[gk] : '', stores: {}, order: 0, last: {}, revS: {}, m30: {}, p30: {} };
+  const now = cairo(), keys = [], iso = d => d.toISOString().slice(0, 10), d30 = iso(new Date(now.getTime() - 30 * 864e5)), d60 = iso(new Date(now.getTime() - 60 * 864e5));
   for (let k = 0; k <= Math.max(months, 12); k++) keys.push(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1)).toISOString().slice(0, 7));
   const from = monthsAgo(months);
   for (const m of keys) {
     const f = await store.getJSON('dash/f/erp-' + m + '.json'); if (!f || !Array.isArray(f.rows)) continue;
     for (const r of f.rows) {
       if (!hit(r[5])) continue;
-      const q = Number(r[2]) || 0, g = Number(r[4]) || 0;
+      const q = Number(r[2]) || 0, g = Number(r[4]) || 0, dt = String(r[0] || '').slice(0, 10), c = storeOf(r[7], st.stores) || String(r[7] || '?');
       if (q > 0 && g > 0 && r[0] >= (inf.pd || '')) { inf.pd = r[0]; inf.price = Math.round(g / q); }
-      if (r[0] < from) continue; const c = storeOf(r[7], st.stores) || String(r[7] || '?'); inf.stores[c] = (inf.stores[c] || 0) + q; }
+      if (q > 0 && dt && dt > (inf.last[c] || '')) inf.last[c] = dt; // the last real sale in each store, from every month on file
+      if (dt > d30) inf.m30[c] = (inf.m30[c] || 0) + q; else if (dt > d60) inf.p30[c] = (inf.p30[c] || 0) + q;
+      if (r[0] < from) continue;
+      inf.stores[c] = (inf.stores[c] || 0) + q; inf.revS[c] = (inf.revS[c] || 0) + g; }
   }
   return inf;
 }
@@ -269,11 +272,11 @@ module.exports = async function handler(req, res) {
     const oneSku = url.searchParams.get('sku') ? skuOf(url.searchParams.get('sku')) : '';
     if (oneSku) {
       const mo = Math.max(...snaps.map(s => Number(s.months) || 6)), inf = await enrichOne(oneSku, mo);
-      if (!money) { inf.price = 0; }
+      if (!money) { inf.price = 0; inf.revS = {}; }
       delete inf.pd;
       if (mine) {
         const codes = new Set(snaps.map(s => s.store));
-        return send(res, 200, { ok: true, restricted: true, money, months: mo, info: { [oneSku]: { price: inf.price || 0, grp: inf.grp || '', stores: Object.fromEntries(Object.entries(inf.stores || {}).filter(([c]) => codes.has(c))), sold: 0, byMonth: [], soh: 0, order: 0 } } });
+        return send(res, 200, { ok: true, restricted: true, money, months: mo, info: { [oneSku]: { price: inf.price || 0, grp: inf.grp || '', stores: Object.fromEntries(Object.entries(inf.stores || {}).filter(([c]) => codes.has(c))), sold: 0, byMonth: [], soh: 0, order: 0, ...Object.fromEntries(['last', 'revS', 'm30', 'p30'].map(k => [k, Object.fromEntries(Object.entries(inf[k] || {}).filter(([c]) => codes.has(c)))])) } } });
       }
       return send(res, 200, { ok: true, money, months: mo, info: { [oneSku]: inf } });
     }
