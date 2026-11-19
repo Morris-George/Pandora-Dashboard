@@ -204,6 +204,31 @@ async function enrich(skus, months) {
   return { info, from, salesMonths: lastN, order: last ? { name: last.name, status: last.status } : null, stores: st.stores.map(s => ({ code: s.code, name: s.name })) };
 }
 
+// one SKU, or one design (a code without its size matches every size): what it sold in each store, all-store totals per month, stock on file.
+// Used by the "Check an item" search on Slowmoving 2.0 for items that are NOT on the slow list. Same sources and same shape as enrich().
+async function enrichOne(code, months) {
+  const up = s => String(s == null ? '' : s).trim().toUpperCase().replace(/\.0$/, '');
+  const hit = s => { s = up(s); return s === code || s.startsWith(code + '-'); };
+  const { storeOf, settings } = require('./_dist'), st = await settings();
+  const erp = (await store.getJSON('rf/erp.json')) || {};
+  const all = Object.keys(erp.sold || {}).sort(), cur = cairo().toISOString().slice(0, 7), lastN = all.filter(m => m < cur).slice(-Math.max(1, months));
+  const sumOf = o => Object.entries(o || {}).reduce((a, [k, v]) => a + (hit(k) ? Number(v) || 0 : 0), 0);
+  const gk = Object.keys(erp.grp || {}).find(hit);
+  const inf = { sold: Math.round(lastN.reduce((a, m) => a + sumOf((erp.sold || {})[m]), 0)), byMonth: lastN.map(m => Math.round(sumOf((erp.sold || {})[m]))), soh: Math.round(sumOf(erp.soh)), grp: gk ? erp.grp[gk] : '', stores: {}, order: 0 };
+  const now = cairo(), keys = [];
+  for (let k = 0; k <= Math.max(months, 12); k++) keys.push(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1)).toISOString().slice(0, 7));
+  const from = monthsAgo(months);
+  for (const m of keys) {
+    const f = await store.getJSON('dash/f/erp-' + m + '.json'); if (!f || !Array.isArray(f.rows)) continue;
+    for (const r of f.rows) {
+      if (!hit(r[5])) continue;
+      const q = Number(r[2]) || 0, g = Number(r[4]) || 0;
+      if (q > 0 && g > 0 && r[0] >= (inf.pd || '')) { inf.pd = r[0]; inf.price = Math.round(g / q); }
+      if (r[0] < from) continue; const c = storeOf(r[7], st.stores) || String(r[7] || '?'); inf.stores[c] = (inf.stores[c] || 0) + q; }
+  }
+  return inf;
+}
+
 module.exports = async function handler(req, res) {
   if (!store.configured()) return send(res, 503, { ok: false, error: 'storage-not-configured' });
   const who = await whoami(req);
@@ -240,6 +265,18 @@ module.exports = async function handler(req, res) {
       snaps.length = 0; snaps.push(...own);
     }
     if (!snaps.length) return send(res, 200, { ok: true, level: blind ? 'view' : lvl, restricted: !!mine, snaps: [], money });
+    // Slowmoving 2.0 "Check an item": one SKU or design, even when it is not slow. Same limits as the full answer: no prices without money access, a store manager only gets their own store.
+    const oneSku = url.searchParams.get('sku') ? skuOf(url.searchParams.get('sku')) : '';
+    if (oneSku) {
+      const mo = Math.max(...snaps.map(s => Number(s.months) || 6)), inf = await enrichOne(oneSku, mo);
+      if (!money) { inf.price = 0; }
+      delete inf.pd;
+      if (mine) {
+        const codes = new Set(snaps.map(s => s.store));
+        return send(res, 200, { ok: true, restricted: true, money, months: mo, info: { [oneSku]: { price: inf.price || 0, grp: inf.grp || '', stores: Object.fromEntries(Object.entries(inf.stores || {}).filter(([c]) => codes.has(c))), sold: 0, byMonth: [], soh: 0, order: 0 } } });
+      }
+      return send(res, 200, { ok: true, money, months: mo, info: { [oneSku]: inf } });
+    }
     // the SKU column, by name
     const c0 = snaps.find(s => s.cols.length).cols, skuCol = c0 ? c0.findIndex(c => c.fieldname === '_sku') : -1;
     const skus = skuCol < 0 ? [] : [...new Set(snaps.flatMap(s => s.rows.map(r => skuOf(r[skuCol]))).filter(Boolean))];

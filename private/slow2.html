@@ -81,6 +81,10 @@ table.hm{width:auto}table.hm th,table.hm td{text-align:center;padding:9px 12px;b
 details.card>summary{cursor:pointer;font-weight:700;list-style:none}details.card>summary::-webkit-details-marker{display:none}
 .lf{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.lf select,.lf input{padding:5px 9px}
 @media(max-width:760px){body{padding:14px 10px 40px}.it{grid-template-columns:48px minmax(0,1fr) auto}.it .do{grid-column:1/-1;order:3}.nopic .it{grid-template-columns:minmax(0,1fr) auto}.sr{grid-template-columns:minmax(80px,1fr) 56px minmax(90px,auto)}.sr .plan,.sr .idl{display:none}.br{grid-template-columns:104px 1fr 92px}.hk b{font-size:18px}}
+/* ---------- Check an item ---------- */
+.ckbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.ckbar .sb{position:relative;flex:1;min-width:200px}.ckbar .sb .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--ink2);width:18px;height:18px;pointer-events:none}.ckbar input{width:100%;padding:11px 12px 11px 40px;font-size:15px;border-radius:12px}
+.verdict{position:relative;display:flex;gap:12px;align-items:flex-start;padding:12px 14px 12px 20px;border:1px solid var(--c);border-radius:14px;background:color-mix(in srgb,var(--c) 10%,transparent);overflow:hidden;margin-top:12px}.verdict::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--c)}.verdict .vi{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;background:color-mix(in srgb,var(--c) 22%,transparent);color:var(--c);flex:none}.verdict .vi .ic{width:20px;height:20px}.verdict b{font-size:16px;font-weight:800}
+.ans .ansh{margin-top:14px}.ans .ansh b{font-size:17px}.it.on{border-color:var(--accent);background:var(--soft)}.ckhint{color:var(--ink2);font-size:13px;padding:10px 2px}
 #main{display:flex;flex-direction:column;gap:14px}
 </style>
 </head>
@@ -96,6 +100,9 @@ details.card>summary{cursor:pointer;font-weight:700;list-style:none}details.card
     <div class="row" style="margin-top:10px"><button class="btn go" id="sync">Run the report</button><button class="btn" id="clear">Clear</button><span class="note" id="msg"></span></div>
   </div></details>
 </div>
+<div class="card" id="chk" hidden><h2>Check An Item</h2><div class="note" style="margin-bottom:10px">Type a SKU, a design code or part of the name. You get: is it slow moving, in which store, and how to move it better.</div>
+  <div class="ckbar"><div class="sb"><span id="ckIc"></span><input type="search" id="cq" placeholder="SKU, design code or item name" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Check an item"></div><button class="btn go" id="cgo">Check</button><button class="btn" id="cx" hidden>Clear</button></div>
+  <div id="cres"></div></div>
 <div id="main" hidden>
 <div class="fs" id="fs"></div>
 <div class="hero" id="kpis"></div>
@@ -185,9 +192,9 @@ async function load(){showErr('');
     N=!!J.blind;R=!!J.restricted;if(!J.money){SORT=SORT==='amt'?'qty':SORT;$('fSort').value=SORT;[...$('fSort').options].forEach(o=>{if(o.value==='amt')o.remove()})} /* a store manager: their own store only, nothing about other stores, no transfers */
     if(R){['stBtn','trCard','stM','trM','stCard','fs'].forEach(k=>$(k).hidden=true);document.querySelector('header.top .sub').textContent='Which items are stuck in your store, why, and what to do with each one so it sells.'}
     if(mg&&J.months)$('months').value=J.months;
-    if(!J.snaps.length){$('main').hidden=true;if(mg)$('setD').open=true;$('meta').innerHTML=mg?'Open <b>Report settings</b>, set the months and press <b>Run the report</b>.':'No report yet. Ask a Refill Order manager to run it.';return}
+    if(!J.snaps.length){$('chk').hidden=true;$('main').hidden=true;if(mg)$('setD').open=true;$('meta').innerHTML=mg?'Open <b>Report settings</b>, set the months and press <b>Run the report</b>.':'No report yet. Ask a Refill Order manager to run it.';return}
     J.all=J.all&&J.all.at===J.snaps.map(x=>x.at).join()?J.all:{at:J.snaps.map(x=>x.at).join(),snaps:J.snaps};drawIncl();applyIncl();
-    build();
+    build();$('chk').hidden=false;ckRun(true);
     $('meta').innerHTML=`<b>Slow</b> = in stock today, with no sale in that store for <b>${J.months} months</b> · updated ${new Date(Math.max(...J.all.snaps.map(s=>Date.parse(s.at)))).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}${R?'':` · ${J.snaps.length} store${J.snaps.length>1?'s':''}`}${J.order?` · refill order <b>${esc(J.order.name)}</b>`:''}`+(J.C.sku<0&&ITEMS.length?' · <b class="bad">No SKU column found in the report.</b>':'');
     if(N){['stBtn','trCard','stM','trM','xPlan','kpis','planBar','rawD'].forEach(k=>$(k).hidden=true);$('meta').innerHTML='<b>Slow</b> = in stock today, with no recent sale in that store. Numbers are not shown for your login.'}
     if(!ITEMS.length){$('main').hidden=true;if(mg)$('setD').open=true;$('meta').innerHTML+='<br><b class="bad">No slow items</b> for these stores, groups and months.';return}
@@ -223,7 +230,7 @@ all.forEach(x=>{st.set(x.store,(st.get(x.store)||0)+x.rows.reduce((t,r)=>t+(gi<0
   $('incl').innerHTML='<div class="inclhead">Stores to include:</div><div class="inclbox">'+[...st].sort((a,b)=>b[1]-a[1]).map(([v,n])=>chip('st',v,n,EX.st.includes(v))).join('')+'</div>'+
     (gr.size?'<div class="inclhead">Item groups to include:</div><div class="inclbox">'+GROUPS.filter(g=>gr.has(g)).map(g=>[g,gr.get(g)]).map(([v,n])=>chip('gr',v,n,EX.gr.includes(v))).join('')+'</div>':'');
   $('incl').querySelectorAll('input').forEach(i=>i.onchange=()=>{const a=EX[i.dataset.k],v=i.dataset.v;if(i.checked)EX[i.dataset.k]=a.filter(x=>x!==v);else a.push(v);
-    try{localStorage.setItem('slow.ex',JSON.stringify(EX))}catch(_){}i.parentNode.classList.toggle('on',i.checked);drawIncl();applyIncl();build();if(ITEMS.length){$('main').hidden=false;draw()}else $('main').hidden=true})}
+    try{localStorage.setItem('slow.ex',JSON.stringify(EX))}catch(_){}i.parentNode.classList.toggle('on',i.checked);drawIncl();applyIncl();build();ckRun(true);if(ITEMS.length){$('main').hidden=false;draw()}else $('main').hidden=true})}
 function applyIncl(){const all=J.all.snaps,cols=(all.find(x=>x.cols.length)||{}).cols||[],gi=colIx(cols,/item group/i);
   J.snaps=all.filter(x=>!EX.st.includes(x.store)).map(x=>gi<0?x:{...x,rows:x.rows.filter(r=>!EX.gr.includes(grpOf(r[gi])))})}
 /* ---------- the plan: every slow line gets one action, a reason in plain words and what to do ---------- */
@@ -424,7 +431,7 @@ function routeScreen(r){const l=[...r.l].sort((a,b)=>b.qty-a.qty);
    body:`<div class="tip">${ic('bulb')} ${esc(r.from)} sold <b>0</b> of these in ${J.months} months, ${esc(r.to)} sold them.</div>`+l.map(t=>itemRow(t.i,t.qty,`${esc(r.to)} sold ${fmt(t.soldTo)}`)).join('')}}
 /* the full story of one item: every store where it is slow with its action, who sells it, and the sales by month */
 /* stock of the item in every store (the same server answer as the dashboard's item pop-up: each person only gets the stores they may see) */
-async function loadStk(box){const sku=box.dataset.stk;let shown=false;
+async function loadStk(box,cb){const sku=box.dataset.stk;let shown=false;
   const W=new Map(ITEMS.map(i=>[i.wh,i.store])),slow={};ITEMS.filter(x=>x.sku===sku).forEach(x=>slow[x.store]=(slow[x.store]||0)+x.qty);
   const sold=((J.info||{})[sku]||{}).stores||{},nm=w=>String(w).replace(/^pandora\s*-?\s*/i,'').replace(/\s*-\s*[A-Z]{1,3}$/,''),lab=w=>W.get(w)||String(w).replace(/^pandora\s*-?\s*/i,'').replace(/\s*-\s*[A-Z]{1,3}$/,'');
   const draw=(j,live)=>{if(!box.isConnected)return;shown=true;
@@ -432,7 +439,7 @@ async function loadStk(box){const sku=box.dataset.stk;let shown=false;
       zero=(j.all||[]).filter(w=>!have.has(w)).map(w=>({n:nm(w),w,c:cd[w]||lab(w),q:0})).sort((a,b)=>a.n.localeCompare(b.n)),rows=held.concat(zero),
       mx=Math.max(1,...held.map(r=>r.q)),tot=held.reduce((a,r)=>a+r.q,0);
     /* every store is listed with the pieces it holds today (0 included), then what it sold in the period */
-    box.innerHTML=rows.length?`<div class="note" style="margin-bottom:6px"><b>${fmt(tot)} pcs</b> in ${held.length} of ${rows.length} store${rows.length>1?'s':''}${live?'':' · updating…'}</div>`+rows.map(r=>{const s=slow[r.c]||0,so=sold[r.c]||0;return `<div class="br" style="cursor:default;grid-template-columns:minmax(110px,1.1fr) 1.4fr auto${r.q?'':';opacity:.62'}"><span><b>${esc(r.n)}</b><div class="note">${s?'slow here: '+fmt(s)+' · ':''}sold ${fmt(so)} in ${J.months} months</div></span>${r.q?bar(r.q,mx,s?'var(--warn)':'var(--good)'):'<div class="hb"></div>'}<span><b>${fmt(r.q)}</b> pcs</span></div>`}).join(''):'<div class="note">The stock of each store is not available right now.</div>'};
+    box.innerHTML=rows.length?`<div class="note" style="margin-bottom:6px"><b>${fmt(tot)} pcs</b> in ${held.length} of ${rows.length} store${rows.length>1?'s':''}${live?'':' · updating…'}</div>`+rows.map(r=>{const s=slow[r.c]||0,so=sold[r.c]||0;return `<div class="br" style="cursor:default;grid-template-columns:minmax(110px,1.1fr) 1.4fr auto${r.q?'':';opacity:.62'}"><span><b>${esc(r.n)}</b><div class="note">${s?'slow here: '+fmt(s)+' · ':''}sold ${fmt(so)} in ${J.months} months</div></span>${r.q?bar(r.q,mx,s?'var(--warn)':'var(--good)'):'<div class="hb"></div>'}<span><b>${fmt(r.q)}</b> pcs</span></div>`}).join(''):'<div class="note">The stock of each store is not available right now.</div>';if(cb)cb(j,live)};
   const get=async c=>{const r=await fetch('/api/stock?op=item&code='+encodeURIComponent(sku)+(c?'&cached=1':''),{credentials:'same-origin',cache:'no-store'});return r.json().catch(()=>({}))};
   try{const a=await get(true);if(a&&a.ok&&!a.miss)draw(a,false)}catch(_){}
   try{const j=await get(false);if(j&&j.ok)draw(j,true);else if(!shown&&box.isConnected)box.innerHTML='<div class="note">The stock of each store is not available right now.</div>'}catch(_){if(!shown&&box.isConnected)box.innerHTML='<div class="note">The stock of each store is not available right now.</div>'}}
@@ -611,6 +618,79 @@ $('stM').addEventListener('click',e=>{const t=e.target;
   if(t.closest('.img img,.pkp'))return; // tapping the picture only enlarges it; the lines are for typing
   const r=t.closest('[data-pk]');if(r){const g=PKG.get(r.dataset.pk);if(!g)return;pkSelect(g,!PK.sel.has(g.sku));pkRedo(r)}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('stM').hidden&&!document.getElementById('zoom'))closePk()});
+
+/* ---------- Check an item: is it slow moving, in which store, and how to move it ---------- */
+IC.search='<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>';
+IC.warn='<path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.2v.01"/>';
+IC.ok='<circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/>';
+IC.none='<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>';
+$('ckIc').innerHTML=ic('search');
+const CK={t:0,tm:0,sku:''},CODE=/^\d{5,6}[A-Z0-9]{0,6}(-[A-Z0-9]{1,4})?$/;
+const ckHint=h=>`<div class="ckhint">${h}</div>`;
+// slow SKUs that match what was typed: every word must be in the SKU, EAN, name or category
+function ckList(q){const ws=String(q||'').trim().toUpperCase().split(/\s+/).filter(Boolean);if(!ws.length)return [];const m=new Map();
+  for(const i of ITEMS){const hay=(i.sku+' '+i.ean+' '+i.name+' '+i.cat).toUpperCase();if(!ws.every(w=>hay.includes(w)))continue;
+    const o=m.get(i.sku)||{sku:i.sku,name:i.name,cat:i.cat,qty:0,stores:new Set()};o.qty+=i.qty;o.stores.add(i.store);m.set(i.sku,o)}
+  const Q=ws.join(' ');return [...m.values()].sort((a,b)=>(b.sku===Q)-(a.sku===Q)||(b.sku.startsWith(Q))-(a.sku.startsWith(Q))||b.qty-a.qty||a.sku.localeCompare(b.sku))}
+const ckRow=(o,sel)=>{const k=o.stores.size;return `<div class="it nn${o.sku===sel?' on':''}" data-ck="${esc(o.sku)}">${pic(o.sku)}<div class="mid"><b title="${esc(o.name)}">${esc(o.name||o.sku)}</b><div class="note">${esc(o.sku)} · ${esc(o.cat)}</div></div><div class="do"><span class="pill" style="--c:var(--bad)">${ic('warn')} Slow in ${R?'your store':k+' store'+(k>1?'s':'')}</span>${N?'':`<div class="note" style="margin-top:4px">${pcs(o.qty)} stuck</div>`}</div></div>`};
+// the answer for an item that IS slow: the verdict, then the same full story as the item pop-up
+function slowAnswer(sku){const L=ITEMS.filter(x=>x.sku===sku).sort((a,b)=>b.qty-a.qty),o=itemScreen(sku),k=L.length,acts=ORDER.filter(a=>L.some(x=>x.act===a));
+  const lines=L.map(x=>`<b>${esc(x.store)}</b>${N?'':` (${pcs(x.qty)}, ${x.age==null?'never sold here':'idle '+idle(x.age)})`}`).join(' · ');
+  return `<div class="ans"><div class="verdict" style="--c:var(--bad)"><span class="vi">${ic('warn')}</span><div><b>Yes, slow moving ${R?'in your store':'in '+k+' store'+(k>1?'s':'')}</b><div style="margin-top:2px">${lines}</div><div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">${acts.map(pill).join('')}</div></div></div>
+  <div class="ansh"><b>${o.title}</b><div class="note">${o.sub||''}</div></div>${o.body}</div>`}
+function ckPaint(l,sel){CK.sku=sel;const others=l.filter(o=>o.sku!==sel),shown=others.slice(0,8);
+  $('cres').innerHTML=(sel?slowAnswer(sel):'')+(others.length?`<div class="note" style="margin:14px 0 6px">${sel?`<b>${fmt(others.length)}</b> other slow SKU${others.length>1?'s':''} match.`:`<b>${fmt(l.length)}</b> slow SKUs match. Tap one to see the answer.`}</div>`+shown.map(o=>ckRow(o,sel)).join('')+(others.length>shown.length?`<div class="note" style="margin-top:6px">…and ${fmt(others.length-shown.length)} more. Type more of the code or name to narrow it.</div>`:''):'');
+  const sb=$('cres').querySelector('[data-stk]');if(sb)loadStk(sb)}
+// an item that is NOT on the slow list: ask the server for its sales, then show stock per store and what to do
+function freeAnswer(code,inf,name){const m=J.months,st=Object.entries(inf.stores||{}).filter(x=>x[1]>0),sold=Math.max(R?0:(inf.sold||0),st.reduce((a,x)=>a+x[1],0)),good=sold>0,bm=inf.byMonth||[],bmx=Math.max(1,...bm),ms=J.salesMonths||[];
+  const left=EX.st.length?`<div class="note" style="margin-top:8px">Not counted (switched off in Report settings): ${EX.st.map(esc).join(', ')}.</div>`:'';
+  return `<div class="ans"><div class="verdict" style="--c:${good?'var(--good)':'var(--ink2)'}"><span class="vi">${ic(good?'ok':'none')}</span><div><b>${good?'No, not slow moving':'Not on the slow list'}</b><div style="margin-top:2px">${good?`It is selling${N?'':`: ${pcs(sold)} sold in the last ${m} months`}${R?' in your store':''}. No store holds it for ${m} months without a sale.`:`No store holds it for ${m} months without a sale, and no sale was found in that time. If you expected it to be slow, check the code.`}</div>${left}</div></div>
+  <div class="ansh"><b>${esc(name||code)}</b><div class="note">${name?esc(code):''}${inf.grp?(name?' · ':'')+esc(catOf(inf.grp,name)):''}</div></div>
+  <div class="bigpic ovp" data-hd="${esc(dvOf(code))}">${pic(code).replace('class="img"','class="img xl"')}</div>`+
+  (N?'':`<div class="hero" style="margin-top:10px">${[inf.price?['Selling price',money(inf.price),'per piece, with VAT']:null,['Sold',pcs(sold),R?'in your store, last '+m+' months':'all stores, last '+m+' months']].filter(Boolean).map(k=>`<div class="hk"><small>${k[0]}</small><b style="font-size:17px">${k[1]}</b><span>${k[2]}</span></div>`).join('')}</div>
+  <h3 style="margin:16px 0 8px;font-size:14px">${ic('store')} Where it is in stock today</h3><div data-stk="${esc(code)}"><div class="note">Loading the stock of each store…</div></div><div id="cTips"></div>`+
+  (!R&&bm.some(v=>v>0)?`<h3 style="margin:16px 0 8px;font-size:14px">${ic('grid')} Sales by month, all stores</h3><div class="mcols">${bm.map((v,k)=>`<div><span>${fmt(v)}</span><i style="height:${Math.round(v/bmx*46)}px"></i><span>${ms[k]?new Date(ms[k]+'-01T00:00:00Z').toLocaleString('en',{month:'short',timeZone:'UTC'}):''}</span></div>`).join('')}</div>`:''))+
+  (N&&st.length?`<h3 style="margin:16px 0 8px;font-size:14px">Who sells it</h3><div class="chips">${st.map(([k])=>`<span class="chip on" style="cursor:default">${esc(k)}</span>`).join('')}</div>`:'')+`</div>`}
+// once the stock per store is known: how to keep a selling item moving
+function freeTips(code,j){const box=$('cTips');if(!box||!box.isConnected)return;
+  const inf=(J.info||{})[code]||{},sold=Object.fromEntries(Object.entries(inf.stores||{}).filter(x=>x[1]>0)),nm=w=>String(w).replace(/^pandora\s*-?\s*/i,'').replace(/\s*-\s*[A-Z]{1,3}$/,''),
+    held=(j.stores||[]).filter(s=>s.qty>0).map(s=>({n:nm(s.store),c:s.code||'',q:s.qty})),tot=held.reduce((a,r)=>a+r.q,0),
+    scope=new Set(Object.values(j.codes||{}).filter(Boolean).concat(held.map(r=>r.c).filter(Boolean))),
+    heldBy=new Map(held.filter(r=>r.c).map(r=>[r.c,r.q])),
+    dry=Object.entries(sold).filter(([c])=>scope.has(c)&&!(heldBy.get(c)>0)).sort((a,b)=>b[1]-a[1]),
+    nameOf=c=>((J.stores||[]).find(x=>x.code===c)||{}).name||c,T=[];
+  const any=Object.values(sold).some(v=>v>0)||(!R&&inf.sold>0);
+  if(!tot&&any)T.push(R?'It is <b>out of stock</b> in your store but it sells. Ask your area manager to send some.':'It is <b>out of stock</b> in every store you can see, but it sells. Put it on the next refill order.');
+  else if(!tot)T.push('No store you can see holds it, and it did not sell lately. Check the code.');
+  if(tot&&dry.length&&!R){const donor=[...held].sort((a,b)=>(b.q/(1+(sold[b.c]||0)))-(a.q/(1+(sold[a.c]||0))))[0];
+    T.push(`<b>${dry.slice(0,3).map(([c,v])=>esc(nameOf(c))+' (sold '+fmt(v)+')').join(', ')}</b> sell${dry.length===1?'s':''} it but ${dry.length===1?'holds':'hold'} none. Send pieces there${donor?`: <b>${esc(donor.n)}</b> has ${fmt(donor.q)} and sold ${fmt(sold[donor.c]||0)}`:''}.`)}
+  else if(tot&&dry.length&&R)T.push('Your store sold it but holds none now. Ask your area manager for more.');
+  if(tot&&!dry.length)T.push('<b>Nothing to fix.</b> It is in stock where it sells. Keep an eye on it: a store that holds it and stops selling for '+J.months+' months will move it to the slow list.');
+  box.innerHTML=`<h3 style="margin:16px 0 8px;font-size:14px">${ic('bulb')} How to keep it moving</h3>`+T.map(t=>`<div class="tip">${t}</div>`).join('')}
+async function ckFree(code,delay){const t=CK.t;
+  $('cres').innerHTML=ckHint(`Checking the stock and sales of <b>${esc(code)}</b>…`);
+  try{if(delay){await new Promise(r=>setTimeout(r,delay));if(t!==CK.t)return}
+    let inf=(J.info||{})[code],name='';
+    if(!inf){const j=await api('/api/slow?v=2&sku='+encodeURIComponent(code));inf=(j.info||{})[code];if(inf){J.info=J.info||{};J.info[code]=inf}}
+    if(t!==CK.t)return;
+    $('cres').innerHTML=freeAnswer(code,inf||{},'');
+    const sb=$('cres').querySelector('[data-stk]');
+    if(sb)loadStk(sb,(j,live)=>{if(t!==CK.t)return;if(j&&j.name){const h=$('cres').querySelector('.ans .ansh b');if(h){h.textContent=String(j.name).replace(/^\s*[0-9A-Z]+(-[0-9A-Z]{1,4})?-\d{8,14}\s*-?\s*/i,'')||code;const n=h.nextElementSibling;if(n&&!/^\s*\S/.test(n.textContent.split(' · ')[0]||'')||n&&n.textContent.trim()===''||n&&n.textContent.startsWith(' · '))n.textContent=code+(n.textContent.replace(/^\s*·\s*/,'')?' · '+n.textContent.replace(/^\s*·\s*/,''):'')}}freeTips(code,j)})}
+  catch(e){if(t===CK.t)$('cres').innerHTML=`<div class="ckhint bad">${esc(e.message)}</div>`}}
+// now = the person pressed Enter or Check: look up straight away
+function ckRun(now){clearTimeout(CK.tm);const q=$('cq').value.trim();$('cx').hidden=!q;CK.t++;
+  if(!q){CK.sku='';$('cres').innerHTML='';return}
+  const l=ckList(q);
+  if(l.length){const Q=q.toUpperCase(),ex=l.find(o=>o.sku===Q);ckPaint(l,ex?ex.sku:l.length===1?l[0].sku:(l.some(o=>o.sku===CK.sku)?CK.sku:''));return}
+  CK.sku='';const c=q.toUpperCase().replace(/\s+/g,'');
+  if(CODE.test(c)){if(now||c.length>=9){ckFree(c,now?0:500);return}
+    $('cres').innerHTML=ckHint(`No slow item matches <b>${esc(q)}</b>. Press <b>Check</b> to look up the stock and sales of <b>${esc(c)}</b>.`);return}
+  $('cres').innerHTML=ckHint(`No slow item matches <b>${esc(q)}</b>. If an item is not slow moving it will not be on this list: type its SKU or design code to check it.`)}
+$('cq').addEventListener('input',()=>{clearTimeout(CK.tm);CK.tm=setTimeout(()=>ckRun(false),200)});
+$('cq').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();ckRun(true)}});
+$('cgo').onclick=()=>ckRun(true);
+$('cx').onclick=()=>{$('cq').value='';ckRun(true);$('cq').focus()};
+$('cres').addEventListener('click',e=>{if(e.target.closest('.img img'))return;const r=e.target.closest('[data-ck]');if(!r)return;CK.t++;const l=ckList($('cq').value);ckPaint(l,r.dataset.ck);$('cres').scrollIntoView({behavior:'smooth',block:'nearest'})});
 
 load();
 </script>

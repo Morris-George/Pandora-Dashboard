@@ -247,7 +247,7 @@ async function itemStock(req, res, who) {
   let sOf = () => '';
   try { const { storeOf, settings } = require('./_dist'), st = await settings(); sOf = w => storeOf(w, st.stores) || ''; } catch (_) { /* no codes: pages fall back to the names */ }
   const stores = [...by.entries()].map(([s, q]) => ({ store: s, code: sOf(s), qty: Math.round(q * 1000) / 1000 })).sort((a, b) => b.qty - a.qty || a.store.localeCompare(b.store));
-  return send(res, 200, { ok: true, code, stores, all: [...known].sort(), codes: Object.fromEntries([...known].map(w => [w, sOf(w)])), total: stores.reduce((t, x) => t + x.qty, 0), scope: sc.all ? 'all' : sc.rx ? 'zone' : 'store', zone: sc.zone || undefined, asOf: at, source: at && snap && rows === snap.rows ? 'excel' : 'erp', cachedOnly: url.searchParams.get('cached') === '1' || undefined });
+  return send(res, 200, { ok: true, code, name: hit.length ? str(hit[0][1], 140) : '', stores, all: [...known].sort(), codes: Object.fromEntries([...known].map(w => [w, sOf(w)])), total: stores.reduce((t, x) => t + x.qty, 0), scope: sc.all ? 'all' : sc.rx ? 'zone' : 'store', zone: sc.zone || undefined, asOf: at, source: at && snap && rows === snap.rows ? 'excel' : 'erp', cachedOnly: url.searchParams.get('cached') === '1' || undefined });
 }
 
 module.exports = async function handler(req, res) {
