@@ -482,7 +482,14 @@ module.exports = async function handler(req, res) {
   // Pandora Dashboards
   if (requestedPath === '/dashboards' || requestedPath === '/dashboards/' || requestedPath === '/index.html') {
     if (!facts.dash) return toHome();
-    return sendFile(res, 'index.html', 'text/html; charset=utf-8', chromeFor('dashboards', multi));
+    // "Open in Item Insights" in the item popups: only for people who may open /item (super admin, Overseers, or given it on User Access Privileges)
+    const itemOk = ((facts.staff && facts.staff.role === 'admin') || (facts.extra || []).includes('item')) && !(facts.hidden || []).includes('item');
+    const chromeD = chromeFor('dashboards', multi);
+    return sendFile(res, 'index.html', 'text/html; charset=utf-8', function (buf) {
+      let html = buf.toString('utf8');
+      if (itemOk) { const h = html.search(/<\/head>/i); if (h !== -1) html = html.slice(0, h) + '<script>window.__PANDORA_ITEM=true;</script>' + html.slice(h); }
+      return chromeD(Buffer.from(html, 'utf8'));
+    });
   }
 
   res.setHeader('Cache-Control', 'no-store');

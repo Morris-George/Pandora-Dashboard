@@ -405,7 +405,8 @@ table.dt{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
 .bnone{color:var(--muted);text-align:center;padding:18px 0;font-size:13px}
 .btabs{display:flex;gap:6px;margin:0 0 12px}.btabs button{flex:1;border:1px solid var(--line2);background:var(--surface2);border-radius:999px;padding:7px 10px;font-size:12.5px;font-weight:700}.btabs button[aria-pressed=true]{background:var(--seg-on);border-color:var(--seg-on);color:var(--seg-on-text)}.btabs button:disabled{opacity:.45;cursor:default}
 .bnote{color:var(--muted);font-size:11.5px;margin-top:10px}
-.bmore{display:flex;justify-content:flex-end;margin-top:12px}
+.bmore{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:12px}
+.iilink{display:inline-flex;align-items:center;text-decoration:none;font-weight:800;border:1px solid var(--line);border-radius:10px;padding:6px 12px;background:var(--fill-soft,#FFE4E8);color:var(--accent-text,#B83A52)}.iilink:hover{filter:brightness(.97)}.iilink[hidden]{display:none}
 .pbig{width:100%;aspect-ratio:1/1;border-radius:14px;background:var(--surface2);display:grid;place-items:center;overflow:hidden;color:var(--muted);font-size:12.5px;text-align:center}
 .pbig img{width:100%;height:100%;object-fit:contain;display:block}
 .pname{margin:12px 2px 2px;font-weight:750;font-size:13.5px;line-height:1.35}.pinfo{margin:0 2px;color:var(--muted);font-size:12px}
@@ -612,7 +613,7 @@ table.dt{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
 </main>
 </div>
 
-<div class="bmodal" id="bModal" hidden><div class="bcard" role="dialog" aria-modal="true" aria-label="Branches that sold this item"><button type="button" class="bclose" id="bClose" aria-label="Close">&times;</button><div class="bname" id="bName"></div><div class="binfo" id="bInfo"></div><div class="btabs" id="bTabs"><button type="button" id="bTabSold" aria-pressed="true">Sold by branch</button><button type="button" id="bTabStock" aria-pressed="false">Qty in each store</button></div><div id="bBody"></div><div class="bmore"><button type="button" class="linkbtn" id="bMore">Open full item details</button></div></div></div>
+<div class="bmodal" id="bModal" hidden><div class="bcard" role="dialog" aria-modal="true" aria-label="Branches that sold this item"><button type="button" class="bclose" id="bClose" aria-label="Close">&times;</button><div class="bname" id="bName"></div><div class="binfo" id="bInfo"></div><div class="btabs" id="bTabs"><button type="button" id="bTabSold" aria-pressed="true">Sold by branch</button><button type="button" id="bTabStock" aria-pressed="false">Qty in each store</button></div><div id="bBody"></div><div class="bmore"><a class="linkbtn iilink" id="bInsight" href="#" hidden>Open in Item Insights ›</a><button type="button" class="linkbtn" id="bMore">Open full item details</button></div></div></div>
 <div class="pmodal" id="pModal" hidden><div class="pcard" role="dialog" aria-modal="true" aria-label="Product picture"><button type="button" class="pclose" id="pClose" aria-label="Close">&times;</button><div class="pbig" id="pBig"></div><div class="pname" id="pName"></div><div class="pinfo" id="pInfo"></div></div></div>
 <div class="cmodal" id="cModal" hidden><div class="ccard" role="dialog" aria-modal="true" aria-label="Store card"><div class="cimg"><img id="cImg" alt="Store card"></div><div class="cbtns"><span id="cName"></span><button type="button" class="small-btn" id="cShare" hidden>Share</button><button type="button" class="cpgo" id="cDown">Download</button><button type="button" class="ghost" id="cCloseBtn">Close</button></div></div></div>
 <div class="drawer" id="drawer" hidden><div class="dpanel" role="dialog" aria-modal="true" aria-label="Item details"><button type="button" class="dclose" id="dClose" aria-label="Close">&times;</button><div id="dBody"></div></div></div>
@@ -760,6 +761,7 @@ window.PPic=(function(){
     cur.sku=sku;cur.sold=list.length?`<div class="bsum"><div><span>Branches that sold it</span><b>${num(list.length)}</b></div><div><span>Units</span><b>${num(tu)}</b></div><div><span>Revenue</span><b>${money(tv)}</b></div></div>`+list.map(x=>`<div class="brow"><span><b>${esc(x.name)}</b><br><small>${num(x.units)} units · last sold ${esc(fD(x.last))}</small></span><b>${money(x.value)}</b><span class="btrack"><i style="width:${Math.max(2,Math.abs(x.value)/max*100)}%"></i></span></div>`).join(''):'<div class="bnone">No branch sold this item in the selected dates.</div>';
     document.getElementById('bTabStock').disabled=(sku==='—');
     document.getElementById('bMore').hidden=(sku==='—');
+    {const a=document.getElementById('bInsight'),dz=window.itemInsightsHref&&window.itemInsightsHref(sku);a.hidden=!dz;if(dz)a.href=dz}
     tab('sold');
     m().hidden=false;
   }
@@ -785,6 +787,7 @@ function stockRows(j){
   const zero=(j.all||[]).filter(w=>{if(/warehouse|samples?\b|\bmain\b|\btest/i.test(w))return false;const n=nr(w);return n&&sells.some(b=>b===n||b.includes(n)||n.includes(b))&&!have.some(h=>nr(h.store)===n)}).map(w=>({store:w,qty:0}));
   return have.sort((a,b)=>b.qty-a.qty).concat(zero.sort((a,b)=>a.store.localeCompare(b.store)));
 }
+window.itemInsightsHref=function(sku){const c=String(sku||'').trim().toUpperCase().split('-')[0];return window.__PANDORA_ITEM&&/^[A-Z0-9]{5,16}$/.test(c)&&/\d/.test(c)?'/item?code='+encodeURIComponent(c):''};
 const WARN='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block;vertical-align:-2px;margin-right:5px"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
 const money=n=>'EGP '+Math.round(n||0).toLocaleString('en-US');
 const num=n=>Math.round(n||0).toLocaleString('en-US');
@@ -1545,6 +1548,7 @@ window.openItem=function(sku){
   const cat=all[0]?.category||'',col=all[0]&&window.__pandoraColOf?window.__pandoraColOf(all[0]):'';
   const lastSold=all.reduce((m,r)=>r.date>m?r.date:m,'');
   let html=`<div class="dhead">${PPic.thumb({sku,name},'')}<div><div class="dsub"><i class="xsku">${esc(sku)}</i> · ${esc(cat)}${col&&col!=='Not classified'?' · '+esc(col):''}</div><h3>${esc(name)}</h3><div class="dsub">${esc(fRange(S.from,S.to))} · every branch · ${S.basis==='net'?'net of VAT':'with VAT'}${nm.size>1?` · sold under ${nm.size} names`:''}</div></div></div>`;
+  { const ii=window.itemInsightsHref&&window.itemInsightsHref(sku); if(ii) html+=`<div class="dsec" style="margin-top:-4px"><a class="iilink" href="${esc(ii)}">Open in Item Insights ›</a></div>`; }
   html+=`<div class="dsec"><h4>Still in stock in</h4><div id="skuStock" class="skustk"><div class="skunone">Loading stock…</div></div></div>`;
   if(!R.length){html+=`<div class="dsec"><div class="skunone">No sales of this item in these dates. ${lastSold?'It was last sold on <b>'+esc(fD(lastSold,true))+'</b>.':''}</div></div>`}
   else{
