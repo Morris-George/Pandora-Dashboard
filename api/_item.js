@@ -203,6 +203,8 @@ async function report(code, months) {
     const s = sOf(skeyOf(r[3]), pretty(r[3])); s.stock += q; stockAll += q;
     const z = stockSize(r) || '—'; s.sizes[z] = (s.sizes[z] || 0) + q; sizeStock[z] = (sizeStock[z] || 0) + q;
   }
+  for (const s of S.values()) s.stock = Math.max(0, s.stock); // ERP can hold a negative balance after a missed receipt: it is zero pieces on the shelf
+  stockAll = [...S.values()].reduce((t, s) => t + s.stock, 0);
   const stores = [...S.values()].filter(s => s.units || s.stock || s.u90 || s.last).map(s => {
     const vel = Math.max(0, s.u90) / spanDays * 7, idle = s.last ? endN - dayN(s.last) : null;
     const cover = vel > 0 ? s.stock / vel : null;
