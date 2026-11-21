@@ -268,6 +268,7 @@ module.exports = async function handler(req, res) {
     else if (P === '/transfer' || P === '/transfer.html') id = 'transfer';
     else if (P === '/insights' || P === '/insights.html') id = 'insights';
     else if (P === '/overview' || P === '/overview.html') id = 'overview';
+    else if (P === '/item' || P === '/item.html') id = 'item';
     else if (P === '/distribution' || P === '/distribution.html') id = 'dist';
     else if (P === '/receiving' || P === '/receiving.html') id = 'recv';
     else if (P === '/vm' || P === '/vm.html') id = 'vm';
@@ -431,6 +432,11 @@ module.exports = async function handler(req, res) {
   if (requestedPath === '/overview' || requestedPath === '/overview/' || requestedPath === '/overview.html') {
     if (!(facts.staff && facts.staff.role === 'admin')) return toHome();
     return sendFile(res, 'overview.html', 'text/html; charset=utf-8', chromeFor('staff', multi));
+  }
+  // Item Insights: super admin and Overseers (plus anyone given it on User Access Privileges, who is lifted to Overseer on this page)
+  if (requestedPath === '/item' || requestedPath === '/item/' || requestedPath === '/item.html') {
+    if (!(facts.staff && facts.staff.role === 'admin') && !(facts.extra || []).includes('item')) return toHome();
+    return sendFile(res, 'item.html', 'text/html; charset=utf-8', chromeFor('staff', multi));
   }
   // The first Slow Moving report was replaced by Slowmoving 2.0. Its page file (private/slow.html) is kept but no longer served; old links and bookmarks land on 2.0.
   if (requestedPath === '/slow' || requestedPath === '/slow/' || requestedPath === '/slow.html') {

@@ -84,6 +84,10 @@
       "destination": "/api/vm?campaigns=1"
     },
     {
+      "source": "/api/item",
+      "destination": "/api/erp?item=1"
+    },
+    {
       "source": "/api/slow",
       "destination": "/api/erp?slow=1"
     },

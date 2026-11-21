@@ -3,7 +3,7 @@
 // Injected by api/site.js into every report page, so the report can be changed in one click instead of going Home first.
 // Same sections and order as the home screen (including the order the super admin saved there), same pink look.
 const BASE = [
-  ['Sales', ['overview', 'dashboards', 'staff', 'mysales', 'mysales2', 'storeteam', 'daily', 'film']],
+  ['Sales', ['overview', 'dashboards', 'item', 'staff', 'mysales', 'mysales2', 'storeteam', 'daily', 'film']],
   ['Stock', ['stock', 'stockcount', 'stockchecker', 'slow2', 'transfer']],
   ['Ordering', ['reorder', 'refill', 'dist', 'recv']],
   ['Visual Merchandising', ['vmzones', 'zonestock', 'vm']],
@@ -105,6 +105,7 @@ const ICONS = {
   stockchecker: '<path d="M4 6v10M7 6v10M10 6v10M13 6v5"/><circle cx="16.5" cy="15.5" r="3.5"/><path d="M19 18l2.2 2.2"/>',
   slow: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   slow2: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M17.5 3.5l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z"/>',
+  item: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8M8 12.5v-2M10.5 12.5v-4M13 12.5v-3"/>',
   transfer: '<path d="M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4"/>',
   reorder: '<path d="M3 5h2l2.2 10h10.3l2-7H7"/><circle cx="9.5" cy="19" r="1.4"/><circle cx="17" cy="19" r="1.4"/><path d="M16 1.8l.8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8z"/>',
   refill: '<path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5"/>',

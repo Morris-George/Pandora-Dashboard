@@ -236,6 +236,7 @@ module.exports = activity.wrap('erp', async function handler(req, res) {
     if (u.searchParams.get('pic') || u.pathname === '/api/pic') return require('./_pic')(req, res); // product picture address (api/_pic.js)
     if (u.searchParams.get('insights') || u.pathname === '/api/insights') return require('./_insights')(req, res); // Sales Intelligence (api/_insights.js)
     if (u.searchParams.get('overview') || u.pathname === '/api/overview') return require('./_overview')(req, res); // Store Overview (api/_overview.js)
+    if (u.searchParams.get('item') || u.pathname === '/api/item') return require('./_item')(req, res); // Item Insights (api/_item.js)
     if (u.searchParams.get('transfer') || u.pathname === '/api/transfer') return require('./_transfer')(req, res);
     if (u.searchParams.get('digest') || u.pathname === '/api/digest') return require('./_digest')(req, res); // Daily WhatsApp digest (api/_digest.js)
     if (u.searchParams.get('slow') || u.pathname === '/api/slow') return require('./_slow')(req, res); } // Refill Order (api/_refill.js)

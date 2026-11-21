@@ -77,7 +77,7 @@ function whoami(req) {
 const REPORT_PATHS = { '/dashboards': 'dashboards', '/index.html': 'dashboards', '/staff': 'staff', '/staff.html': 'staff', '/staff/index.html': 'staff', '/staff/person': 'staff',
   '/uploads': 'uploads', '/uploads.html': 'uploads', '/activity': 'activity', '/activity.html': 'activity', '/daily': 'daily', '/daily.html': 'daily', '/schedule': 'schedule', '/schedule.html': 'schedule',
   '/vm/zones': 'vmzones', '/vmzones.html': 'vmzones', '/vm/stock': 'zonestock', '/zonestock.html': 'zonestock', '/stock': 'stock', '/stock.html': 'stock', '/stockcount': 'stockcount', '/stockcount.html': 'stockcount',
-  '/stockchecker': 'stockchecker', '/stockchecker.html': 'stockchecker', '/vm': 'vm', '/vm.html': 'vm' };
+  '/stockchecker': 'stockchecker', '/stockchecker.html': 'stockchecker', '/vm': 'vm', '/vm.html': 'vm', '/item': 'item', '/item.html': 'item' };
 function reportOf(req) {
   const one = u => { try { return REPORT_PATHS[new URL(u, 'https://x.invalid').pathname.replace(/\/+$/, '') || '/'] || ''; } catch (_) { return ''; } };
   const path = String(req.url || '');
